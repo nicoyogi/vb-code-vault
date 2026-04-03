@@ -72,98 +72,51 @@
       top: 0;
       z-index: 10;
     }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      font-size: 16px;
-      color: var(--text);
-      text-decoration: none;
-    }
-    .logo-icon {
-      width: 28px; height: 28px;
-      background: var(--accent);
-      border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      color: white;
-      font-size: 13px;
-      font-weight: 700;
-      font-family: var(--mono);
-    }
+    .logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: 700; font-family: var(--mono); }
     .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-    #total-badge {
-      font-size: 12px;
-      background: var(--surface2);
-      border: 0.5px solid var(--border);
-      border-radius: 20px;
-      padding: 3px 10px;
-      color: var(--text2);
-    }
+    #total-badge { font-size: 12px; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 20px; padding: 3px 10px; color: var(--text2); }
 
-    /* Main layout */
+    /* Status indicator */
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #888780; flex-shrink: 0; transition: background 0.3s; }
+    .status-dot.online { background: #639922; }
+    .status-dot.error { background: #E24B4A; }
+    .status-wrap { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text3); }
+
+    /* Main */
     main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 
     /* Toolbar */
-    .toolbar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 1.25rem;
-      flex-wrap: wrap;
-    }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .toolbar input[type="text"] {
-      flex: 1;
-      min-width: 180px;
-      height: 36px;
-      border: 0.5px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 0 12px;
-      font-size: 14px;
-      background: var(--surface);
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.15s;
+      flex: 1; min-width: 180px; height: 36px;
+      border: 0.5px solid var(--border2); border-radius: var(--radius);
+      padding: 0 12px; font-size: 14px;
+      background: var(--surface); color: var(--text);
+      outline: none; transition: border-color 0.15s;
     }
     .toolbar input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
     .toolbar select {
-      height: 36px;
-      border: 0.5px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 0 10px;
-      font-size: 14px;
-      background: var(--surface);
-      color: var(--text);
-      outline: none;
-      cursor: pointer;
-      min-width: 140px;
+      height: 36px; border: 0.5px solid var(--border2); border-radius: var(--radius);
+      padding: 0 10px; font-size: 14px;
+      background: var(--surface); color: var(--text);
+      outline: none; cursor: pointer; min-width: 140px;
     }
     .btn-primary {
-      height: 36px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: var(--radius);
-      padding: 0 16px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: opacity 0.15s;
+      height: 36px; background: var(--accent); color: white;
+      border: none; border-radius: var(--radius);
+      padding: 0 16px; font-size: 14px; font-weight: 500;
+      cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
     }
     .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-sm {
-      height: 30px;
-      background: transparent;
-      border: 0.5px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 0 12px;
-      font-size: 12px;
-      cursor: pointer;
-      color: var(--text2);
-      transition: background 0.12s;
-      white-space: nowrap;
+      height: 30px; background: transparent; border: 0.5px solid var(--border2);
+      border-radius: var(--radius); padding: 0 12px; font-size: 12px;
+      cursor: pointer; color: var(--text2); transition: background 0.12s; white-space: nowrap;
     }
     .btn-sm:hover { background: var(--surface2); }
+    .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-danger { color: var(--red-text); border-color: var(--red-border); }
     .btn-danger:hover { background: var(--red-bg); }
 
@@ -174,159 +127,62 @@
     .snippet-grid { display: grid; gap: 12px; }
 
     /* Card */
-    .card {
-      background: var(--surface);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 1rem 1.25rem;
-      transition: border-color 0.15s;
-    }
+    .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; transition: border-color 0.15s; }
     .card:hover { border-color: var(--border2); }
     .card-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
     .card-title { font-size: 15px; font-weight: 500; flex: 1; }
     .card-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-    .badge {
-      font-size: 11px; padding: 2px 8px;
-      border-radius: 20px;
-      background: var(--accent-bg);
-      color: var(--accent-text);
-      font-weight: 500;
-    }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
     .date { font-size: 12px; color: var(--text3); margin-left: auto; }
     .card-desc { font-size: 13px; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
     .code-preview {
-      background: var(--surface2);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 12px;
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--text2);
-      overflow: hidden;
-      max-height: 76px;
-      white-space: pre;
-      line-height: 1.6;
+      background: var(--surface2); border: 0.5px solid var(--border); border-radius: var(--radius);
+      padding: 10px 12px; font-family: var(--mono); font-size: 12px; color: var(--text2);
+      overflow: hidden; max-height: 76px; white-space: pre; line-height: 1.6;
     }
     .card-actions { display: flex; gap: 6px; margin-top: 10px; }
 
+    /* Skeleton loader */
+    .skeleton { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
+    .skel-line { background: var(--surface2); border-radius: 4px; height: 14px; margin-bottom: 10px; animation: shimmer 1.4s ease-in-out infinite; }
+    @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
     /* Empty */
-    .empty {
-      text-align: center;
-      color: var(--text3);
-      padding: 4rem 1rem;
-      font-size: 14px;
-    }
+    .empty { text-align: center; color: var(--text3); padding: 4rem 1rem; font-size: 14px; }
     .empty-icon { font-size: 36px; margin-bottom: 12px; }
 
-    /* Modal backdrop */
-    .overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
+    /* Overlays */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
     .overlay.open { display: flex; }
 
     /* Form modal */
-    .modal {
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      border: 0.5px solid var(--border);
-      padding: 1.5rem;
-      width: min(540px, 100%);
-      max-height: 92vh;
-      overflow-y: auto;
-    }
+    .modal { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; width: min(540px, 100%); max-height: 92vh; overflow-y: auto; }
     .modal h2 { font-size: 16px; font-weight: 500; margin-bottom: 1.25rem; }
     .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
     .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
-    .field input[type="text"],
-    .field select,
-    .field textarea {
-      width: 100%;
-      border: 0.5px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 8px 12px;
-      font-size: 14px;
-      background: var(--surface);
-      color: var(--text);
-      outline: none;
-      font-family: inherit;
-      transition: border-color 0.15s;
+    .field input[type="text"], .field select, .field textarea {
+      width: 100%; border: 0.5px solid var(--border2); border-radius: var(--radius);
+      padding: 8px 12px; font-size: 14px; background: var(--surface); color: var(--text);
+      outline: none; font-family: inherit; transition: border-color 0.15s;
     }
-    .field input:focus, .field select:focus, .field textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(24,95,165,0.12);
-    }
-    .field textarea {
-      min-height: 220px;
-      font-family: var(--mono);
-      font-size: 13px;
-      resize: vertical;
-      line-height: 1.6;
-    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
+    .field textarea { min-height: 220px; font-family: var(--mono); font-size: 13px; resize: vertical; line-height: 1.6; }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
 
     /* Detail overlay */
-    .detail-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 200;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 2rem 1rem;
-      overflow-y: auto;
-    }
+    .detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; }
     .detail-overlay.open { display: flex; }
-    .detail-box {
-      background: var(--surface);
-      border-radius: var(--radius-lg);
-      border: 0.5px solid var(--border);
-      padding: 1.5rem;
-      width: min(700px, 100%);
-    }
+    .detail-box { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; width: min(700px, 100%); }
     .detail-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
     .detail-title { font-size: 18px; font-weight: 500; flex: 1; }
-    .detail-code {
-      background: var(--surface2);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem 1.25rem;
-      font-family: var(--mono);
-      font-size: 13px;
-      color: var(--text);
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 55vh;
-      overflow-y: auto;
-      line-height: 1.7;
-    }
+    .detail-code { background: var(--surface2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; font-family: var(--mono); font-size: 13px; color: var(--text); white-space: pre-wrap; word-break: break-word; max-height: 55vh; overflow-y: auto; line-height: 1.7; }
     .detail-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
     .copy-ok { font-size: 12px; color: var(--green-text); }
 
-    /* Notification toast */
-    #toast {
-      position: fixed;
-      bottom: 2rem;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: var(--text);
-      color: var(--bg);
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-size: 13px;
-      opacity: 0;
-      transition: all 0.25s;
-      pointer-events: none;
-      z-index: 999;
-    }
+    /* Toast */
+    #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 999; white-space: nowrap; }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.error-toast { background: #A32D2D; color: #fff; }
 
     @media (max-width: 540px) {
       header { padding: 0 1rem; }
@@ -343,8 +199,12 @@
     VB Code Vault
   </a>
   <div class="header-right">
-    <span id="total-badge">0 snippets</span>
-    <button class="btn-primary" onclick="openAdd()">+ New snippet</button>
+    <div class="status-wrap">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-label">Connecting...</span>
+    </div>
+    <span id="total-badge">— snippets</span>
+    <button class="btn-primary" id="add-btn" onclick="openAdd()">+ New snippet</button>
   </div>
 </header>
 
@@ -360,50 +220,34 @@
 </main>
 
 <!-- Form modal -->
-<div class="overlay" id="form-modal" onclick="handleOverlayClick(event,'form-modal')">
+<div class="overlay" id="form-modal" onclick="handleBgClick(event,'form-modal')">
   <div class="modal" onclick="event.stopPropagation()">
     <h2 id="modal-title">New snippet</h2>
-    <div class="field">
-      <label>Title *</label>
-      <input type="text" id="f-title" placeholder="e.g. File reader module">
-    </div>
+    <div class="field"><label>Title *</label><input type="text" id="f-title" placeholder="e.g. File reader module"></div>
     <div class="field">
       <label>Category</label>
       <select id="f-cat">
-        <option>General</option>
-        <option>Form</option>
-        <option>Database</option>
-        <option>File I/O</option>
-        <option>String</option>
-        <option>Math</option>
-        <option>UI</option>
-        <option>Network</option>
-        <option>Excel</option>
-        <option>Other</option>
+        <option>General</option><option>Form</option><option>Database</option>
+        <option>File I/O</option><option>String</option><option>Math</option>
+        <option>UI</option><option>Network</option><option>Excel</option><option>Other</option>
       </select>
     </div>
-    <div class="field">
-      <label>Description</label>
-      <input type="text" id="f-desc" placeholder="Short description (optional)">
-    </div>
-    <div class="field">
-      <label>VB Code *</label>
-      <textarea id="f-code" placeholder="Paste your VB code here..."></textarea>
-    </div>
+    <div class="field"><label>Description</label><input type="text" id="f-desc" placeholder="Short description (optional)"></div>
+    <div class="field"><label>VB Code *</label><textarea id="f-code" placeholder="Paste your VB code here..."></textarea></div>
     <div class="modal-actions">
       <button class="btn-sm" onclick="closeModal()">Cancel</button>
-      <button class="btn-primary" onclick="saveSnippet()">Save snippet</button>
+      <button class="btn-primary" id="save-btn" onclick="saveSnippet()">Save snippet</button>
     </div>
   </div>
 </div>
 
 <!-- Detail modal -->
-<div class="detail-overlay" id="detail-modal" onclick="handleOverlayClick(event,'detail-modal')">
+<div class="detail-overlay" id="detail-modal" onclick="handleBgClick(event,'detail-modal')">
   <div class="detail-box" onclick="event.stopPropagation()">
     <div class="detail-header">
       <div style="flex:1">
         <div class="detail-title" id="d-title"></div>
-        <div id="d-meta" style="margin-top:5px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;"></div>
+        <div id="d-meta" style="margin-top:5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
       </div>
       <button class="btn-sm" onclick="closeDetail()">&#10005; Close</button>
     </div>
@@ -419,70 +263,87 @@
 
 <div id="toast"></div>
 
+<!-- Firebase SDK (compat version — works without bundler) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <script>
-  const STORAGE_KEY = 'vb_vault_v1';
+  /* ── Firebase init ── */
+  const firebaseConfig = {
+    apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
+    authDomain: "vb-code-vault.firebaseapp.com",
+    projectId: "vb-code-vault",
+    storageBucket: "vb-code-vault.firebasestorage.app",
+    messagingSenderId: "773245175115",
+    appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const col = db.collection('snippets');
+
+  /* ── State ── */
   let snippets = [];
   let editId = null;
   let detailId = null;
+  let saving = false;
 
-  function loadData() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      snippets = raw ? JSON.parse(raw) : [];
-    } catch(e) { snippets = []; }
+  /* ── Status helpers ── */
+  function setStatus(state, label) {
+    const dot = document.getElementById('status-dot');
+    const lbl = document.getElementById('status-label');
+    dot.className = 'status-dot ' + (state || '');
+    lbl.textContent = label;
   }
 
-  function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(snippets));
+  /* ── Firestore: real-time listener ── */
+  function startListener() {
+    setStatus('', 'Connecting...');
+    col.orderBy('createdAt', 'desc').onSnapshot(snap => {
+      snippets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setStatus('online', 'Online');
+      render();
+    }, err => {
+      console.error(err);
+      setStatus('error', 'Error');
+      showToast('Could not connect to database.', true);
+    });
   }
 
+  /* ── Render ── */
   function esc(s) {
-    return String(s)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
   function fmtDate(ts) {
-    return new Date(ts).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
-  }
-
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2200);
+    if (!ts) return '';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
   }
 
   function render() {
     const q = document.getElementById('search').value.toLowerCase().trim();
     const catFilter = document.getElementById('filter-cat').value;
 
-    const cats = [...new Set(snippets.map(s => s.category))].sort();
+    const cats = [...new Set(snippets.map(s => s.category).filter(Boolean))].sort();
     const sel = document.getElementById('filter-cat');
-    const prevCat = sel.value;
+    const prev = sel.value;
     sel.innerHTML = '<option value="">All categories</option>' +
-      cats.map(c => `<option${c === prevCat ? ' selected' : ''}>${esc(c)}</option>`).join('');
+      cats.map(c => `<option${c === prev ? ' selected' : ''}>${esc(c)}</option>`).join('');
 
     let list = snippets.filter(s => {
       const matchQ = !q ||
-        s.title.toLowerCase().includes(q) ||
-        s.code.toLowerCase().includes(q) ||
-        (s.desc || '').toLowerCase().includes(q);
+        (s.title||'').toLowerCase().includes(q) ||
+        (s.code||'').toLowerCase().includes(q) ||
+        (s.desc||'').toLowerCase().includes(q);
       const matchCat = !catFilter || s.category === catFilter;
       return matchQ && matchCat;
-    }).sort((a, b) => b.id - a.id);
+    });
 
     const total = snippets.length;
     document.getElementById('total-badge').textContent = total + ' snippet' + (total !== 1 ? 's' : '');
-
     const statsEl = document.getElementById('stats');
-    if (q || catFilter) {
-      statsEl.textContent = `Showing ${list.length} of ${total} snippet${total !== 1 ? 's' : ''}`;
-    } else {
-      statsEl.textContent = total > 0 ? `${total} snippet${total !== 1 ? 's' : ''} stored` : '';
-    }
+    statsEl.textContent = (q || catFilter)
+      ? `Showing ${list.length} of ${total} snippet${total !== 1 ? 's' : ''}`
+      : total > 0 ? `${total} snippet${total !== 1 ? 's' : ''} stored` : '';
 
     const grid = document.getElementById('grid');
     if (!list.length) {
@@ -493,29 +354,26 @@
     }
 
     grid.innerHTML = list.map(s => {
-      const preview = s.code.substring(0, 200) + (s.code.length > 200 ? '...' : '');
+      const preview = (s.code||'').substring(0, 200) + ((s.code||'').length > 200 ? '...' : '');
       return `
         <div class="card">
-          <div class="card-header">
-            <div class="card-title">${esc(s.title)}</div>
-          </div>
+          <div class="card-header"><div class="card-title">${esc(s.title||'')}</div></div>
           <div class="card-meta">
-            <span class="badge">${esc(s.category)}</span>
-            <span class="date">${fmtDate(s.id)}</span>
+            <span class="badge">${esc(s.category||'General')}</span>
+            <span class="date">${fmtDate(s.createdAt)}</span>
           </div>
           ${s.desc ? `<div class="card-desc">${esc(s.desc)}</div>` : ''}
           <div class="code-preview">${esc(preview)}</div>
           <div class="card-actions">
-            <button class="btn-sm" onclick="openDetail(${s.id})">&#128065; View</button>
-            <button class="btn-sm" onclick="openEdit(${s.id})">&#9998; Edit</button>
-            <button class="btn-sm btn-danger" onclick="deleteSnippet(${s.id})">&#128465; Delete</button>
+            <button class="btn-sm" onclick="openDetail('${s.id}')">&#128065; View</button>
+            <button class="btn-sm" onclick="openEdit('${s.id}')">&#9998; Edit</button>
+            <button class="btn-sm btn-danger" onclick="deleteSnippet('${s.id}')">&#128465; Delete</button>
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
   }
 
-  /* --- Form modal --- */
+  /* ── Form modal ── */
   function openAdd() {
     editId = null;
     document.getElementById('modal-title').textContent = 'New snippet';
@@ -532,97 +390,120 @@
     if (!s) return;
     editId = id;
     document.getElementById('modal-title').textContent = 'Edit snippet';
-    document.getElementById('f-title').value = s.title;
+    document.getElementById('f-title').value = s.title || '';
     document.getElementById('f-desc').value = s.desc || '';
-    document.getElementById('f-code').value = s.code;
-    document.getElementById('f-cat').value = s.category;
+    document.getElementById('f-code').value = s.code || '';
+    document.getElementById('f-cat').value = s.category || 'General';
     closeDetail();
     document.getElementById('form-modal').classList.add('open');
+    setTimeout(() => document.getElementById('f-title').focus(), 50);
   }
 
   function closeModal() { document.getElementById('form-modal').classList.remove('open'); }
 
-  function saveSnippet() {
+  async function saveSnippet() {
+    if (saving) return;
     const title = document.getElementById('f-title').value.trim();
-    const code = document.getElementById('f-code').value.trim();
-    const desc = document.getElementById('f-desc').value.trim();
+    const code  = document.getElementById('f-code').value.trim();
+    const desc  = document.getElementById('f-desc').value.trim();
     const category = document.getElementById('f-cat').value;
-    if (!title) { document.getElementById('f-title').focus(); showToast('Please enter a title.'); return; }
-    if (!code) { document.getElementById('f-code').focus(); showToast('Please paste some VB code.'); return; }
-    if (editId !== null) {
-      const s = snippets.find(x => x.id === editId);
-      if (s) { s.title = title; s.desc = desc; s.code = code; s.category = category; s.updated = Date.now(); }
-    } else {
-      snippets.push({ id: Date.now(), title, desc, code, category });
+
+    if (!title) { document.getElementById('f-title').focus(); showToast('Please enter a title.', true); return; }
+    if (!code)  { document.getElementById('f-code').focus();  showToast('Please paste some VB code.', true); return; }
+
+    saving = true;
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      if (editId) {
+        await col.doc(editId).update({ title, desc, code, category, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        showToast('Snippet updated!');
+      } else {
+        await col.add({ title, desc, code, category, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        showToast('Snippet saved!');
+      }
+      closeModal();
+    } catch(e) {
+      console.error(e);
+      showToast('Save failed. Check your connection.', true);
+    } finally {
+      saving = false;
+      btn.disabled = false;
+      btn.textContent = 'Save snippet';
     }
-    saveData();
-    closeModal();
-    render();
-    showToast(editId !== null ? 'Snippet updated!' : 'Snippet saved!');
   }
 
-  /* --- Detail modal --- */
+  /* ── Detail modal ── */
   function openDetail(id) {
     const s = snippets.find(x => x.id === id);
     if (!s) return;
     detailId = id;
-    document.getElementById('d-title').textContent = s.title;
+    document.getElementById('d-title').textContent = s.title || '';
     document.getElementById('d-meta').innerHTML =
-      `<span class="badge">${esc(s.category)}</span><span style="font-size:12px;color:var(--text3)">${fmtDate(s.id)}</span>`;
+      `<span class="badge">${esc(s.category||'General')}</span><span style="font-size:12px;color:var(--text3)">${fmtDate(s.createdAt)}</span>`;
     document.getElementById('d-desc').textContent = s.desc || '';
-    document.getElementById('d-code').textContent = s.code;
+    document.getElementById('d-code').textContent = s.code || '';
     document.getElementById('copy-btn').textContent = '\uD83D\uDCCB Copy code';
     document.getElementById('copy-ok').textContent = '';
     document.getElementById('detail-modal').classList.add('open');
   }
 
   function closeDetail() { document.getElementById('detail-modal').classList.remove('open'); }
-
-  function editFromDetail() { if (detailId !== null) openEdit(detailId); }
+  function editFromDetail() { if (detailId) openEdit(detailId); }
 
   function copyCode() {
     const s = snippets.find(x => x.id === detailId);
     if (!s) return;
-    navigator.clipboard.writeText(s.code).then(() => {
+    navigator.clipboard.writeText(s.code || '').then(() => {
       document.getElementById('copy-btn').textContent = '\u2713 Copied!';
       document.getElementById('copy-ok').textContent = 'Code copied to clipboard';
       setTimeout(() => {
         document.getElementById('copy-btn').textContent = '\uD83D\uDCCB Copy code';
         document.getElementById('copy-ok').textContent = '';
       }, 2000);
-    }).catch(() => showToast('Copy failed. Please select and copy manually.'));
+    }).catch(() => showToast('Copy failed — please select manually.', true));
   }
 
-  /* --- Delete --- */
-  function deleteSnippet(id) {
+  /* ── Delete ── */
+  async function deleteSnippet(id) {
     if (!confirm('Delete this snippet? This cannot be undone.')) return;
-    snippets = snippets.filter(s => s.id !== id);
-    saveData();
-    render();
-    showToast('Snippet deleted.');
-  }
-
-  /* --- Click outside to close --- */
-  function handleOverlayClick(e, id) {
-    if (e.target === document.getElementById(id)) {
-      document.getElementById(id).classList.remove('open');
+    try {
+      await col.doc(id).delete();
+      showToast('Snippet deleted.');
+    } catch(e) {
+      showToast('Delete failed. Check your connection.', true);
     }
   }
 
-  /* --- Keyboard shortcuts --- */
+  /* ── Helpers ── */
+  function handleBgClick(e, id) {
+    if (e.target === document.getElementById(id)) document.getElementById(id).classList.remove('open');
+  }
+
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = isError ? 'error-toast show' : 'show';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.className = ''; }, 2500);
+  }
+
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      closeModal();
-      closeDetail();
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault();
-      document.getElementById('search').focus();
-    }
+    if (e.key === 'Escape') { closeModal(); closeDetail(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('search').focus(); }
   });
 
-  loadData();
-  render();
+  /* ── Show skeletons while loading ── */
+  document.getElementById('grid').innerHTML = [1,2,3].map(() => `
+    <div class="skeleton">
+      <div class="skel-line" style="width:55%"></div>
+      <div class="skel-line" style="width:25%;height:10px"></div>
+      <div class="skel-line" style="width:100%;height:60px"></div>
+    </div>`).join('');
+
+  startListener();
 </script>
 </body>
 </html>
