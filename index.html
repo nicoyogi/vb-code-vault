@@ -135,11 +135,106 @@
     .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
     .date { font-size: 12px; color: var(--text3); margin-left: auto; }
     .card-desc { font-size: 13px; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
-    .code-preview {
-      background: var(--surface2); border: 0.5px solid var(--border); border-radius: var(--radius);
-      padding: 10px 12px; font-family: var(--mono); font-size: 12px; color: var(--text2);
-      overflow: hidden; max-height: 76px; white-space: pre; line-height: 1.6;
+
+    /* ── Code preview (card) ── */
+    .code-preview-wrap {
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid #1a1a2e;
+      margin-bottom: 2px;
     }
+    .code-preview-bar {
+      background: #1e1e2e;
+      padding: 5px 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .code-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .code-preview {
+      background: #13131f;
+      padding: 10px 12px 10px 0;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', var(--mono);
+      font-size: 12px;
+      overflow: hidden;
+      max-height: 100px;
+      line-height: 1.7;
+      display: table;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .code-preview .ln {
+      display: table-cell;
+      width: 32px;
+      min-width: 32px;
+      text-align: right;
+      padding-right: 10px;
+      color: #3d3d5c;
+      user-select: none;
+      font-size: 11px;
+      vertical-align: top;
+      padding-left: 8px;
+    }
+    .code-preview .lc {
+      display: table-cell;
+      white-space: pre;
+      color: #cdd6f4;
+      padding-right: 12px;
+    }
+    .code-preview .cr { display: table-row; }
+
+    /* ── Detail code view ── */
+    .detail-code-wrap {
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid #1a1a2e;
+    }
+    .detail-code-bar {
+      background: #1e1e2e;
+      padding: 7px 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .detail-code {
+      background: #13131f;
+      padding: 12px 12px 12px 0;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', var(--mono);
+      font-size: 13px;
+      color: #cdd6f4;
+      max-height: 55vh;
+      overflow-y: auto;
+      line-height: 1.7;
+      display: table;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .detail-code .ln {
+      display: table-cell;
+      width: 42px;
+      min-width: 42px;
+      text-align: right;
+      padding-right: 14px;
+      padding-left: 10px;
+      color: #3d3d5c;
+      user-select: none;
+      font-size: 12px;
+      vertical-align: top;
+      border-right: 1px solid #1e1e3a;
+    }
+    .detail-code .lc { display: table-cell; white-space: pre-wrap; word-break: break-word; padding-left: 14px; padding-right: 12px; }
+    .detail-code .cr { display: table-row; }
+    .detail-code .cr:hover { background: rgba(255,255,255,0.03); }
+
+    /* VB Syntax colors (Catppuccin-inspired) */
+    .kw  { color: #cba6f7; font-weight: 600; }   /* keywords */
+    .str { color: #a6e3a1; }                       /* strings */
+    .cmt { color: #6c7086; font-style: italic; }   /* comments */
+    .num { color: #fab387; }                        /* numbers */
+    .func{ color: #89b4fa; }                        /* functions/subs */
+    .typ { color: #f38ba8; }                        /* types */
+    .op  { color: #94e2d5; }                        /* operators */
+
     .card-actions { display: flex; gap: 6px; margin-top: 10px; }
 
     /* Skeleton loader */
@@ -175,7 +270,6 @@
     .detail-box { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; width: min(700px, 100%); }
     .detail-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
     .detail-title { font-size: 18px; font-weight: 500; flex: 1; }
-    .detail-code { background: var(--surface2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; font-family: var(--mono); font-size: 13px; color: var(--text); white-space: pre-wrap; word-break: break-word; max-height: 55vh; overflow-y: auto; line-height: 1.7; }
     .detail-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
     .copy-ok { font-size: 12px; color: var(--green-text); }
 
@@ -252,7 +346,15 @@
       <button class="btn-sm" onclick="closeDetail()">&#10005; Close</button>
     </div>
     <div id="d-desc" style="font-size:13px;color:var(--text2);margin-bottom:12px;"></div>
-    <div id="d-code" class="detail-code"></div>
+    <div class="detail-code-wrap">
+      <div class="detail-code-bar">
+        <div class="code-dot" style="background:#ff5f57"></div>
+        <div class="code-dot" style="background:#febc2e"></div>
+        <div class="code-dot" style="background:#28c840"></div>
+        <span style="margin-left:8px;font-size:11px;color:#6c7086;font-family:'Consolas',monospace" id="d-filename">snippet.vb</span>
+      </div>
+      <div id="d-code" class="detail-code"></div>
+    </div>
     <div class="detail-actions">
       <button class="btn-sm" id="copy-btn" onclick="copyCode()">&#128203; Copy code</button>
       <button class="btn-sm" onclick="editFromDetail()">&#9998; Edit</button>
@@ -268,7 +370,63 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-  /* ── Firebase init ── */
+  /* ── VB Syntax Highlighter ── */
+  function highlightVB(code) {
+    const keywords = /\b(Sub|End Sub|Function|End Function|Dim|As|Integer|String|Boolean|Double|Long|Single|Date|Object|Variant|Byte|If|Then|Else|ElseIf|End If|For|To|Step|Next|Do|Loop|While|Wend|Until|Select|Case|End Select|With|End With|Class|End Class|Module|End Module|Property|Get|Set|Let|End Property|Return|Call|New|Nothing|True|False|Null|Empty|Me|MyBase|MyClass|Public|Private|Protected|Friend|Static|Shared|ReadOnly|Const|Enum|End Enum|Structure|End Structure|Interface|End Interface|Implements|Inherits|Imports|Namespace|End Namespace|Try|Catch|Finally|End Try|Throw|RaiseEvent|AddHandler|RemoveHandler|And|Or|Not|Xor|AndAlso|OrElse|Is|IsNot|Like|Mod|In|Of|ByVal|ByRef|Optional|ParamArray|Overrides|Overloads|Shadows|MustOverride|MustInherit|NotOverridable|NotInheritable|Handles|Delegate|Event|Declare|Extern|Exit|GoTo|Resume|On Error|Error|MsgBox|Print|Write|WriteLine|Input|Open|Close|Get|Put|Seek|Loc|LOF|EOF|FileLen|FreeFile|Dir|Kill|Name|MkDir|RmDir|ChDir|ChDrive|Shell|Environ|Format|CStr|CInt|CDbl|CBool|CLng|CSng|CByte|CDate|CObj|CType|TryCast|DirectCast|TypeOf|GetType|AddressOf)\b/g;
+    const types = /\b(Integer|Long|Short|Byte|Single|Double|Decimal|Boolean|Char|String|Date|Object|Variant|Currency)\b/g;
+
+    return code.split('\n').map((line, i) => {
+      let safe = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      // Comments (must be first — skip rest of line)
+      safe = safe.replace(/(&#39;|')(.*$)/, '<span class="cmt">$1$2</span>');
+      if (/^(\s*)(Rem\b.*)$/i.test(safe)) {
+        safe = safe.replace(/^(\s*)(Rem\b.*)$/i, '$1<span class="cmt">$2</span>');
+      }
+
+      // Strings (only if no comment yet applied)
+      if (!safe.includes('class="cmt"')) {
+        safe = safe.replace(/"([^"]*)"/g, '<span class="str">"$1"</span>');
+      }
+
+      // Numbers
+      safe = safe.replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
+
+      // Sub/Function names
+      safe = safe.replace(/\b(Sub|Function|Property)\s+([A-Za-z_]\w*)/g,
+        '<span class="kw">$1</span> <span class="func">$2</span>');
+
+      // Keywords
+      safe = safe.replace(keywords, m => `<span class="kw">${m}</span>`);
+
+      // Operators
+      safe = safe.replace(/(\s)(=|&lt;&gt;|&lt;=|&gt;=|&lt;|&gt;|&amp;|\+|-|\*|\/)(\s)/g,
+        '$1<span class="op">$2</span>$3');
+
+      return safe;
+    });
+  }
+
+  function renderCodePreview(code, maxLines = 5) {
+    const lines = highlightVB(code);
+    const shown = lines.slice(0, maxLines);
+    return shown.map((l, i) =>
+      `<div class="cr"><span class="ln">${i+1}</span><span class="lc">${l}</span></div>`
+    ).join('') + (lines.length > maxLines
+      ? `<div class="cr"><span class="ln">…</span><span class="lc" style="color:#3d3d5c">+${lines.length - maxLines} more lines</span></div>`
+      : '');
+  }
+
+  function renderDetailCode(code) {
+    const lines = highlightVB(code);
+    return lines.map((l, i) =>
+      `<div class="cr"><span class="ln">${i+1}</span><span class="lc">${l}</span></div>`
+    ).join('');
+  }
+
   const firebaseConfig = {
     apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
     authDomain: "vb-code-vault.firebaseapp.com",
@@ -354,7 +512,7 @@
     }
 
     grid.innerHTML = list.map(s => {
-      const preview = (s.code||'').substring(0, 200) + ((s.code||'').length > 200 ? '...' : '');
+      const highlighted = renderCodePreview(s.code || '');
       return `
         <div class="card">
           <div class="card-header"><div class="card-title">${esc(s.title||'')}</div></div>
@@ -363,7 +521,15 @@
             <span class="date">${fmtDate(s.createdAt)}</span>
           </div>
           ${s.desc ? `<div class="card-desc">${esc(s.desc)}</div>` : ''}
-          <div class="code-preview">${esc(preview)}</div>
+          <div class="code-preview-wrap">
+            <div class="code-preview-bar">
+              <div class="code-dot" style="background:#ff5f57"></div>
+              <div class="code-dot" style="background:#febc2e"></div>
+              <div class="code-dot" style="background:#28c840"></div>
+              <span style="margin-left:8px;font-size:10px;color:#6c7086;font-family:'Consolas',monospace">${esc(s.title||'snippet')}.vb</span>
+            </div>
+            <div class="code-preview">${highlighted}</div>
+          </div>
           <div class="card-actions">
             <button class="btn-sm" onclick="openDetail('${s.id}')">&#128065; View</button>
             <button class="btn-sm" onclick="openEdit('${s.id}')">&#9998; Edit</button>
@@ -444,7 +610,8 @@
     document.getElementById('d-meta').innerHTML =
       `<span class="badge">${esc(s.category||'General')}</span><span style="font-size:12px;color:var(--text3)">${fmtDate(s.createdAt)}</span>`;
     document.getElementById('d-desc').textContent = s.desc || '';
-    document.getElementById('d-code').textContent = s.code || '';
+    document.getElementById('d-code').innerHTML = renderDetailCode(s.code || '');
+    document.getElementById('d-filename').textContent = (s.title || 'snippet').replace(/[^a-z0-9_\-]/gi,'_').toLowerCase() + '.vb';
     document.getElementById('copy-btn').textContent = '\uD83D\uDCCB Copy code';
     document.getElementById('copy-ok').textContent = '';
     document.getElementById('detail-modal').classList.add('open');
