@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VB Code Vault</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f8f7f4;
+      --surface: #ffffff;
+      --surface2: #f1efe8;
+      --border: rgba(0,0,0,0.12);
+      --border2: rgba(0,0,0,0.22);
+      --text: #1a1a18;
+      --text2: #5f5e5a;
+      --text3: #888780;
+      --accent: #185FA5;
+      --accent-bg: #E6F1FB;
+      --accent-text: #0C447C;
+      --green-bg: #EAF3DE;
+      --green-text: #3B6D11;
+      --red-bg: #FCEBEB;
+      --red-text: #A32D2D;
+      --red-border: #F09595;
+      --mono: 'Courier New', Courier, monospace;
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1a;
+        --surface: #252523;
+        --surface2: #2c2c2a;
+        --border: rgba(255,255,255,0.10);
+        --border2: rgba(255,255,255,0.20);
+        --text: #f0ede8;
+        --text2: #b4b2a9;
+        --text3: #888780;
+        --accent: #378ADD;
+        --accent-bg: #042C53;
+        --accent-text: #85B7EB;
+        --green-bg: #173404;
+        --green-text: #C0DD97;
+        --red-bg: #501313;
+        --red-text: #F09595;
+        --red-border: #791F1F;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--border);
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: white;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    #total-badge {
+      font-size: 12px;
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      color: var(--text2);
+    }
+
+    /* Main layout */
+    main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .toolbar input[type="text"] {
+      flex: 1;
+      min-width: 180px;
+      height: 36px;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 0 12px;
+      font-size: 14px;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .toolbar input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
+    .toolbar select {
+      height: 36px;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 0 10px;
+      font-size: 14px;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      cursor: pointer;
+      min-width: 140px;
+    }
+    .btn-primary {
+      height: 36px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-sm {
+      height: 30px;
+      background: transparent;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 0 12px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text2);
+      transition: background 0.12s;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { background: var(--surface2); }
+    .btn-danger { color: var(--red-text); border-color: var(--red-border); }
+    .btn-danger:hover { background: var(--red-bg); }
+
+    /* Stats */
+    .stats { font-size: 13px; color: var(--text3); margin-bottom: 1rem; }
+
+    /* Snippet grid */
+    .snippet-grid { display: grid; gap: 12px; }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      transition: border-color 0.15s;
+    }
+    .card:hover { border-color: var(--border2); }
+    .card-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+    .card-title { font-size: 15px; font-weight: 500; flex: 1; }
+    .card-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    .badge {
+      font-size: 11px; padding: 2px 8px;
+      border-radius: 20px;
+      background: var(--accent-bg);
+      color: var(--accent-text);
+      font-weight: 500;
+    }
+    .date { font-size: 12px; color: var(--text3); margin-left: auto; }
+    .card-desc { font-size: 13px; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
+    .code-preview {
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text2);
+      overflow: hidden;
+      max-height: 76px;
+      white-space: pre;
+      line-height: 1.6;
+    }
+    .card-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+    /* Empty */
+    .empty {
+      text-align: center;
+      color: var(--text3);
+      padding: 4rem 1rem;
+      font-size: 14px;
+    }
+    .empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+    /* Modal backdrop */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .overlay.open { display: flex; }
+
+    /* Form modal */
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 0.5px solid var(--border);
+      padding: 1.5rem;
+      width: min(540px, 100%);
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal h2 { font-size: 16px; font-weight: 500; margin-bottom: 1.25rem; }
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+    .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
+    .field input[type="text"],
+    .field select,
+    .field textarea {
+      width: 100%;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-size: 14px;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(24,95,165,0.12);
+    }
+    .field textarea {
+      min-height: 220px;
+      font-family: var(--mono);
+      font-size: 13px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+
+    /* Detail overlay */
+    .detail-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+      overflow-y: auto;
+    }
+    .detail-overlay.open { display: flex; }
+    .detail-box {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 0.5px solid var(--border);
+      padding: 1.5rem;
+      width: min(700px, 100%);
+    }
+    .detail-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+    .detail-title { font-size: 18px; font-weight: 500; flex: 1; }
+    .detail-code {
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 55vh;
+      overflow-y: auto;
+      line-height: 1.7;
+    }
+    .detail-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+    .copy-ok { font-size: 12px; color: var(--green-text); }
+
+    /* Notification toast */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--text);
+      color: var(--bg);
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 540px) {
+      header { padding: 0 1rem; }
+      .toolbar { gap: 6px; }
+      .toolbar select { min-width: 100px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="#" class="logo">
+    <div class="logo-icon">VB</div>
+    VB Code Vault
+  </a>
+  <div class="header-right">
+    <span id="total-badge">0 snippets</span>
+    <button class="btn-primary" onclick="openAdd()">+ New snippet</button>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="&#128269; Search by title, code, or description..." oninput="render()">
+    <select id="filter-cat" onchange="render()">
+      <option value="">All categories</option>
+    </select>
+  </div>
+  <div id="stats" class="stats"></div>
+  <div id="grid" class="snippet-grid"></div>
+</main>
+
+<!-- Form modal -->
+<div class="overlay" id="form-modal" onclick="handleOverlayClick(event,'form-modal')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="modal-title">New snippet</h2>
+    <div class="field">
+      <label>Title *</label>
+      <input type="text" id="f-title" placeholder="e.g. File reader module">
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select id="f-cat">
+        <option>General</option>
+        <option>Form</option>
+        <option>Database</option>
+        <option>File I/O</option>
+        <option>String</option>
+        <option>Math</option>
+        <option>UI</option>
+        <option>Network</option>
+        <option>Excel</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <input type="text" id="f-desc" placeholder="Short description (optional)">
+    </div>
+    <div class="field">
+      <label>VB Code *</label>
+      <textarea id="f-code" placeholder="Paste your VB code here..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveSnippet()">Save snippet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail modal -->
+<div class="detail-overlay" id="detail-modal" onclick="handleOverlayClick(event,'detail-modal')">
+  <div class="detail-box" onclick="event.stopPropagation()">
+    <div class="detail-header">
+      <div style="flex:1">
+        <div class="detail-title" id="d-title"></div>
+        <div id="d-meta" style="margin-top:5px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;"></div>
+      </div>
+      <button class="btn-sm" onclick="closeDetail()">&#10005; Close</button>
+    </div>
+    <div id="d-desc" style="font-size:13px;color:var(--text2);margin-bottom:12px;"></div>
+    <div id="d-code" class="detail-code"></div>
+    <div class="detail-actions">
+      <button class="btn-sm" id="copy-btn" onclick="copyCode()">&#128203; Copy code</button>
+      <button class="btn-sm" onclick="editFromDetail()">&#9998; Edit</button>
+      <span class="copy-ok" id="copy-ok"></span>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const STORAGE_KEY = 'vb_vault_v1';
+  let snippets = [];
+  let editId = null;
+  let detailId = null;
+
+  function loadData() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      snippets = raw ? JSON.parse(raw) : [];
+    } catch(e) { snippets = []; }
+  }
+
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snippets));
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(ts) {
+    return new Date(ts).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function render() {
+    const q = document.getElementById('search').value.toLowerCase().trim();
+    const catFilter = document.getElementById('filter-cat').value;
+
+    const cats = [...new Set(snippets.map(s => s.category))].sort();
+    const sel = document.getElementById('filter-cat');
+    const prevCat = sel.value;
+    sel.innerHTML = '<option value="">All categories</option>' +
+      cats.map(c => `<option${c === prevCat ? ' selected' : ''}>${esc(c)}</option>`).join('');
+
+    let list = snippets.filter(s => {
+      const matchQ = !q ||
+        s.title.toLowerCase().includes(q) ||
+        s.code.toLowerCase().includes(q) ||
+        (s.desc || '').toLowerCase().includes(q);
+      const matchCat = !catFilter || s.category === catFilter;
+      return matchQ && matchCat;
+    }).sort((a, b) => b.id - a.id);
+
+    const total = snippets.length;
+    document.getElementById('total-badge').textContent = total + ' snippet' + (total !== 1 ? 's' : '');
+
+    const statsEl = document.getElementById('stats');
+    if (q || catFilter) {
+      statsEl.textContent = `Showing ${list.length} of ${total} snippet${total !== 1 ? 's' : ''}`;
+    } else {
+      statsEl.textContent = total > 0 ? `${total} snippet${total !== 1 ? 's' : ''} stored` : '';
+    }
+
+    const grid = document.getElementById('grid');
+    if (!list.length) {
+      grid.innerHTML = total === 0
+        ? `<div class="empty"><div class="empty-icon">&#128190;</div><div>No snippets yet.</div><div style="margin-top:6px">Click <strong>+ New snippet</strong> to save your first VB code!</div></div>`
+        : `<div class="empty"><div class="empty-icon">&#128269;</div><div>No snippets match your search.</div></div>`;
+      return;
+    }
+
+    grid.innerHTML = list.map(s => {
+      const preview = s.code.substring(0, 200) + (s.code.length > 200 ? '...' : '');
+      return `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">${esc(s.title)}</div>
+          </div>
+          <div class="card-meta">
+            <span class="badge">${esc(s.category)}</span>
+            <span class="date">${fmtDate(s.id)}</span>
+          </div>
+          ${s.desc ? `<div class="card-desc">${esc(s.desc)}</div>` : ''}
+          <div class="code-preview">${esc(preview)}</div>
+          <div class="card-actions">
+            <button class="btn-sm" onclick="openDetail(${s.id})">&#128065; View</button>
+            <button class="btn-sm" onclick="openEdit(${s.id})">&#9998; Edit</button>
+            <button class="btn-sm btn-danger" onclick="deleteSnippet(${s.id})">&#128465; Delete</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  /* --- Form modal --- */
+  function openAdd() {
+    editId = null;
+    document.getElementById('modal-title').textContent = 'New snippet';
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-code').value = '';
+    document.getElementById('f-cat').value = 'General';
+    document.getElementById('form-modal').classList.add('open');
+    setTimeout(() => document.getElementById('f-title').focus(), 50);
+  }
+
+  function openEdit(id) {
+    const s = snippets.find(x => x.id === id);
+    if (!s) return;
+    editId = id;
+    document.getElementById('modal-title').textContent = 'Edit snippet';
+    document.getElementById('f-title').value = s.title;
+    document.getElementById('f-desc').value = s.desc || '';
+    document.getElementById('f-code').value = s.code;
+    document.getElementById('f-cat').value = s.category;
+    closeDetail();
+    document.getElementById('form-modal').classList.add('open');
+  }
+
+  function closeModal() { document.getElementById('form-modal').classList.remove('open'); }
+
+  function saveSnippet() {
+    const title = document.getElementById('f-title').value.trim();
+    const code = document.getElementById('f-code').value.trim();
+    const desc = document.getElementById('f-desc').value.trim();
+    const category = document.getElementById('f-cat').value;
+    if (!title) { document.getElementById('f-title').focus(); showToast('Please enter a title.'); return; }
+    if (!code) { document.getElementById('f-code').focus(); showToast('Please paste some VB code.'); return; }
+    if (editId !== null) {
+      const s = snippets.find(x => x.id === editId);
+      if (s) { s.title = title; s.desc = desc; s.code = code; s.category = category; s.updated = Date.now(); }
+    } else {
+      snippets.push({ id: Date.now(), title, desc, code, category });
+    }
+    saveData();
+    closeModal();
+    render();
+    showToast(editId !== null ? 'Snippet updated!' : 'Snippet saved!');
+  }
+
+  /* --- Detail modal --- */
+  function openDetail(id) {
+    const s = snippets.find(x => x.id === id);
+    if (!s) return;
+    detailId = id;
+    document.getElementById('d-title').textContent = s.title;
+    document.getElementById('d-meta').innerHTML =
+      `<span class="badge">${esc(s.category)}</span><span style="font-size:12px;color:var(--text3)">${fmtDate(s.id)}</span>`;
+    document.getElementById('d-desc').textContent = s.desc || '';
+    document.getElementById('d-code').textContent = s.code;
+    document.getElementById('copy-btn').textContent = '\uD83D\uDCCB Copy code';
+    document.getElementById('copy-ok').textContent = '';
+    document.getElementById('detail-modal').classList.add('open');
+  }
+
+  function closeDetail() { document.getElementById('detail-modal').classList.remove('open'); }
+
+  function editFromDetail() { if (detailId !== null) openEdit(detailId); }
+
+  function copyCode() {
+    const s = snippets.find(x => x.id === detailId);
+    if (!s) return;
+    navigator.clipboard.writeText(s.code).then(() => {
+      document.getElementById('copy-btn').textContent = '\u2713 Copied!';
+      document.getElementById('copy-ok').textContent = 'Code copied to clipboard';
+      setTimeout(() => {
+        document.getElementById('copy-btn').textContent = '\uD83D\uDCCB Copy code';
+        document.getElementById('copy-ok').textContent = '';
+      }, 2000);
+    }).catch(() => showToast('Copy failed. Please select and copy manually.'));
+  }
+
+  /* --- Delete --- */
+  function deleteSnippet(id) {
+    if (!confirm('Delete this snippet? This cannot be undone.')) return;
+    snippets = snippets.filter(s => s.id !== id);
+    saveData();
+    render();
+    showToast('Snippet deleted.');
+  }
+
+  /* --- Click outside to close --- */
+  function handleOverlayClick(e, id) {
+    if (e.target === document.getElementById(id)) {
+      document.getElementById(id).classList.remove('open');
+    }
+  }
+
+  /* --- Keyboard shortcuts --- */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeModal();
+      closeDetail();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      document.getElementById('search').focus();
+    }
+  });
+
+  loadData();
+  render();
+</script>
+</body>
+</html>
