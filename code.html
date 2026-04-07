@@ -72,15 +72,15 @@
       top: 0;
       z-index: 10;
     }
-    .logo-back { font-size: 13px; color: var(--text3); text-decoration: none; padding: 4px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); transition: background 0.12s; }
+    .logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--text); text-decoration: none; }
+    .logo-back { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text3); text-decoration: none; padding: 4px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius); transition: background 0.12s, color 0.12s; white-space: nowrap; }
     .logo-back:hover { background: var(--surface2); color: var(--text2); }
     .logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: 700; font-family: var(--mono); }
     .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
     #total-badge { font-size: 12px; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 20px; padding: 3px 10px; color: var(--text2); }
 
     /* Status indicator */
-    .logo-back { font-size: 13px; color: var(--text3); text-decoration: none; padding: 4px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); transition: background 0.12s; }
-    .logo-back:hover { background: var(--surface2); color: var(--text2); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #888780; flex-shrink: 0; transition: background 0.3s; }
     .status-dot.online { background: #639922; }
     .status-dot.error { background: #E24B4A; }
     .status-wrap { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text3); }
@@ -395,7 +395,7 @@
     </div>
     <button class="lock-btn" onclick="unlock()">Unlock</button>
     <div class="lock-error" id="lock-error"></div>
-    <div class="lock-hint">Password is stored locally on this device.<br>To change it, clear your browser data for this site.</div>
+    <div class="lock-hint">Same password as your Q&amp;A Base.<br>Stored securely in Firebase.</div>
   </div>
 </div>
 
