@@ -333,10 +333,15 @@
       const tags = (e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
       const imgs = e.images||[];
       const thumbHtml = imgs.length > 0
-        ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px;margin-bottom:10px;">
-             ${imgs.map(url => `<img src="${esc(url)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:0.5px solid var(--border);cursor:pointer;" onclick="openDetail('${e.id}')" loading="lazy">`).join('')}
-           </div>`
-        : '';
+      ? `<div style="display:grid;grid-template-columns:${imgs.length===1?'1fr':imgs.length===2?'1fr 1fr':'1fr 1fr 1fr'};gap:6px;margin-bottom:10px;">
+           ${imgs.map(url => `
+             <img src="${esc(url)}"
+               style="width:100%;height:${imgs.length===1?'220px':'140px'};object-fit:contain;background:var(--surface2);border-radius:6px;border:0.5px solid var(--border);cursor:pointer;"
+               onclick="openDetail('${e.id}')"
+               loading="lazy">
+           `).join('')}
+         </div>`
+      : '';
       return `
         <div class="qa-card">
           <div class="qa-card-header">
