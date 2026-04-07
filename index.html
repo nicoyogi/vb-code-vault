@@ -544,7 +544,7 @@
               <div class="code-dot" style="background:#febc2e"></div>
               <div class="code-dot" style="background:#28c840"></div>
               <span style="margin-left:8px;font-size:10px;color:#6c7086;font-family:'Consolas',monospace">${esc(s.title||'snippet')}.vb</span>
-              <button class="copy-inline-btn" onclick="copyInline(event,'${s.id}')">copy</button>
+              <button class="copy-inline-btn" data-copy-id="${s.id}">copy</button>
             </div>
             <div class="code-preview">${highlighted}</div>
           </div>
@@ -668,22 +668,25 @@
     try {
       const ta = document.createElement('textarea');
       ta.value = text;
-      ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:0;width:2px;height:2px;padding:0;border:none;outline:none;box-shadow:none;background:transparent;opacity:0;';
       document.body.appendChild(ta);
       ta.focus();
-      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
       const ok = document.execCommand('copy');
       document.body.removeChild(ta);
       if (ok) onSuccess(); else onFail();
     } catch(e) { onFail(); }
   }
 
-  /* ── Copy inline (card bar) ── */
-  function copyInline(e, id) {
+  /* ── Copy inline (card bar) — delegated ── */
+  document.getElementById('grid').addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-copy-id]');
+    if (!btn) return;
     e.stopPropagation();
+    const id = btn.dataset.copyId;
     const s = snippets.find(x => x.id === id);
     if (!s) return;
-    const btn = e.currentTarget;
     copyText(
       s.code || '',
       () => {
@@ -693,7 +696,7 @@
       },
       () => showToast('Copy failed — please select manually.', true)
     );
-  }
+  });
 
   /* ── Delete ── */
   async function deleteSnippet(id) {
