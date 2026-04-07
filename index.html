@@ -641,14 +641,41 @@
   function copyCode() {
     const s = snippets.find(x => x.id === detailId);
     if (!s) return;
-    navigator.clipboard.writeText(s.code || '').then(() => {
-      document.getElementById('copy-btn').textContent = '\u2713 Copied!';
-      document.getElementById('copy-ok').textContent = 'Code copied to clipboard';
-      setTimeout(() => {
-        document.getElementById('copy-btn').textContent = '\uD83D\uDCCB Copy code';
-        document.getElementById('copy-ok').textContent = '';
-      }, 2000);
-    }).catch(() => showToast('Copy failed — please select manually.', true));
+    copyText(
+      s.code || '',
+      () => {
+        document.getElementById('copy-btn').textContent = '\u2713 Copied!';
+        document.getElementById('copy-ok').textContent = 'Code copied to clipboard';
+        setTimeout(() => {
+          document.getElementById('copy-btn').textContent = '\uD83D\uDCCB Copy code';
+          document.getElementById('copy-ok').textContent = '';
+        }, 2000);
+      },
+      () => showToast('Copy failed — please select manually.', true)
+    );
+  }
+
+  /* ── Robust copy helper (clipboard API + textarea fallback) ── */
+  function copyText(text, onSuccess, onFail) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(onSuccess).catch(() => fallbackCopy(text, onSuccess, onFail));
+    } else {
+      fallbackCopy(text, onSuccess, onFail);
+    }
+  }
+
+  function fallbackCopy(text, onSuccess, onFail) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) onSuccess(); else onFail();
+    } catch(e) { onFail(); }
   }
 
   /* ── Copy inline (card bar) ── */
@@ -656,15 +683,16 @@
     e.stopPropagation();
     const s = snippets.find(x => x.id === id);
     if (!s) return;
-    navigator.clipboard.writeText(s.code || '').then(() => {
-      const btn = e.currentTarget;
-      btn.textContent = '✓ copied!';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.textContent = 'copy';
-        btn.classList.remove('copied');
-      }, 2000);
-    }).catch(() => showToast('Copy failed — please select manually.', true));
+    const btn = e.currentTarget;
+    copyText(
+      s.code || '',
+      () => {
+        btn.textContent = '✓ copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+      },
+      () => showToast('Copy failed — please select manually.', true)
+    );
   }
 
   /* ── Delete ── */
