@@ -217,7 +217,7 @@
       font-family: 'Cascadia Code', 'Fira Code', 'Consolas', var(--mono);
       font-size: 13px;
       color: #cdd6f4;
-      max-height: 55vh;
+      flex: 1;
       overflow-y: auto;
       line-height: 1.7;
       display: table;
@@ -280,12 +280,14 @@
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
 
     /* Detail overlay */
-    .detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; }
+    .detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
     .detail-overlay.open { display: flex; }
-    .detail-box { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; width: min(700px, 100%); }
-    .detail-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
-    .detail-title { font-size: 18px; font-weight: 500; flex: 1; }
-    .detail-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+    .detail-box { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.25rem; width: min(700px, 100%); max-height: 88vh; display: flex; flex-direction: column; }
+    .detail-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; flex-shrink: 0; }
+    .detail-title { font-size: 16px; font-weight: 500; flex: 1; }
+    .detail-code-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; border-radius: var(--radius); border: 1px solid #1a1a2e; }
+    .detail-code-bar { flex-shrink: 0; }
+    .detail-actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-shrink: 0; }
     .copy-ok { font-size: 12px; color: var(--green-text); }
 
     /* Toast */
@@ -360,7 +362,7 @@
       </div>
       <button class="btn-sm" onclick="closeDetail()">&#10005; Close</button>
     </div>
-    <div id="d-desc" style="font-size:13px;color:var(--text2);margin-bottom:12px;"></div>
+    <div id="d-desc" style="font-size:13px;color:var(--text2);margin-bottom:8px;flex-shrink:0;"></div>
     <div class="detail-code-wrap">
       <div class="detail-code-bar">
         <div class="code-dot" style="background:#ff5f57"></div>
