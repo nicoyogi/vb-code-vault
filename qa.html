@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Q&A Knowledge Base</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f8f7f4;
+      --surface: #ffffff;
+      --surface2: #f1efe8;
+      --border: rgba(0,0,0,0.12);
+      --border2: rgba(0,0,0,0.22);
+      --text: #1a1a18;
+      --text2: #5f5e5a;
+      --text3: #888780;
+      --accent: #7c3aed;
+      --accent-bg: #f3f0ff;
+      --accent-text: #5b21b6;
+      --green-bg: #EAF3DE;
+      --green-text: #3B6D11;
+      --red-bg: #FCEBEB;
+      --red-text: #A32D2D;
+      --red-border: #F09595;
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1a;
+        --surface: #252523;
+        --surface2: #2c2c2a;
+        --border: rgba(255,255,255,0.10);
+        --border2: rgba(255,255,255,0.20);
+        --text: #f0ede8;
+        --text2: #b4b2a9;
+        --text3: #888780;
+        --accent: #a78bfa;
+        --accent-bg: #2d1f5e;
+        --accent-text: #c4b5fd;
+        --green-bg: #173404;
+        --green-text: #C0DD97;
+        --red-bg: #501313;
+        --red-text: #F09595;
+        --red-border: #791F1F;
+      }
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+
+    header { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 0 1.5rem; display: flex; align-items: center; gap: 12px; height: 56px; position: sticky; top: 0; z-index: 10; }
+    .logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; }
+    .logo-back { font-size: 13px; color: var(--text3); text-decoration: none; padding: 4px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); transition: background 0.12s; }
+    .logo-back:hover { background: var(--surface2); color: var(--text2); }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    #total-badge { font-size: 12px; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 20px; padding: 3px 10px; color: var(--text2); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #888780; flex-shrink: 0; transition: background 0.3s; }
+    .status-dot.online { background: #639922; }
+    .status-dot.error { background: #E24B4A; }
+    .status-wrap { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text3); }
+
+    main { max-width: 860px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+    .toolbar { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .toolbar input[type="text"] { flex: 1; min-width: 180px; height: 36px; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 0 12px; font-size: 14px; background: var(--surface); color: var(--text); outline: none; transition: border-color 0.15s; }
+    .toolbar input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+    .toolbar select { height: 36px; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 0 10px; font-size: 14px; background: var(--surface); color: var(--text); outline: none; cursor: pointer; min-width: 140px; }
+    .btn-primary { height: 36px; background: var(--accent); color: white; border: none; border-radius: var(--radius); padding: 0 16px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: opacity 0.15s; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-sm { height: 30px; background: transparent; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 0 12px; font-size: 12px; cursor: pointer; color: var(--text2); transition: background 0.12s; white-space: nowrap; }
+    .btn-sm:hover { background: var(--surface2); }
+    .btn-danger { color: var(--red-text); border-color: var(--red-border); }
+    .btn-danger:hover { background: var(--red-bg); }
+
+    .stats { font-size: 13px; color: var(--text3); margin-bottom: 1rem; }
+    .qa-grid { display: grid; gap: 12px; }
+
+    /* Q&A Card */
+    .qa-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; transition: border-color 0.15s; }
+    .qa-card:hover { border-color: var(--border2); }
+    .qa-card-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+    .q-icon { width: 26px; height: 26px; border-radius: 6px; background: var(--accent-bg); color: var(--accent-text); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .qa-question { font-size: 15px; font-weight: 500; flex: 1; line-height: 1.4; }
+    .qa-answer { font-size: 13px; color: var(--text2); line-height: 1.65; padding: 10px 12px; background: var(--surface2); border-radius: var(--radius); border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word; max-height: 100px; overflow: hidden; position: relative; }
+    .qa-answer.expanded { max-height: none; }
+    .qa-answer-fade { position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, var(--surface2)); border-radius: 0 0 var(--radius) var(--radius); pointer-events: none; }
+    .qa-meta { display: flex; align-items: center; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
+    .date { font-size: 12px; color: var(--text3); margin-left: auto; }
+    .qa-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+    .skeleton { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
+    .skel-line { background: var(--surface2); border-radius: 4px; height: 14px; margin-bottom: 10px; animation: shimmer 1.4s ease-in-out infinite; }
+    @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    .empty { text-align: center; color: var(--text3); padding: 4rem 1rem; font-size: 14px; }
+    .empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+    /* Modals */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; width: min(560px, 100%); max-height: 92vh; overflow-y: auto; }
+    .modal h2 { font-size: 16px; font-weight: 500; margin-bottom: 1.25rem; }
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+    .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
+    .field input[type="text"], .field select, .field textarea { width: 100%; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 8px 12px; font-size: 14px; background: var(--surface); color: var(--text); outline: none; font-family: inherit; transition: border-color 0.15s; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+    .field textarea { min-height: 160px; resize: vertical; line-height: 1.6; }
+    .field textarea.mono { font-family: 'Courier New', monospace; font-size: 13px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+
+    /* Detail modal */
+    .detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+    .detail-overlay.open { display: flex; }
+    .detail-box { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; width: min(680px, 100%); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
+    .detail-q { font-size: 17px; font-weight: 500; margin-bottom: 12px; line-height: 1.4; flex-shrink: 0; display: flex; gap: 10px; align-items: flex-start; }
+    .detail-q .q-icon { flex-shrink: 0; }
+    .detail-a { flex: 1; overflow-y: auto; background: var(--surface2); border-radius: var(--radius); padding: 1rem 1.25rem; font-size: 13.5px; color: var(--text2); line-height: 1.75; white-space: pre-wrap; word-break: break-word; border-left: 3px solid var(--accent); }
+    .detail-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; flex-shrink: 0; }
+    .detail-meta { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; flex-shrink: 0; flex-wrap: wrap; }
+    .copy-ok { font-size: 12px; color: var(--green-text); }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 999; white-space: nowrap; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.error-toast { background: #A32D2D; color: #fff; }
+
+    /* Lock screen */
+    #lock-screen { display: none; position: fixed; inset: 0; background: #0d0d14; z-index: 1000; align-items: center; justify-content: center; flex-direction: column; }
+    #lock-screen.active { display: flex; }
+    .lock-box { background: #1a1a2e; border: 1px solid #2a2a42; border-radius: 16px; padding: 2.5rem 2rem; width: min(360px, 92vw); display: flex; flex-direction: column; align-items: center; }
+    .lock-icon { width: 52px; height: 52px; background: var(--accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 1.25rem; }
+    .lock-title { font-size: 18px; font-weight: 600; color: #cdd6f4; margin-bottom: 4px; }
+    .lock-sub { font-size: 13px; color: #6c7086; margin-bottom: 1.5rem; text-align: center; }
+    .lock-input-wrap { position: relative; width: 100%; margin-bottom: 12px; }
+    .lock-input { width: 100%; background: #13131f; border: 1px solid #2a2a42; border-radius: 8px; padding: 10px 44px 10px 14px; font-size: 15px; color: #cdd6f4; outline: none; font-family: inherit; transition: border-color 0.15s; }
+    .lock-input:focus { border-color: var(--accent); }
+    .lock-input.shake { animation: shake 0.35s ease; border-color: #E24B4A; }
+    .lock-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #6c7086; font-size: 15px; padding: 4px; line-height: 1; }
+    .lock-toggle:hover { color: #cdd6f4; }
+    .lock-btn { width: 100%; background: var(--accent); color: white; border: none; border-radius: 8px; padding: 11px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; transition: opacity 0.15s; margin-bottom: 12px; }
+    .lock-btn:hover { opacity: 0.88; }
+    .lock-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .lock-error { font-size: 12px; color: #E24B4A; min-height: 16px; text-align: center; }
+    .lock-hint { font-size: 11px; color: #3d3d5c; margin-top: 1.25rem; text-align: center; line-height: 1.6; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+
+    @media (max-width: 540px) { header { padding: 0 1rem; } }
+  </style>
+</head>
+<body>
+
+<!-- Lock screen -->
+<div id="lock-screen">
+  <div class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <div class="lock-title">Q&A Knowledge Base</div>
+    <div class="lock-sub">Enter your password to access your notes</div>
+    <div class="lock-input-wrap">
+      <input class="lock-input" type="password" id="lock-input" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()">
+      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn">👁</button>
+    </div>
+    <button class="lock-btn" onclick="unlock()">Unlock</button>
+    <div class="lock-error" id="lock-error"></div>
+    <div class="lock-hint">Same password as your Code Vault.<br>Stored securely in Firebase.</div>
+  </div>
+</div>
+
+<header>
+  <a href="index.html" class="logo-back">← Home</a>
+  <a href="#" class="logo">
+    <div class="logo-icon">🧠</div>
+    Q&amp;A Knowledge Base
+  </a>
+  <div class="header-right">
+    <div class="status-wrap">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-label">Connecting...</span>
+    </div>
+    <span id="total-badge">— entries</span>
+    <button class="btn-sm" onclick="lockApp()" title="Lock">🔒</button>
+    <button class="btn-primary" onclick="openAdd()">+ New Q&amp;A</button>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="🔍 Search questions or answers..." oninput="render()">
+    <select id="filter-cat" onchange="render()">
+      <option value="">All categories</option>
+    </select>
+  </div>
+  <div id="stats" class="stats"></div>
+  <div id="grid" class="qa-grid"></div>
+</main>
+
+<!-- Form modal -->
+<div class="overlay" id="form-modal" onclick="handleBgClick(event,'form-modal')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="modal-title">New Q&amp;A</h2>
+    <div class="field"><label>Question *</label><input type="text" id="f-q" placeholder="e.g. How do I loop through rows in VBA?"></div>
+    <div class="field">
+      <label>Category</label>
+      <select id="f-cat">
+        <option>General</option><option>VBA</option><option>Excel</option><option>SQL</option>
+        <option>Python</option><option>Logic</option><option>Formula</option><option>Tips</option><option>Other</option>
+      </select>
+    </div>
+    <div class="field"><label>Answer *</label><textarea id="f-a" placeholder="Write the answer here..."></textarea></div>
+    <div class="field"><label>Tags (comma separated)</label><input type="text" id="f-tags" placeholder="e.g. loop, range, cells"></div>
+    <div class="modal-actions">
+      <button class="btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" id="save-btn" onclick="saveEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail modal -->
+<div class="detail-overlay" id="detail-modal" onclick="handleBgClick(event,'detail-modal')">
+  <div class="detail-box" onclick="event.stopPropagation()">
+    <div class="detail-q">
+      <div class="q-icon">Q</div>
+      <span id="d-q"></span>
+    </div>
+    <div class="detail-meta" id="d-meta"></div>
+    <div class="detail-a" id="d-a"></div>
+    <div class="detail-actions">
+      <button class="btn-sm" id="copy-btn" onclick="copyAnswer()">📋 Copy answer</button>
+      <button class="btn-sm" onclick="editFromDetail()">✎ Edit</button>
+      <button class="btn-sm" onclick="closeDetail()">✕ Close</button>
+      <span class="copy-ok" id="copy-ok"></span>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
+    authDomain: "vb-code-vault.firebaseapp.com",
+    projectId: "vb-code-vault",
+    storageBucket: "vb-code-vault.firebasestorage.app",
+    messagingSenderId: "773245175115",
+    appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const col = db.collection('qa_entries');
+  const authDoc = db.collection('_config').doc('auth');
+
+  let entries = [];
+  let editId = null;
+  let detailId = null;
+  let saving = false;
+
+  /* ── Status ── */
+  function setStatus(state, label) {
+    document.getElementById('status-dot').className = 'status-dot ' + (state || '');
+    document.getElementById('status-label').textContent = label;
+  }
+
+  /* ── Firestore listener ── */
+  function startListener() {
+    setStatus('', 'Connecting...');
+    col.orderBy('createdAt', 'desc').onSnapshot(snap => {
+      entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setStatus('online', 'Online');
+      render();
+    }, err => {
+      setStatus('error', 'Error');
+      showToast('Could not connect to database.', true);
+    });
+  }
+
+  /* ── Render ── */
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fmtDate(ts) {
+    if (!ts) return '';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+  }
+
+  function render() {
+    const q = document.getElementById('search').value.toLowerCase().trim();
+    const catFilter = document.getElementById('filter-cat').value;
+
+    const cats = [...new Set(entries.map(e => e.category).filter(Boolean))].sort();
+    const sel = document.getElementById('filter-cat');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">All categories</option>' +
+      cats.map(c => `<option${c===prev?' selected':''}>${esc(c)}</option>`).join('');
+
+    let list = entries.filter(e => {
+      const matchQ = !q || (e.question||'').toLowerCase().includes(q) || (e.answer||'').toLowerCase().includes(q) || (e.tags||'').toLowerCase().includes(q);
+      return matchQ && (!catFilter || e.category === catFilter);
+    });
+
+    const total = entries.length;
+    document.getElementById('total-badge').textContent = total + ' entr' + (total !== 1 ? 'ies' : 'y');
+    document.getElementById('stats').textContent = (q || catFilter)
+      ? `Showing ${list.length} of ${total}`
+      : total > 0 ? `${total} entr${total!==1?'ies':'y'} stored` : '';
+
+    const grid = document.getElementById('grid');
+    if (!list.length) {
+      grid.innerHTML = total === 0
+        ? `<div class="empty"><div class="empty-icon">🧠</div><div>No Q&amp;A entries yet.</div><div style="margin-top:6px">Click <strong>+ New Q&amp;A</strong> to add your first entry!</div></div>`
+        : `<div class="empty"><div class="empty-icon">🔍</div><div>No entries match your search.</div></div>`;
+      return;
+    }
+
+    grid.innerHTML = list.map(e => {
+      const answerPreview = esc((e.answer||'').substring(0, 220) + ((e.answer||'').length > 220 ? '...' : ''));
+      const tags = (e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
+      return `
+        <div class="qa-card">
+          <div class="qa-card-header">
+            <div class="q-icon">Q</div>
+            <div class="qa-question">${esc(e.question||'')}</div>
+          </div>
+          <div class="qa-answer" id="ans-${e.id}">${answerPreview}</div>
+          <div class="qa-meta">
+            <span class="badge">${esc(e.category||'General')}</span>
+            ${tags.map(t=>`<span style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:20px;padding:1px 7px;">${esc(t)}</span>`).join('')}
+            <span class="date">${fmtDate(e.createdAt)}</span>
+          </div>
+          <div class="qa-actions">
+            <button class="btn-sm" onclick="openDetail('${e.id}')">👁 View</button>
+            <button class="btn-sm" onclick="openEdit('${e.id}')">✎ Edit</button>
+            <button class="btn-sm btn-danger" onclick="deleteEntry('${e.id}')">🗑 Delete</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  /* ── Form modal ── */
+  function openAdd() {
+    editId = null;
+    document.getElementById('modal-title').textContent = 'New Q&A';
+    document.getElementById('f-q').value = '';
+    document.getElementById('f-a').value = '';
+    document.getElementById('f-tags').value = '';
+    document.getElementById('f-cat').value = 'General';
+    document.getElementById('form-modal').classList.add('open');
+    setTimeout(() => document.getElementById('f-q').focus(), 50);
+  }
+
+  function openEdit(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    editId = id;
+    document.getElementById('modal-title').textContent = 'Edit Q&A';
+    document.getElementById('f-q').value = e.question || '';
+    document.getElementById('f-a').value = e.answer || '';
+    document.getElementById('f-tags').value = e.tags || '';
+    document.getElementById('f-cat').value = e.category || 'General';
+    closeDetail();
+    document.getElementById('form-modal').classList.add('open');
+    setTimeout(() => document.getElementById('f-q').focus(), 50);
+  }
+
+  function closeModal() { document.getElementById('form-modal').classList.remove('open'); }
+
+  async function saveEntry() {
+    if (saving) return;
+    const question = document.getElementById('f-q').value.trim();
+    const answer   = document.getElementById('f-a').value.trim();
+    const tags     = document.getElementById('f-tags').value.trim();
+    const category = document.getElementById('f-cat').value;
+    if (!question) { document.getElementById('f-q').focus(); showToast('Please enter a question.', true); return; }
+    if (!answer)   { document.getElementById('f-a').focus(); showToast('Please enter an answer.', true); return; }
+
+    saving = true;
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      if (editId) {
+        await col.doc(editId).update({ question, answer, tags, category, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        showToast('Entry updated!');
+      } else {
+        await col.add({ question, answer, tags, category, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        showToast('Entry saved!');
+      }
+      closeModal();
+    } catch(err) {
+      showToast('Save failed. Check your connection.', true);
+    } finally {
+      saving = false; btn.disabled = false; btn.textContent = 'Save';
+    }
+  }
+
+  /* ── Detail modal ── */
+  function openDetail(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    detailId = id;
+    document.getElementById('d-q').textContent = e.question || '';
+    const tags = (e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
+    document.getElementById('d-meta').innerHTML =
+      `<span class="badge">${esc(e.category||'General')}</span>
+       ${tags.map(t=>`<span style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:20px;padding:1px 7px;">${esc(t)}</span>`).join('')}
+       <span style="font-size:12px;color:var(--text3);margin-left:auto">${fmtDate(e.createdAt)}</span>`;
+    document.getElementById('d-a').textContent = e.answer || '';
+    document.getElementById('copy-btn').textContent = '📋 Copy answer';
+    document.getElementById('copy-ok').textContent = '';
+    document.getElementById('detail-modal').classList.add('open');
+  }
+
+  function closeDetail() { document.getElementById('detail-modal').classList.remove('open'); }
+  function editFromDetail() { if (detailId) openEdit(detailId); }
+
+  /* ── Copy ── */
+  function copyText(text, onSuccess, onFail) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(onSuccess).catch(() => fallbackCopy(text, onSuccess, onFail));
+    } else { fallbackCopy(text, onSuccess, onFail); }
+  }
+  function fallbackCopy(text, onSuccess, onFail) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly','');
+      ta.style.cssText = 'position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;';
+      document.body.appendChild(ta); ta.focus(); ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) onSuccess(); else onFail();
+    } catch(e) { onFail(); }
+  }
+  function copyAnswer() {
+    const e = entries.find(x => x.id === detailId);
+    if (!e) return;
+    copyText(e.answer||'', () => {
+      document.getElementById('copy-btn').textContent = '✓ Copied!';
+      document.getElementById('copy-ok').textContent = 'Answer copied';
+      setTimeout(() => { document.getElementById('copy-btn').textContent = '📋 Copy answer'; document.getElementById('copy-ok').textContent = ''; }, 2000);
+    }, () => showToast('Copy failed.', true));
+  }
+
+  /* ── Delete ── */
+  async function deleteEntry(id) {
+    if (!confirm('Delete this entry? This cannot be undone.')) return;
+    try { await col.doc(id).delete(); showToast('Entry deleted.'); }
+    catch(e) { showToast('Delete failed.', true); }
+  }
+
+  /* ── Helpers ── */
+  function handleBgClick(e, id) { if (e.target === document.getElementById(id)) document.getElementById(id).classList.remove('open'); }
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = isError ? 'error-toast show' : 'show';
+    clearTimeout(t._timer); t._timer = setTimeout(() => { t.className = ''; }, 2500);
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); closeDetail(); }
+  });
+
+  /* ── Password lock (shared with Code Vault via same Firebase doc) ── */
+  const SESSION_KEY = 'vb_vault_session';
+
+  async function hashPass(pass) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass + 'vb_vault_salt_2024'));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  function toggleLockVis() {
+    const inp = document.getElementById('lock-input');
+    const btn = document.getElementById('lock-vis-btn');
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+    else { inp.type = 'password'; btn.textContent = '👁'; }
+  }
+  function setLockLoading(on) {
+    const btn = document.querySelector('.lock-btn');
+    btn.textContent = on ? 'Checking...' : 'Unlock';
+    btn.disabled = on;
+  }
+  async function unlock() {
+    const input = document.getElementById('lock-input').value;
+    if (!input) { showLockError('Please enter a password.'); return; }
+    setLockLoading(true);
+    try {
+      const hash = await hashPass(input);
+      const snap = await authDoc.get();
+      if (!snap.exists) {
+        await authDoc.set({ hash, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        grantAccess();
+      } else if (snap.data().hash === hash) {
+        grantAccess();
+      } else {
+        showLockError('Incorrect password. Try again.');
+        const inp = document.getElementById('lock-input');
+        inp.classList.add('shake'); inp.value = '';
+        setTimeout(() => inp.classList.remove('shake'), 400);
+      }
+    } catch(e) { showLockError('Connection error. Check your internet.'); }
+    finally { setLockLoading(false); }
+  }
+  function showLockError(msg) {
+    document.getElementById('lock-error').textContent = msg;
+    setTimeout(() => document.getElementById('lock-error').textContent = '', 3000);
+  }
+  function grantAccess() {
+    sessionStorage.setItem(SESSION_KEY, '1');
+    document.getElementById('lock-screen').classList.remove('active');
+    document.getElementById('grid').innerHTML = [1,2,3].map(() => `
+      <div class="skeleton">
+        <div class="skel-line" style="width:60%"></div>
+        <div class="skel-line" style="width:100%;height:60px"></div>
+      </div>`).join('');
+    startListener();
+  }
+  function lockApp() {
+    sessionStorage.removeItem(SESSION_KEY);
+    document.getElementById('lock-input').value = '';
+    document.getElementById('lock-error').textContent = '';
+    document.getElementById('lock-screen').classList.add('active');
+    setTimeout(() => document.getElementById('lock-input').focus(), 100);
+  }
+  function checkAuth() {
+    if (sessionStorage.getItem(SESSION_KEY) === '1') { grantAccess(); return; }
+    document.getElementById('lock-screen').classList.add('active');
+    setTimeout(() => document.getElementById('lock-input').focus(), 100);
+  }
+
+  checkAuth();
+</script>
+</body>
+</html>
