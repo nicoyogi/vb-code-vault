@@ -3,919 +3,326 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VB Code Vault</title>
+  <title>My Dev Space</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #f8f7f4;
-      --surface: #ffffff;
-      --surface2: #f1efe8;
-      --border: rgba(0,0,0,0.12);
-      --border2: rgba(0,0,0,0.22);
-      --text: #1a1a18;
-      --text2: #5f5e5a;
-      --text3: #888780;
-      --accent: #185FA5;
-      --accent-bg: #E6F1FB;
-      --accent-text: #0C447C;
-      --green-bg: #EAF3DE;
-      --green-text: #3B6D11;
-      --red-bg: #FCEBEB;
-      --red-text: #A32D2D;
-      --red-border: #F09595;
-      --mono: 'Courier New', Courier, monospace;
-      --radius: 8px;
-      --radius-lg: 12px;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #1c1c1a;
-        --surface: #252523;
-        --surface2: #2c2c2a;
-        --border: rgba(255,255,255,0.10);
-        --border2: rgba(255,255,255,0.20);
-        --text: #f0ede8;
-        --text2: #b4b2a9;
-        --text3: #888780;
-        --accent: #378ADD;
-        --accent-bg: #042C53;
-        --accent-text: #85B7EB;
-        --green-bg: #173404;
-        --green-text: #C0DD97;
-        --red-bg: #501313;
-        --red-text: #F09595;
-        --red-border: #791F1F;
-      }
+      --bg: #080810;
+      --surface: #0f0f1a;
+      --border: rgba(255,255,255,0.07);
+      --text: #e8e6f0;
+      --text2: #8a88a0;
+      --text3: #4a4860;
+      --accent-code: #5b9cf6;
+      --accent-code-glow: rgba(91,156,246,0.12);
+      --accent-qa: #a78bfa;
+      --accent-qa-glow: rgba(167,139,250,0.12);
+      --mono: 'DM Mono', monospace;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Syne', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    /* Header */
-    header {
-      background: var(--surface);
-      border-bottom: 0.5px solid var(--border);
-      padding: 0 1.5rem;
       display: flex;
-      align-items: center;
-      gap: 12px;
-      height: 56px;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    .logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--text); text-decoration: none; }
-    .logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: 700; font-family: var(--mono); }
-    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-    #total-badge { font-size: 12px; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 20px; padding: 3px 10px; color: var(--text2); }
-
-    /* Status indicator */
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #888780; flex-shrink: 0; transition: background 0.3s; }
-    .status-dot.online { background: #639922; }
-    .status-dot.error { background: #E24B4A; }
-    .status-wrap { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text3); }
-
-    /* Main */
-    main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-
-    /* Toolbar */
-    .toolbar { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
-    .toolbar input[type="text"] {
-      flex: 1; min-width: 180px; height: 36px;
-      border: 0.5px solid var(--border2); border-radius: var(--radius);
-      padding: 0 12px; font-size: 14px;
-      background: var(--surface); color: var(--text);
-      outline: none; transition: border-color 0.15s;
-    }
-    .toolbar input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
-    .toolbar select {
-      height: 36px; border: 0.5px solid var(--border2); border-radius: var(--radius);
-      padding: 0 10px; font-size: 14px;
-      background: var(--surface); color: var(--text);
-      outline: none; cursor: pointer; min-width: 140px;
-    }
-    .btn-primary {
-      height: 36px; background: var(--accent); color: white;
-      border: none; border-radius: var(--radius);
-      padding: 0 16px; font-size: 14px; font-weight: 500;
-      cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
-    }
-    .btn-primary:hover { opacity: 0.88; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-sm {
-      height: 30px; background: transparent; border: 0.5px solid var(--border2);
-      border-radius: var(--radius); padding: 0 12px; font-size: 12px;
-      cursor: pointer; color: var(--text2); transition: background 0.12s; white-space: nowrap;
-    }
-    .btn-sm:hover { background: var(--surface2); }
-    .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-danger { color: var(--red-text); border-color: var(--red-border); }
-    .btn-danger:hover { background: var(--red-bg); }
-
-    /* Stats */
-    .stats { font-size: 13px; color: var(--text3); margin-bottom: 1rem; }
-
-    /* Snippet grid */
-    .snippet-grid { display: grid; gap: 12px; }
-
-    /* Card */
-    .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; transition: border-color 0.15s; }
-    .card:hover { border-color: var(--border2); }
-    .card-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
-    .card-title { font-size: 15px; font-weight: 500; flex: 1; }
-    .card-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
-    .date { font-size: 12px; color: var(--text3); margin-left: auto; }
-    .card-desc { font-size: 13px; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
-
-    /* ── Code preview (card) ── */
-    .code-preview-wrap {
-      border-radius: var(--radius);
-      overflow: hidden;
-      border: 1px solid #1a1a2e;
-      margin-bottom: 2px;
-    }
-    .code-preview-bar {
-      background: #1e1e2e;
-      padding: 5px 10px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .code-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .copy-inline-btn {
-      margin-left: auto;
-      background: transparent;
-      border: 1px solid #3d3d5c;
-      border-radius: 4px;
-      color: #6c7086;
-      font-size: 11px;
-      font-family: 'Consolas', monospace;
-      padding: 2px 8px;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
-    .copy-inline-btn:hover { background: #2a2a3e; color: #cdd6f4; border-color: #6c7086; }
-    .copy-inline-btn.copied { color: #a6e3a1; border-color: #a6e3a1; }
-    .code-preview {
-      background: #13131f;
-      padding: 10px 12px 10px 0;
-      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', var(--mono);
-      font-size: 12px;
-      overflow: hidden;
-      max-height: 100px;
-      line-height: 1.7;
-      display: table;
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .code-preview .ln {
-      display: table-cell;
-      width: 32px;
-      min-width: 32px;
-      text-align: right;
-      padding-right: 10px;
-      color: #3d3d5c;
-      user-select: none;
-      font-size: 11px;
-      vertical-align: top;
-      padding-left: 8px;
-    }
-    .code-preview .lc {
-      display: table-cell;
-      white-space: pre;
-      color: #cdd6f4;
-      padding-right: 12px;
-    }
-    .code-preview .cr { display: table-row; }
-
-    /* ── Detail code view ── */
-    .detail-code-wrap {
-      border-radius: var(--radius);
-      overflow: hidden;
-      border: 1px solid #1a1a2e;
-    }
-    .detail-code-bar {
-      background: #1e1e2e;
-      padding: 7px 12px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .detail-code {
-      background: #13131f;
-      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', var(--mono);
-      font-size: 13px;
-      color: #cdd6f4;
-      flex: 1;
-      min-height: 0;
-      overflow-y: auto;
-      overflow-x: auto;
-      line-height: 1.7;
-    }
-    .detail-code .cr { display: flex; }
-    .detail-code .cr:hover { background: rgba(255,255,255,0.03); }
-    .detail-code .ln {
-      flex-shrink: 0;
-      width: 42px;
-      text-align: right;
-      padding: 0 14px 0 10px;
-      color: #3d3d5c;
-      user-select: none;
-      font-size: 12px;
-      border-right: 1px solid #1e1e3a;
-    }
-    .detail-code .lc { flex: 1; white-space: pre; padding: 0 12px 0 14px; }
-
-    /* VB Syntax colors (Catppuccin-inspired) */
-    .kw  { color: #cba6f7; font-weight: 600; }   /* keywords */
-    .str { color: #a6e3a1; }                       /* strings */
-    .cmt { color: #6c7086; font-style: italic; }   /* comments */
-    .num { color: #fab387; }                        /* numbers */
-    .func{ color: #89b4fa; }                        /* functions/subs */
-    .typ { color: #f38ba8; }                        /* types */
-    .op  { color: #94e2d5; }                        /* operators */
-
-    .card-actions { display: flex; gap: 6px; margin-top: 10px; }
-
-    /* Skeleton loader */
-    .skeleton { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
-    .skel-line { background: var(--surface2); border-radius: 4px; height: 14px; margin-bottom: 10px; animation: shimmer 1.4s ease-in-out infinite; }
-    @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.5} }
-
-    /* Empty */
-    .empty { text-align: center; color: var(--text3); padding: 4rem 1rem; font-size: 14px; }
-    .empty-icon { font-size: 36px; margin-bottom: 12px; }
-
-    /* Overlays */
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
-    .overlay.open { display: flex; }
-
-    /* Form modal */
-    .modal { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; width: min(540px, 100%); max-height: 92vh; overflow-y: auto; }
-    .modal h2 { font-size: 16px; font-weight: 500; margin-bottom: 1.25rem; }
-    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
-    .field label { font-size: 12px; color: var(--text2); font-weight: 500; }
-    .field input[type="text"], .field select, .field textarea {
-      width: 100%; border: 0.5px solid var(--border2); border-radius: var(--radius);
-      padding: 8px 12px; font-size: 14px; background: var(--surface); color: var(--text);
-      outline: none; font-family: inherit; transition: border-color 0.15s;
-    }
-    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
-    .field textarea { min-height: 220px; font-family: var(--mono); font-size: 13px; resize: vertical; line-height: 1.6; }
-    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
-
-    /* Detail overlay */
-    .detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
-    .detail-overlay.open { display: flex; }
-    .detail-box { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.25rem; width: min(700px, 100%); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
-    .detail-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; flex-shrink: 0; }
-    .detail-title { font-size: 16px; font-weight: 500; flex: 1; }
-    .detail-code-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; border-radius: var(--radius); border: 1px solid #1a1a2e; overflow: hidden; }
-    .detail-code-bar { flex-shrink: 0; }
-    .detail-actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-shrink: 0; }
-    .copy-ok { font-size: 12px; color: var(--green-text); }
-
-    /* Toast */
-    #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 999; white-space: nowrap; }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    #toast.error-toast { background: #A32D2D; color: #fff; }
-
-    /* Lock screen */
-    #lock-screen {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: #0d0d14;
-      z-index: 1000;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
     }
-    #lock-screen.active { display: flex; }
-    .lock-box {
-      background: #1a1a2e;
-      border: 1px solid #2a2a42;
-      border-radius: 16px;
-      padding: 2.5rem 2rem;
-      width: min(360px, 92vw);
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-top {
+      position: fixed;
+      top: -180px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(91,156,246,0.07) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 800px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0;
-    }
-    .lock-icon {
-      width: 52px; height: 52px;
-      background: #185FA5;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      margin-bottom: 1.25rem;
-    }
-    .lock-title { font-size: 18px; font-weight: 600; color: #cdd6f4; margin-bottom: 4px; }
-    .lock-sub { font-size: 13px; color: #6c7086; margin-bottom: 1.5rem; text-align: center; }
-    .lock-input-wrap { position: relative; width: 100%; margin-bottom: 12px; }
-    .lock-input {
-      width: 100%;
-      background: #13131f;
-      border: 1px solid #2a2a42;
-      border-radius: 8px;
-      padding: 10px 44px 10px 14px;
-      font-size: 15px;
-      color: #cdd6f4;
-      outline: none;
-      font-family: inherit;
-      letter-spacing: 0.08em;
-      transition: border-color 0.15s;
-    }
-    .lock-input:focus { border-color: #378ADD; }
-    .lock-input.shake { animation: shake 0.35s ease; border-color: #E24B4A; }
-    .lock-toggle {
-      position: absolute; right: 12px; top: 50%;
-      transform: translateY(-50%);
-      background: none; border: none; cursor: pointer;
-      color: #6c7086; font-size: 15px; padding: 4px;
-      line-height: 1;
-    }
-    .lock-toggle:hover { color: #cdd6f4; }
-    .lock-btn {
-      width: 100%;
-      background: #185FA5;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 11px;
-      font-size: 15px;
-      font-weight: 500;
-      cursor: pointer;
-      font-family: inherit;
-      transition: opacity 0.15s;
-      margin-bottom: 12px;
-    }
-    .lock-btn:hover { opacity: 0.88; }
-    .lock-error { font-size: 12px; color: #E24B4A; min-height: 16px; text-align: center; }
-    .lock-hint { font-size: 11px; color: #3d3d5c; margin-top: 1.25rem; text-align: center; line-height: 1.6; }
-    @keyframes shake {
-      0%,100% { transform: translateX(0); }
-      20% { transform: translateX(-8px); }
-      40% { transform: translateX(8px); }
-      60% { transform: translateX(-6px); }
-      80% { transform: translateX(6px); }
     }
 
-    @media (max-width: 540px) {
-      header { padding: 0 1rem; }
-      .toolbar { gap: 6px; }
-      .toolbar select { min-width: 100px; }
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text3);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-bottom: 1.1rem;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .title {
+      font-size: clamp(2.4rem, 6vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.08;
+      text-align: center;
+      margin-bottom: 1rem;
+      animation: fadeUp 0.5s 0.08s ease both;
+      letter-spacing: -0.02em;
+    }
+
+    .title .grad {
+      background: linear-gradient(125deg, #5b9cf6 0%, #a78bfa 55%, #f472b6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--text2);
+      text-align: center;
+      margin-bottom: 3.5rem;
+      animation: fadeUp 0.5s 0.16s ease both;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      width: 100%;
+      animation: fadeUp 0.5s 0.24s ease both;
+    }
+
+    .card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 2rem 1.75rem;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 0.22s cubic-bezier(.2,.8,.3,1), border-color 0.22s;
+    }
+
+    .card-glow {
+      position: absolute;
+      inset: 0;
+      border-radius: 22px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .card-code .card-glow { background: radial-gradient(ellipse at 20% 20%, var(--accent-code-glow), transparent 65%); }
+    .card-qa   .card-glow { background: radial-gradient(ellipse at 20% 20%, var(--accent-qa-glow),   transparent 65%); }
+
+    .card:hover { transform: translateY(-5px); }
+    .card:hover .card-glow { opacity: 1; }
+    .card-code:hover { border-color: rgba(91,156,246,0.28); }
+    .card-qa:hover   { border-color: rgba(167,139,250,0.28); }
+
+    .card-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      margin-bottom: 1.4rem;
+      position: relative; z-index: 1;
+      transition: transform 0.22s;
+    }
+    .card:hover .card-icon { transform: scale(1.08); }
+    .card-code .card-icon { background: rgba(91,156,246,0.1); box-shadow: 0 0 0 1px rgba(91,156,246,0.15); }
+    .card-qa   .card-icon { background: rgba(167,139,250,0.1); box-shadow: 0 0 0 1px rgba(167,139,250,0.15); }
+
+    .card-num {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      position: relative; z-index: 1;
+    }
+    .card-code .card-num { color: var(--accent-code); }
+    .card-qa   .card-num { color: var(--accent-qa); }
+
+    .card-name {
+      font-size: 1.45rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      position: relative; z-index: 1;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+    }
+
+    .card-desc {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--text2);
+      line-height: 1.75;
+      position: relative; z-index: 1;
+      flex: 1;
+    }
+
+    .card-footer {
+      margin-top: 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative; z-index: 1;
+    }
+
+    .card-tags {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid;
+    }
+    .card-code .tag { color: var(--accent-code); border-color: rgba(91,156,246,0.2); background: rgba(91,156,246,0.06); }
+    .card-qa   .tag { color: var(--accent-qa);   border-color: rgba(167,139,250,0.2); background: rgba(167,139,250,0.06); }
+
+    .card-arrow {
+      font-size: 20px;
+      color: var(--text3);
+      transition: transform 0.2s, color 0.2s;
+      line-height: 1;
+    }
+    .card:hover .card-arrow { transform: translateX(5px); }
+    .card-code:hover .card-arrow { color: var(--accent-code); }
+    .card-qa:hover   .card-arrow { color: var(--accent-qa); }
+
+    /* Decorative corner code */
+    .card-deco {
+      position: absolute;
+      bottom: 16px;
+      right: 18px;
+      font-family: var(--mono);
+      font-size: 9px;
+      line-height: 1.9;
+      text-align: right;
+      pointer-events: none;
+      user-select: none;
+      transition: opacity 0.3s;
+      opacity: 0.06;
+    }
+    .card:hover .card-deco { opacity: 0.13; }
+    .card-code .card-deco { color: var(--accent-code); }
+    .card-qa   .card-deco { color: var(--accent-qa); }
+
+    /* Divider line between cards */
+    .divider {
+      display: none;
+    }
+
+    .footer {
+      margin-top: 2.5rem;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text3);
+      text-align: center;
+      animation: fadeUp 0.5s 0.32s ease both;
+      line-height: 2;
+    }
+
+    .footer a { color: var(--text3); text-decoration: none; }
+    .footer a:hover { color: var(--text2); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 580px) {
+      .cards { grid-template-columns: 1fr; }
+      .title { font-size: 2.2rem; }
+      .card { padding: 1.5rem; }
     }
   </style>
 </head>
 <body>
 
-<!-- Lock screen -->
-<div id="lock-screen">
-  <div class="lock-box">
-    <div class="lock-icon">🔒</div>
-    <div class="lock-title">VB Code Vault</div>
-    <div class="lock-sub">Enter your password to access your snippets</div>
-    <div class="lock-input-wrap">
-      <input class="lock-input" type="password" id="lock-input" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()">
-      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn" title="Show/hide">👁</button>
-    </div>
-    <button class="lock-btn" onclick="unlock()">Unlock</button>
-    <div class="lock-error" id="lock-error"></div>
-    <div class="lock-hint">Password is stored locally on this device.<br>To change it, clear your browser data for this site.</div>
-  </div>
-</div>
+<div class="glow-top"></div>
 
-<header>
-  <a href="#" class="logo">
-    <div class="logo-icon">VB</div>
-    VB Code Vault
-  </a>
-  <div class="header-right">
-    <div class="status-wrap">
-      <div class="status-dot" id="status-dot"></div>
-      <span id="status-label">Connecting...</span>
-    </div>
-    <span id="total-badge">— snippets</span>
-    <button class="btn-sm" onclick="lockApp()" title="Lock">🔒</button>
-    <button class="btn-primary" id="add-btn" onclick="openAdd()">+ New snippet</button>
-  </div>
-</header>
+<div class="container">
 
-<main>
-  <div class="toolbar">
-    <input type="text" id="search" placeholder="&#128269; Search by title, code, or description..." oninput="render()">
-    <select id="filter-cat" onchange="render()">
-      <option value="">All categories</option>
-    </select>
-  </div>
-  <div id="stats" class="stats"></div>
-  <div id="grid" class="snippet-grid"></div>
-</main>
+  <div class="eyebrow">// personal workspace</div>
 
-<!-- Form modal -->
-<div class="overlay" id="form-modal" onclick="handleBgClick(event,'form-modal')">
-  <div class="modal" onclick="event.stopPropagation()">
-    <h2 id="modal-title">New snippet</h2>
-    <div class="field"><label>Title *</label><input type="text" id="f-title" placeholder="e.g. File reader module"></div>
-    <div class="field">
-      <label>Category</label>
-      <select id="f-cat">
-        <option>General</option><option>Form</option><option>Database</option>
-        <option>File I/O</option><option>String</option><option>Math</option>
-        <option>UI</option><option>Network</option><option>Excel</option><option>Other</option>
-      </select>
-    </div>
-    <div class="field"><label>Description</label><input type="text" id="f-desc" placeholder="Short description (optional)"></div>
-    <div class="field"><label>VB Code *</label><textarea id="f-code" placeholder="Paste your VB code here..."></textarea></div>
-    <div class="modal-actions">
-      <button class="btn-sm" onclick="closeModal()">Cancel</button>
-      <button class="btn-primary" id="save-btn" onclick="saveSnippet()">Save snippet</button>
-    </div>
-  </div>
-</div>
+  <h1 class="title">My <span class="grad">Dev Space</span></h1>
 
-<!-- Detail modal -->
-<div class="detail-overlay" id="detail-modal" onclick="handleBgClick(event,'detail-modal')">
-  <div class="detail-box" onclick="event.stopPropagation()">
-    <div class="detail-header">
-      <div style="flex:1">
-        <div class="detail-title" id="d-title"></div>
-        <div id="d-meta" style="margin-top:5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
+  <p class="subtitle">Select a module to get started</p>
+
+  <div class="cards">
+
+    <a href="code.html" class="card card-code">
+      <div class="card-glow"></div>
+      <div class="card-icon">💾</div>
+      <div class="card-num">Module 01</div>
+      <div class="card-name">VB Code Vault</div>
+      <div class="card-desc">Store, search &amp; organize your VB/VBA snippets. Syntax highlighted, cloud-synced via Firebase.</div>
+      <div class="card-footer">
+        <div class="card-tags">
+          <span class="tag">VB</span>
+          <span class="tag">VBA</span>
+          <span class="tag">Excel</span>
+        </div>
+        <span class="card-arrow">→</span>
       </div>
-      <button class="btn-sm" onclick="closeDetail()">&#10005; Close</button>
-    </div>
-    <div id="d-desc" style="font-size:13px;color:var(--text2);margin-bottom:8px;flex-shrink:0;"></div>
-    <div class="detail-code-wrap">
-      <div class="detail-code-bar">
-        <div class="code-dot" style="background:#ff5f57"></div>
-        <div class="code-dot" style="background:#febc2e"></div>
-        <div class="code-dot" style="background:#28c840"></div>
-        <span style="margin-left:8px;font-size:11px;color:#6c7086;font-family:'Consolas',monospace" id="d-filename">snippet.vb</span>
+      <div class="card-deco">Sub Store()<br>  snippet.save()<br>  highlight()<br>End Sub</div>
+    </a>
+
+    <a href="qa.html" class="card card-qa">
+      <div class="card-glow"></div>
+      <div class="card-icon">🧠</div>
+      <div class="card-num">Module 02</div>
+      <div class="card-name">Q&amp;A Knowledge Base</div>
+      <div class="card-desc">Save questions, answers &amp; notes. Build your personal knowledge library for quick reference.</div>
+      <div class="card-footer">
+        <div class="card-tags">
+          <span class="tag">Q&amp;A</span>
+          <span class="tag">Notes</span>
+          <span class="tag">Tips</span>
+        </div>
+        <span class="card-arrow">→</span>
       </div>
-      <div id="d-code" class="detail-code"></div>
-    </div>
-    <div class="detail-actions">
-      <button class="btn-sm" id="copy-btn" onclick="copyCode()">&#128203; Copy code</button>
-      <button class="btn-sm" onclick="editFromDetail()">&#9998; Edit</button>
-      <span class="copy-ok" id="copy-ok"></span>
-    </div>
+      <div class="card-deco">ask("How to?")<br>  .find(answer)<br>  .save(note)<br>  // done ✓</div>
+    </a>
+
   </div>
+
+  <div class="footer">
+    codingkuh.my.id &nbsp;·&nbsp; Firebase + GitHub Pages<br>
+    <a href="code.html">Code Vault</a> &nbsp;·&nbsp; <a href="qa.html">Q&amp;A Base</a>
+  </div>
+
 </div>
-
-<div id="toast"></div>
-
-<!-- Firebase SDK (compat version — works without bundler) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-<script>
-  /* ── VB Syntax Highlighter ── */
-  function highlightVB(code) {
-    const keywords = /\b(Sub|End Sub|Function|End Function|Dim|As|Integer|String|Boolean|Double|Long|Single|Date|Object|Variant|Byte|If|Then|Else|ElseIf|End If|For|To|Step|Next|Do|Loop|While|Wend|Until|Select|Case|End Select|With|End With|Class|End Class|Module|End Module|Property|Get|Set|Let|End Property|Return|Call|New|Nothing|True|False|Null|Empty|Me|MyBase|MyClass|Public|Private|Protected|Friend|Static|Shared|ReadOnly|Const|Enum|End Enum|Structure|End Structure|Interface|End Interface|Implements|Inherits|Imports|Namespace|End Namespace|Try|Catch|Finally|End Try|Throw|RaiseEvent|AddHandler|RemoveHandler|And|Or|Not|Xor|AndAlso|OrElse|Is|IsNot|Like|Mod|In|Of|ByVal|ByRef|Optional|ParamArray|Overrides|Overloads|Shadows|MustOverride|MustInherit|NotOverridable|NotInheritable|Handles|Delegate|Event|Declare|Extern|Exit|GoTo|Resume|On Error|Error|MsgBox|Print|Write|WriteLine|Input|Open|Close|Get|Put|Seek|Loc|LOF|EOF|FileLen|FreeFile|Dir|Kill|Name|MkDir|RmDir|ChDir|ChDrive|Shell|Environ|Format|CStr|CInt|CDbl|CBool|CLng|CSng|CByte|CDate|CObj|CType|TryCast|DirectCast|TypeOf|GetType|AddressOf)\b/g;
-    const types = /\b(Integer|Long|Short|Byte|Single|Double|Decimal|Boolean|Char|String|Date|Object|Variant|Currency)\b/g;
-
-    return code.split('\n').map((line, i) => {
-      let safe = line
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-      // Comments (must be first — skip rest of line)
-      safe = safe.replace(/(&#39;|')(.*$)/, '<span class="cmt">$1$2</span>');
-      if (/^(\s*)(Rem\b.*)$/i.test(safe)) {
-        safe = safe.replace(/^(\s*)(Rem\b.*)$/i, '$1<span class="cmt">$2</span>');
-      }
-
-      // Strings (only if no comment yet applied)
-      if (!safe.includes('class="cmt"')) {
-        safe = safe.replace(/"([^"]*)"/g, '<span class="str">"$1"</span>');
-      }
-
-      // Numbers
-      safe = safe.replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
-
-      // Sub/Function names
-      safe = safe.replace(/\b(Sub|Function|Property)\s+([A-Za-z_]\w*)/g,
-        '<span class="kw">$1</span> <span class="func">$2</span>');
-
-      // Keywords
-      safe = safe.replace(keywords, m => `<span class="kw">${m}</span>`);
-
-      // Operators
-      safe = safe.replace(/(\s)(=|&lt;&gt;|&lt;=|&gt;=|&lt;|&gt;|&amp;|\+|-|\*|\/)(\s)/g,
-        '$1<span class="op">$2</span>$3');
-
-      return safe;
-    });
-  }
-
-  function renderCodePreview(code, maxLines = 5) {
-    const lines = highlightVB(code);
-    const shown = lines.slice(0, maxLines);
-    return shown.map((l, i) =>
-      `<div class="cr"><span class="ln">${i+1}</span><span class="lc">${l}</span></div>`
-    ).join('') + (lines.length > maxLines
-      ? `<div class="cr"><span class="ln">…</span><span class="lc" style="color:#3d3d5c">+${lines.length - maxLines} more lines</span></div>`
-      : '');
-  }
-
-  function renderDetailCode(code) {
-    const lines = highlightVB(code);
-    return lines.map((l, i) =>
-      `<div class="cr"><span class="ln">${i+1}</span><span class="lc">${l}</span></div>`
-    ).join('');
-  }
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
-    authDomain: "vb-code-vault.firebaseapp.com",
-    projectId: "vb-code-vault",
-    storageBucket: "vb-code-vault.firebasestorage.app",
-    messagingSenderId: "773245175115",
-    appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const col = db.collection('snippets');
-
-  /* ── State ── */
-  let snippets = [];
-  let editId = null;
-  let detailId = null;
-  let saving = false;
-
-  /* ── Status helpers ── */
-  function setStatus(state, label) {
-    const dot = document.getElementById('status-dot');
-    const lbl = document.getElementById('status-label');
-    dot.className = 'status-dot ' + (state || '');
-    lbl.textContent = label;
-  }
-
-  /* ── Firestore: real-time listener ── */
-  function startListener() {
-    setStatus('', 'Connecting...');
-    col.orderBy('createdAt', 'desc').onSnapshot(snap => {
-      snippets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setStatus('online', 'Online');
-      render();
-    }, err => {
-      console.error(err);
-      setStatus('error', 'Error');
-      showToast('Could not connect to database.', true);
-    });
-  }
-
-  /* ── Render ── */
-  function esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-  function fmtDate(ts) {
-    if (!ts) return '';
-    const d = ts.toDate ? ts.toDate() : new Date(ts);
-    return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
-  }
-
-  function render() {
-    const q = document.getElementById('search').value.toLowerCase().trim();
-    const catFilter = document.getElementById('filter-cat').value;
-
-    const cats = [...new Set(snippets.map(s => s.category).filter(Boolean))].sort();
-    const sel = document.getElementById('filter-cat');
-    const prev = sel.value;
-    sel.innerHTML = '<option value="">All categories</option>' +
-      cats.map(c => `<option${c === prev ? ' selected' : ''}>${esc(c)}</option>`).join('');
-
-    let list = snippets.filter(s => {
-      const matchQ = !q ||
-        (s.title||'').toLowerCase().includes(q) ||
-        (s.code||'').toLowerCase().includes(q) ||
-        (s.desc||'').toLowerCase().includes(q);
-      const matchCat = !catFilter || s.category === catFilter;
-      return matchQ && matchCat;
-    });
-
-    const total = snippets.length;
-    document.getElementById('total-badge').textContent = total + ' snippet' + (total !== 1 ? 's' : '');
-    const statsEl = document.getElementById('stats');
-    statsEl.textContent = (q || catFilter)
-      ? `Showing ${list.length} of ${total} snippet${total !== 1 ? 's' : ''}`
-      : total > 0 ? `${total} snippet${total !== 1 ? 's' : ''} stored` : '';
-
-    const grid = document.getElementById('grid');
-    if (!list.length) {
-      grid.innerHTML = total === 0
-        ? `<div class="empty"><div class="empty-icon">&#128190;</div><div>No snippets yet.</div><div style="margin-top:6px">Click <strong>+ New snippet</strong> to save your first VB code!</div></div>`
-        : `<div class="empty"><div class="empty-icon">&#128269;</div><div>No snippets match your search.</div></div>`;
-      return;
-    }
-
-    grid.innerHTML = list.map(s => {
-      const highlighted = renderCodePreview(s.code || '');
-      return `
-        <div class="card">
-          <div class="card-header"><div class="card-title">${esc(s.title||'')}</div></div>
-          <div class="card-meta">
-            <span class="badge">${esc(s.category||'General')}</span>
-            <span class="date">${fmtDate(s.createdAt)}</span>
-          </div>
-          ${s.desc ? `<div class="card-desc">${esc(s.desc)}</div>` : ''}
-          <div class="code-preview-wrap">
-            <div class="code-preview-bar">
-              <div class="code-dot" style="background:#ff5f57"></div>
-              <div class="code-dot" style="background:#febc2e"></div>
-              <div class="code-dot" style="background:#28c840"></div>
-              <span style="margin-left:8px;font-size:10px;color:#6c7086;font-family:'Consolas',monospace">${esc(s.title||'snippet')}.vb</span>
-              <button class="copy-inline-btn" data-copy-id="${s.id}">copy</button>
-            </div>
-            <div class="code-preview">${highlighted}</div>
-          </div>
-          <div class="card-actions">
-            <button class="btn-sm" onclick="openDetail('${s.id}')">&#128065; View</button>
-            <button class="btn-sm" onclick="openEdit('${s.id}')">&#9998; Edit</button>
-            <button class="btn-sm btn-danger" onclick="deleteSnippet('${s.id}')">&#128465; Delete</button>
-          </div>
-        </div>`;
-    }).join('');
-  }
-
-  /* ── Form modal ── */
-  function openAdd() {
-    editId = null;
-    document.getElementById('modal-title').textContent = 'New snippet';
-    document.getElementById('f-title').value = '';
-    document.getElementById('f-desc').value = '';
-    document.getElementById('f-code').value = '';
-    document.getElementById('f-cat').value = 'General';
-    document.getElementById('form-modal').classList.add('open');
-    setTimeout(() => document.getElementById('f-title').focus(), 50);
-  }
-
-  function openEdit(id) {
-    const s = snippets.find(x => x.id === id);
-    if (!s) return;
-    editId = id;
-    document.getElementById('modal-title').textContent = 'Edit snippet';
-    document.getElementById('f-title').value = s.title || '';
-    document.getElementById('f-desc').value = s.desc || '';
-    document.getElementById('f-code').value = s.code || '';
-    document.getElementById('f-cat').value = s.category || 'General';
-    closeDetail();
-    document.getElementById('form-modal').classList.add('open');
-    setTimeout(() => document.getElementById('f-title').focus(), 50);
-  }
-
-  function closeModal() { document.getElementById('form-modal').classList.remove('open'); }
-
-  async function saveSnippet() {
-    if (saving) return;
-    const title = document.getElementById('f-title').value.trim();
-    const code  = document.getElementById('f-code').value.trim();
-    const desc  = document.getElementById('f-desc').value.trim();
-    const category = document.getElementById('f-cat').value;
-
-    if (!title) { document.getElementById('f-title').focus(); showToast('Please enter a title.', true); return; }
-    if (!code)  { document.getElementById('f-code').focus();  showToast('Please paste some VB code.', true); return; }
-
-    saving = true;
-    const btn = document.getElementById('save-btn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-
-    try {
-      if (editId) {
-        await col.doc(editId).update({ title, desc, code, category, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-        showToast('Snippet updated!');
-      } else {
-        await col.add({ title, desc, code, category, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-        showToast('Snippet saved!');
-      }
-      closeModal();
-    } catch(e) {
-      console.error(e);
-      showToast('Save failed. Check your connection.', true);
-    } finally {
-      saving = false;
-      btn.disabled = false;
-      btn.textContent = 'Save snippet';
-    }
-  }
-
-  /* ── Detail modal ── */
-  function openDetail(id) {
-    const s = snippets.find(x => x.id === id);
-    if (!s) return;
-    detailId = id;
-    document.getElementById('d-title').textContent = s.title || '';
-    document.getElementById('d-meta').innerHTML =
-      `<span class="badge">${esc(s.category||'General')}</span><span style="font-size:12px;color:var(--text3)">${fmtDate(s.createdAt)}</span>`;
-    document.getElementById('d-desc').textContent = s.desc || '';
-    document.getElementById('d-code').innerHTML = renderDetailCode(s.code || '');
-    document.getElementById('d-filename').textContent = (s.title || 'snippet').replace(/[^a-z0-9_\-]/gi,'_').toLowerCase() + '.vb';
-    document.getElementById('copy-btn').textContent = '\uD83D\uDCCB Copy code';
-    document.getElementById('copy-ok').textContent = '';
-    document.getElementById('detail-modal').classList.add('open');
-  }
-
-  function closeDetail() { document.getElementById('detail-modal').classList.remove('open'); }
-  function editFromDetail() { if (detailId) openEdit(detailId); }
-
-  function copyCode() {
-    const s = snippets.find(x => x.id === detailId);
-    if (!s) return;
-    copyText(
-      s.code || '',
-      () => {
-        document.getElementById('copy-btn').textContent = '\u2713 Copied!';
-        document.getElementById('copy-ok').textContent = 'Code copied to clipboard';
-        setTimeout(() => {
-          document.getElementById('copy-btn').textContent = '\uD83D\uDCCB Copy code';
-          document.getElementById('copy-ok').textContent = '';
-        }, 2000);
-      },
-      () => showToast('Copy failed — please select manually.', true)
-    );
-  }
-
-  /* ── Robust copy helper (clipboard API + textarea fallback) ── */
-  function copyText(text, onSuccess, onFail) {
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(onSuccess).catch(() => fallbackCopy(text, onSuccess, onFail));
-    } else {
-      fallbackCopy(text, onSuccess, onFail);
-    }
-  }
-
-  function fallbackCopy(text, onSuccess, onFail) {
-    try {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.setAttribute('readonly', '');
-      ta.style.cssText = 'position:fixed;top:0;left:0;width:2px;height:2px;padding:0;border:none;outline:none;box-shadow:none;background:transparent;opacity:0;';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.setSelectionRange(0, ta.value.length);
-      const ok = document.execCommand('copy');
-      document.body.removeChild(ta);
-      if (ok) onSuccess(); else onFail();
-    } catch(e) { onFail(); }
-  }
-
-  /* ── Copy inline (card bar) — delegated ── */
-  document.getElementById('grid').addEventListener('click', function(e) {
-    const btn = e.target.closest('[data-copy-id]');
-    if (!btn) return;
-    e.stopPropagation();
-    const id = btn.dataset.copyId;
-    const s = snippets.find(x => x.id === id);
-    if (!s) return;
-    copyText(
-      s.code || '',
-      () => {
-        btn.textContent = '✓ copied!';
-        btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
-      },
-      () => showToast('Copy failed — please select manually.', true)
-    );
-  });
-
-  /* ── Delete ── */
-  async function deleteSnippet(id) {
-    if (!confirm('Delete this snippet? This cannot be undone.')) return;
-    try {
-      await col.doc(id).delete();
-      showToast('Snippet deleted.');
-    } catch(e) {
-      showToast('Delete failed. Check your connection.', true);
-    }
-  }
-
-  function lockApp() {
-    sessionStorage.removeItem(PASS_KEY);
-    document.getElementById('lock-input').value = '';
-    document.getElementById('lock-error').textContent = '';
-    document.getElementById('lock-screen').classList.add('active');
-    setTimeout(() => document.getElementById('lock-input').focus(), 100);
-  }
-
-  /* ── Helpers ── */
-  function handleBgClick(e, id) {
-    if (e.target === document.getElementById(id)) document.getElementById(id).classList.remove('open');
-  }
-
-  function showToast(msg, isError) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = isError ? 'error-toast show' : 'show';
-    clearTimeout(t._timer);
-    t._timer = setTimeout(() => { t.className = ''; }, 2500);
-  }
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeModal(); closeDetail(); }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('search').focus(); }
-  });
-
-  /* ── Password lock (hash stored in Firestore) ── */
-  const SESSION_KEY = 'vb_vault_session';
-  const authDoc = db.collection('_config').doc('auth');
-
-  async function hashPass(pass) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass + 'vb_vault_salt_2024'));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-  }
-
-  function toggleLockVis() {
-    const inp = document.getElementById('lock-input');
-    const btn = document.getElementById('lock-vis-btn');
-    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
-    else { inp.type = 'password'; btn.textContent = '👁'; }
-  }
-
-  function setLockLoading(on) {
-    const btn = document.querySelector('.lock-btn');
-    btn.textContent = on ? 'Checking...' : 'Unlock';
-    btn.disabled = on;
-  }
-
-  async function unlock() {
-    const input = document.getElementById('lock-input').value;
-    if (!input) { showLockError('Please enter a password.'); return; }
-
-    setLockLoading(true);
-    try {
-      const hash = await hashPass(input);
-      const snap = await authDoc.get();
-
-      if (!snap.exists) {
-        // First time — save hash to Firestore
-        await authDoc.set({ hash, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-        grantAccess();
-      } else if (snap.data().hash === hash) {
-        grantAccess();
-      } else {
-        showLockError('Incorrect password. Try again.');
-        const inp = document.getElementById('lock-input');
-        inp.classList.add('shake');
-        inp.value = '';
-        setTimeout(() => inp.classList.remove('shake'), 400);
-      }
-    } catch(e) {
-      showLockError('Connection error. Check your internet.');
-      console.error(e);
-    } finally {
-      setLockLoading(false);
-    }
-  }
-
-  function showLockError(msg) {
-    document.getElementById('lock-error').textContent = msg;
-    setTimeout(() => document.getElementById('lock-error').textContent = '', 3000);
-  }
-
-  function grantAccess() {
-    sessionStorage.setItem(SESSION_KEY, '1');
-    document.getElementById('lock-screen').classList.remove('active');
-    document.getElementById('grid').innerHTML = [1,2,3].map(() => `
-      <div class="skeleton">
-        <div class="skel-line" style="width:55%"></div>
-        <div class="skel-line" style="width:25%;height:10px"></div>
-        <div class="skel-line" style="width:100%;height:60px"></div>
-      </div>`).join('');
-    startListener();
-  }
-
-  function lockApp() {
-    sessionStorage.removeItem(SESSION_KEY);
-    document.getElementById('lock-input').value = '';
-    document.getElementById('lock-error').textContent = '';
-    document.getElementById('lock-screen').classList.add('active');
-    setTimeout(() => document.getElementById('lock-input').focus(), 100);
-  }
-
-  function checkAuth() {
-    if (sessionStorage.getItem(SESSION_KEY) === '1') {
-      grantAccess();
-      return;
-    }
-    document.getElementById('lock-screen').classList.add('active');
-    setTimeout(() => document.getElementById('lock-input').focus(), 100);
-  }
-
-  checkAuth();
-</script>
 </body>
 </html>
