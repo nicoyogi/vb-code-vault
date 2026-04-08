@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Anmerkung Processor</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<!-- SheetJS: read cell values only -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- JSZip: patch raw XML inside the XLSX so styles are never touched -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -48,16 +51,17 @@ h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 
 .btn-run:disabled { opacity: 0.3; cursor: not-allowed; }
 .btn-dl { width: 100%; padding: 13px; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); border-radius: 12px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--accent); cursor: pointer; transition: background 0.2s; display: none; margin-bottom: 10px; }
 .btn-dl:hover { background: rgba(52,211,153,0.16); }
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem; display: none; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem; }
 .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem; }
 .stat-n { font-size: 22px; font-weight: 800; color: var(--text); }
 .stat-l { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 3px; }
-.log { font-family: var(--mono); font-size: 11.5px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; margin-top: 0.5rem; display: none; line-height: 1.8; }
+.log { font-family: var(--mono); font-size: 11.5px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; margin-top: 0.5rem; display: none; line-height: 1.8; white-space: pre-wrap; }
 .log.err { color: var(--danger); border-color: rgba(248,113,113,0.15); background: rgba(248,113,113,0.05); }
-.log.ok { color: var(--accent); border-color: rgba(52,211,153,0.15); }
+.log.ok  { color: var(--accent); border-color: rgba(52,211,153,0.15); }
 .footer { margin-top: 3rem; font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; line-height: 2; }
 .footer a { color: var(--text3); text-decoration: none; }
 .footer a:hover { color: var(--text2); }
+#stats { display: none; }
 @media (max-width: 520px) { .fw-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -97,16 +101,15 @@ h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 
     onclick="document.getElementById('fileInput').click()"
     ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
     <div class="upload-icon">⬆</div>
-    <div class="upload-text"><strong>Click to browse</strong> or drag &amp; drop your .xlsx / .xls file</div>
+    <div class="upload-text"><strong>Click to browse</strong> or drag &amp; drop your .xlsx file</div>
     <div class="file-name" id="fileName"></div>
   </div>
-  <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="onFileSelect(event)">
+  <input type="file" id="fileInput" accept=".xlsx" style="display:none" onchange="onFileSelect(event)">
 
   <div class="section-label">03 — Process &amp; download</div>
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
   <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Run processor</button>
   <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download processed file ↓</button>
-
   <div class="stats" id="stats">
     <div class="stat"><div class="stat-n" id="sTotal">0</div><div class="stat-l">rows scanned</div></div>
     <div class="stat"><div class="stat-n" id="sFilled">0</div><div class="stat-l">anmerkung filled</div></div>
@@ -121,25 +124,40 @@ h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 
 </div>
 
 <script>
-let selectedFW = null, workbook = null, resultWB = null;
+/* ══════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════ */
+let selectedFW   = null;
+let rawFileBytes = null;  // original ArrayBuffer — never modified
+let workbook     = null;  // SheetJS WB for reading values
+let resultBlob   = null;  // final output Blob
+
 const T_DACHSER = 0.09, T_KN = 0.09, T_DHL = 0.04, T_WACKLER = 0.09;
 
+/* ══════════════════════════════════════════════════════════
+   UI HELPERS
+══════════════════════════════════════════════════════════ */
 function selectFW(btn) {
   document.querySelectorAll('.fw-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected'); selectedFW = btn.dataset.fw; checkReady();
+  btn.classList.add('selected');
+  selectedFW = btn.dataset.fw;
+  checkReady();
 }
 function onDrag(e, over) { e.preventDefault(); document.getElementById('dropArea').classList.toggle('drag', over); }
-function onDrop(e) { e.preventDefault(); onDrag(e,false); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); }
-function onFileSelect(e) { if(e.target.files[0]) loadFile(e.target.files[0]); }
+function onDrop(e)       { e.preventDefault(); onDrag(e,false); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); }
+function onFileSelect(e) { if (e.target.files[0]) loadFile(e.target.files[0]); }
+
 function loadFile(file) {
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = ev => {
     try {
-      workbook = XLSX.read(e.target.result, {type:'array', cellStyles:true, cellNF:true, sheetStubs:true});
+      rawFileBytes = ev.target.result;
+      workbook = XLSX.read(rawFileBytes, {type:'array', cellNF:true});
       const fn = document.getElementById('fileName');
       fn.textContent = file.name + ' — ' + workbook.SheetNames.length + ' sheet(s)';
       fn.style.display = 'block';
-      showLog('File loaded: ' + file.name, 'ok'); checkReady();
+      showLog('File loaded: ' + file.name, 'ok');
+      checkReady();
     } catch(err) { showLog('Could not read file: ' + err.message, 'err'); }
   };
   reader.readAsArrayBuffer(file);
@@ -154,16 +172,15 @@ function setProgress(pct) {
   document.getElementById('progressFill').style.width = pct + '%';
 }
 
-/* ── Cell helpers ── */
+/* ══════════════════════════════════════════════════════════
+   CELL READING HELPERS  (SheetJS, read-only)
+══════════════════════════════════════════════════════════ */
 function findCol(ws, range, h2, h3) {
   for (let c = 0; c <= range.e.c; c++) {
-    const c2 = ws[XLSX.utils.encode_cell({r:1,c})];
-    const c3 = ws[XLSX.utils.encode_cell({r:2,c})];
-    const v2 = c2 ? String(c2.v||'') : '';
-    const v3 = c3 ? String(c3.v||'') : '';
-    const ok2 = h2==='' || v2.toLowerCase().includes(h2.toLowerCase());
-    const ok3 = v3.toLowerCase().includes(h3.toLowerCase());
-    if (ok2 && ok3) return c;
+    const v2 = (ws[XLSX.utils.encode_cell({r:1,c})]||{v:''}).v;
+    const v3 = (ws[XLSX.utils.encode_cell({r:2,c})]||{v:''}).v;
+    const s2 = String(v2||'').toLowerCase(), s3 = String(v3||'').toLowerCase();
+    if ((h2==='' || s2.includes(h2.toLowerCase())) && s3.includes(h3.toLowerCase())) return c;
   }
   return -1;
 }
@@ -171,10 +188,7 @@ function cellNum(ws, r, c) {
   if (c < 0) return 0;
   const cell = ws[XLSX.utils.encode_cell({r,c})];
   if (!cell || cell.v == null) return 0;
-  let s = String(cell.v).trim();
-  if (!s || s==='-') return 0;
-  if (s.includes(',') && !s.includes('.')) s = s.replace(',','.');
-  s = s.replace(/[^0-9.\-]/g,'');
+  let s = String(cell.v).trim().replace(/,(?=[^.]*$)/,'.').replace(/[^0-9.\-]/g,'');
   const n = parseFloat(s); return isNaN(n) ? 0 : n;
 }
 function cellStr(ws, r, c) {
@@ -189,72 +203,63 @@ function join(a, b) {
   return a ? a + ' // ' + b : b;
 }
 
-/* ══════════════════════════════════════════
-   DACHSER — CekKondisi_Freigabe (Doc 2)
-   Tol: 0.09 | ZZ & SNK Ausfallfracht always run
-   FR blocks TZ | TZ only when result empty
-══════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════
+   FORWARDER LOGIC
+══════════════════════════════════════════════════════════ */
+
+/* ── DACHSER ── */
 function resolveDachser(ws, range) {
   const fc = (h2,h3) => findCol(ws,range,h2,h3);
   return {
-    target: fc('','Anmerkung'), stat: fc('','Stat_Freigabe'),
-    tarif: fc('Total','Kosten lt. Tarif'),
-    zz: fc('ZZ','Differenz'), dgr: fc('DGR','Differenz'), lg: fc('LG','Differenz'),
-    exp: fc('EXP','Differenz'), exp_dl: fc('EXP','Kosten DL'),
-    snk_diff: fc('SNK','Differenz'), snk_dl: fc('SNK','Kosten DL'),
-    fr: fc('FR','Differenz'), maut: fc('MT','Differenz'), tz: fc('TZ','Differenz'),
+    target:fc('','Anmerkung'), stat:fc('','Stat_Freigabe'),
+    tarif:fc('Total','Kosten lt. Tarif'),
+    zz:fc('ZZ','Differenz'), dgr:fc('DGR','Differenz'), lg:fc('LG','Differenz'),
+    exp:fc('EXP','Differenz'), exp_dl:fc('EXP','Kosten DL'),
+    snk_diff:fc('SNK','Differenz'), snk_dl:fc('SNK','Kosten DL'),
+    fr:fc('FR','Differenz'), maut:fc('MT','Differenz'), tz:fc('TZ','Differenz'),
   };
 }
 function processDachser(ws, r, cols) {
   const T = T_DACHSER;
-  if (cols.stat >= 0 && cellNum(ws,r,cols.stat) !== 10) return null;
-  const tRaw = cellStr(ws,r,cols.tarif), tV = cellNum(ws,r,cols.tarif);
-  const tarifZero = tRaw !== '' && ((tV===0 && tRaw.includes('0')) || tRaw==='-');
-  let res = '';
-  /* ZZ always */
-  if (cols.zz >= 0 && hasErr(cellNum(ws,r,cols.zz),T)) res = join(res,'2. Zustellung');
-  /* SNK: Ausfallfracht always; others skip if Tarif=0 */
-  const snkDiff = cols.snk_diff>=0 ? cellNum(ws,r,cols.snk_diff) : 0;
-  const snkDl   = cols.snk_dl>=0   ? cellNum(ws,r,cols.snk_dl)   : 0;
+  if (cols.stat>=0 && cellNum(ws,r,cols.stat)!==10) return null;
+  const tRaw=cellStr(ws,r,cols.tarif), tV=cellNum(ws,r,cols.tarif);
+  const tarifZero = tRaw!=='' && ((tV===0 && tRaw.includes('0')) || tRaw==='-');
+  let res='';
+  if (cols.zz>=0 && hasErr(cellNum(ws,r,cols.zz),T)) res=join(res,'2. Zustellung');
+  const snkDiff=cols.snk_diff>=0?cellNum(ws,r,cols.snk_diff):0;
+  const snkDl  =cols.snk_dl>=0  ?cellNum(ws,r,cols.snk_dl)  :0;
   if (cols.snk_diff>=0 && snkDiff!==0) {
-    if (snkDl===75) res = join(res,'Ausfallfracht/Schadensersatz');
-    else if (!tarifZero) res = join(res, snkDl===9
-      ? 'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag'
-      : 'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag');
+    if (snkDl===75) res=join(res,'Ausfallfracht/Schadensersatz');
+    else if (!tarifZero) res=join(res, snkDl===9
+      ?'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag'
+      :'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag');
   }
   if (tarifZero) return res;
-  if (cols.dgr>=0 && hasErr(cellNum(ws,r,cols.dgr),T)) res = join(res,'Gefahrgut-Zuschlag');
-  if (cols.lg>=0  && hasErr(cellNum(ws,r,cols.lg),T))  res = join(res,'Lagergeld');
+  if (cols.dgr>=0 && hasErr(cellNum(ws,r,cols.dgr),T)) res=join(res,'Gefahrgut-Zuschlag');
+  if (cols.lg>=0  && hasErr(cellNum(ws,r,cols.lg),T))  res=join(res,'Lagergeld');
   const expD=cols.exp>=0?cellNum(ws,r,cols.exp):0, expDl=cols.exp_dl>=0?cellNum(ws,r,cols.exp_dl):0;
-  if (cols.exp>=0 && hasErr(expD,T))
-    res = join(res,(expD===95||expDl===95)?'Termin-zuschlag':'Produktzuschlag');
-  if (cols.maut>=0 && hasErr(cellNum(ws,r,cols.maut),T)) res = join(res,'Mautdifferenz');
-  let hasFR = false;
-  if (cols.fr>=0 && hasErr(cellNum(ws,r,cols.fr),T)) { res = join(res,'Frachtdifferenz'); hasFR=true; }
-  if (res==='' && !hasFR && cols.tz>=0 && hasErr(cellNum(ws,r,cols.tz),T)) res = 'Differenz treibstof';
+  if (cols.exp>=0 && hasErr(expD,T)) res=join(res,(expD===95||expDl===95)?'Termin-zuschlag':'Produktzuschlag');
+  if (cols.maut>=0 && hasErr(cellNum(ws,r,cols.maut),T)) res=join(res,'Mautdifferenz');
+  let hasFR=false;
+  if (cols.fr>=0 && hasErr(cellNum(ws,r,cols.fr),T)) { res=join(res,'Frachtdifferenz'); hasFR=true; }
+  if (res===''&&!hasFR&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
   return res;
 }
 
-/* ══════════════════════════════════════════
-   K+N — FillAnmerkung (Doc 3)
-   Tol: 0.09 | Fixed column indices
-   Amazon tariff tiers · bundling · Kontierung
-══════════════════════════════════════════ */
+/* ── K+N ── */
 const BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,
   1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,
   4500,5000,5500,6000,6500,7000,7500,8500,9500,99999];
-function getTier(kg){ for(let b of BP) if(kg<=b) return b; return 99999; }
+function getTier(kg){for(const b of BP) if(kg<=b) return b; return 99999;}
 function resolveKN(ws, range) {
-  const fc = (h2,h3) => findCol(ws,range,h2,h3);
-  return {
-    target: fc('','Anmerkung'), stat: fc('','Stat_Freigabe'),
+  const fc=(h2,h3)=>findCol(ws,range,h2,h3);
+  return { target:fc('','Anmerkung'), stat:fc('','Stat_Freigabe'),
     recip:11, vkg:28, vkg_dl:29, kost:33, sach:34,
-    fr:38, toll:41, snk_dl:42, snk_diff:44, fuel:47,
-  };
+    fr:38, toll:41, snk_dl:42, snk_diff:44, fuel:47 };
 }
 function processKN(ws, r, cols) {
-  const T = T_KN;
-  if (cols.stat>=0 && cellNum(ws,r,cols.stat)!==10) return null;
+  const T=T_KN;
+  if (cols.stat>=0&&cellNum(ws,r,cols.stat)!==10) return null;
   let res='', hasFR=false;
   const frDiff=cellNum(ws,r,cols.fr), snkDl=cellNum(ws,r,cols.snk_dl);
   if (hasErr(frDiff,T)) {
@@ -262,9 +267,8 @@ function processKN(ws, r, cols) {
     if (frDiff>0) {
       if (snkDl===18) res=join(res,'hätte gebündelt werden müssen');
       else if (snkDl===5) {
-        const v1=cellNum(ws,r,cols.vkg), v2=cellNum(ws,r,cols.vkg_dl);
         const recip=cellStr(ws,r,cols.recip).toLowerCase();
-        res=join(res, recip.includes('amazon')&&getTier(v1)===getTier(v2)
+        res=join(res, recip.includes('amazon')&&getTier(cellNum(ws,r,cols.vkg))===getTier(cellNum(ws,r,cols.vkg_dl))
           ?'hätte nach Amazon Tarif abrechnen dürfen':'Differenz aufgrund abweichender Gewichte');
       } else res=join(res,'Differenz aufgrund abweichender Gewichte');
     } else res=join(res,'Differenz aufgrund abweichender Gewichte');
@@ -272,26 +276,21 @@ function processKN(ws, r, cols) {
   }
   const snkDiff=cellNum(ws,r,cols.snk_diff);
   if (hasErr(snkDiff,T)) {
-    if (snkDl===5)       res=join(res,'Portalavisierung, ok?');
-    else if (snkDl===9)  res=join(res,'Avis, ok?');
-    else if (snkDl===18) { if(!res.toLowerCase().includes('avis')) res=join(res,'Avis, ok?'); }
-    else if (snkDl===34) { res=join(res,'Portalavisierung, ok?'); res=join(res,'Avis, ok?'); }
+    if (snkDl===5)      res=join(res,'Portalavisierung, ok?');
+    else if(snkDl===9)  res=join(res,'Avis, ok?');
+    else if(snkDl===18){if(!res.toLowerCase().includes('avis'))res=join(res,'Avis, ok?');}
+    else if(snkDl===34){res=join(res,'Portalavisierung, ok?');res=join(res,'Avis, ok?');}
     else res=join(res,'SNK Differenz');
   }
-  if (!hasFR && hasErr(cellNum(ws,r,cols.fuel),T)) res=join(res,'Differenz treibstoff');
-  const kost=cellStr(ws,r,cols.kost), sach=cellStr(ws,r,cols.sach);
-  if (!kost||kost==='-'||!sach||sach==='-') res=join(res,'Kontierung?');
+  if (!hasFR&&hasErr(cellNum(ws,r,cols.fuel),T)) res=join(res,'Differenz treibstoff');
+  if (!cellStr(ws,r,cols.kost)||cellStr(ws,r,cols.kost)==='-'||
+      !cellStr(ws,r,cols.sach)||cellStr(ws,r,cols.sach)==='-') res=join(res,'Kontierung?');
   return res;
 }
 
-/* ══════════════════════════════════════════
-   DHL Express — CekKondisi_Final_YO_Kelipatan15 (Doc 1)
-   Tol: 0.04 | YO ×15 logic | SNK exact 25/30/60
-   Blocker group → prevents standard group
-   TZ only when result still empty
-══════════════════════════════════════════ */
+/* ── DHL ── */
 function resolveDHL(ws, range) {
-  const fc = (h2,h3) => findCol(ws,range,h2,h3);
+  const fc=(h2,h3)=>findCol(ws,range,h2,h3);
   return {
     target:fc('','Anmerkung'), stat:fc('','Stat_Freigabe'),
     tarif:fc('Total','Kosten lt. Tarif'),
@@ -304,169 +303,296 @@ function resolveDHL(ws, range) {
   };
 }
 function processDHL(ws, r, cols) {
-  const T = T_DHL;
-  if (cols.stat>=0 && cellNum(ws,r,cols.stat)!==10) return null;
+  const T=T_DHL;
+  if (cols.stat>=0&&cellNum(ws,r,cols.stat)!==10) return null;
   if (cols.tarif>=0) {
     const raw=cellStr(ws,r,cols.tarif), v=cellNum(ws,r,cols.tarif);
-    if (raw && v===0 && (raw.includes('0')||raw==='-')) return 'Fremdnummer doppelt berechnet.';
+    if (raw&&v===0&&(raw.includes('0')||raw==='-')) return 'Fremdnummer doppelt berechnet.';
   }
   let res='';
-  if (cols.sach>=0 && !cellStr(ws,r,cols.sach)) res=join(res,'kontierung?');
-  if (cols.kost>=0 && !cellStr(ws,r,cols.kost)) res=join(res,'kontierung?');
+  if (cols.sach>=0&&!cellStr(ws,r,cols.sach)) res=join(res,'kontierung?');
+  if (cols.kost>=0&&!cellStr(ws,r,cols.kost)) res=join(res,'kontierung?');
   let block=false;
   [[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],
    [cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']]
-  .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
+  .forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});
   const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;
   if (cols.conv>=0) {
-    if (yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}
+    if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}
     else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}
   }
-  [[cols.irr,'Non-conveyable piece irregular ok?'],
-   [cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']]
-  .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
+  [[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']]
+  .forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});
   const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;
-  if (cols.snk>=0) {
-    if (snk===25){res=join(res,'Limited quantities ok?');block=true;}
-    else if (snk===30){res=join(res,'Elevated Risk, ok?');block=true;}
-    else if (snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}
-    else if (hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}
+  if(cols.snk>=0){
+    if(snk===25){res=join(res,'Limited quantities ok?');block=true;}
+    else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}
+    else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}
+    else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}
   }
   if (!block) {
     const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;
     if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}
     [[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']]
-    .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m); });
+    .forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});
   }
-  if (res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
+  if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
   return res;
 }
 
-/* ══════════════════════════════════════════
-   WACKLER — Soll-Ist-Vergleich format
-   Tol: 0.09
-   Column layout (rows 1/2/3 headers):
-     Row 2: AVIS | FR | MT | SNK | TZ | Total
-     Row 3: Kosten DL | Kosten lt. Tarif | Differenz (per group)
-
-   Logic order:
-   1. AVIS Differenz  → 'Avis, ok?'          (PRIORITY — checked first)
-   2. FR Differenz    → 'Frachtdifferenz'
-   3. MT Differenz    → 'Mautdifferenz'
-   4. SNK Differenz   → 'SNK Differenz'
-   5. TZ Differenz    → 'Differenz treibstof' (FALLBACK — only if res still empty)
-══════════════════════════════════════════ */
+/* ── WACKLER ── */
 function resolveWackler(ws, range) {
-  const fc = (h2,h3) => findCol(ws,range,h2,h3);
+  const fc=(h2,h3)=>findCol(ws,range,h2,h3);
   return {
-    target:    fc('','Anmerkung'),
-    stat:      fc('','Stat_Freigabe'),
-    avis_diff: fc('AVIS','Differenz'),
-    fr:        fc('FR','Differenz'),
-    maut:      fc('MT','Differenz'),
-    snk_diff:  fc('SNK','Differenz'),
-    tz:        fc('TZ','Differenz'),
+    target:fc('','Anmerkung'), stat:fc('','Stat_Freigabe'),
+    avis_diff:fc('AVIS','Differenz'), fr:fc('FR','Differenz'),
+    maut:fc('MT','Differenz'), snk_diff:fc('SNK','Differenz'), tz:fc('TZ','Differenz'),
   };
 }
 function processWackler(ws, r, cols) {
-  const T = T_WACKLER;
-  if (cols.stat >= 0 && cellNum(ws,r,cols.stat) !== 10) return null;
-  let res = '';
-  /* 1. AVIS — highest priority */
-  if (cols.avis_diff >= 0 && hasErr(cellNum(ws,r,cols.avis_diff), T))
-    res = join(res, 'Avis, ok?');
-  /* 2. FR */
-  if (cols.fr >= 0 && hasErr(cellNum(ws,r,cols.fr), T))
-    res = join(res, 'Frachtdifferenz');
-  /* 3. MT */
-  if (cols.maut >= 0 && hasErr(cellNum(ws,r,cols.maut), T))
-    res = join(res, 'Mautdifferenz');
-  /* 4. SNK */
-  if (cols.snk_diff >= 0 && hasErr(cellNum(ws,r,cols.snk_diff), T))
-    res = join(res, 'SNK Differenz');
-  /* 5. TZ — fallback only when nothing else triggered */
-  if (res === '' && cols.tz >= 0 && hasErr(cellNum(ws,r,cols.tz), T))
-    res = 'Differenz treibstof';
+  const T=T_WACKLER;
+  if (cols.stat>=0&&cellNum(ws,r,cols.stat)!==10) return null;
+  let res='';
+  if(cols.avis_diff>=0&&hasErr(cellNum(ws,r,cols.avis_diff),T)) res=join(res,'Avis, ok?');
+  if(cols.fr>=0      &&hasErr(cellNum(ws,r,cols.fr),T))         res=join(res,'Frachtdifferenz');
+  if(cols.maut>=0    &&hasErr(cellNum(ws,r,cols.maut),T))       res=join(res,'Mautdifferenz');
+  if(cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))   res=join(res,'SNK Differenz');
+  if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))     res='Differenz treibstof';
   return res;
 }
 
-
-
-/* ── Runner ── */
-function runProcess() {
-  const btn = document.getElementById('btnRun');
-  btn.disabled = true; btn.textContent = 'Processing...';
-  document.getElementById('btnDl').style.display = 'none';
-  document.getElementById('stats').style.display = 'none';
-  setProgress(5);
-  setTimeout(() => {
-    try {
-      resultWB = XLSX.utils.book_new();
-      let total=0, filled=0, skipped=0;
-      workbook.SheetNames.forEach((name, si) => {
-        const ws = workbook.Sheets[name];
-        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
-        let cols, fn;
-        if      (selectedFW==='dachser') { cols=resolveDachser(ws,range); fn=processDachser; }
-        else if (selectedFW==='kn')      { cols=resolveKN(ws,range);      fn=processKN;      }
-        else if (selectedFW==='dhl')     { cols=resolveDHL(ws,range);      fn=processDHL;     }
-        else                             { cols=resolveWackler(ws,range);  fn=processWackler; }
-
-        if (cols.target < 0) {
-          showLog('Sheet "' + name + '": Anmerkung column not found.', 'err');
-          return;
-        }
-
-        /* Data rows start at Excel row 4 = 0-based index 3 */
-        for (let r = 3; r <= range.e.r; r++) {
-          total++;
-          const result = fn(ws, r, cols);
-          const addr = XLSX.utils.encode_cell({r, c: cols.target});
-
-          if (result === null) {
-            /* Stat≠10: skipped — mutate value only, keep all style properties */
-            if (ws[addr]) {
-              ws[addr].v = '';
-              ws[addr].t = 's';
-              delete ws[addr].w; /* clear cached formatted text so SheetJS recomputes */
-            } else {
-              ws[addr] = {t:'s', v:''};
-            }
-            skipped++;
-          } else {
-            /* Stat=10: write result — mutate existing cell to preserve .s style index */
-            if (ws[addr]) {
-              ws[addr].v = result;
-              ws[addr].t = 's';
-              delete ws[addr].w;
-            } else {
-              /* Cell didn't exist yet (blank column) — create with no style so original border etc is kept */
-              ws[addr] = {t:'s', v:result};
-            }
-            if (result) filled++;
-          }
-        }
-
-        XLSX.utils.book_append_sheet(resultWB, ws, name);
-        setProgress(20 + Math.round(80 * (si+1) / workbook.SheetNames.length));
-      });
-
-      document.getElementById('sTotal').textContent  = total;
-      document.getElementById('sFilled').textContent = filled;
-      document.getElementById('sSkipped').textContent = skipped;
-      document.getElementById('stats').style.display = 'grid';
-      showLog('Done — ' + filled + ' rows filled, ' + skipped + ' skipped (Stat_Freigabe ≠ 10).', 'ok');
-      document.getElementById('btnDl').style.display = 'block';
-      setProgress(100);
-    } catch(e) { showLog('Error: ' + e.message, 'err'); }
-    btn.disabled = false; btn.textContent = 'Run processor';
-  }, 80);
+/* ══════════════════════════════════════════════════════════
+   COLUMN INDEX <-> LETTER HELPERS
+══════════════════════════════════════════════════════════ */
+function idxToCol(idx) {        // 0-based index -> "A","B",..."AA","BC"...
+  let r='', n=idx+1;
+  while(n>0){const rem=(n-1)%26;r=String.fromCharCode(65+rem)+r;n=Math.floor((n-1)/26);}
+  return r;
+}
+function colToIdx(col) {        // "A" -> 0,  "BC" -> 54
+  let n=0;
+  for(let i=0;i<col.length;i++) n=n*26+(col.charCodeAt(i)-64);
+  return n-1;
 }
 
-function downloadResult() {
-  if (!resultWB) return;
-  /* cellStyles:true preserves .s style indices loaded from the source file */
-  XLSX.writeFile(resultWB, 'anmerkung_processed.xlsx', {cellStyles: true, bookSST: false});
+/* ══════════════════════════════════════════════════════════
+   SHARED STRINGS HELPERS
+══════════════════════════════════════════════════════════ */
+function parseSharedStrings(xml) {
+  const strings=[];
+  for(const m of xml.matchAll(/<si>([\s\S]*?)<\/si>/g)){
+    const parts=[...m[1].matchAll(/<t(?:[^>]*)>([\s\S]*?)<\/t>/g)];
+    strings.push(parts.map(p=>p[1]
+      .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+      .replace(/&quot;/g,'"').replace(/&apos;/g,"'")).join(''));
+  }
+  return strings;
+}
+function getOrAdd(strings, str) {
+  const i=strings.indexOf(str);
+  if(i!==-1)return i;
+  strings.push(str);
+  return strings.length-1;
+}
+function escXml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+function rebuildSharedStrings(strings){
+  const n=strings.length;
+  const sis=strings.map(s=>`<si><t xml:space="preserve">${escXml(s)}</t></si>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${n}" uniqueCount="${n}">${sis}</sst>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SHEET XML PATCHER
+   For each target row:
+     - If cell already exists  → replace <v> content, keep s= attribute
+     - If cell doesn't exist   → insert new <c> with inferred s= from row siblings
+══════════════════════════════════════════════════════════ */
+function patchSheet(sheetXml, targetCol, rowResults, strings) {
+  // rowResults: Map< excelRow(1-based), text|null >
+  // targetCol: e.g. "BC"
+
+  let xml = sheetXml;
+
+  for(const [rowNum, value] of rowResults){
+    if(value===null) continue;           // skip-rows: leave untouched
+    const cellRef = targetCol + rowNum;
+    const ssIdx   = getOrAdd(strings, value);
+
+    // Does this cell already exist?
+    // Match: <c r="BC4" ... >...</c>  OR  <c r="BC4" ... />
+    const existRe = new RegExp(
+      `<c\\s+r="${cellRef}"([^>]*?)>([\\s\\S]*?)<\\/c>|<c\\s+r="${cellRef}"([^>]*?)\\/>`,
+      ''
+    );
+    const existMatch = existRe.exec(xml);
+
+    if(existMatch){
+      // Preserve the s= attribute, just replace inner value
+      const attrs = (existMatch[1]||existMatch[3]||'');
+      // Ensure t="s"
+      let newAttrs = attrs.replace(/\bt="[^"]*"/g,'').trimEnd()+' t="s"';
+      xml = xml.slice(0, existMatch.index)
+        + `<c r="${cellRef}"${newAttrs}><v>${ssIdx}</v></c>`
+        + xml.slice(existMatch.index + existMatch[0].length);
+    } else {
+      // Cell doesn't exist — insert into the row
+      const rowRe = new RegExp(
+        `(<row[^>]+r="${rowNum}"[^>]*>)([\\s\\S]*?)(<\\/row>)`
+      );
+      const rowMatch = rowRe.exec(xml);
+      if(!rowMatch) continue;
+
+      const [fullRow, rowOpen, rowContent, rowClose] = rowMatch;
+
+      // Infer style index from most common s= in this row
+      const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);
+      const freq={};
+      sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});
+      const styleIdx = sVals.length
+        ? Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]
+        : '1';
+
+      const newCell = `<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;
+
+      // Insert at correct column position (cells must be ordered)
+      const tIdx = colToIdx(targetCol);
+      let insertAt = rowContent.length;
+      for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)\d+"/g)){
+        if(colToIdx(m[1]) > tIdx){ insertAt=m.index; break; }
+      }
+
+      const newContent = rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);
+      xml = xml.slice(0, rowMatch.index) + rowOpen + newContent + rowClose
+          + xml.slice(rowMatch.index + fullRow.length);
+    }
+  }
+  return xml;
+}
+
+/* ══════════════════════════════════════════════════════════
+   MAIN RUNNER
+══════════════════════════════════════════════════════════ */
+async function runProcess(){
+  const btn=document.getElementById('btnRun');
+  btn.disabled=true; btn.textContent='Processing...';
+  document.getElementById('btnDl').style.display='none';
+  document.getElementById('stats').style.display='none';
+  setProgress(5);
+
+  try{
+    /* ── Step 1: run forwarder logic via SheetJS (read only) ── */
+    let total=0, filled=0, skipped=0;
+    const allResults={};  // sheetName -> { targetCol, rowMap }
+
+    for(const name of workbook.SheetNames){
+      const ws=workbook.Sheets[name];
+      const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+
+      let cols, fn;
+      if     (selectedFW==='dachser'){cols=resolveDachser(ws,range);fn=processDachser;}
+      else if(selectedFW==='kn')     {cols=resolveKN(ws,range);     fn=processKN;}
+      else if(selectedFW==='dhl')    {cols=resolveDHL(ws,range);     fn=processDHL;}
+      else                           {cols=resolveWackler(ws,range); fn=processWackler;}
+
+      if(cols.target<0){showLog(`Sheet "${name}": Anmerkung column not found.`,'err');continue;}
+
+      const targetCol = idxToCol(cols.target);
+      const rowMap    = new Map();
+
+      for(let r=3; r<=range.e.r; r++){
+        total++;
+        const result=fn(ws,r,cols);
+        const excelRow=r+1;           // SheetJS 0-based → Excel 1-based
+        if(result===null){ skipped++; }
+        else{ rowMap.set(excelRow, result); if(result) filled++; }
+      }
+      allResults[name]={targetCol, rowMap};
+    }
+    setProgress(25);
+
+    /* ── Step 2: open original file with JSZip ── */
+    const zip = await JSZip.loadAsync(rawFileBytes);
+    setProgress(40);
+
+    /* ── Step 3: parse sharedStrings ── */
+    const ssFile = zip.file('xl/sharedStrings.xml');
+    let ssXml = ssFile ? await ssFile.async('string') : '';
+    const strings = ssXml ? parseSharedStrings(ssXml) : [];
+
+    /* ── Step 4: resolve sheet file paths ── */
+    const wbXml    = await zip.file('xl/workbook.xml').async('string');
+    const wbRelXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+
+    // sheetName -> rId
+    const sheetRids={};
+    for(const m of wbXml.matchAll(/<sheet\b[^>]+\bname="([^"]+)"[^>]+\br:id="(rId\d+)"/g))
+      sheetRids[m[1]]=m[2];
+
+    // rId -> relative path
+    const ridPaths={};
+    for(const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g))
+      ridPaths[m[1]]=m[2];
+
+    /* ── Step 5: patch each sheet ── */
+    const sheetNames=Object.keys(allResults);
+    for(let si=0; si<sheetNames.length; si++){
+      const name=sheetNames[si];
+      const {targetCol, rowMap}=allResults[name];
+      if(!rowMap.size) continue;
+
+      const rId=sheetRids[name];
+      if(!rId) continue;
+      let rel=ridPaths[rId]||'';
+      // Normalize: "worksheets/sheet1.xml" or "/xl/worksheets/sheet1.xml" -> "xl/worksheets/sheet1.xml"
+      rel=rel.replace(/^\/+/,'');
+      if(!rel.startsWith('xl/')) rel='xl/'+rel;
+
+      let sheetXml = await zip.file(rel).async('string');
+      sheetXml = patchSheet(sheetXml, targetCol, rowMap, strings);
+      zip.file(rel, sheetXml);
+
+      setProgress(40+Math.round(40*(si+1)/sheetNames.length));
+    }
+
+    /* ── Step 6: write updated sharedStrings ── */
+    zip.file('xl/sharedStrings.xml', rebuildSharedStrings(strings));
+    setProgress(85);
+
+    /* ── Step 7: generate output blob ── */
+    resultBlob = await zip.generateAsync({
+      type:'blob',
+      mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      compression:'DEFLATE',
+      compressionOptions:{level:6}
+    });
+    setProgress(100);
+
+    document.getElementById('sTotal').textContent  = total;
+    document.getElementById('sFilled').textContent = filled;
+    document.getElementById('sSkipped').textContent= skipped;
+    document.getElementById('stats').style.display ='grid';
+    showLog(`Done — ${filled} rows filled, ${skipped} skipped (Stat_Freigabe ≠ 10).`,'ok');
+    document.getElementById('btnDl').style.display='block';
+
+  } catch(e){
+    showLog('Error: '+e.message+'\n'+e.stack,'err');
+    console.error(e);
+  }
+  btn.disabled=false; btn.textContent='Run processor';
+}
+
+/* ══════════════════════════════════════════════════════════
+   DOWNLOAD
+══════════════════════════════════════════════════════════ */
+function downloadResult(){
+  if(!resultBlob) return;
+  const url=URL.createObjectURL(resultBlob);
+  const a=document.createElement('a');
+  a.href=url; a.download='anmerkung_processed.xlsx'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 </script>
 </body>
