@@ -3,225 +3,62 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anmerkung Processor — Dev Space</title>
+<title>Anmerkung Processor</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #080810;
-  --surface: #0f0f1a;
-  --surface2: #14141f;
-  --border: rgba(255,255,255,0.07);
-  --border2: rgba(255,255,255,0.12);
-  --text: #e8e6f0;
-  --text2: #8a88a0;
-  --text3: #4a4860;
-  --accent: #34d399;
-  --accent-glow: rgba(52,211,153,0.12);
-  --accent2: #5b9cf6;
-  --accent2-glow: rgba(91,156,246,0.12);
-  --danger: #f87171;
+  --bg: #080810; --surface: #0f0f1a; --surface2: #14141f;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+  --text: #e8e6f0; --text2: #8a88a0; --text3: #4a4860;
+  --accent: #34d399; --danger: #f87171;
   --mono: 'DM Mono', monospace;
 }
-body {
-  font-family: 'Syne', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  padding: 2rem 1rem 4rem;
-  overflow-x: hidden;
-}
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
-  z-index: 0;
-}
-.glow-top {
-  position: fixed;
-  top: -180px; left: 50%;
-  transform: translateX(-50%);
-  width: 700px; height: 400px;
-  background: radial-gradient(ellipse, rgba(52,211,153,0.06) 0%, transparent 65%);
-  pointer-events: none; z-index: 0;
-}
-.container {
-  position: relative; z-index: 1;
-  width: 100%; max-width: 720px;
-  margin: 0 auto;
-}
-/* Nav */
-.nav {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 2.5rem;
-}
-.nav-back {
-  font-family: var(--mono); font-size: 11px;
-  color: var(--text3); text-decoration: none;
-  display: flex; align-items: center; gap: 6px;
-  transition: color 0.2s;
-}
+body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem 4rem; overflow-x: hidden; }
+body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px); background-size: 48px 48px; pointer-events: none; z-index: 0; }
+.glow-top { position: fixed; top: -180px; left: 50%; transform: translateX(-50%); width: 700px; height: 400px; background: radial-gradient(ellipse, rgba(52,211,153,0.06) 0%, transparent 65%); pointer-events: none; z-index: 0; }
+.container { position: relative; z-index: 1; width: 100%; max-width: 720px; margin: 0 auto; }
+.nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; }
+.nav-back { font-family: var(--mono); font-size: 11px; color: var(--text3); text-decoration: none; transition: color 0.2s; }
 .nav-back:hover { color: var(--text2); }
-.nav-badge {
-  font-family: var(--mono); font-size: 10px;
-  padding: 3px 10px; border-radius: 20px;
-  border: 1px solid rgba(52,211,153,0.2);
-  color: var(--accent); background: rgba(52,211,153,0.06);
-}
-/* Header */
-.eyebrow {
-  font-family: var(--mono); font-size: 11px;
-  color: var(--text3); letter-spacing: 0.22em;
-  text-transform: uppercase; margin-bottom: 0.8rem;
-}
-h1 {
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-  font-weight: 800; line-height: 1.1;
-  letter-spacing: -0.02em; margin-bottom: 0.6rem;
-}
-h1 .grad {
-  background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-.subtitle {
-  font-family: var(--mono); font-size: 12px;
-  color: var(--text2); margin-bottom: 2.5rem;
-}
-/* Section label */
-.section-label {
-  font-family: var(--mono); font-size: 10px;
-  color: var(--text3); letter-spacing: 0.18em;
-  text-transform: uppercase; margin-bottom: 10px;
-}
-/* Forwarder grid */
-.fw-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr);
-  gap: 10px; margin-bottom: 1.5rem;
-}
-.fw-btn {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 1rem 1.2rem;
-  cursor: pointer; text-align: left;
-  transition: transform 0.18s cubic-bezier(.2,.8,.3,1), border-color 0.18s;
-  position: relative; overflow: hidden;
-}
+.nav-badge { font-family: var(--mono); font-size: 10px; padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(52,211,153,0.2); color: var(--accent); background: rgba(52,211,153,0.06); }
+.eyebrow { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 0.8rem; }
+h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 0.6rem; }
+h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.subtitle { font-family: var(--mono); font-size: 12px; color: var(--text2); margin-bottom: 2.5rem; }
+.section-label { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 10px; }
+.fw-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+.fw-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.2rem; cursor: pointer; text-align: left; transition: transform 0.18s cubic-bezier(.2,.8,.3,1), border-color 0.18s; position: relative; overflow: hidden; }
 .fw-btn:hover { transform: translateY(-2px); border-color: var(--border2); }
-.fw-btn.selected {
-  border-color: rgba(52,211,153,0.4);
-  background: rgba(52,211,153,0.05);
-}
-.fw-btn.selected::before {
-  content: '✓';
-  position: absolute; top: 10px; right: 12px;
-  font-size: 11px; color: var(--accent);
-  font-family: var(--mono);
-}
-.fw-name {
-  font-size: 13px; font-weight: 700;
-  color: var(--text); margin-bottom: 4px;
-}
-.fw-desc {
-  font-family: var(--mono); font-size: 10px;
-  color: var(--text3); line-height: 1.6;
-}
-/* Upload area */
-.upload-area {
-  background: var(--surface); border: 1.5px dashed rgba(255,255,255,0.1);
-  border-radius: 16px; padding: 2.2rem 1.5rem;
-  text-align: center; cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-  margin-bottom: 1rem;
-}
-.upload-area:hover, .upload-area.drag {
-  border-color: rgba(52,211,153,0.3);
-  background: rgba(52,211,153,0.03);
-}
-.upload-icon {
-  font-size: 26px; margin-bottom: 10px; color: var(--text3);
-}
-.upload-text {
-  font-family: var(--mono); font-size: 12px; color: var(--text2);
-}
+.fw-btn.selected { border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.05); }
+.fw-btn.selected::before { content: '✓'; position: absolute; top: 10px; right: 12px; font-size: 11px; color: var(--accent); font-family: var(--mono); }
+.fw-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.fw-desc { font-family: var(--mono); font-size: 10px; color: var(--text3); line-height: 1.6; }
+.upload-area { background: var(--surface); border: 1.5px dashed rgba(255,255,255,0.1); border-radius: 16px; padding: 2.2rem 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; margin-bottom: 1rem; }
+.upload-area:hover, .upload-area.drag { border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.03); }
+.upload-icon { font-size: 26px; margin-bottom: 10px; color: var(--text3); }
+.upload-text { font-family: var(--mono); font-size: 12px; color: var(--text2); }
 .upload-text strong { color: var(--text); font-weight: 600; }
-.file-name {
-  font-family: var(--mono); font-size: 11px; color: var(--accent);
-  margin-top: 10px; display: none;
-}
-/* Progress */
-.progress-wrap {
-  height: 3px; background: rgba(255,255,255,0.05);
-  border-radius: 2px; margin-bottom: 1rem; overflow: hidden; display: none;
-}
-.progress-fill {
-  height: 100%; width: 0%; background: var(--accent);
-  border-radius: 2px; transition: width 0.25s;
-}
-/* Buttons */
-.btn-run {
-  width: 100%; padding: 13px;
-  background: transparent;
-  border: 1px solid var(--border2);
-  border-radius: 12px;
-  font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
-  color: var(--text2); cursor: pointer;
-  transition: color 0.2s, border-color 0.2s, background 0.2s;
-  margin-bottom: 10px;
-  letter-spacing: 0.02em;
-}
-.btn-run:hover:not(:disabled) {
-  color: var(--text); border-color: rgba(52,211,153,0.3);
-  background: rgba(52,211,153,0.04);
-}
+.file-name { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-top: 10px; display: none; }
+.progress-wrap { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; display: none; }
+.progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 2px; transition: width 0.25s; }
+.btn-run { width: 100%; padding: 13px; background: transparent; border: 1px solid var(--border2); border-radius: 12px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text2); cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s; margin-bottom: 10px; }
+.btn-run:hover:not(:disabled) { color: var(--text); border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.04); }
 .btn-run:disabled { opacity: 0.3; cursor: not-allowed; }
-.btn-dl {
-  width: 100%; padding: 13px;
-  background: rgba(52,211,153,0.1);
-  border: 1px solid rgba(52,211,153,0.3);
-  border-radius: 12px;
-  font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
-  color: var(--accent); cursor: pointer;
-  transition: background 0.2s;
-  display: none; margin-bottom: 10px;
-}
+.btn-dl { width: 100%; padding: 13px; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); border-radius: 12px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--accent); cursor: pointer; transition: background 0.2s; display: none; margin-bottom: 10px; }
 .btn-dl:hover { background: rgba(52,211,153,0.16); }
-/* Stats */
-.stats {
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 10px; margin-bottom: 1rem; display: none;
-}
-.stat {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 0.9rem 1rem;
-}
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem; display: none; }
+.stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem 1rem; }
 .stat-n { font-size: 22px; font-weight: 800; color: var(--text); }
 .stat-l { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 3px; }
-/* Log */
-.log {
-  font-family: var(--mono); font-size: 11.5px; color: var(--text2);
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 1rem 1.2rem;
-  margin-top: 0.5rem; display: none; line-height: 1.8;
-}
+.log { font-family: var(--mono); font-size: 11.5px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; margin-top: 0.5rem; display: none; line-height: 1.8; }
 .log.err { color: var(--danger); border-color: rgba(248,113,113,0.15); background: rgba(248,113,113,0.05); }
-.log.ok { color: var(--accent); border-color: rgba(52,211,153,0.15); }
-/* Footer */
-.footer {
-  margin-top: 3rem;
-  font-family: var(--mono); font-size: 11px;
-  color: var(--text3); text-align: center; line-height: 2;
-}
+.log.ok  { color: var(--accent); border-color: rgba(52,211,153,0.15); }
+.footer { margin-top: 3rem; font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; line-height: 2; }
 .footer a { color: var(--text3); text-decoration: none; }
 .footer a:hover { color: var(--text2); }
-@media (max-width: 520px) {
-  .fw-grid { grid-template-columns: 1fr; }
-  .stats { grid-template-columns: repeat(3, 1fr); }
-}
+@media (max-width: 520px) { .fw-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -237,20 +74,19 @@ h1 .grad {
   <h1>Anmerkung <span class="grad">Processor</span></h1>
   <p class="subtitle">Upload · select forwarder · fill Anmerkung column · download</p>
 
-  <!-- Step 1 -->
   <div class="section-label">01 — Select forwarder</div>
   <div class="fw-grid">
-    <button class="fw-btn" data-fw="yo" onclick="selectFW(this)">
-      <div class="fw-name">Dachser (YO)</div>
-      <div class="fw-desc">Non-conv ×15, SNK 25/30/60,<br>FR·PAL·OW blocker groups</div>
+    <button class="fw-btn" data-fw="dachser" onclick="selectFW(this)">
+      <div class="fw-name">Dachser</div>
+      <div class="fw-desc">ZZ, DGR, LG, EXP, SNK Ausfallfracht<br>FR blocks TZ · Tarif=0 guard</div>
     </button>
-    <button class="fw-btn" data-fw="freigabe" onclick="selectFW(this)">
-      <div class="fw-name">K+N (Freigabe)</div>
-      <div class="fw-desc">ZZ always-on, SNK Ausfall­fracht,<br>FR blocks TZ, Tarif=0 guard</div>
+    <button class="fw-btn" data-fw="kn" onclick="selectFW(this)">
+      <div class="fw-name">K+N</div>
+      <div class="fw-desc">Amazon tariff tiers · bundling<br>SNK types 5/9/18/34 · Kontierung</div>
     </button>
-    <button class="fw-btn" data-fw="anmerkung" onclick="selectFW(this)">
+    <button class="fw-btn" data-fw="dhl" onclick="selectFW(this)">
       <div class="fw-name">DHL Express</div>
-      <div class="fw-desc">Amazon tariff tiers, bundling,<br>SNK types 5/9/18/34, Kontierung</div>
+      <div class="fw-desc">YO ×15 · SNK 25/30/60<br>FR·PAL·OW blocker groups</div>
     </button>
     <button class="fw-btn" data-fw="wackler" onclick="selectFW(this)">
       <div class="fw-name">Wackler</div>
@@ -258,7 +94,6 @@ h1 .grad {
     </button>
   </div>
 
-  <!-- Step 2 -->
   <div class="section-label">02 — Upload file</div>
   <div class="upload-area" id="dropArea"
        onclick="document.getElementById('fileInput').click()"
@@ -269,11 +104,10 @@ h1 .grad {
   </div>
   <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="onFileSelect(event)">
 
-  <!-- Step 3 -->
   <div class="section-label">03 — Process &amp; download</div>
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
   <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Run processor</button>
-  <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download processed file ↓</button>
+  <button class="btn-dl"  id="btnDl"  onclick="downloadResult()">Download processed file ↓</button>
 
   <div class="stats" id="stats">
     <div class="stat"><div class="stat-n" id="sTotal">0</div><div class="stat-l">rows scanned</div></div>
@@ -290,18 +124,15 @@ h1 .grad {
 
 <script>
 let selectedFW = null, workbook = null, resultWB = null;
-const T_YO = 0.04, T_KN = 0.09, T_DHL = 0.09, T_WK = 0.09;
+const T_DACHSER = 0.09, T_KN = 0.09, T_DHL = 0.04, T_WACKLER = 0.09;
 
 function selectFW(btn) {
   document.querySelectorAll('.fw-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  selectedFW = btn.dataset.fw;
-  checkReady();
+  btn.classList.add('selected'); selectedFW = btn.dataset.fw; checkReady();
 }
 function onDrag(e, over) { e.preventDefault(); document.getElementById('dropArea').classList.toggle('drag', over); }
 function onDrop(e) { e.preventDefault(); onDrag(e,false); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); }
 function onFileSelect(e) { if(e.target.files[0]) loadFile(e.target.files[0]); }
-
 function loadFile(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -310,8 +141,7 @@ function loadFile(file) {
       const fn = document.getElementById('fileName');
       fn.textContent = file.name + ' — ' + workbook.SheetNames.length + ' sheet(s)';
       fn.style.display = 'block';
-      showLog('File loaded: ' + file.name, 'ok');
-      checkReady();
+      showLog('File loaded: ' + file.name, 'ok'); checkReady();
     } catch(err) { showLog('Could not read file: ' + err.message, 'err'); }
   };
   reader.readAsArrayBuffer(file);
@@ -319,25 +149,22 @@ function loadFile(file) {
 function checkReady() { document.getElementById('btnRun').disabled = !(selectedFW && workbook); }
 function showLog(msg, type) {
   const el = document.getElementById('log');
-  el.style.display = 'block';
-  el.className = 'log ' + (type||'');
-  el.textContent = msg;
+  el.style.display = 'block'; el.className = 'log ' + (type||''); el.textContent = msg;
 }
 function setProgress(pct) {
   document.getElementById('progressWrap').style.display = 'block';
   document.getElementById('progressFill').style.width = pct + '%';
 }
 
-/* ── Utilities ── */
+/* ── Cell helpers ── */
 function findCol(ws, range, h2, h3) {
-  const maxC = range.e.c + 1;
-  for (let c = 0; c < maxC; c++) {
-    const c2 = ws[XLSX.utils.encode_cell({r:1,c})] || ws[XLSX.utils.encode_cell({r:1,c:0})];
+  for (let c = 0; c <= range.e.c; c++) {
+    const c2 = ws[XLSX.utils.encode_cell({r:1,c})];
     const c3 = ws[XLSX.utils.encode_cell({r:2,c})];
     const v2 = c2 ? String(c2.v||'') : '';
     const v3 = c3 ? String(c3.v||'') : '';
     const ok2 = h2==='' || v2.toLowerCase().includes(h2.toLowerCase());
-    const ok3 = h3==='' || v3.toLowerCase().includes(h3.toLowerCase());
+    const ok3 = v3.toLowerCase().includes(h3.toLowerCase());
     if (ok2 && ok3) return c;
   }
   return -1;
@@ -357,153 +184,185 @@ function cellStr(ws, r, c) {
   const cell = ws[XLSX.utils.encode_cell({r,c})];
   return cell ? String(cell.v||'').trim() : '';
 }
-function err(v, t) { return Math.abs(v) > t; }
+function hasErr(v, t) { return Math.abs(v) > t; }
 function join(a, b) {
   if (!b) return a;
   if (a.toLowerCase().includes(b.toLowerCase())) return a;
   return a ? a + ' // ' + b : b;
 }
 
-/* ── Dachser (YO) ── */
+/* ══════════════════════════════════════════
+   DACHSER — CekKondisi_Freigabe (Doc 2)
+   Tol: 0.09 | ZZ & SNK Ausfallfracht always run
+   FR blocks TZ | TZ only when result empty
+══════════════════════════════════════════ */
+function resolveDachser(ws, range) {
+  const fc = (h2,h3) => findCol(ws,range,h2,h3);
+  return {
+    target: fc('','Anmerkung'), stat: fc('','Stat_Freigabe'),
+    tarif: fc('Total','Kosten lt. Tarif'),
+    zz: fc('ZZ','Differenz'), dgr: fc('DGR','Differenz'), lg: fc('LG','Differenz'),
+    exp: fc('EXP','Differenz'), exp_dl: fc('EXP','Kosten DL'),
+    snk_diff: fc('SNK','Differenz'), snk_dl: fc('SNK','Kosten DL'),
+    fr: fc('FR','Differenz'), maut: fc('MT','Differenz'), tz: fc('TZ','Differenz'),
+  };
+}
 function processDachser(ws, r, cols) {
-  const T = T_YO;
+  const T = T_DACHSER;
   if (cols.stat >= 0 && cellNum(ws,r,cols.stat) !== 10) return null;
-  if (cols.tarif >= 0) {
-    const raw = cellStr(ws,r,cols.tarif), v = cellNum(ws,r,cols.tarif);
+  const tRaw = cellStr(ws,r,cols.tarif), tV = cellNum(ws,r,cols.tarif);
+  const tarifZero = tRaw !== '' && ((tV===0 && tRaw.includes('0')) || tRaw==='-');
+  let res = '';
+  /* ZZ always */
+  if (cols.zz >= 0 && hasErr(cellNum(ws,r,cols.zz),T)) res = join(res,'2. Zustellung');
+  /* SNK: Ausfallfracht always; others skip if Tarif=0 */
+  const snkDiff = cols.snk_diff>=0 ? cellNum(ws,r,cols.snk_diff) : 0;
+  const snkDl   = cols.snk_dl>=0   ? cellNum(ws,r,cols.snk_dl)   : 0;
+  if (cols.snk_diff>=0 && snkDiff!==0) {
+    if (snkDl===75) res = join(res,'Ausfallfracht/Schadensersatz');
+    else if (!tarifZero) res = join(res, snkDl===9
+      ? 'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag'
+      : 'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag');
+  }
+  if (tarifZero) return res;
+  if (cols.dgr>=0 && hasErr(cellNum(ws,r,cols.dgr),T)) res = join(res,'Gefahrgut-Zuschlag');
+  if (cols.lg>=0  && hasErr(cellNum(ws,r,cols.lg),T))  res = join(res,'Lagergeld');
+  const expD=cols.exp>=0?cellNum(ws,r,cols.exp):0, expDl=cols.exp_dl>=0?cellNum(ws,r,cols.exp_dl):0;
+  if (cols.exp>=0 && hasErr(expD,T))
+    res = join(res,(expD===95||expDl===95)?'Termin-zuschlag':'Produktzuschlag');
+  if (cols.maut>=0 && hasErr(cellNum(ws,r,cols.maut),T)) res = join(res,'Mautdifferenz');
+  let hasFR = false;
+  if (cols.fr>=0 && hasErr(cellNum(ws,r,cols.fr),T)) { res = join(res,'Frachtdifferenz'); hasFR=true; }
+  if (res==='' && !hasFR && cols.tz>=0 && hasErr(cellNum(ws,r,cols.tz),T)) res = 'Differenz treibstof';
+  return res;
+}
+
+/* ══════════════════════════════════════════
+   K+N — FillAnmerkung (Doc 3)
+   Tol: 0.09 | Fixed column indices
+   Amazon tariff tiers · bundling · Kontierung
+══════════════════════════════════════════ */
+const BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,
+  1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,
+  4500,5000,5500,6000,6500,7000,7500,8500,9500,99999];
+function getTier(kg){ for(let b of BP) if(kg<=b) return b; return 99999; }
+function resolveKN(ws, range) {
+  const fc = (h2,h3) => findCol(ws,range,h2,h3);
+  return {
+    target: fc('','Anmerkung'), stat: fc('','Stat_Freigabe'),
+    recip:11, vkg:28, vkg_dl:29, kost:33, sach:34,
+    fr:38, toll:41, snk_dl:42, snk_diff:44, fuel:47,
+  };
+}
+function processKN(ws, r, cols) {
+  const T = T_KN;
+  if (cols.stat>=0 && cellNum(ws,r,cols.stat)!==10) return null;
+  let res='', hasFR=false;
+  const frDiff=cellNum(ws,r,cols.fr), snkDl=cellNum(ws,r,cols.snk_dl);
+  if (hasErr(frDiff,T)) {
+    hasFR=true;
+    if (frDiff>0) {
+      if (snkDl===18) res=join(res,'hätte gebündelt werden müssen');
+      else if (snkDl===5) {
+        const v1=cellNum(ws,r,cols.vkg), v2=cellNum(ws,r,cols.vkg_dl);
+        const recip=cellStr(ws,r,cols.recip).toLowerCase();
+        res=join(res, recip.includes('amazon')&&getTier(v1)===getTier(v2)
+          ?'hätte nach Amazon Tarif abrechnen dürfen':'Differenz aufgrund abweichender Gewichte');
+      } else res=join(res,'Differenz aufgrund abweichender Gewichte');
+    } else res=join(res,'Differenz aufgrund abweichender Gewichte');
+    if (hasErr(cellNum(ws,r,cols.toll),T)) res=join(res,'Mautdifferenz');
+  }
+  const snkDiff=cellNum(ws,r,cols.snk_diff);
+  if (hasErr(snkDiff,T)) {
+    if      (snkDl===5)  res=join(res,'Portalavisierung, ok?');
+    else if (snkDl===9)  res=join(res,'Avis, ok?');
+    else if (snkDl===18) { if(!res.toLowerCase().includes('avis')) res=join(res,'Avis, ok?'); }
+    else if (snkDl===34) { res=join(res,'Portalavisierung, ok?'); res=join(res,'Avis, ok?'); }
+    else                  res=join(res,'SNK Differenz');
+  }
+  if (!hasFR && hasErr(cellNum(ws,r,cols.fuel),T)) res=join(res,'Differenz treibstoff');
+  const kost=cellStr(ws,r,cols.kost), sach=cellStr(ws,r,cols.sach);
+  if (!kost||kost==='-'||!sach||sach==='-') res=join(res,'Kontierung?');
+  return res;
+}
+
+/* ══════════════════════════════════════════
+   DHL Express — CekKondisi_Final_YO_Kelipatan15 (Doc 1)
+   Tol: 0.04 | YO ×15 logic | SNK exact 25/30/60
+   Blocker group → prevents standard group
+   TZ only when result still empty
+══════════════════════════════════════════ */
+function resolveDHL(ws, range) {
+  const fc = (h2,h3) => findCol(ws,range,h2,h3);
+  return {
+    target:fc('','Anmerkung'), stat:fc('','Stat_Freigabe'),
+    tarif:fc('Total','Kosten lt. Tarif'),
+    sach:fc('','SACHKONTO'), kost:fc('','KOSTENSTELLE'),
+    addr:fc('FR','Differenz'), stack:fc('PAL','Differenz'), weight:fc('OW','Differenz'),
+    conv:fc('YO','Differenz'), irr:fc('YL','Differenz'), neut:fc('ND','Differenz'),
+    sign:fc('SF','Differenz'), snk:fc('SNK','Differenz'),
+    diff:fc('AC','Differenz'), maut:fc('MT','Differenz'),
+    surc:fc('NX','Differenz'), over:fc('OS','Differenz'), tz:fc('TZ','Differenz'),
+  };
+}
+function processDHL(ws, r, cols) {
+  const T = T_DHL;
+  if (cols.stat>=0 && cellNum(ws,r,cols.stat)!==10) return null;
+  if (cols.tarif>=0) {
+    const raw=cellStr(ws,r,cols.tarif), v=cellNum(ws,r,cols.tarif);
     if (raw && v===0 && (raw.includes('0')||raw==='-')) return 'Fremdnummer doppelt berechnet.';
   }
-  let res = '';
+  let res='';
   if (cols.sach>=0 && !cellStr(ws,r,cols.sach)) res=join(res,'kontierung?');
   if (cols.kost>=0 && !cellStr(ws,r,cols.kost)) res=join(res,'kontierung?');
   let block=false;
-  [[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']]
-    .forEach(([c,m]) => { if(c>=0&&err(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
-  const yo = cols.conv>=0 ? cellNum(ws,r,cols.conv) : 0;
+  [[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],
+   [cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']]
+    .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
+  const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;
   if (cols.conv>=0) {
-    if (yo>0 && yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}
-    else if(err(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}
+    if (yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}
+    else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}
   }
-  [[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']]
-    .forEach(([c,m]) => { if(c>=0&&err(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
+  [[cols.irr,'Non-conveyable piece irregular ok?'],
+   [cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']]
+    .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
   const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;
-  if(cols.snk>=0){
-    if(snk===25){res=join(res,'Limited quantities ok?');block=true;}
-    else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}
-    else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}
-    else if(err(snk,T)){res=join(res,'SNK Differenz');block=true;}
+  if (cols.snk>=0) {
+    if      (snk===25){res=join(res,'Limited quantities ok?');block=true;}
+    else if (snk===30){res=join(res,'Elevated Risk, ok?');block=true;}
+    else if (snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}
+    else if (hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}
   }
-  if(!block){
+  if (!block) {
     const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;
-    if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(err(ac,T))res=join(res,'Address Correction ok?');}
+    if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}
     [[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']]
-      .forEach(([c,m]) => { if(c>=0&&err(cellNum(ws,r,c),T))res=join(res,m); });
+      .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m); });
   }
-  if(!res&&cols.tz>=0&&err(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
+  if (res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
   return res;
 }
 
-/* ── K+N (Freigabe) ── */
-function processKN(ws, r, cols) {
-  const T=T_KN;
-  if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10) return null;
-  const tRaw=cellStr(ws,r,cols.tarif),tV=cellNum(ws,r,cols.tarif);
-  const tZero=tRaw&&((tV===0&&tRaw.includes('0'))||tRaw==='-');
-  let res='';
-  if(cols.zz>=0&&err(cellNum(ws,r,cols.zz),T)) res=join(res,'2. Zustellung');
-  const snkDiff=cols.snk_diff>=0?cellNum(ws,r,cols.snk_diff):0;
-  const snkDl=cols.snk_dl>=0?cellNum(ws,r,cols.snk_dl):0;
-  if(cols.snk_diff>=0&&snkDiff!==0){
-    if(snkDl===75) res=join(res,'Ausfallfracht/Schadensersatz');
-    else if(!tZero){
-      if(snkDl===9) res=join(res,'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag');
-      else res=join(res,'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag');
-    }
-  }
-  if(tZero) return res;
-  if(cols.dgr>=0&&err(cellNum(ws,r,cols.dgr),T)) res=join(res,'Gefahrgut-Zuschlag');
-  if(cols.lg>=0&&err(cellNum(ws,r,cols.lg),T)) res=join(res,'Lagergeld');
-  const expD=cols.exp>=0?cellNum(ws,r,cols.exp):0, expDl=cols.exp_dl>=0?cellNum(ws,r,cols.exp_dl):0;
-  if(cols.exp>=0&&err(expD,T)) res=join(res,(expD===95||expDl===95)?'Termin-zuschlag':'Produktzuschlag');
-  if(cols.maut>=0&&err(cellNum(ws,r,cols.maut),T)) res=join(res,'Mautdifferenz');
-  let hasFR=false;
-  if(cols.fr>=0&&err(cellNum(ws,r,cols.fr),T)){res=join(res,'Frachtdifferenz');hasFR=true;}
-  if(!res&&!hasFR&&cols.tz>=0&&err(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
-  return res;
-}
-
-/* ── DHL Express ── */
-const BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8500,9500,99999];
-function tier(kg){ for(let b of BP) if(kg<=b) return b; return 99999; }
-function processDHL(ws, r, cols) {
-  const T=T_DHL;
-  if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10) return null;
-  let res='', hasFR=false;
-  const frD=cols.fr>=0?cellNum(ws,r,cols.fr):0, snkDl=cols.snk_dl>=0?cellNum(ws,r,cols.snk_dl):0;
-  if(err(frD,T)){
-    hasFR=true;
-    if(frD>0){
-      if(snkDl===18) res=join(res,'hätte gebündelt werden müssen');
-      else if(snkDl===5){
-        const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0, v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
-        const recip=cellStr(ws,r,cols.recip).toLowerCase();
-        res=join(res, recip.includes('amazon')&&tier(v1)===tier(v2)?'hätte nach Amazon Tarif abrechnen dürfen':'Differenz aufgrund abweichender Gewichte');
-      } else res=join(res,'Differenz aufgrund abweichender Gewichte');
-    } else res=join(res,'Differenz aufgrund abweichender Gewichte');
-    if(cols.toll>=0&&err(cellNum(ws,r,cols.toll),T)) res=join(res,'Mautdifferenz');
-  }
-  const snkD=cols.snk_diff>=0?cellNum(ws,r,cols.snk_diff):0;
-  if(err(snkD,T)){
-    if(snkDl===5) res=join(res,'Portalavisierung, ok?');
-    else if(snkDl===9) res=join(res,'Avis, ok?');
-    else if(snkDl===18){if(!res.toLowerCase().includes('avis'))res=join(res,'Avis, ok?');}
-    else if(snkDl===34){res=join(res,'Portalavisierung, ok?');res=join(res,'Avis, ok?');}
-    else res=join(res,'SNK Differenz');
-  }
-  if(!hasFR&&cols.fuel>=0&&err(cellNum(ws,r,cols.fuel),T)) res=join(res,'Differenz treibstoff');
-  const kost=cellStr(ws,r,cols.kost), sach=cellStr(ws,r,cols.sach);
-  if(!kost||kost==='-'||!sach||sach==='-') res=join(res,'Kontierung?');
-  return res;
-}
-
-/* ── Wackler ── */
-function processWackler(ws, r, cols) {
-  const T=T_WK;
-  if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10) return null;
-  let res='';
-  if(cols.fr>=0&&err(cellNum(ws,r,cols.fr),T)) res=join(res,'Frachtdifferenz');
-  if(cols.maut>=0&&err(cellNum(ws,r,cols.maut),T)) res=join(res,'Mautdifferenz');
-  if(cols.snk_diff>=0&&err(cellNum(ws,r,cols.snk_diff),T)) res=join(res,'SNK Differenz');
-  if(!res&&cols.tz>=0&&err(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
-  return res;
-}
-
-/* ── Column resolvers ── */
-function resolveCols(ws, range, fw) {
+/* ══════════════════════════════════════════
+   WACKLER — no VB code yet
+   Standard differenz: FR · MT · SNK · TZ
+══════════════════════════════════════════ */
+function resolveWackler(ws, range) {
   const fc=(h2,h3)=>findCol(ws,range,h2,h3);
-  if(fw==='yo') return {
-    target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),
-    sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),
-    addr:fc('FR','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),
-    conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),
-    sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),
-    maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz'),
-  };
-  if(fw==='freigabe') return {
-    target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),
-    zz:fc('ZZ','Differenz'),dgr:fc('DGR','Differenz'),lg:fc('LG','Differenz'),
-    exp:fc('EXP','Differenz'),exp_dl:fc('EXP','Kosten DL'),
-    snk_diff:fc('SNK','Differenz'),snk_dl:fc('SNK','Kosten DL'),
-    fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),
-  };
-  if(fw==='anmerkung') return {
-    target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),
-    recip:11,vkg:28,vkg_dl:29,kost:33,sach:34,fr:38,toll:41,snk_dl:42,snk_diff:44,fuel:47,
-  };
-  if(fw==='wackler') return {
-    target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),
-    fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),
-    snk_diff:fc('SNK','Differenz'),tz:fc('TZ','Differenz'),
-  };
+  return { target:fc('','Anmerkung'), stat:fc('','Stat_Freigabe'),
+           fr:fc('FR','Differenz'), maut:fc('MT','Differenz'),
+           snk_diff:fc('SNK','Differenz'), tz:fc('TZ','Differenz') };
+}
+function processWackler(ws, r, cols) {
+  const T=T_WACKLER;
+  if (cols.stat>=0&&cellNum(ws,r,cols.stat)!==10) return null;
+  let res='';
+  if(cols.fr>=0&&hasErr(cellNum(ws,r,cols.fr),T)) res=join(res,'Frachtdifferenz');
+  if(cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T)) res=join(res,'Mautdifferenz');
+  if(cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T)) res=join(res,'SNK Differenz');
+  if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
+  return res;
 }
 
 /* ── Runner ── */
@@ -513,22 +372,22 @@ function runProcess() {
   document.getElementById('btnDl').style.display='none';
   document.getElementById('stats').style.display='none';
   setProgress(5);
-  setTimeout(() => {
+  setTimeout(()=>{
     try {
       resultWB=XLSX.utils.book_new();
-      let total=0, filled=0, skipped=0;
-      workbook.SheetNames.forEach((name,si) => {
+      let total=0,filled=0,skipped=0;
+      workbook.SheetNames.forEach((name,si)=>{
         const ws=workbook.Sheets[name];
         const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
-        const cols=resolveCols(ws,range,selectedFW);
-        if(cols.target<0){showLog('Sheet "'+name+'": Anmerkung column not found.','err');return;}
+        let cols, fn;
+        if      (selectedFW==='dachser'){cols=resolveDachser(ws,range);fn=processDachser;}
+        else if (selectedFW==='kn')     {cols=resolveKN(ws,range);     fn=processKN;}
+        else if (selectedFW==='dhl')    {cols=resolveDHL(ws,range);    fn=processDHL;}
+        else                            {cols=resolveWackler(ws,range); fn=processWackler;}
+        if (cols.target<0){showLog('Sheet "'+name+'": Anmerkung column not found.','err');return;}
         for(let r=3;r<=range.e.r;r++){
           total++;
-          let result;
-          if(selectedFW==='yo') result=processDachser(ws,r,cols);
-          else if(selectedFW==='freigabe') result=processKN(ws,r,cols);
-          else if(selectedFW==='anmerkung') result=processDHL(ws,r,cols);
-          else result=processWackler(ws,r,cols);
+          const result=fn(ws,r,cols);
           const addr=XLSX.utils.encode_cell({r,c:cols.target});
           if(result===null){ws[addr]={t:'s',v:''};skipped++;}
           else{ws[addr]={t:'s',v:result};if(result)filled++;}
@@ -543,15 +402,11 @@ function runProcess() {
       showLog('Done — '+filled+' rows filled, '+skipped+' skipped (Stat_Freigabe ≠ 10).','ok');
       document.getElementById('btnDl').style.display='block';
       setProgress(100);
-    } catch(e){ showLog('Error: '+e.message,'err'); }
+    } catch(e){showLog('Error: '+e.message,'err');}
     btn.disabled=false; btn.textContent='Run processor';
-  }, 80);
+  },80);
 }
-
-function downloadResult() {
-  if(!resultWB) return;
-  XLSX.writeFile(resultWB,'anmerkung_processed.xlsx');
-}
+function downloadResult(){ if(!resultWB)return; XLSX.writeFile(resultWB,'anmerkung_processed.xlsx'); }
 </script>
 </body>
 </html>
