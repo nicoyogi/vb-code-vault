@@ -54,7 +54,7 @@ h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 
 .stat-l { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 3px; }
 .log { font-family: var(--mono); font-size: 11.5px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; margin-top: 0.5rem; display: none; line-height: 1.8; }
 .log.err { color: var(--danger); border-color: rgba(248,113,113,0.15); background: rgba(248,113,113,0.05); }
-.log.ok  { color: var(--accent); border-color: rgba(52,211,153,0.15); }
+.log.ok { color: var(--accent); border-color: rgba(52,211,153,0.15); }
 .footer { margin-top: 3rem; font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; line-height: 2; }
 .footer a { color: var(--text3); text-decoration: none; }
 .footer a:hover { color: var(--text2); }
@@ -64,12 +64,10 @@ h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 
 <body>
 <div class="glow-top"></div>
 <div class="container">
-
   <nav class="nav">
     <a href="index.html" class="nav-back">← back to home</a>
     <span class="nav-badge">Excel Processor</span>
   </nav>
-
   <div class="eyebrow">// anmerkung tool</div>
   <h1>Anmerkung <span class="grad">Processor</span></h1>
   <p class="subtitle">Upload · select forwarder · fill Anmerkung column · download</p>
@@ -90,14 +88,14 @@ h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 
     </button>
     <button class="fw-btn" data-fw="wackler" onclick="selectFW(this)">
       <div class="fw-name">Wackler</div>
-      <div class="fw-desc">Standard differenz checks<br>FR · MT · SNK · TZ fallback</div>
+      <div class="fw-desc">AVIS · FR · MT · SNK · TZ<br>Priority: AVIS first · TZ fallback</div>
     </button>
   </div>
 
   <div class="section-label">02 — Upload file</div>
   <div class="upload-area" id="dropArea"
-       onclick="document.getElementById('fileInput').click()"
-       ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
+    onclick="document.getElementById('fileInput').click()"
+    ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
     <div class="upload-icon">⬆</div>
     <div class="upload-text"><strong>Click to browse</strong> or drag &amp; drop your .xlsx / .xls file</div>
     <div class="file-name" id="fileName"></div>
@@ -107,7 +105,7 @@ h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 
   <div class="section-label">03 — Process &amp; download</div>
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
   <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Run processor</button>
-  <button class="btn-dl"  id="btnDl"  onclick="downloadResult()">Download processed file ↓</button>
+  <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download processed file ↓</button>
 
   <div class="stats" id="stats">
     <div class="stat"><div class="stat-n" id="sTotal">0</div><div class="stat-l">rows scanned</div></div>
@@ -137,7 +135,7 @@ function loadFile(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      workbook = XLSX.read(e.target.result, {type:'array'});
+      workbook = XLSX.read(e.target.result, {type:'array', cellStyles:true, cellNF:true, sheetStubs:true});
       const fn = document.getElementById('fileName');
       fn.textContent = file.name + ' — ' + workbook.SheetNames.length + ' sheet(s)';
       fn.style.display = 'block';
@@ -274,11 +272,11 @@ function processKN(ws, r, cols) {
   }
   const snkDiff=cellNum(ws,r,cols.snk_diff);
   if (hasErr(snkDiff,T)) {
-    if      (snkDl===5)  res=join(res,'Portalavisierung, ok?');
+    if (snkDl===5)       res=join(res,'Portalavisierung, ok?');
     else if (snkDl===9)  res=join(res,'Avis, ok?');
     else if (snkDl===18) { if(!res.toLowerCase().includes('avis')) res=join(res,'Avis, ok?'); }
     else if (snkDl===34) { res=join(res,'Portalavisierung, ok?'); res=join(res,'Avis, ok?'); }
-    else                  res=join(res,'SNK Differenz');
+    else res=join(res,'SNK Differenz');
   }
   if (!hasFR && hasErr(cellNum(ws,r,cols.fuel),T)) res=join(res,'Differenz treibstoff');
   const kost=cellStr(ws,r,cols.kost), sach=cellStr(ws,r,cols.sach);
@@ -318,7 +316,7 @@ function processDHL(ws, r, cols) {
   let block=false;
   [[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],
    [cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']]
-    .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
+  .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
   const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;
   if (cols.conv>=0) {
     if (yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}
@@ -326,10 +324,10 @@ function processDHL(ws, r, cols) {
   }
   [[cols.irr,'Non-conveyable piece irregular ok?'],
    [cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']]
-    .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
+  .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;} });
   const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;
   if (cols.snk>=0) {
-    if      (snk===25){res=join(res,'Limited quantities ok?');block=true;}
+    if (snk===25){res=join(res,'Limited quantities ok?');block=true;}
     else if (snk===30){res=join(res,'Elevated Risk, ok?');block=true;}
     else if (snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}
     else if (hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}
@@ -338,75 +336,138 @@ function processDHL(ws, r, cols) {
     const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;
     if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}
     [[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']]
-      .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m); });
+    .forEach(([c,m])=>{ if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m); });
   }
   if (res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
   return res;
 }
 
 /* ══════════════════════════════════════════
-   WACKLER — no VB code yet
-   Standard differenz: FR · MT · SNK · TZ
+   WACKLER — Soll-Ist-Vergleich format
+   Tol: 0.09
+   Column layout (rows 1/2/3 headers):
+     Row 2: AVIS | FR | MT | SNK | TZ | Total
+     Row 3: Kosten DL | Kosten lt. Tarif | Differenz (per group)
+
+   Logic order:
+   1. AVIS Differenz  → 'Avis, ok?'          (PRIORITY — checked first)
+   2. FR Differenz    → 'Frachtdifferenz'
+   3. MT Differenz    → 'Mautdifferenz'
+   4. SNK Differenz   → 'SNK Differenz'
+   5. TZ Differenz    → 'Differenz treibstof' (FALLBACK — only if res still empty)
 ══════════════════════════════════════════ */
 function resolveWackler(ws, range) {
-  const fc=(h2,h3)=>findCol(ws,range,h2,h3);
-  return { target:fc('','Anmerkung'), stat:fc('','Stat_Freigabe'),
-           fr:fc('FR','Differenz'), maut:fc('MT','Differenz'),
-           snk_diff:fc('SNK','Differenz'), tz:fc('TZ','Differenz') };
+  const fc = (h2,h3) => findCol(ws,range,h2,h3);
+  return {
+    target:    fc('','Anmerkung'),
+    stat:      fc('','Stat_Freigabe'),
+    avis_diff: fc('AVIS','Differenz'),
+    fr:        fc('FR','Differenz'),
+    maut:      fc('MT','Differenz'),
+    snk_diff:  fc('SNK','Differenz'),
+    tz:        fc('TZ','Differenz'),
+  };
 }
 function processWackler(ws, r, cols) {
-  const T=T_WACKLER;
-  if (cols.stat>=0&&cellNum(ws,r,cols.stat)!==10) return null;
-  let res='';
-  if(cols.fr>=0&&hasErr(cellNum(ws,r,cols.fr),T)) res=join(res,'Frachtdifferenz');
-  if(cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T)) res=join(res,'Mautdifferenz');
-  if(cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T)) res=join(res,'SNK Differenz');
-  if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T)) res='Differenz treibstof';
+  const T = T_WACKLER;
+  if (cols.stat >= 0 && cellNum(ws,r,cols.stat) !== 10) return null;
+  let res = '';
+  /* 1. AVIS — highest priority */
+  if (cols.avis_diff >= 0 && hasErr(cellNum(ws,r,cols.avis_diff), T))
+    res = join(res, 'Avis, ok?');
+  /* 2. FR */
+  if (cols.fr >= 0 && hasErr(cellNum(ws,r,cols.fr), T))
+    res = join(res, 'Frachtdifferenz');
+  /* 3. MT */
+  if (cols.maut >= 0 && hasErr(cellNum(ws,r,cols.maut), T))
+    res = join(res, 'Mautdifferenz');
+  /* 4. SNK */
+  if (cols.snk_diff >= 0 && hasErr(cellNum(ws,r,cols.snk_diff), T))
+    res = join(res, 'SNK Differenz');
+  /* 5. TZ — fallback only when nothing else triggered */
+  if (res === '' && cols.tz >= 0 && hasErr(cellNum(ws,r,cols.tz), T))
+    res = 'Differenz treibstof';
   return res;
 }
 
+
+
 /* ── Runner ── */
 function runProcess() {
-  const btn=document.getElementById('btnRun');
-  btn.disabled=true; btn.textContent='Processing...';
-  document.getElementById('btnDl').style.display='none';
-  document.getElementById('stats').style.display='none';
+  const btn = document.getElementById('btnRun');
+  btn.disabled = true; btn.textContent = 'Processing...';
+  document.getElementById('btnDl').style.display = 'none';
+  document.getElementById('stats').style.display = 'none';
   setProgress(5);
-  setTimeout(()=>{
+  setTimeout(() => {
     try {
-      resultWB=XLSX.utils.book_new();
-      let total=0,filled=0,skipped=0;
-      workbook.SheetNames.forEach((name,si)=>{
-        const ws=workbook.Sheets[name];
-        const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+      resultWB = XLSX.utils.book_new();
+      let total=0, filled=0, skipped=0;
+      workbook.SheetNames.forEach((name, si) => {
+        const ws = workbook.Sheets[name];
+        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
         let cols, fn;
-        if      (selectedFW==='dachser'){cols=resolveDachser(ws,range);fn=processDachser;}
-        else if (selectedFW==='kn')     {cols=resolveKN(ws,range);     fn=processKN;}
-        else if (selectedFW==='dhl')    {cols=resolveDHL(ws,range);    fn=processDHL;}
-        else                            {cols=resolveWackler(ws,range); fn=processWackler;}
-        if (cols.target<0){showLog('Sheet "'+name+'": Anmerkung column not found.','err');return;}
-        for(let r=3;r<=range.e.r;r++){
-          total++;
-          const result=fn(ws,r,cols);
-          const addr=XLSX.utils.encode_cell({r,c:cols.target});
-          if(result===null){ws[addr]={t:'s',v:''};skipped++;}
-          else{ws[addr]={t:'s',v:result};if(result)filled++;}
+        if      (selectedFW==='dachser') { cols=resolveDachser(ws,range); fn=processDachser; }
+        else if (selectedFW==='kn')      { cols=resolveKN(ws,range);      fn=processKN;      }
+        else if (selectedFW==='dhl')     { cols=resolveDHL(ws,range);      fn=processDHL;     }
+        else                             { cols=resolveWackler(ws,range);  fn=processWackler; }
+
+        if (cols.target < 0) {
+          showLog('Sheet "' + name + '": Anmerkung column not found.', 'err');
+          return;
         }
-        XLSX.utils.book_append_sheet(resultWB,ws,name);
-        setProgress(20+Math.round(80*(si+1)/workbook.SheetNames.length));
+
+        /* Data rows start at Excel row 4 = 0-based index 3 */
+        for (let r = 3; r <= range.e.r; r++) {
+          total++;
+          const result = fn(ws, r, cols);
+          const addr = XLSX.utils.encode_cell({r, c: cols.target});
+
+          if (result === null) {
+            /* Stat≠10: skipped — mutate value only, keep all style properties */
+            if (ws[addr]) {
+              ws[addr].v = '';
+              ws[addr].t = 's';
+              delete ws[addr].w; /* clear cached formatted text so SheetJS recomputes */
+            } else {
+              ws[addr] = {t:'s', v:''};
+            }
+            skipped++;
+          } else {
+            /* Stat=10: write result — mutate existing cell to preserve .s style index */
+            if (ws[addr]) {
+              ws[addr].v = result;
+              ws[addr].t = 's';
+              delete ws[addr].w;
+            } else {
+              /* Cell didn't exist yet (blank column) — create with no style so original border etc is kept */
+              ws[addr] = {t:'s', v:result};
+            }
+            if (result) filled++;
+          }
+        }
+
+        XLSX.utils.book_append_sheet(resultWB, ws, name);
+        setProgress(20 + Math.round(80 * (si+1) / workbook.SheetNames.length));
       });
-      document.getElementById('sTotal').textContent=total;
-      document.getElementById('sFilled').textContent=filled;
-      document.getElementById('sSkipped').textContent=skipped;
-      document.getElementById('stats').style.display='grid';
-      showLog('Done — '+filled+' rows filled, '+skipped+' skipped (Stat_Freigabe ≠ 10).','ok');
-      document.getElementById('btnDl').style.display='block';
+
+      document.getElementById('sTotal').textContent  = total;
+      document.getElementById('sFilled').textContent = filled;
+      document.getElementById('sSkipped').textContent = skipped;
+      document.getElementById('stats').style.display = 'grid';
+      showLog('Done — ' + filled + ' rows filled, ' + skipped + ' skipped (Stat_Freigabe ≠ 10).', 'ok');
+      document.getElementById('btnDl').style.display = 'block';
       setProgress(100);
-    } catch(e){showLog('Error: '+e.message,'err');}
-    btn.disabled=false; btn.textContent='Run processor';
-  },80);
+    } catch(e) { showLog('Error: ' + e.message, 'err'); }
+    btn.disabled = false; btn.textContent = 'Run processor';
+  }, 80);
 }
-function downloadResult(){ if(!resultWB)return; XLSX.writeFile(resultWB,'anmerkung_processed.xlsx'); }
+
+function downloadResult() {
+  if (!resultWB) return;
+  /* cellStyles:true preserves .s style indices loaded from the source file */
+  XLSX.writeFile(resultWB, 'anmerkung_processed.xlsx', {cellStyles: true, bookSST: false});
+}
 </script>
 </body>
 </html>
