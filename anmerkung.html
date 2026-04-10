@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Anmerkung Processor</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-<!-- SheetJS: read cell values only -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- JSZip: patch raw XML inside the XLSX so styles are never touched -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -128,9 +126,9 @@ h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 
    STATE
 ══════════════════════════════════════════════════════════ */
 let selectedFW   = null;
-let rawFileBytes = null;  // original ArrayBuffer — never modified
-let workbook     = null;  // SheetJS WB for reading values
-let resultBlob   = null;  // final output Blob
+let rawFileBytes = null;
+let workbook     = null;
+let resultBlob   = null;
 
 const T_DACHSER = 0.08, T_KN = 0.09, T_DHL = 0.04, T_WACKLER = 0.09;
 
@@ -207,20 +205,7 @@ function join(a, b) {
    FORWARDER LOGIC
 ══════════════════════════════════════════════════════════ */
 
-/* ── DACHSER — CekKondisi_Freigabe (FreigabeCheck module)
-   Tolerance: 0.08
-   · ZZ always runs
-   · SNK always runs (190/130/75 fire even when Tarif=0)
-   · SAM always runs
-   · All other checks skip when Tarif=0
-   · FR variants: isZW→ZW note | sachkonto=X→VORHOLUNG | servArt=K1AS→Sonderfahrt
-                  anzSdg>1→hätte gebündelt | else→Frachtdifferenz
-   · FR blocks TZ; TZ only when result empty and no FR diff
-   · SNK_DL=14 with SNK_DIFF significant → Abholterminvereinbarung appended separately
-   · Output order: ZZ → SNK → SAM → [DGR → EXP → Maut → SBFU → FR → Abhol] → TZ
-   · Fixed structural columns (0-based): referenz3=15, empfPlz=13, empfOrt=14,
-                                          anzSdg=3, servArt=16, sachkonto=35
-══════════════════════════════════════════════════════════ */
+/* ── DACHSER ── */
 const DA_COL_REFERENZ3 = 15;
 const DA_COL_EMPF_PLZ  = 13;
 const DA_COL_EMPF_ORT  = 14;
@@ -269,10 +254,8 @@ function daEvalSNK(ws, r, cols, isTarifZero, servArt) {
   if (snkDl === 0 && snkTar === 0 && snkDiff === 0) return '';
 
   switch (snkDl) {
-    case 190:
-      return 'AUSFALLFRACHT';
-    case 130:
-      return 'Standgeld';
+    case 190: return 'AUSFALLFRACHT';
+    case 130: return 'Standgeld';
     case 75:
       return (servArt.toUpperCase() === 'K1AV')
         ? 'Speditionskosten gem. Text'
@@ -328,76 +311,48 @@ function processDachser(ws, r, cols) {
 
   let res = '';
 
-  // 1. ZZ — always runs
   if (cols.zz >= 0 && hasErr(cellNum(ws, r, cols.zz), T))
     res = join(res, '2. Zustellung');
 
-  // 2. SNK — always runs (190/130/75 fire regardless of Tarif)
   res = join(res, daEvalSNK(ws, r, cols, isTarifZero, servArt));
 
-  // 3. SAM — always runs
   if (cols.sam >= 0 && hasErr(cellNum(ws, r, cols.sam), T))
     res = join(res, 'Samstagzustellung');
 
-  // Everything below skipped when Tarif=0
   if (isTarifZero) return res;
 
-  // 4. DGR
   if (cols.dgr >= 0 && hasErr(cellNum(ws, r, cols.dgr), T))
     res = join(res, 'Gefahrgut-Zuschlag');
 
-  // 5. EXP
   res = join(res, daEvalEXP(ws, r, cols));
 
-  // 6. Maut
   if (cols.maut >= 0 && hasErr(cellNum(ws, r, cols.maut), T))
     res = join(res, 'Mautdifferenz');
 
-  // 7. SBFU
   if (cols.sbfu >= 0 && hasErr(cellNum(ws, r, cols.sbfu), T))
     res = join(res, 'SBfU-Bescheinigung f. Umsatzsteuerzwecke');
 
-  // 8. FR / ZW / VORHOLUNG / Sonderfahrt / hätte gebündelt / Frachtdifferenz
   let hasFR = false;
   if (cols.fr >= 0 && hasErr(cellNum(ws, r, cols.fr), T)) {
     hasFR = true;
-    if      (isZW)                        res = join(res, daZWNote(ws, r));
-    else if (sachkonto.toUpperCase()==='X') res = join(res, 'VORHOLUNG');
-    else if (servArt.toUpperCase()==='K1AS') res = join(res, 'Sonderfahrt');
-    else if (anzSdg > 1)                  res = join(res, 'hätte gebündelt werden können?');
-    else                                  res = join(res, 'Frachtdifferenz');
+    if      (isZW)                           res = join(res, daZWNote(ws, r));
+    else if (sachkonto.toUpperCase() === 'X') res = join(res, 'VORHOLUNG');
+    else if (servArt.toUpperCase() === 'K1AS') res = join(res, 'Sonderfahrt');
+    else if (anzSdg > 1)                     res = join(res, 'hätte gebündelt werden können?');
+    else                                     res = join(res, 'Frachtdifferenz');
   }
 
-  // 9. Abholterminvereinbarung — SNK_DL=14 appended separately after FR
   if (cols.snk_dl >= 0 && cellNum(ws, r, cols.snk_dl) === 14 &&
       cols.snk_diff >= 0 && hasErr(cellNum(ws, r, cols.snk_diff), T))
     res = join(res, 'Abholterminvereinbarung');
 
-  // 10. TZ — only when result still empty and no FR diff
   if (res === '' && !hasFR && cols.tz >= 0 && hasErr(cellNum(ws, r, cols.tz), T))
     res = 'Differenz treibstof';
 
   return res;
 }
 
-/* ── K+N — FillAnmerkung (AnmerkungCheck module)
-   Tolerance: 0.09
-   All columns resolved dynamically via row-2 + row-3 headers.
-   1. freightDiff significant:
-      · ReferenzNr contains comma → return 'hätte gebündelt werden müssen, ok?' immediately
-      · frDiff > 0, SNK_DL=5, Amazon recipient, same tariff tier → Amazon tariff note
-      · otherwise → Differenz aufgrund abweichender Gewichte
-   2. ExpDiff significant → FIXTERMIN
-   3. TollDiff significant → Mautdifferenz
-   4. SurchargeNightDiff significant:
-      · SNK_DL=5 or 25 → Portalavisierung, ok?
-      · SNK_DL=9       → Avis, ok?
-      · SNK_DL=18      → Avis, ok? (if not already present)
-      · SNK_DL=34      → Portalavisierung, ok? + Avis, ok?
-      · else           → SNK Differenz
-   5. FuelDiff significant → Differenz treibstoff
-   6. Kostenstelle blank/'-' OR Sachkonto blank/'-' → Kontierung?
-══════════════════════════════════════════════════════════ */
+/* ── K+N ── */
 const KN_BP = [50,100,150,200,250,300,350,400,450,500,
   600,700,800,900,1000,1100,1200,1300,1400,1500,
   1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,
@@ -446,9 +401,7 @@ function processKN(ws, r, cols) {
 
   let res = '';
 
-  // 1. Freight difference
   if (hasErr(frDiff, T)) {
-    // Bundling: ReferenzNr contains comma → return immediately, nothing else
     if (refNr && refNr !== '-' && refNr.includes(','))
       return 'hätte gebündelt werden müssen, ok?';
 
@@ -463,15 +416,9 @@ function processKN(ws, r, cols) {
     }
   }
 
-  // 2. EXP difference → FIXTERMIN
-  if (hasErr(expDiff, T))
-    res = join(res, 'FIXTERMIN');
+  if (hasErr(expDiff, T))  res = join(res, 'FIXTERMIN');
+  if (hasErr(tollDiff, T)) res = join(res, 'Mautdifferenz');
 
-  // 3. Toll difference
-  if (hasErr(tollDiff, T))
-    res = join(res, 'Mautdifferenz');
-
-  // 4. Surcharge night difference
   if (hasErr(snkDiff, T)) {
     if      (snkDl === 5 || snkDl === 25) res = join(res, 'Portalavisierung, ok?');
     else if (snkDl === 9)                 res = join(res, 'Avis, ok?');
@@ -480,18 +427,15 @@ function processKN(ws, r, cols) {
     else                                  res = join(res, 'SNK Differenz');
   }
 
-  // 5. Fuel difference
-  if (hasErr(fuelDiff, T))
-    res = join(res, 'Differenz treibstoff');
+  if (hasErr(fuelDiff, T)) res = join(res, 'Differenz treibstoff');
 
-  // 6. Kontierung
   if (!kost || kost === '-' || !sach || sach === '-')
     res = join(res, 'Kontierung?');
 
   return res;
 }
 
-/* ── DHL Express (unchanged from Doc 4) ── */
+/* ── DHL Express ── */
 function resolveDHL(ws, range) {
   const fc=(h2,h3)=>findCol(ws,range,h2,h3);
   return {
@@ -543,7 +487,7 @@ function processDHL(ws, r, cols) {
   return res;
 }
 
-/* ── WACKLER (unchanged from Doc 4) ── */
+/* ── Wackler ── */
 function resolveWackler(ws, range) {
   const fc=(h2,h3)=>findCol(ws,range,h2,h3);
   return {
@@ -582,127 +526,168 @@ function colToIdx(col) {
    SHARED STRINGS HELPERS
 ══════════════════════════════════════════════════════════ */
 function parseSharedStrings(xml) {
-  const strings=[];
-  for(const m of xml.matchAll(/<si>([\s\S]*?)<\/si>/g)){
-    const parts=[...m[1].matchAll(/<t(?:[^>]*)>([\s\S]*?)<\/t>/g)];
-    strings.push(parts.map(p=>p[1]
+  const strings = [];
+  for (const m of xml.matchAll(/<si>([\s\S]*?)<\/si>/g)) {
+    const parts = [...m[1].matchAll(/<t(?:[^>]*)>([\s\S]*?)<\/t>/g)];
+    strings.push(parts.map(p => p[1]
       .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
       .replace(/&quot;/g,'"').replace(/&apos;/g,"'")).join(''));
   }
   return strings;
 }
 function getOrAdd(strings, str) {
-  const i=strings.indexOf(str);
-  if(i!==-1)return i;
+  const i = strings.indexOf(str);
+  if (i !== -1) return i;
   strings.push(str);
-  return strings.length-1;
+  return strings.length - 1;
 }
-function escXml(s){
+function escXml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
           .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 }
-function rebuildSharedStrings(strings){
-  const n=strings.length;
-  const sis=strings.map(s=>`<si><t xml:space="preserve">${escXml(s)}</t></si>`).join('');
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${n}" uniqueCount="${n}">${sis}</sst>`;
+function rebuildSharedStrings(strings) {
+  const n = strings.length;
+  const sis = strings.map(s =>
+    `<si><t xml:space="preserve">${escXml(s)}</t></si>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`
+    + `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"`
+    + ` count="${n}" uniqueCount="${n}">${sis}</sst>`;
 }
 
 /* ══════════════════════════════════════════════════════════
-   SHEET XML PATCHER
-   For each target row:
-     · If cell already exists  → replace <v> content, keep s= attribute
-     · If cell doesn't exist   → insert new <c> with inferred s= from row siblings
+   CONTENT TYPES — ensure sharedStrings entry exists
+══════════════════════════════════════════════════════════ */
+function ensureSharedStringsContentType(ctXml) {
+  const ssType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml';
+  if (ctXml.includes(ssType)) return ctXml;
+  const entry = `<Override PartName="/xl/sharedStrings.xml" ContentType="${ssType}"/>`;
+  return ctXml.replace('</Types>', entry + '</Types>');
+}
+
+/* ══════════════════════════════════════════════════════════
+   WORKBOOK RELS — ensure sharedStrings relationship exists
+══════════════════════════════════════════════════════════ */
+function ensureSharedStringsRel(relXml) {
+  if (relXml.includes('sharedStrings')) return relXml;
+  const ssType = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings';
+  const entry  = `<Relationship Id="rIdSS" Type="${ssType}" Target="sharedStrings.xml"/>`;
+  return relXml.replace('</Relationships>', entry + '</Relationships>');
+}
+
+/* ══════════════════════════════════════════════════════════
+   SHEET XML PATCHER  (hardened)
 ══════════════════════════════════════════════════════════ */
 function patchSheet(sheetXml, targetCol, rowResults, strings) {
-  let xml = sheetXml;
+  const tIdx = colToIdx(targetCol);
 
-  for(const [rowNum, value] of rowResults){
-    if(value===null) continue;
+  for (const [rowNum, value] of rowResults) {
+    if (value === null) continue;
     const cellRef = targetCol + rowNum;
     const ssIdx   = getOrAdd(strings, value);
 
+    /* ── Try to find and replace an existing cell ──
+       Handles both:
+         <c r="X1" s="2" t="str">...</c>
+         <c r="X1" s="2"/>   (self-closing, empty cell)
+       Attributes can appear in any order.
+    ── */
     const existRe = new RegExp(
-      `<c\\s+r="${cellRef}"([^>]*?)>([\\s\\S]*?)<\\/c>|<c\\s+r="${cellRef}"([^>]*?)\\/>`,
-      ''
+      `<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`,
     );
-    const existMatch = existRe.exec(xml);
+    const existMatch = existRe.exec(sheetXml);
 
-    if(existMatch){
-      const attrs = (existMatch[1]||existMatch[3]||'');
-      let newAttrs = attrs.replace(/\bt="[^"]*"/g,'').trimEnd()+' t="s"';
-      xml = xml.slice(0, existMatch.index)
-        + `<c r="${cellRef}"${newAttrs}><v>${ssIdx}</v></c>`
-        + xml.slice(existMatch.index + existMatch[0].length);
-    } else {
-      const rowRe = new RegExp(
-        `(<row[^>]+r="${rowNum}"[^>]*>)([\\s\\S]*?)(<\\/row>)`
-      );
-      const rowMatch = rowRe.exec(xml);
-      if(!rowMatch) continue;
-
-      const [fullRow, rowOpen, rowContent, rowClose] = rowMatch;
-
-      const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);
-      const freq={};
-      sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});
-      const styleIdx = sVals.length
-        ? Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]
-        : '1';
-
-      const newCell = `<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;
-
-      const tIdx = colToIdx(targetCol);
-      let insertAt = rowContent.length;
-      for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)\d+"/g)){
-        if(colToIdx(m[1]) > tIdx){ insertAt=m.index; break; }
-      }
-
-      const newContent = rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);
-      xml = xml.slice(0, rowMatch.index) + rowOpen + newContent + rowClose
-          + xml.slice(rowMatch.index + fullRow.length);
+    if (existMatch) {
+      // Merge attrs from both sides of r="...", strip old t= value
+      const rawAttrs = (existMatch[1] + ' ' + (existMatch[2] || ''))
+        .replace(/\s*\bt="[^"]*"/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const attrStr = rawAttrs ? ' ' + rawAttrs : '';
+      sheetXml = sheetXml.slice(0, existMatch.index)
+        + `<c r="${cellRef}"${attrStr} t="s"><v>${ssIdx}</v></c>`
+        + sheetXml.slice(existMatch.index + existMatch[0].length);
+      continue;
     }
+
+    /* ── Cell doesn't exist — find row and insert ── */
+    // Find the opening <row ... r="N" ...> tag
+    const rowOpenRe = new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^/][^>]*>`);
+    const rowOpenMatch = rowOpenRe.exec(sheetXml);
+    if (!rowOpenMatch) continue;
+
+    const afterOpen = rowOpenMatch.index + rowOpenMatch[0].length;
+
+    // Find matching </row> by simple string search from afterOpen
+    const closeTag = '</row>';
+    const closeIdx = sheetXml.indexOf(closeTag, afterOpen);
+    if (closeIdx < 0) continue;
+
+    const rowContent = sheetXml.slice(afterOpen, closeIdx);
+
+    // Infer style index from sibling cells (most-frequent s= value)
+    const sVals = [...rowContent.matchAll(/\bs="(\d+)"/g)].map(m => m[1]);
+    const freq  = {};
+    sVals.forEach(v => { freq[v] = (freq[v] || 0) + 1; });
+    const styleIdx = sVals.length
+      ? Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0]
+      : '0';
+
+    const newCell = `<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;
+
+    // Insert at correct column position
+    let insertAt = rowContent.length;
+    for (const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)) {
+      if (colToIdx(m[1]) > tIdx) { insertAt = m.index; break; }
+    }
+
+    const newContent = rowContent.slice(0, insertAt) + newCell + rowContent.slice(insertAt);
+    sheetXml = sheetXml.slice(0, afterOpen) + newContent + sheetXml.slice(closeIdx);
   }
-  return xml;
+
+  return sheetXml;
 }
 
 /* ══════════════════════════════════════════════════════════
    MAIN RUNNER
 ══════════════════════════════════════════════════════════ */
-async function runProcess(){
-  const btn=document.getElementById('btnRun');
-  btn.disabled=true; btn.textContent='Processing...';
-  document.getElementById('btnDl').style.display='none';
-  document.getElementById('stats').style.display='none';
+async function runProcess() {
+  const btn = document.getElementById('btnRun');
+  btn.disabled = true; btn.textContent = 'Processing...';
+  document.getElementById('btnDl').style.display = 'none';
+  document.getElementById('stats').style.display = 'none';
   setProgress(5);
 
-  try{
+  try {
     /* ── Step 1: run forwarder logic via SheetJS (read only) ── */
-    let total=0, filled=0, skipped=0;
-    const allResults={};
+    let total = 0, filled = 0, skipped = 0;
+    const allResults = {};
 
-    for(const name of workbook.SheetNames){
-      const ws=workbook.Sheets[name];
-      const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+    for (const name of workbook.SheetNames) {
+      const ws    = workbook.Sheets[name];
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
 
       let cols, fn;
-      if     (selectedFW==='dachser'){cols=resolveDachser(ws,range);fn=processDachser;}
-      else if(selectedFW==='kn')     {cols=resolveKN(ws,range);     fn=processKN;}
-      else if(selectedFW==='dhl')    {cols=resolveDHL(ws,range);     fn=processDHL;}
-      else                           {cols=resolveWackler(ws,range); fn=processWackler;}
+      if      (selectedFW === 'dachser') { cols = resolveDachser(ws, range); fn = processDachser; }
+      else if (selectedFW === 'kn')      { cols = resolveKN(ws, range);      fn = processKN;      }
+      else if (selectedFW === 'dhl')     { cols = resolveDHL(ws, range);     fn = processDHL;     }
+      else                               { cols = resolveWackler(ws, range); fn = processWackler; }
 
-      if(cols.target<0){showLog(`Sheet "${name}": Anmerkung column not found.`,'err');continue;}
+      if (cols.target < 0) {
+        showLog(`Sheet "${name}": Anmerkung column not found.`, 'err');
+        continue;
+      }
 
       const targetCol = idxToCol(cols.target);
       const rowMap    = new Map();
 
-      for(let r=3; r<=range.e.r; r++){
+      for (let r = 3; r <= range.e.r; r++) {
         total++;
-        const result=fn(ws,r,cols);
-        const excelRow=r+1;           // SheetJS 0-based → Excel 1-based
-        if(result===null){ skipped++; }
-        else{ rowMap.set(excelRow, result); if(result) filled++; }
+        const result   = fn(ws, r, cols);
+        const excelRow = r + 1; // SheetJS 0-based → Excel 1-based
+        if (result === null) { skipped++; }
+        else { rowMap.set(excelRow, result); if (result) filled++; }
       }
-      allResults[name]={targetCol, rowMap};
+      allResults[name] = { targetCol, rowMap };
     }
     setProgress(25);
 
@@ -710,79 +695,96 @@ async function runProcess(){
     const zip = await JSZip.loadAsync(rawFileBytes);
     setProgress(40);
 
-    /* ── Step 3: parse sharedStrings ── */
+    /* ── Step 3: parse sharedStrings (or start fresh if absent) ── */
     const ssFile = zip.file('xl/sharedStrings.xml');
-    let ssXml = ssFile ? await ssFile.async('string') : '';
+    let ssXml    = ssFile ? await ssFile.async('string') : '';
     const strings = ssXml ? parseSharedStrings(ssXml) : [];
 
     /* ── Step 4: resolve sheet file paths ── */
     const wbXml    = await zip.file('xl/workbook.xml').async('string');
     const wbRelXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
 
-    const sheetRids={};
-    for(const m of wbXml.matchAll(/<sheet\b[^>]+\bname="([^"]+)"[^>]+\br:id="(rId\d+)"/g))
-      sheetRids[m[1]]=m[2];
+    const sheetRids = {};
+    for (const m of wbXml.matchAll(/<sheet\b[^>]+\bname="([^"]+)"[^>]+\br:id="(rId\d+)"/g))
+      sheetRids[m[1]] = m[2];
 
-    const ridPaths={};
-    for(const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g))
-      ridPaths[m[1]]=m[2];
+    const ridPaths = {};
+    for (const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g))
+      ridPaths[m[1]] = m[2];
 
     /* ── Step 5: patch each sheet ── */
-    const sheetNames=Object.keys(allResults);
-    for(let si=0; si<sheetNames.length; si++){
-      const name=sheetNames[si];
-      const {targetCol, rowMap}=allResults[name];
-      if(!rowMap.size) continue;
+    const sheetNames = Object.keys(allResults);
+    for (let si = 0; si < sheetNames.length; si++) {
+      const name = sheetNames[si];
+      const { targetCol, rowMap } = allResults[name];
+      if (!rowMap.size) continue;
 
-      const rId=sheetRids[name];
-      if(!rId) continue;
-      let rel=ridPaths[rId]||'';
-      rel=rel.replace(/^\/+/,'');
-      if(!rel.startsWith('xl/')) rel='xl/'+rel;
+      const rId = sheetRids[name];
+      if (!rId) continue;
+      let rel = ridPaths[rId] || '';
+      rel = rel.replace(/^\/+/, '');
+      if (!rel.startsWith('xl/')) rel = 'xl/' + rel;
 
       let sheetXml = await zip.file(rel).async('string');
       sheetXml = patchSheet(sheetXml, targetCol, rowMap, strings);
       zip.file(rel, sheetXml);
 
-      setProgress(40+Math.round(40*(si+1)/sheetNames.length));
+      setProgress(40 + Math.round(40 * (si + 1) / sheetNames.length));
     }
 
-    /* ── Step 6: write updated sharedStrings ── */
+    /* ── Step 6: write sharedStrings + fix Content_Types + fix rels ── */
     zip.file('xl/sharedStrings.xml', rebuildSharedStrings(strings));
+
+    // Ensure [Content_Types].xml has the sharedStrings Override entry
+    const ctFile = zip.file('[Content_Types].xml');
+    if (ctFile) {
+      let ctXml = await ctFile.async('string');
+      ctXml = ensureSharedStringsContentType(ctXml);
+      zip.file('[Content_Types].xml', ctXml);
+    }
+
+    // Ensure workbook.xml.rels has the sharedStrings Relationship entry
+    const wbRelFile = zip.file('xl/_rels/workbook.xml.rels');
+    if (wbRelFile) {
+      let wbRel = await wbRelFile.async('string');
+      wbRel = ensureSharedStringsRel(wbRel);
+      zip.file('xl/_rels/workbook.xml.rels', wbRel);
+    }
     setProgress(85);
 
     /* ── Step 7: generate output blob ── */
     resultBlob = await zip.generateAsync({
-      type:'blob',
-      mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      compression:'DEFLATE',
-      compressionOptions:{level:6}
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
     });
     setProgress(100);
 
-    document.getElementById('sTotal').textContent  = total;
-    document.getElementById('sFilled').textContent = filled;
-    document.getElementById('sSkipped').textContent= skipped;
-    document.getElementById('stats').style.display ='grid';
-    showLog(`Done — ${filled} rows filled, ${skipped} skipped (Stat_Freigabe ≠ 10).`,'ok');
-    document.getElementById('btnDl').style.display='block';
+    document.getElementById('sTotal').textContent   = total;
+    document.getElementById('sFilled').textContent  = filled;
+    document.getElementById('sSkipped').textContent = skipped;
+    document.getElementById('stats').style.display  = 'grid';
+    showLog(`Done — ${filled} rows filled, ${skipped} skipped (Stat_Freigabe ≠ 10).`, 'ok');
+    document.getElementById('btnDl').style.display  = 'block';
 
-  } catch(e){
-    showLog('Error: '+e.message+'\n'+e.stack,'err');
+  } catch(e) {
+    showLog('Error: ' + e.message + '\n' + e.stack, 'err');
     console.error(e);
   }
-  btn.disabled=false; btn.textContent='Run processor';
+  btn.disabled = false;
+  btn.textContent = 'Run processor';
 }
 
 /* ══════════════════════════════════════════════════════════
    DOWNLOAD
 ══════════════════════════════════════════════════════════ */
-function downloadResult(){
-  if(!resultBlob) return;
-  const url=URL.createObjectURL(resultBlob);
-  const a=document.createElement('a');
-  a.href=url; a.download='anmerkung_processed.xlsx'; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
+function downloadResult() {
+  if (!resultBlob) return;
+  const url = URL.createObjectURL(resultBlob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = 'anmerkung_processed.xlsx'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 </script>
 </body>
