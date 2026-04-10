@@ -138,7 +138,7 @@ function loadFile(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      workbook = XLSX.read(e.target.result, { type: 'array' });
+      workbook = XLSX.read(e.target.result, { type: 'array', cellStyles: true, cellNF: true, bookSST: true });
       const fn = document.getElementById('fileName');
       fn.textContent = file.name + ' — ' + workbook.SheetNames.length + ' sheet(s)';
       fn.style.display = 'block';
@@ -649,7 +649,8 @@ function runProcess() {
 
   setTimeout(() => {
     try {
-      resultWB = XLSX.utils.book_new();
+      // Use the original workbook directly so all styles/merges/col-widths are preserved
+      resultWB = workbook;
       let total = 0, filled = 0, skipped = 0;
 
       workbook.SheetNames.forEach((name, si) => {
@@ -657,10 +658,10 @@ function runProcess() {
         const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
 
         let cols, fn;
-        if (selectedFW === 'kn')      { cols = resolveKN(ws, range);      fn = processKN; }
+        if      (selectedFW === 'kn')      { cols = resolveKN(ws, range);      fn = processKN; }
         else if (selectedFW === 'dachser') { cols = resolveDachser(ws, range); fn = processDachser; }
-        else if (selectedFW === 'dhl')    { cols = resolveDHL(ws, range);     fn = processDHL; }
-        else                              { cols = resolveWackler(ws, range);  fn = processWackler; }
+        else if (selectedFW === 'dhl')     { cols = resolveDHL(ws, range);     fn = processDHL; }
+        else                               { cols = resolveWackler(ws, range); fn = processWackler; }
 
         if (cols.target < 0) {
           showLog('Sheet "' + name + '": Anmerkung column not found.', 'err');
@@ -672,11 +673,17 @@ function runProcess() {
           total++;
           const result = fn(ws, r, cols);
           const addr = XLSX.utils.encode_cell({ r, c: cols.target });
-          if (result === null) { ws[addr] = { t: 's', v: '' }; skipped++; }
-          else { ws[addr] = { t: 's', v: result }; if (result) filled++; }
+          // Merge into existing cell object to keep its style/format metadata intact
+          const existing = ws[addr] || {};
+          if (result === null) {
+            ws[addr] = Object.assign({}, existing, { t: 's', v: '' });
+            skipped++;
+          } else {
+            ws[addr] = Object.assign({}, existing, { t: 's', v: result });
+            if (result) filled++;
+          }
         }
 
-        XLSX.utils.book_append_sheet(resultWB, ws, name);
         setProgress(20 + Math.round(80 * (si + 1) / workbook.SheetNames.length));
       });
 
@@ -695,7 +702,7 @@ function runProcess() {
 
 function downloadResult() {
   if (!resultWB) return;
-  XLSX.writeFile(resultWB, 'anmerkung_processed.xlsx');
+  XLSX.writeFile(resultWB, 'anmerkung_processed.xlsx', { bookSST: true, cellStyles: true, bookType: 'xlsx' });
 }
 </script>
 </body>
