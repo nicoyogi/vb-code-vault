@@ -87,7 +87,6 @@ body::before {
   gap: 14px; width: 100%;
   animation: fadeUp 0.5s 0.24s ease both;
 }
-/* Third card spans full width */
 .card-xl {
   grid-column: 1 / -1;
 }
@@ -143,7 +142,6 @@ body::before {
   color: var(--text2); line-height: 1.75;
   position: relative; z-index: 1; flex: 1;
 }
-/* Horizontal layout for the wide card */
 .card-xl .card-inner {
   display: flex; align-items: flex-start; gap: 1.5rem;
   position: relative; z-index: 1;
@@ -183,14 +181,47 @@ body::before {
 .card-code .card-deco { color: var(--accent-code); }
 .card-qa   .card-deco { color: var(--accent-qa); }
 .card-xl   .card-deco { color: var(--accent-xl); }
+
+/* ── Download Button ── */
+.download-wrap {
+  margin-top: 2rem; width: 100%;
+  display: flex; justify-content: center;
+  animation: fadeUp 0.5s 0.3s ease both;
+}
+.btn-download {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #080810;
+  background: linear-gradient(125deg, #5b9cf6 0%, #a78bfa 55%, #f472b6 100%);
+  border: none; border-radius: 50px;
+  padding: 13px 28px;
+  cursor: pointer; text-decoration: none;
+  position: relative; overflow: hidden;
+  transition: transform 0.2s cubic-bezier(.2,.8,.3,1), opacity 0.2s;
+}
+.btn-download::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.15);
+  opacity: 0; transition: opacity 0.2s;
+}
+.btn-download:hover { transform: translateY(-3px); }
+.btn-download:hover::before { opacity: 1; }
+.btn-download:active { transform: translateY(0) scale(0.97); }
+.btn-download svg {
+  width: 16px; height: 16px; flex-shrink: 0;
+}
+
 .footer {
-  margin-top: 2.5rem;
+  margin-top: 2rem;
   font-family: var(--mono); font-size: 11px;
   color: var(--text3); text-align: center;
-  animation: fadeUp 0.5s 0.32s ease both; line-height: 2;
+  animation: fadeUp 0.5s 0.38s ease both; line-height: 2;
 }
 .footer a { color: var(--text3); text-decoration: none; }
 .footer a:hover { color: var(--text2); }
+
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -265,11 +296,39 @@ body::before {
 
   </div>
 
+  <!-- Download Button -->
+  <div class="download-wrap">
+    <a href="#" class="btn-download" onclick="downloadApp(event)">
+      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 1v9M8 10l-3-3M8 10l3-3" stroke="#080810" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 12h12" stroke="#080810" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M3 12v1.5A1.5 1.5 0 0 0 4.5 15h7A1.5 1.5 0 0 0 13 13.5V12" stroke="#080810" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      Download App
+    </a>
+  </div>
+
   <div class="footer">
     codingkuh.my.id &nbsp;·&nbsp; Firebase + GitHub Pages<br>
     <a href="code.html">Code Vault</a> &nbsp;·&nbsp; <a href="qa.html">Q&amp;A Base</a> &nbsp;·&nbsp; <a href="anmerkung.html">Anmerkung</a>
   </div>
 
 </div>
+
+<script>
+function downloadApp(e) {
+  e.preventDefault();
+  /* ── Replace the href below with your actual download URL ── */
+  const downloadUrl = 'https://drive.google.com/drive/u/0/folders/1-0Midk1ahjvQvVygEqbMn1z9QA2WFZBm';
+  if (downloadUrl === '#your-download-url-here') {
+    alert('Replace downloadUrl in the script with your actual download link.');
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = 'KitabSuci.zip';
+  a.click();
+}
+</script>
 </body>
 </html>
