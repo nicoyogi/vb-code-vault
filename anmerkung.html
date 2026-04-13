@@ -90,7 +90,7 @@ h1 .grad { background: linear-gradient(125deg, #34d399 0%, #5b9cf6 60%, #a78bfa 
     </button>
     <button class="fw-btn" data-fw="wackler" onclick="selectFW(this)">
       <div class="fw-name">Wackler</div>
-      <div class="fw-desc">AVIS · FR · MT · SNK · TZ<br>Priority: AVIS first · TZ fallback</div>
+      <div class="fw-desc">Fremdnummer · AVIS 7.5/8.5/1 · SNK 38/−11.5<br>Gewichte · Bündelung · Return · Kontierung · TZ</div>
     </button>
   </div>
 
@@ -489,22 +489,148 @@ function processDHL(ws, r, cols) {
 
 /* ── Wackler ── */
 function resolveWackler(ws, range) {
-  const fc=(h2,h3)=>findCol(ws,range,h2,h3);
+  const fc = (h2, h3) => findCol(ws, range, h2, h3);
   return {
-    target:fc('','Anmerkung'), stat:fc('','Stat_Freigabe'),
-    avis_diff:fc('AVIS','Differenz'), fr:fc('FR','Differenz'),
-    maut:fc('MT','Differenz'), snk_diff:fc('SNK','Differenz'), tz:fc('TZ','Differenz'),
+    target:    fc('', 'Anmerkung'),
+    stat:      fc('', 'Stat_Freigabe'),
+    tarif:     fc('Total', 'Kosten lt. Tarif'),   // for Fremdnummer check
+    avis_diff: fc('AVIS', 'Differenz'),
+    snk_diff:  fc('SNK', 'Differenz'),
+    fr:        fc('FR', 'Differenz'),
+    maut:      fc('MT', 'Differenz'),
+    tz:        fc('TZ', 'Differenz'),
+    referenz:  fc('', 'ReferenzNr'),
+    vkg:       fc('', 'Volumen kg'),
+    vkg_dl:    fc('', 'Volumen kg DL'),
+    empf_plz:  fc('', 'Empf.-PLZ'),
+    empf_ort:  fc('', 'Empf.-Ort'),
+    kostenstelle: fc('', 'KOSTENSTELLE'),
+    sachkonto:    fc('', 'SACHKONTO'),
   };
 }
+
+/* Protected Anmerkung values — do NOT overwrite if already present */
+const WACKLER_PROTECTED = [
+  'Fremdnummer Doppelt berechnet',
+  'hätte gebündelt werden müssen',
+  'Return, ok?',
+  'Differenz aufgrund abweichender Gewichte',
+];
+
 function processWackler(ws, r, cols) {
-  const T=T_WACKLER;
-  if (cols.stat>=0&&cellNum(ws,r,cols.stat)!==10) return null;
-  let res='';
-  if(cols.avis_diff>=0&&hasErr(cellNum(ws,r,cols.avis_diff),T)) res=join(res,'Avis, ok?');
-  if(cols.fr>=0      &&hasErr(cellNum(ws,r,cols.fr),T))         res=join(res,'Frachtdifferenz');
-  if(cols.maut>=0    &&hasErr(cellNum(ws,r,cols.maut),T))       res=join(res,'Mautdifferenz');
-  if(cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))   res=join(res,'SNK Differenz');
-  if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))     res='Differenz treibstof';
+  if (cols.stat >= 0 && cellNum(ws, r, cols.stat) !== 10) return null;
+
+  // Read existing Anmerkung — skip protected values
+  const existing = cellStr(ws, r, cols.target);
+  for (const p of WACKLER_PROTECTED) {
+    if (existing.toLowerCase().includes(p.toLowerCase())) return null;
+  }
+
+  /* ── PRIORITY 1: Fremdnummer Doppelt berechnet ──
+     Triggered when Total > Kosten lt. Tarif is zero / empty / dash.
+     If triggered, return immediately (standalone, skip all other checks). */
+  if (cols.tarif >= 0) {
+    const tarifRaw = cellStr(ws, r, cols.tarif);
+    const tarifNum = cellNum(ws, r, cols.tarif);
+    if (tarifRaw && (tarifRaw === '-' || (tarifNum === 0 && tarifRaw !== ''))) {
+      return 'Fremdnummer Doppelt berechnet';
+    }
+  }
+
+  let res = '';
+
+  /* ── AVIS Differenz = 7.5 or 8.5 → "Avis, ok?" ── */
+  if (cols.avis_diff >= 0) {
+    const avis = cellNum(ws, r, cols.avis_diff);
+    if (avis === 7.5 || avis === 8.5) res = join(res, 'Avis, ok?');
+  }
+
+  /* ── SNK Differenz = 38 → "NL-FIX" ── */
+  if (cols.snk_diff >= 0) {
+    const snk = cellNum(ws, r, cols.snk_diff);
+    if (snk === 38) res = join(res, 'NL-FIX');
+  }
+
+  /* ── SNK Differenz = −11.5 → "hätte B2C-Line abrechnen dürfen" ── */
+  if (cols.snk_diff >= 0) {
+    const snk = cellNum(ws, r, cols.snk_diff);
+    if (snk === -11.5) res = join(res, 'hätte B2C-Line abrechnen dürfen');
+  }
+
+  /* ── Volumen kg ≠ Volumen kg DL AND FR Differenz has value
+        → "Differenz aufgrund abweichender Gewichte"
+        This takes priority over bundling check below. ── */
+  let gewichteTriggered = false;
+  if (cols.vkg >= 0 && cols.vkg_dl >= 0 && cols.fr >= 0) {
+    const vkg   = cellNum(ws, r, cols.vkg);
+    const vkgDl = cellNum(ws, r, cols.vkg_dl);
+    const frVal = cellNum(ws, r, cols.fr);
+    const vkgStr   = cellStr(ws, r, cols.vkg);
+    const vkgDlStr = cellStr(ws, r, cols.vkg_dl);
+    const volDiff  = (vkgStr !== vkgDlStr) && (vkg !== vkgDl);
+    const frHasVal = Math.abs(frVal) > T_WACKLER;
+    if (volDiff && frHasVal) {
+      res = join(res, 'Differenz aufgrund abweichender Gewichte');
+      gewichteTriggered = true;
+    }
+  }
+
+  /* ── ReferenzNr contains comma AND FR Differenz has value
+        → "hätte gebündelt werden müssen"
+        Only if Gewichte check did NOT trigger. ── */
+  if (!gewichteTriggered && cols.referenz >= 0 && cols.fr >= 0) {
+    const refNr = cellStr(ws, r, cols.referenz);
+    const frVal = cellNum(ws, r, cols.fr);
+    if (refNr.includes(',') && Math.abs(frVal) > T_WACKLER) {
+      res = join(res, 'hätte gebündelt werden müssen');
+    }
+  }
+
+  /* ── AVIS Differenz = 1 → "Differenz avis, ok?" ── */
+  if (cols.avis_diff >= 0) {
+    const avis = cellNum(ws, r, cols.avis_diff);
+    if (avis === 1) res = join(res, 'Differenz avis, ok?');
+  }
+
+  /* ── Empf.-PLZ = 88499 AND Empf.-Ort = RIEDLINGEN → "Return, ok?" ── */
+  if (cols.empf_plz >= 0 && cols.empf_ort >= 0) {
+    const plz = cellStr(ws, r, cols.empf_plz);
+    const ort = cellStr(ws, r, cols.empf_ort).toUpperCase();
+    if (plz === '88499' && ort === 'RIEDLINGEN') res = join(res, 'Return, ok?');
+  }
+
+  /* ── FR Differenz (general fallback, not already covered above) ── */
+  if (cols.fr >= 0 && !gewichteTriggered) {
+    const frVal = cellNum(ws, r, cols.fr);
+    if (hasErr(frVal, T_WACKLER) && !res.toLowerCase().includes('gebündelt') && !res.toLowerCase().includes('return')) {
+      res = join(res, 'Frachtdifferenz');
+    }
+  }
+
+  /* ── MT Differenz → "Mautdifferenz" ── */
+  if (cols.maut >= 0 && hasErr(cellNum(ws, r, cols.maut), T_WACKLER))
+    res = join(res, 'Mautdifferenz');
+
+  /* ── SNK Differenz (general, not already handled by exact values above) ── */
+  if (cols.snk_diff >= 0) {
+    const snk = cellNum(ws, r, cols.snk_diff);
+    if (snk !== 38 && snk !== -11.5 && hasErr(snk, T_WACKLER))
+      res = join(res, 'SNK Differenz');
+  }
+
+  /* ── KOSTENSTELLE and SACHKONTO both empty or "X" → "Kontierung?" ── */
+  if (cols.kostenstelle >= 0 && cols.sachkonto >= 0) {
+    const kt = cellStr(ws, r, cols.kostenstelle).toUpperCase();
+    const sk = cellStr(ws, r, cols.sachkonto).toUpperCase();
+    const ktMissing = (kt === '' || kt === 'X');
+    const skMissing = (sk === '' || sk === 'X');
+    if (ktMissing && skMissing) res = join(res, 'Kontierung?');
+  }
+
+  /* ── TZ Differenz fallback — only if nothing else was written ── */
+  if (res === '' && cols.tz >= 0 && hasErr(cellNum(ws, r, cols.tz), T_WACKLER))
+    res = 'Differenz treibstof';
+
   return res;
 }
 
@@ -585,19 +711,12 @@ function patchSheet(sheetXml, targetCol, rowResults, strings) {
     const cellRef = targetCol + rowNum;
     const ssIdx   = getOrAdd(strings, value);
 
-    /* ── Try to find and replace an existing cell ──
-       Handles both:
-         <c r="X1" s="2" t="str">...</c>
-         <c r="X1" s="2"/>   (self-closing, empty cell)
-       Attributes can appear in any order.
-    ── */
     const existRe = new RegExp(
       `<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`,
     );
     const existMatch = existRe.exec(sheetXml);
 
     if (existMatch) {
-      // Merge attrs from both sides of r="...", strip old t= value
       const rawAttrs = (existMatch[1] + ' ' + (existMatch[2] || ''))
         .replace(/\s*\bt="[^"]*"/g, '')
         .replace(/\s+/g, ' ')
@@ -609,22 +728,18 @@ function patchSheet(sheetXml, targetCol, rowResults, strings) {
       continue;
     }
 
-    /* ── Cell doesn't exist — find row and insert ── */
-    // Find the opening <row ... r="N" ...> tag
     const rowOpenRe = new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^/][^>]*>`);
     const rowOpenMatch = rowOpenRe.exec(sheetXml);
     if (!rowOpenMatch) continue;
 
     const afterOpen = rowOpenMatch.index + rowOpenMatch[0].length;
 
-    // Find matching </row> by simple string search from afterOpen
     const closeTag = '</row>';
     const closeIdx = sheetXml.indexOf(closeTag, afterOpen);
     if (closeIdx < 0) continue;
 
     const rowContent = sheetXml.slice(afterOpen, closeIdx);
 
-    // Infer style index from sibling cells (most-frequent s= value)
     const sVals = [...rowContent.matchAll(/\bs="(\d+)"/g)].map(m => m[1]);
     const freq  = {};
     sVals.forEach(v => { freq[v] = (freq[v] || 0) + 1; });
@@ -634,7 +749,6 @@ function patchSheet(sheetXml, targetCol, rowResults, strings) {
 
     const newCell = `<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;
 
-    // Insert at correct column position
     let insertAt = rowContent.length;
     for (const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)) {
       if (colToIdx(m[1]) > tIdx) { insertAt = m.index; break; }
@@ -658,7 +772,6 @@ async function runProcess() {
   setProgress(5);
 
   try {
-    /* ── Step 1: run forwarder logic via SheetJS (read only) ── */
     let total = 0, filled = 0, skipped = 0;
     const allResults = {};
 
@@ -683,7 +796,7 @@ async function runProcess() {
       for (let r = 3; r <= range.e.r; r++) {
         total++;
         const result   = fn(ws, r, cols);
-        const excelRow = r + 1; // SheetJS 0-based → Excel 1-based
+        const excelRow = r + 1;
         if (result === null) { skipped++; }
         else { rowMap.set(excelRow, result); if (result) filled++; }
       }
@@ -691,16 +804,13 @@ async function runProcess() {
     }
     setProgress(25);
 
-    /* ── Step 2: open original file with JSZip ── */
     const zip = await JSZip.loadAsync(rawFileBytes);
     setProgress(40);
 
-    /* ── Step 3: parse sharedStrings (or start fresh if absent) ── */
     const ssFile = zip.file('xl/sharedStrings.xml');
     let ssXml    = ssFile ? await ssFile.async('string') : '';
     const strings = ssXml ? parseSharedStrings(ssXml) : [];
 
-    /* ── Step 4: resolve sheet file paths ── */
     const wbXml    = await zip.file('xl/workbook.xml').async('string');
     const wbRelXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
 
@@ -712,7 +822,6 @@ async function runProcess() {
     for (const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g))
       ridPaths[m[1]] = m[2];
 
-    /* ── Step 5: patch each sheet ── */
     const sheetNames = Object.keys(allResults);
     for (let si = 0; si < sheetNames.length; si++) {
       const name = sheetNames[si];
@@ -732,10 +841,8 @@ async function runProcess() {
       setProgress(40 + Math.round(40 * (si + 1) / sheetNames.length));
     }
 
-    /* ── Step 6: write sharedStrings + fix Content_Types + fix rels ── */
     zip.file('xl/sharedStrings.xml', rebuildSharedStrings(strings));
 
-    // Ensure [Content_Types].xml has the sharedStrings Override entry
     const ctFile = zip.file('[Content_Types].xml');
     if (ctFile) {
       let ctXml = await ctFile.async('string');
@@ -743,7 +850,6 @@ async function runProcess() {
       zip.file('[Content_Types].xml', ctXml);
     }
 
-    // Ensure workbook.xml.rels has the sharedStrings Relationship entry
     const wbRelFile = zip.file('xl/_rels/workbook.xml.rels');
     if (wbRelFile) {
       let wbRel = await wbRelFile.async('string');
@@ -752,7 +858,6 @@ async function runProcess() {
     }
     setProgress(85);
 
-    /* ── Step 7: generate output blob ── */
     resultBlob = await zip.generateAsync({
       type: 'blob',
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
