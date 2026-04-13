@@ -8,224 +8,76 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #080810;
-  --surface: #0f0f1a;
-  --border: rgba(255,255,255,0.07);
-  --text: #e8e6f0;
-  --text2: #8a88a0;
-  --text3: #4a4860;
-  --accent-code: #5b9cf6;
-  --accent-code-glow: rgba(91,156,246,0.12);
-  --accent-qa: #a78bfa;
-  --accent-qa-glow: rgba(167,139,250,0.12);
-  --accent-xl: #34d399;
-  --accent-xl-glow: rgba(52,211,153,0.12);
+  --bg: #080810; --surface: #0f0f1a; --border: rgba(255,255,255,0.07);
+  --text: #e8e6f0; --text2: #8a88a0; --text3: #4a4860;
+  --accent-code: #5b9cf6; --accent-code-glow: rgba(91,156,246,0.12);
+  --accent-qa: #a78bfa; --accent-qa-glow: rgba(167,139,250,0.12);
+  --accent-xl: #34d399; --accent-xl-glow: rgba(52,211,153,0.12);
   --mono: 'DM Mono', monospace;
 }
-body {
-  font-family: 'Syne', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-  overflow-x: hidden;
-}
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
-  z-index: 0;
-}
-.glow-top {
-  position: fixed;
-  top: -180px; left: 50%;
-  transform: translateX(-50%);
-  width: 700px; height: 400px;
-  background: radial-gradient(ellipse, rgba(91,156,246,0.07) 0%, transparent 65%);
-  pointer-events: none; z-index: 0;
-}
-.container {
-  position: relative; z-index: 1;
-  width: 100%; max-width: 800px;
-  display: flex; flex-direction: column; align-items: center;
-}
-.eyebrow {
-  font-family: var(--mono); font-size: 11px;
-  color: var(--text3); letter-spacing: 0.22em;
-  text-transform: uppercase; margin-bottom: 1.1rem;
-  animation: fadeUp 0.5s ease both;
-}
-.title {
-  font-size: clamp(2.4rem, 6vw, 3.8rem);
-  font-weight: 800; line-height: 1.08;
-  text-align: center; margin-bottom: 1rem;
-  animation: fadeUp 0.5s 0.08s ease both;
-  letter-spacing: -0.02em;
-}
-.title .grad {
-  background: linear-gradient(125deg, #5b9cf6 0%, #a78bfa 55%, #f472b6 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-.subtitle {
-  font-family: var(--mono); font-size: 12.5px;
-  color: var(--text2); text-align: center;
-  margin-bottom: 3.5rem;
-  animation: fadeUp 0.5s 0.16s ease both;
-}
-.cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px; width: 100%;
-  animation: fadeUp 0.5s 0.24s ease both;
-}
-.card-xl {
-  grid-column: 1 / -1;
-}
-.card {
-  position: relative;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 2rem 1.75rem;
-  cursor: pointer; text-decoration: none; color: inherit;
-  display: flex; flex-direction: column; overflow: hidden;
-  transition: transform 0.22s cubic-bezier(.2,.8,.3,1), border-color 0.22s;
-}
-.card-glow {
-  position: absolute; inset: 0; border-radius: 22px;
-  opacity: 0; transition: opacity 0.3s; pointer-events: none;
-}
+body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; overflow-x: hidden; }
+body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px); background-size: 48px 48px; pointer-events: none; z-index: 0; }
+.glow-top { position: fixed; top: -180px; left: 50%; transform: translateX(-50%); width: 700px; height: 400px; background: radial-gradient(ellipse, rgba(91,156,246,0.07) 0%, transparent 65%); pointer-events: none; z-index: 0; }
+.container { position: relative; z-index: 1; width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; }
+.eyebrow { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 1.1rem; animation: fadeUp 0.5s ease both; }
+.title { font-size: clamp(2.4rem, 6vw, 3.8rem); font-weight: 800; line-height: 1.08; text-align: center; margin-bottom: 1rem; animation: fadeUp 0.5s 0.08s ease both; letter-spacing: -0.02em; }
+.title .grad { background: linear-gradient(125deg, #5b9cf6 0%, #a78bfa 55%, #f472b6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.subtitle { font-family: var(--mono); font-size: 12.5px; color: var(--text2); text-align: center; margin-bottom: 3.5rem; animation: fadeUp 0.5s 0.16s ease both; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; animation: fadeUp 0.5s 0.24s ease both; }
+.card-xl { grid-column: 1 / -1; }
+.card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 2rem 1.75rem; cursor: pointer; text-decoration: none; color: inherit; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.22s cubic-bezier(.2,.8,.3,1), border-color 0.22s; }
+.card-glow { position: absolute; inset: 0; border-radius: 22px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 .card-code .card-glow { background: radial-gradient(ellipse at 20% 20%, var(--accent-code-glow), transparent 65%); }
-.card-qa   .card-glow { background: radial-gradient(ellipse at 20% 20%, var(--accent-qa-glow),   transparent 65%); }
-.card-xl   .card-glow { background: radial-gradient(ellipse at 10% 50%, var(--accent-xl-glow),   transparent 65%); }
+.card-qa   .card-glow { background: radial-gradient(ellipse at 20% 20%, var(--accent-qa-glow), transparent 65%); }
+.card-xl   .card-glow { background: radial-gradient(ellipse at 10% 50%, var(--accent-xl-glow), transparent 65%); }
 .card:hover { transform: translateY(-5px); }
 .card:hover .card-glow { opacity: 1; }
 .card-code:hover { border-color: rgba(91,156,246,0.28); }
 .card-qa:hover   { border-color: rgba(167,139,250,0.28); }
 .card-xl:hover   { border-color: rgba(52,211,153,0.28); }
-.card-icon {
-  width: 52px; height: 52px; border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px; margin-bottom: 1.4rem;
-  position: relative; z-index: 1;
-  transition: transform 0.22s;
-}
+.card-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 1.4rem; position: relative; z-index: 1; transition: transform 0.22s; }
 .card:hover .card-icon { transform: scale(1.08); }
 .card-code .card-icon { background: rgba(91,156,246,0.1);  box-shadow: 0 0 0 1px rgba(91,156,246,0.15); }
 .card-qa   .card-icon { background: rgba(167,139,250,0.1); box-shadow: 0 0 0 1px rgba(167,139,250,0.15); }
 .card-xl   .card-icon { background: rgba(52,211,153,0.1);  box-shadow: 0 0 0 1px rgba(52,211,153,0.15); }
-.card-num {
-  font-family: var(--mono); font-size: 10px;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  margin-bottom: 6px; position: relative; z-index: 1;
-}
+.card-num { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 6px; position: relative; z-index: 1; }
 .card-code .card-num { color: var(--accent-code); }
 .card-qa   .card-num { color: var(--accent-qa); }
 .card-xl   .card-num { color: var(--accent-xl); }
-.card-name {
-  font-size: 1.45rem; font-weight: 700;
-  margin-bottom: 10px; position: relative; z-index: 1;
-  line-height: 1.15; letter-spacing: -0.01em;
-}
+.card-name { font-size: 1.45rem; font-weight: 700; margin-bottom: 10px; position: relative; z-index: 1; line-height: 1.15; letter-spacing: -0.01em; }
 .card-xl .card-name { font-size: 1.3rem; }
-.card-desc {
-  font-family: var(--mono); font-size: 11.5px;
-  color: var(--text2); line-height: 1.75;
-  position: relative; z-index: 1; flex: 1;
-}
-.card-xl .card-inner {
-  display: flex; align-items: flex-start; gap: 1.5rem;
-  position: relative; z-index: 1;
-}
+.card-desc { font-family: var(--mono); font-size: 11.5px; color: var(--text2); line-height: 1.75; position: relative; z-index: 1; flex: 1; }
+.card-xl .card-inner { display: flex; align-items: flex-start; gap: 1.5rem; position: relative; z-index: 1; }
 .card-xl .card-icon { margin-bottom: 0; flex-shrink: 0; }
 .card-xl .card-body { flex: 1; }
 .card-xl .card-num  { margin-bottom: 4px; }
-.card-footer {
-  margin-top: 1.6rem; display: flex;
-  align-items: center; justify-content: space-between;
-  position: relative; z-index: 1;
-}
+.card-footer { margin-top: 1.6rem; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1; }
 .card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
-.tag {
-  font-family: var(--mono); font-size: 9.5px;
-  padding: 2px 8px; border-radius: 20px; border: 1px solid;
-}
+.tag { font-family: var(--mono); font-size: 9.5px; padding: 2px 8px; border-radius: 20px; border: 1px solid; }
 .card-code .tag { color: var(--accent-code); border-color: rgba(91,156,246,0.2);  background: rgba(91,156,246,0.06); }
 .card-qa   .tag { color: var(--accent-qa);   border-color: rgba(167,139,250,0.2); background: rgba(167,139,250,0.06); }
 .card-xl   .tag { color: var(--accent-xl);   border-color: rgba(52,211,153,0.2);  background: rgba(52,211,153,0.06); }
-.card-arrow {
-  font-size: 20px; color: var(--text3);
-  transition: transform 0.2s, color 0.2s; line-height: 1;
-}
+.card-arrow { font-size: 20px; color: var(--text3); transition: transform 0.2s, color 0.2s; line-height: 1; }
 .card:hover .card-arrow { transform: translateX(5px); }
 .card-code:hover .card-arrow { color: var(--accent-code); }
 .card-qa:hover   .card-arrow { color: var(--accent-qa); }
 .card-xl:hover   .card-arrow { color: var(--accent-xl); }
-.card-deco {
-  position: absolute; bottom: 16px; right: 18px;
-  font-family: var(--mono); font-size: 9px;
-  line-height: 1.9; text-align: right;
-  pointer-events: none; user-select: none;
-  transition: opacity 0.3s; opacity: 0.06;
-}
+.card-deco { position: absolute; bottom: 16px; right: 18px; font-family: var(--mono); font-size: 9px; line-height: 1.9; text-align: right; pointer-events: none; user-select: none; transition: opacity 0.3s; opacity: 0.06; }
 .card:hover .card-deco { opacity: 0.13; }
 .card-code .card-deco { color: var(--accent-code); }
 .card-qa   .card-deco { color: var(--accent-qa); }
 .card-xl   .card-deco { color: var(--accent-xl); }
-
-/* ── Download Button ── */
-.download-wrap {
-  margin-top: 2rem; width: 100%;
-  display: flex; justify-content: center;
-  animation: fadeUp 0.5s 0.3s ease both;
-}
-.btn-download {
-  display: inline-flex; align-items: center; gap: 10px;
-  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #080810;
-  background: linear-gradient(125deg, #5b9cf6 0%, #a78bfa 55%, #f472b6 100%);
-  border: none; border-radius: 50px;
-  padding: 13px 28px;
-  cursor: pointer; text-decoration: none;
-  position: relative; overflow: hidden;
-  transition: transform 0.2s cubic-bezier(.2,.8,.3,1), opacity 0.2s;
-}
-.btn-download::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: rgba(255,255,255,0.15);
-  opacity: 0; transition: opacity 0.2s;
-}
+.download-wrap { margin-top: 2rem; width: 100%; display: flex; justify-content: center; animation: fadeUp 0.5s 0.3s ease both; }
+.btn-download { display: inline-flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: #080810; background: linear-gradient(125deg, #5b9cf6 0%, #a78bfa 55%, #f472b6 100%); border: none; border-radius: 50px; padding: 13px 28px; cursor: pointer; text-decoration: none; position: relative; overflow: hidden; transition: transform 0.2s cubic-bezier(.2,.8,.3,1), opacity 0.2s; }
+.btn-download::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.15); opacity: 0; transition: opacity 0.2s; }
 .btn-download:hover { transform: translateY(-3px); }
 .btn-download:hover::before { opacity: 1; }
 .btn-download:active { transform: translateY(0) scale(0.97); }
-.btn-download svg {
-  width: 16px; height: 16px; flex-shrink: 0;
-}
-
-.footer {
-  margin-top: 2rem;
-  font-family: var(--mono); font-size: 11px;
-  color: var(--text3); text-align: center;
-  animation: fadeUp 0.5s 0.38s ease both; line-height: 2;
-}
+.btn-download svg { width: 16px; height: 16px; flex-shrink: 0; }
+.footer { margin-top: 2rem; font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; animation: fadeUp 0.5s 0.38s ease both; line-height: 2; }
 .footer a { color: var(--text3); text-decoration: none; }
 .footer a:hover { color: var(--text2); }
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 580px) {
   .cards { grid-template-columns: 1fr; }
   .card-xl { grid-column: auto; }
@@ -238,13 +90,10 @@ body::before {
 <body>
 <div class="glow-top"></div>
 <div class="container">
-
   <div class="eyebrow">Workspace</div>
   <h1 class="title"> Malignant <span class="grad">Grimoire</span></h1>
   <p class="subtitle">Select an app to get started</p>
-
   <div class="cards">
-
     <a href="code.html" class="card card-code">
       <div class="card-glow"></div>
       <div class="card-icon">💾</div>
@@ -252,14 +101,11 @@ body::before {
       <div class="card-name">VB Code Vault</div>
       <div class="card-desc">Store, search &amp; organize your VB/VBA snippets. Syntax highlighted, cloud-synced via Firebase.</div>
       <div class="card-footer">
-        <div class="card-tags">
-          <span class="tag">VB</span><span class="tag">VBA</span><span class="tag">Excel</span>
-        </div>
+        <div class="card-tags"><span class="tag">VB</span><span class="tag">VBA</span><span class="tag">Excel</span></div>
         <span class="card-arrow">→</span>
       </div>
       <div class="card-deco">Sub Store()<br> snippet.save()<br> highlight()<br>End Sub</div>
     </a>
-
     <a href="qa.html" class="card card-qa">
       <div class="card-glow"></div>
       <div class="card-icon">🧠</div>
@@ -267,14 +113,11 @@ body::before {
       <div class="card-name">Q&amp;A Knowledge Base</div>
       <div class="card-desc">Save questions, answers &amp; notes. Build your personal knowledge library for quick reference.</div>
       <div class="card-footer">
-        <div class="card-tags">
-          <span class="tag">Q&amp;A</span><span class="tag">Notes</span><span class="tag">Tips</span>
-        </div>
+        <div class="card-tags"><span class="tag">Q&amp;A</span><span class="tag">Notes</span><span class="tag">Tips</span></div>
         <span class="card-arrow">→</span>
       </div>
       <div class="card-deco">ask("How to?")<br> .find(answer)<br> .save(note)<br> // done ✓</div>
     </a>
-
     <a href="anmerkung.html" class="card card-xl">
       <div class="card-glow"></div>
       <div class="card-inner">
@@ -284,21 +127,21 @@ body::before {
           <div class="card-name">Anmerkung Processor</div>
           <div class="card-desc">Upload an Excel invoice comparison sheet, select your forwarder (Dachser, K+N, DHL Express, Wackler), and auto-fill the Anmerkung column based on your VB logic — right in the browser.</div>
           <div class="card-footer">
-            <div class="card-tags">
-              <span class="tag">Dachser</span><span class="tag">K+N</span><span class="tag">DHL</span><span class="tag">Wackler</span><span class="tag">xlsx</span>
-            </div>
+            <div class="card-tags"><span class="tag">Dachser</span><span class="tag">K+N</span><span class="tag">DHL</span><span class="tag">Wackler</span><span class="tag">xlsx</span></div>
             <span class="card-arrow">→</span>
           </div>
         </div>
       </div>
       <div class="card-deco">upload(file)<br> selectForwarder()<br> fillAnmerkung()<br> download() ✓</div>
     </a>
-
   </div>
 
   <!-- Download Button -->
   <div class="download-wrap">
-    <a href="#" class="btn-download" onclick="downloadApp(event)">
+    <a href="https://drive.usercontent.google.com/download?id=1ukOZKreOhH6tOnwgd9z4h5_TrnrvC05q&export=download&authuser=0"
+       class="btn-download"
+       target="_blank"
+       rel="noopener noreferrer">
       <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M8 1v9M8 10l-3-3M8 10l3-3" stroke="#080810" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M2 12h12" stroke="#080810" stroke-width="1.6" stroke-linecap="round"/>
@@ -312,23 +155,6 @@ body::before {
     codingkuh.my.id &nbsp;·&nbsp; Firebase + GitHub Pages<br>
     <a href="code.html">Code Vault</a> &nbsp;·&nbsp; <a href="qa.html">Q&amp;A Base</a> &nbsp;·&nbsp; <a href="anmerkung.html">Anmerkung</a>
   </div>
-
 </div>
-
-<script>
-function downloadApp(e) {
-  e.preventDefault();
-  /* ── Replace the href below with your actual download URL ── */
-  const downloadUrl = 'https://drive.usercontent.google.com/download?id=1ukOZKreOhH6tOnwgd9z4h5_TrnrvC05q&export=download&authuser=0';
-  if (downloadUrl === '#your-download-url-here') {
-    alert('Replace downloadUrl in the script with your actual download link.');
-    return;
-  }
-  const a = document.createElement('a');
-  a.href = downloadUrl;
-  a.download = 'KitabSuci.zip';
-  a.click();
-}
-</script>
 </body>
 </html>
