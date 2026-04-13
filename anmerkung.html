@@ -129,6 +129,7 @@ let selectedFW   = null;
 let rawFileBytes = null;
 let workbook     = null;
 let resultBlob   = null;
+let originalFileName = '';
 
 const T_DACHSER = 0.08, T_KN = 0.09, T_DHL = 0.04, T_WACKLER = 0.09;
 
@@ -146,6 +147,7 @@ function onDrop(e)       { e.preventDefault(); onDrag(e,false); if (e.dataTransf
 function onFileSelect(e) { if (e.target.files[0]) loadFile(e.target.files[0]); }
 
 function loadFile(file) {
+  originalFileName = file.name;
   const reader = new FileReader();
   reader.onload = ev => {
     try {
@@ -542,7 +544,7 @@ function processWackler(ws, r, cols) {
   /* ── AVIS Differenz = 7.5 or 8.5 → "Avis, ok?" ── */
   if (cols.avis_diff >= 0) {
     const avis = cellNum(ws, r, cols.avis_diff);
-    if (avis === 7.5 || avis === 8.5) res = join(res, 'Avis, ok?');
+    if (avis === 7.5 || avis === 8.5 || avis === 6.5) res = join(res, 'Avis, ok?');
   }
 
   /* ── SNK Differenz = 38 → "NL-FIX" ── */
@@ -888,7 +890,7 @@ function downloadResult() {
   if (!resultBlob) return;
   const url = URL.createObjectURL(resultBlob);
   const a   = document.createElement('a');
-  a.href = url; a.download = 'anmerkung_processed.xlsx'; a.click();
+  a.href = url; a.download = originalFileName || 'anmerkung_processed.xlsx'; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 </script>
