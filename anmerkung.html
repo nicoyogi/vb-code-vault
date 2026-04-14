@@ -334,7 +334,7 @@ function processDachser(ws,r,cols){
     else if(sachkonto.toUpperCase()==='X')res=join(res,'VORHOLUNG');
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
     else if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
-    else res=join(res,'Frachtdifferenz');
+    else res=join(res,'Differenz aufgrund von abweichendem Gewicht');
   }
 
   // Abholterminvereinbarung — appended after FR when SNK_DL = 14
