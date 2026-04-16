@@ -134,6 +134,109 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 
 #stats-wrap { display: none; }
 
+/* SUBSCRIPTION MODAL */
+#sub-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82); z-index: 500;
+  align-items: center; justify-content: center;
+  padding: 1rem; backdrop-filter: blur(10px);
+}
+#sub-overlay.open { display: flex; }
+.sub-box {
+  background: #08081a;
+  border: 1px solid rgba(212,175,100,0.35);
+  border-radius: 24px; padding: 2.4rem 2rem 2rem;
+  width: min(420px, 100%);
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; position: relative; overflow: hidden;
+}
+.sub-box::before {
+  content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212,175,100,0.6), transparent);
+}
+.sub-box::after {
+  content: ''; position: absolute; top: 14px; left: 14px;
+  width: 14px; height: 14px;
+  border-top: 1px solid rgba(212,175,100,0.3);
+  border-left: 1px solid rgba(212,175,100,0.3);
+}
+.sub-sparkle {
+  font-size: 42px; margin-bottom: 1rem;
+  animation: subfloat 3s ease-in-out infinite;
+}
+@keyframes subfloat { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-8px) rotate(3deg)} }
+.sub-title {
+  font-family: var(--cinzel); font-size: 19px; font-weight: 900;
+  letter-spacing: .06em; color: var(--text); margin-bottom: .4rem;
+  line-height: 1.2;
+}
+.sub-title .grad {
+  background: linear-gradient(120deg, #facc15 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.sub-tagline {
+  font-family: var(--mono); font-size: 11.5px;
+  color: rgba(212,175,100,0.5); margin-bottom: 1.6rem;
+  letter-spacing: .06em;
+}
+.sub-perks {
+  background: rgba(212,175,100,0.04); border: 1px solid var(--border);
+  border-radius: 16px; padding: 1rem 1.2rem;
+  width: 100%; margin-bottom: 1.4rem; text-align: left;
+}
+.sub-perk {
+  font-family: var(--mono); font-size: 11.5px;
+  color: rgba(212,175,100,0.65); padding: 4px 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.sub-perk-icon { color: #34d399; font-size: 12px; flex-shrink: 0; }
+.sub-price {
+  font-family: var(--cinzel); font-size: 28px; font-weight: 900;
+  color: var(--text); margin-bottom: .2rem;
+}
+.sub-price span { font-size: 13px; color: var(--text3); font-weight: 400; font-family: var(--mono); }
+.sub-note { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 1.4rem; }
+.sub-buy-btn {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, rgba(212,175,100,0.2) 0%, rgba(212,175,100,0.08) 100%);
+  border: 1px solid rgba(212,175,100,0.45);
+  border-radius: 12px;
+  font-family: var(--cinzel); font-size: 13px; font-weight: 700;
+  letter-spacing: .14em; color: #f0d080;
+  cursor: pointer; transition: all .25s; margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.sub-buy-btn:hover {
+  background: linear-gradient(135deg, rgba(212,175,100,0.32) 0%, rgba(212,175,100,0.14) 100%);
+  border-color: rgba(212,175,100,0.7);
+  box-shadow: 0 0 28px rgba(212,175,100,0.2);
+  transform: translateY(-1px);
+}
+.sub-buy-btn:active { transform: translateY(0); }
+.sub-cancel-btn {
+  background: none; border: none; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; color: var(--text3);
+  padding: 6px; transition: color .15s;
+}
+.sub-cancel-btn:hover { color: var(--text2); }
+.sub-thankyou { display: none; flex-direction: column; align-items: center; text-align: center; }
+.sub-thankyou.show { display: flex; }
+.sub-thankyou-icon { font-size: 52px; margin-bottom: 1rem; animation: subpop .4s cubic-bezier(.36,.07,.19,.97); }
+@keyframes subpop { 0%{transform:scale(0.5)}70%{transform:scale(1.15)}100%{transform:scale(1)} }
+.sub-thankyou-title {
+  font-family: var(--cinzel); font-size: 20px; font-weight: 900;
+  color: var(--text); margin-bottom: .5rem; letter-spacing: .06em;
+}
+.sub-thankyou-msg { font-family: var(--mono); font-size: 12px; color: var(--text2); line-height: 1.7; margin-bottom: 1.4rem; }
+.sub-continue-btn {
+  padding: 11px 28px;
+  background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.35);
+  border-radius: 12px; font-family: var(--cinzel); font-size: 12px;
+  font-weight: 700; letter-spacing: .12em; color: #34d399;
+  cursor: pointer; transition: all .2s; text-transform: uppercase;
+}
+.sub-continue-btn:hover { background: rgba(52,211,153,0.22); box-shadow: 0 0 20px rgba(52,211,153,0.18); }
+
 @media (max-width: 520px) { .fw-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -184,7 +287,7 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 
   <div class="section-label">III — Transmute &amp; Download</div>
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
-  <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Invoke the Ritual</button>
+  <button class="btn-run" id="btnRun" disabled onclick="openRunGate()">Invoke the Ritual</button>
   <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Transmuted Scroll ↓</button>
 
   <div id="stats-wrap">
@@ -199,6 +302,43 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   <div class="footer">
     codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
     <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a>
+  </div>
+</div>
+
+<!-- Subscription Modal -->
+<div id="sub-overlay" onclick="handleSubBgClick(event)">
+  <div class="sub-box" onclick="event.stopPropagation()">
+
+    <!-- Default state -->
+    <div id="sub-default">
+      <div class="sub-sparkle">💎</div>
+      <div class="sub-title">You must buy a<br><span class="grad">Subscription</span></div>
+      <div class="sub-tagline">// unlock the full grimoire</div>
+      <div class="sub-perks">
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Run the transmutation ritual</div>
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Process unlimited scrolls</div>
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> All forwarder engines unlocked</div>
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Download transmuted files</div>
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Dark arts support (24/7)</div>
+      </div>
+      <div class="sub-price">$9.99 <span>/ month</span></div>
+      <div class="sub-note">Cancel anytime · No dark rituals required</div>
+      <button class="sub-buy-btn" onclick="handleBuySubscription()">✦ Buy Subscription ✦</button>
+      <button class="sub-cancel-btn" onclick="closeSubModal()">Maybe later</button>
+    </div>
+
+    <!-- Thank you state -->
+    <div class="sub-thankyou" id="sub-thankyou">
+      <div class="sub-thankyou-icon">🎉</div>
+      <div class="sub-thankyou-title">Thank you for your purchase!</div>
+      <div class="sub-thankyou-msg">
+        Welcome to the inner sanctum, Archmage.<br>
+        All spells are now unlocked. May your code<br>
+        compile on the first attempt. ✨
+      </div>
+      <button class="sub-continue-btn" onclick="proceedAfterPurchase()">✦ Begin the Ritual ✦</button>
+    </div>
+
   </div>
 </div>
 
@@ -223,6 +363,40 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   window.addEventListener('resize',init);window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
   init();requestAnimationFrame(frame);
 })();
+
+/* ══════════════════════════════════════════════════════════
+   SUBSCRIPTION GATE
+══════════════════════════════════════════════════════════ */
+let subPendingAction = null;
+
+function openRunGate() {
+  subPendingAction = 'run';
+  openSubModal();
+}
+function openSubModal() {
+  document.getElementById('sub-default').style.display = '';
+  document.getElementById('sub-thankyou').classList.remove('show');
+  document.getElementById('sub-overlay').classList.add('open');
+}
+function closeSubModal() {
+  document.getElementById('sub-overlay').classList.remove('open');
+  subPendingAction = null;
+}
+function handleSubBgClick(e) {
+  if (e.target === document.getElementById('sub-overlay')) closeSubModal();
+}
+function handleBuySubscription() {
+  document.getElementById('sub-default').style.display = 'none';
+  document.getElementById('sub-thankyou').classList.add('show');
+}
+function proceedAfterPurchase() {
+  document.getElementById('sub-overlay').classList.remove('open');
+  const action = subPendingAction;
+  subPendingAction = null;
+  if (action === 'run') runProcess();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSubModal(); });
 
 /* ══════════════════════════════════════════════════════════
    STATE
@@ -302,32 +476,14 @@ function processDachser(ws,r,cols){
         anzSdg=parseInt(cellStr(ws,r,DA_COL_ANZ_SDG))||0,
         isTarifZero=daIsTarifZero(ws,r,cols.tarif);
   let res='',hasFR=false;
-
-  // ZZ — always runs
   if(cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T))res=join(res,'2. Zustellung');
-
-  // SNK
   res=join(res,daEvalSNK(ws,r,cols,isTarifZero,servArt));
-
-  // SAM — always runs
   if(cols.sam>=0&&hasErr(cellNum(ws,r,cols.sam),T))res=join(res,'Samstagzustellung');
-
-  // Everything else skipped when Tarif = 0
   if(isTarifZero)return res;
-
-  // DGR
   if(cols.dgr>=0&&hasErr(cellNum(ws,r,cols.dgr),T))res=join(res,'Gefahrgut-Zuschlag');
-
-  // EXP
   res=join(res,daEvalEXP(ws,r,cols));
-
-  // Maut
   if(cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T))res=join(res,'Mautdifferenz');
-
-  // SBFU
   if(cols.sbfu>=0&&hasErr(cellNum(ws,r,cols.sbfu),T))res=join(res,'SBfU-Bescheinigung f. Umsatzsteuerzwecke');
-
-  // FR
   if(cols.fr>=0&&hasErr(cellNum(ws,r,cols.fr),T)){
     hasFR=true;
     if(isZW)res=join(res,daZWNote(ws,r));
@@ -336,14 +492,9 @@ function processDachser(ws,r,cols){
     else if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
     else res=join(res,'Differenz aufgrund von abweichendem Gewicht');
   }
-
-  // Abholterminvereinbarung — appended after FR when SNK_DL = 14
   if(cols.snk_dl>=0&&cellNum(ws,r,cols.snk_dl)===14&&cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))
     res=join(res,'Abholterminvereinbarung');
-
-  // TZ — only when result is still empty AND no FR diff
   if(res===''&&!hasFR&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';
-
   return res;
 }
 
