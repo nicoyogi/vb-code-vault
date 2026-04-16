@@ -759,6 +759,13 @@ function proceedAfterPurchase() {
   subPendingId = null;
   if (action === 'view') openDetail(id);
   else if (action === 'edit') openEdit(id);
+  else if (action === 'copy') {
+    const s=snippets.find(x=>x.id===id);if(!s)return;
+    copyText(s.code||'',
+      ()=>showToast('Code copied!'),
+      ()=>showToast('Copy failed.',true)
+    );
+  }
 }
 
 function openAdd(){editId=null;document.getElementById('modal-title').textContent='Inscribe New Spell';document.getElementById('f-title').value='';document.getElementById('f-desc').value='';document.getElementById('f-code').value='';document.getElementById('f-cat').value='General';document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-title').focus(),50);}
@@ -801,8 +808,11 @@ function copyText(text,onSuccess,onFail){if(navigator.clipboard&&window.isSecure
 function fallbackCopy(text,onSuccess,onFail){try{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;';document.body.appendChild(ta);ta.focus();ta.setSelectionRange(0,ta.value.length);const ok=document.execCommand('copy');document.body.removeChild(ta);if(ok)onSuccess();else onFail();}catch(e){onFail();}}
 document.getElementById('grid').addEventListener('click',function(e){
   const btn=e.target.closest('[data-copy-id]');if(!btn)return;e.stopPropagation();
-  const id=btn.dataset.copyId;const s=snippets.find(x=>x.id===id);if(!s)return;
-  copyText(s.code||'',()=>{btn.textContent='✓ copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='copy';btn.classList.remove('copied');},2000);},()=>showToast('Copy failed.',true));
+  const id=btn.dataset.copyId;
+  // Gate: require subscription before revealing code
+  subPendingAction='copy';
+  subPendingId=id;
+  openSubModal();
 });
 async function deleteSnippet(id){if(!confirm('Delete this spell? This cannot be undone.'))return;try{await col.doc(id).delete();showToast('Spell dissolved.');}catch(e){showToast('Delete failed.',true);}}
 function handleBgClick(e,id){if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');}
