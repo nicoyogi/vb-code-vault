@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGP · Excel Importer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a1628; --surface: #111f35; --border: rgba(0,85,180,0.25);
+      --accent: #0055b4; --accent2: #0078d7; --text: #e8edf5;
+      --text2: #8ba0bb; --success: #4ade80; --error: #f87171;
+      --mono: 'IBM Plex Mono', monospace; --sans: 'Space Grotesk', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image: linear-gradient(rgba(0,85,180,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,85,180,0.04) 1px, transparent 1px); background-size: 40px 40px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; width: min(620px, 100%); position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: var(--accent); border-radius: 12px 12px 0 0; }
+    .logo { display:flex; align-items:center; gap:10px; margin-bottom:1.5rem; }
+    .logo-mark { width:38px; height:38px; background:var(--accent); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; }
+    .logo-text { font-family: var(--sans); font-size:17px; font-weight:700; color:#fff; }
+    .logo-sub { font-size:10px; color:var(--text2); letter-spacing:.08em; margin-top:2px; }
+    h1 { font-family:var(--sans); font-size:22px; font-weight:700; margin-bottom:.5rem; }
+    .subtitle { font-size:12px; color:var(--text2); margin-bottom:1.5rem; line-height:1.7; }
+    .stats-row { display:flex; gap:12px; margin-bottom:1.5rem; flex-wrap:wrap; }
+    .stat { background:rgba(0,85,180,0.1); border:1px solid var(--border); border-radius:6px; padding:.5rem 1rem; font-size:12px; }
+    .stat strong { color: var(--accent2); display:block; font-size:18px; font-family:var(--sans); }
+    .btn { width:100%; height:46px; background:var(--accent); border:none; border-radius:6px; font-family:var(--sans); font-size:14px; font-weight:700; letter-spacing:.04em; color:#fff; cursor:pointer; transition:background .2s, box-shadow .2s; }
+    .btn:hover:not(:disabled) { background:var(--accent2); box-shadow:0 4px 20px rgba(0,85,180,0.5); }
+    .btn:disabled { opacity:.4; cursor:not-allowed; }
+    .progress-wrap { margin-top:1.2rem; display:none; }
+    .progress-bar-bg { height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-bottom:.5rem; }
+    .progress-bar { height:100%; background:var(--accent2); border-radius:3px; width:0%; transition:width .3s; }
+    .progress-label { font-size:11px; color:var(--text2); display:flex; justify-content:space-between; }
+    .log { margin-top:1rem; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:.75rem; font-size:11px; max-height:220px; overflow-y:auto; display:none; }
+    .log-line { line-height:1.9; }
+    .log-line.ok { color:var(--success); }
+    .log-line.err { color:var(--error); }
+    .log-line.info { color:var(--text2); }
+    .done-box { margin-top:1rem; background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.3); border-radius:6px; padding:1rem; text-align:center; display:none; }
+    .done-box .icon { font-size:28px; margin-bottom:.4rem; }
+    .done-box h3 { font-family:var(--sans); font-size:16px; margin-bottom:.3rem; color:var(--success); }
+    .done-box p { font-size:11px; color:var(--text2); }
+    a.back { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--text2); text-decoration:none; margin-bottom:1.2rem; letter-spacing:.06em; transition:color .2s; }
+    a.back:hover { color:var(--accent2); }
+    .warning { background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.25); border-radius:6px; padding:.75rem 1rem; font-size:11px; color:#fbbf24; margin-bottom:1.2rem; line-height:1.7; }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="card">
+  <a class="back" href="qa-siemens.html">← Back to Knowledge Base</a>
+  <div class="logo">
+    <div class="logo-mark">SGP</div>
+    <div>
+      <div class="logo-text">Siemens GP</div>
+      <div class="logo-sub">// Excel Importer</div>
+    </div>
+  </div>
+  <h1>Import Knowledge Base</h1>
+  <p class="subtitle">Uploads <strong>150 entries</strong> from <code>standart_notize_indo.xlsx</code> into Firebase.<br>Entries are tagged with <code>project: sgp</code> and categorised automatically.</p>
+
+  <div class="stats-row">
+    <div class="stat"><strong>150</strong>total entries</div>
+    <div class="stat"><strong>113</strong>process notes</div>
+    <div class="stat"><strong>37</strong>SAP Notiz / wording</div>
+  </div>
+
+  <div class="warning">⚠️ This will ADD all 150 entries. Run once only — re-running will create duplicates. If you need to re-import, delete existing SGP entries first.</div>
+
+  <button class="btn" id="import-btn" onclick="startImport()">🚀 Import 150 Entries to Firebase</button>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="progress-label"><span id="progress-text">Starting...</span><span id="progress-count">0 / 150</span></div>
+  </div>
+
+  <div class="log" id="log"></div>
+  <div class="done-box" id="done-box">
+    <div class="icon">✅</div>
+    <h3>Import Complete!</h3>
+    <p id="done-text">All entries have been uploaded to Firebase.</p>
+    <br>
+    <a href="qa-siemens.html" style="color:#4ade80;font-size:12px;">→ Go to Knowledge Base</a>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
+  authDomain:"vb-code-vault.firebaseapp.com",
+  projectId:"vb-code-vault",
+  storageBucket:"vb-code-vault.firebasestorage.app",
+  messagingSenderId:"773245175115",
+  appId:"1:773245175115:web:0b6a4f27388f58f026d4ce"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const col = db.collection('qa_entries');
+
+const ENTRIES = [
+  {
+    "question": "Tips Ground, selalu cek ORG ID terlebih dahulu, lalu setelah itu alamat dan UST ID. setelah itu baru tarif check",
+    "answer": "Tips Ground, selalu cek ORG ID terlebih dahulu, lalu setelah itu alamat dan UST ID. setelah itu baru tarif check",
+    "category": "General",
+    "tags": "plausibility-check",
+    "project": "sgp"
+  },
+  {
+    "question": "Tips Air, selalu cek ORG ID terlebih dahulu, setelah itu AWB dan cek Oanda. setelah itu baru tarif check",
+    "answer": "Tips Air, selalu cek ORG ID terlebih dahulu, setelah itu AWB dan cek Oanda. setelah itu baru tarif check",
+    "category": "General",
+    "tags": "plausibility-check",
+    "project": "sgp"
+  },
+  {
+    "question": "Pengecekan KEP, selalu cek posisi lain. jika ada claim dan posisi lain tarif ok, Rest OK",
+    "answer": "Pengecekan KEP, selalu cek posisi lain. jika ada claim dan posisi lain tarif ok, Rest OK",
+    "category": "General",
+    "tags": "plausibility-check",
+    "project": "sgp"
+  },
+  {
+    "question": "UCR SELAIN SIEAX2 dianggap OUTBOUND !!!",
+    "answer": "UCR SELAIN SIEAX2 dianggap OUTBOUND !!!",
+    "category": "UCR",
+    "tags": "ucr",
+    "project": "sgp"
+  },
+  {
+    "question": "UCR BARU YANG DIMULAI DARI ANGKA 6xxxx dimasukkan didalam TEXT !!!, biasanya outbound, tetapi ada yang inbound juga (dic...",
+    "answer": "UCR BARU YANG DIMULAI DARI ANGKA 6xxxx dimasukkan didalam TEXT !!!, biasanya outbound, tetapi ada yang inbound juga (dicek addressnya)",
+    "category": "UCR",
+    "tags": "ucr",
+    "project": "sgp"
+  },
+  {
+    "question": "GB-HU Tax 19% dalam DBSchenker sistem OPP Tax dapat diterima",
+    "answer": "GB-HU Tax 19% dalam DBSchenker sistem OPP Tax dapat diterima",
+    "category": "General",
+    "tags": "tax",
+    "project": "sgp"
+  },
+  {
+    "question": "DE-HU dalam SiemensKFT tidak kena Tax 19% dapat diterima",
+    "answer": "DE-HU dalam SiemensKFT tidak kena Tax 19% dapat diterima",
+    "category": "General",
+    "tags": "tax",
+    "project": "sgp"
+  },
+  {
+    "question": "SIEZE FNP = Claim, only OPP.",
+    "answer": "SIEZE FNP = Claim, only OPP.",
+    "category": "FNP",
+    "tags": "fnp",
+    "project": "sgp"
+  },
+  {
+    "question": "KUEHNE HAIGER UBAH = Vendor 1800021712 Kuehne Nuremberg FNP, untuk Ground biasa",
+    "answer": "KUEHNE HAIGER UBAH = Vendor 1800021712 Kuehne Nuremberg FNP, untuk Ground biasa",
+    "category": "FNP",
+    "tags": "fnp",
+    "project": "sgp"
+  },
+  {
+    "question": "KUEHNE HAIGER UBAH = Vendor 1800021977 Kuehne Landverkehr FNP, untuk Annex 8 + HVO dan E-Truck",
+    "answer": "KUEHNE HAIGER UBAH = Vendor 1800021977 Kuehne Landverkehr FNP, untuk Annex 8 + HVO dan E-Truck",
+    "category": "FNP",
+    "tags": "fnp",
+    "project": "sgp"
+  },
+  {
+    "question": "Gesperrte User untuk ORG ID AH035285 masih berlaku. Release ke Ana Maria Condrut (Z004VM7A). SELALU DENGAN NOTIZ \"Forwar...",
+    "answer": "Gesperrte User untuk ORG ID AH035285 masih berlaku. Release ke Ana Maria Condrut (Z004VM7A). SELALU DENGAN NOTIZ \"Forwarding as part of the scope shift from GBS to SE LOG SV EU for factual check\"",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "Please do not process Org ID A7701708 anymore; Notiz in SAP = \"betrifft Org ID A7701708\"",
+    "answer": "Please do not process Org ID A7701708 anymore; Notiz in SAP = \"betrifft Org ID A7701708\"",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "SIEZE KSP = Claim, only OPP.",
+    "answer": "SIEZE KSP = Claim, only OPP.",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "(ORG ID) AH036479, AH036481, A1104235 = AH035014 (für inbound) / AH035285 (für outbound)",
+    "answer": "(ORG ID) AH036479, AH036481, A1104235 = AH035014 (für inbound) / AH035285 (für outbound)",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) KSP ORG ID A7701708 tapi di lampiran TO pake ORG A4050570 = Kontierung beda, claim. Beda sistem.",
+    "answer": "(TO) KSP ORG ID A7701708 tapi di lampiran TO pake ORG A4050570 = Kontierung beda, claim. Beda sistem.",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) KSP ORG ID : AH035285, OUTBOUND = Wajib TO, INBOUND = NO TO. (Kecuali HTL). AH035014 (inbound).",
+    "answer": "(TO) KSP ORG ID : AH035285, OUTBOUND = Wajib TO, INBOUND = NO TO. (Kecuali HTL). AH035014 (inbound).",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release) The release to Ana Condrut is only in KSP.",
+    "answer": "(Release) The release to Ana Condrut is only in KSP.",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release) KSP info : Don’t release to Ivanova Blagovesa and Lukas Srb.",
+    "answer": "(Release) KSP info : Don’t release to Ivanova Blagovesa and Lukas Srb.",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release) Release Pauschalfract Duisburg/Düsseldorf/Mülheim SOR AH038677 PO 3109580 bukan ke Maren Lutz -> Ngikut Ramp-U...",
+    "answer": "(Release) Release Pauschalfract Duisburg/Düsseldorf/Mülheim SOR AH038677 PO 3109580 bukan ke Maren Lutz -> Ngikut Ramp-Up.",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release + Note) Tidak bisa release ke user di list gesperrt yang baru (ter-lock). Sebagai gantinya direlease ke Ana Mar...",
+    "answer": "(Release + Note) Tidak bisa release ke user di list gesperrt yang baru (ter-lock). Sebagai gantinya direlease ke Ana Maria Condrut GID Z004VM7A dengan Notiz: Forwarding as part of the scope shift from GBS to SE LOG SV EU for factual check",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release + Note) KSP ORG ID : A7701708 Project UBB, ketika kirim ke Robert hoffmann kasih NOTE : (Name) ist im SAP-Syste...",
+    "answer": "(Release + Note) KSP ORG ID : A7701708 Project UBB, ketika kirim ke Robert hoffmann kasih NOTE : (Name) ist im SAP-System gesperrt, Freigabe an Robert Hoffmann).",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release)kalo ada yang nemu accounting WBS dimulai dari \"O-XXXX-01-A\" dalam TO yang tidak komplit, biasanya ditambahkan ...",
+    "answer": "(Release)kalo ada yang nemu accounting WBS dimulai dari \"O-XXXX-01-A\" dalam TO yang tidak komplit, biasanya ditambahkan \"-P000-0640\". Selama ini selalu diterima, terimakasih",
+    "category": "KSP",
+    "tags": "ksp",
+    "project": "sgp"
+  },
+  {
+    "question": "SIEZE only OPP.",
+    "answer": "SIEZE only OPP.",
+    "category": "OPP",
+    "tags": "opp",
+    "project": "sgp"
+  },
+  {
+    "question": "(ORG ID) BDT ORG ID AH007735 baik biasa atopun VLM pake UBB.",
+    "answer": "(ORG ID) BDT ORG ID AH007735 baik biasa atopun VLM pake UBB.",
+    "category": "OPP",
+    "tags": "opp",
+    "project": "sgp"
+  },
+  {
+    "question": "(Kontierung) SIEZE Kontierung C=15411, Ditambahkan menjadi 12015411",
+    "answer": "(Kontierung) SIEZE Kontierung C=15411, Ditambahkan menjadi 12015411",
+    "category": "OPP",
+    "tags": "opp",
+    "project": "sgp"
+  },
+  {
+    "question": "(Kontierung) ACCOUNTING INBOUND SELALU IKUT RAMPUP BUKAN TO !!!\n AH007731 = C=11008310*G=61510000\n AH007733 = A=M0000060...",
+    "answer": "(Kontierung) ACCOUNTING INBOUND SELALU IKUT RAMPUP BUKAN TO !!!\n AH007731 = C=11008310*G=61510000\n AH007733 = A=M00000603370*G=61515000\n AH007735 = C=12020705*G=61515000 (UBB BDT)\n AHB00206 = A=M00000603370*G=61515000.",
+    "category": "OPP",
+    "tags": "opp",
+    "project": "sgp"
+  },
+  {
+    "question": "(Relase) Release Pauschalfract Milkrun Werk Mülheim SOR AH007733 PO 4400000247, bukan ke Maren Lutz -> Ngikut Ramp-Up.",
+    "answer": "(Relase) Release Pauschalfract Milkrun Werk Mülheim SOR AH007733 PO 4400000247, bukan ke Maren Lutz -> Ngikut Ramp-Up.",
+    "category": "OPP",
+    "tags": "opp",
+    "project": "sgp"
+  },
+  {
+    "question": "SIEZE PS1 = Claim, only OPP.",
+    "answer": "SIEZE PS1 = Claim, only OPP.",
+    "category": "PS1",
+    "tags": "ps1",
+    "project": "sgp"
+  },
+  {
+    "question": "(ORG ID) Siemens Energy Compressor OK. (ORG ID A1103434, DE309520415).",
+    "answer": "(ORG ID) Siemens Energy Compressor OK. (ORG ID A1103434, DE309520415).",
+    "category": "PS1",
+    "tags": "ps1",
+    "project": "sgp"
+  },
+  {
+    "question": "(ORG ID) ORG ID A7701708 in PS1, please check the \"Business Unit\".",
+    "answer": "(ORG ID) ORG ID A7701708 in PS1, please check the \"Business Unit\".",
+    "category": "PS1",
+    "tags": "ps1",
+    "project": "sgp"
+  },
+  {
+    "question": "(Kontierung) Untuk PS1, acounting di itemnya misal gak ada TO., trus kalo accounting gk lengkap misal EA123456 DITAMBAHI...",
+    "answer": "(Kontierung) Untuk PS1, acounting di itemnya misal gak ada TO., trus kalo accounting gk lengkap misal EA123456 DITAMBAHI Z00A15BIL., tergantung ORG ID (A1103003, A1102957). Kalo A1102698 pake Z00A12BIL",
+    "category": "PS1",
+    "tags": "ps1",
+    "project": "sgp"
+  },
+  {
+    "question": "Ground April +3.75%. Diesel -5% di April dapat diterima karena Underbilling",
+    "answer": "Ground April +3.75%. Diesel -5% di April dapat diterima karena Underbilling",
+    "category": "General",
+    "tags": "diesel-april",
+    "project": "sgp"
+  },
+  {
+    "question": "KEP April +9% Ok, Confirmed",
+    "answer": "KEP April +9% Ok, Confirmed",
+    "category": "General",
+    "tags": "diesel-april",
+    "project": "sgp"
+  },
+  {
+    "question": "(ORG ID) dan (UCR) Harus sama dengan Tranport Order",
+    "answer": "(ORG ID) dan (UCR) Harus sama dengan Tranport Order",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(ORG ID) dan (UCR) Harus sama dengan Delivery Note (Lieferschein)",
+    "answer": "(ORG ID) dan (UCR) Harus sama dengan Delivery Note (Lieferschein)",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Harga di TO yang dari siemens (Einzeltransportauftrag), atau yang lain selama ada identitas dari siemens. Bisa dian...",
+    "answer": "(TO) Harga di TO yang dari siemens (Einzeltransportauftrag), atau yang lain selama ada identitas dari siemens. Bisa dianggap cost confirmation. Biasanya di TO halaman 2 Schecker AIR.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Preis acuan ada di TO, kalo undercharge ok, kalo over claim.",
+    "answer": "(TO) Preis acuan ada di TO, kalo undercharge ok, kalo over claim.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Sun Ba 2 Project (stored in TO) take over.",
+    "answer": "(TO) Sun Ba 2 Project (stored in TO) take over.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Pada dasarnya semua speditur tidak harus TO termasuk Air Inbound, yang wajib biasanya AIR Outbound dan ORG ID AH035...",
+    "answer": "(TO) Pada dasarnya semua speditur tidak harus TO termasuk Air Inbound, yang wajib biasanya AIR Outbound dan ORG ID AH035285 Outbound.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Syarat Delivery Note bisa dipakai, atau bisa dianggap TO = UCR dan ORG ID harus match, ada kontierung.",
+    "answer": "(TO) Syarat Delivery Note bisa dipakai, atau bisa dianggap TO = UCR dan ORG ID harus match, ada kontierung.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Ada 2 TO beda service code OK. Cari yang sesuai dengan Invoice.",
+    "answer": "(TO) Ada 2 TO beda service code OK. Cari yang sesuai dengan Invoice.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release) Untuk TO Ground, di bagian email Sender bisa di buat Acuan release jika Ramp-up Nurwenn",
+    "answer": "(Release) Untuk TO Ground, di bagian email Sender bisa di buat Acuan release jika Ramp-up Nurwenn",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Jika tidak ada TO, tetapi ada korespondensi yang menunjukkan alamat dan kontierung bisa di anggap TO. Kalau tidak a...",
+    "answer": "(TO) Jika tidak ada TO, tetapi ada korespondensi yang menunjukkan alamat dan kontierung bisa di anggap TO. Kalau tidak ada, tidak bisa dianggap TO.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Jika harga di charge di TO, tetapi di invoice juga dicharge sesuai dengan rate card, maka CLAIM jika harga di TO le...",
+    "answer": "(TO) Jika harga di charge di TO, tetapi di invoice juga dicharge sesuai dengan rate card, maka CLAIM jika harga di TO lebih murah, kalau lebih mahal coba tanya dulu. (contoh kasus FNP-4991207)",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(Item) Attachment dangerous goods (dangerous declaration) bisa dianggap konfirmasi bahwa itu benar\" dangerous goods.",
+    "answer": "(Item) Attachment dangerous goods (dangerous declaration) bisa dianggap konfirmasi bahwa itu benar\" dangerous goods.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(Cost Confirmation) Harga di \"Versandauftrag\" bisa dijadikan sebagai cost konfirmasi.",
+    "answer": "(Cost Confirmation) Harga di \"Versandauftrag\" bisa dijadikan sebagai cost konfirmasi.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(System) No Partner Bank Type bisa tetep di release.",
+    "answer": "(System) No Partner Bank Type bisa tetep di release.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(System) Jika Partner bank type di invoice dengan di system beda, minta tolong di indo siemens buat adjust. (See OPP-235...",
+    "answer": "(System) Jika Partner bank type di invoice dengan di system beda, minta tolong di indo siemens buat adjust. (See OPP-2355765 & 2355763)",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(System) Company code error 1500, not 1200 Take over.",
+    "answer": "(System) Company code error 1500, not 1200 Take over.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(System) G Accounting 61510000 doesn't match combination with WBS A-002915-GNA30A00. Release + Note (error nya)",
+    "answer": "(System) G Accounting 61510000 doesn't match combination with WBS A-002915-GNA30A00. Release + Note (error nya)",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(Kontierung) Untuk pengisian sales order yang nggak ada itemnya, di isi yang paling atas di SAP.",
+    "answer": "(Kontierung) Untuk pengisian sales order yang nggak ada itemnya, di isi yang paling atas di SAP.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(Kontierung) Delivery Note tidak bisa jadi acuan buat release kalau tidak ada kontierungnya.",
+    "answer": "(Kontierung) Delivery Note tidak bisa jadi acuan buat release kalau tidak ada kontierungnya.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(Kontierung) The general ledger account is maybe incorrect (61500000). Please post to 61510000.",
+    "answer": "(Kontierung) The general ledger account is maybe incorrect (61500000). Please post to 61510000.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release) Release kontak ada di TO, packing list, bisa juga ke yang memberikan konfirmasi di korespondensi, atau ditempa...",
+    "answer": "(Release) Release kontak ada di TO, packing list, bisa juga ke yang memberikan konfirmasi di korespondensi, atau ditempat dimana ada kontierungnya. Selebihnya mending tanya dulu. Kalo ORG ID nya atau UCR nya beda claim.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release + Note) Penentuan Inbound khususnya SIEFS, SIEFC, ect. Dicek dulu dengan SITRIS. Kalo nggak ada dilihat dulu al...",
+    "answer": "(Release + Note) Penentuan Inbound khususnya SIEFS, SIEFC, ect. Dicek dulu dengan SITRIS. Kalo nggak ada dilihat dulu alamatnya dicocokkan dengan ramp-up, baru menentukan dia sebagai ABG/EMP. Untuk contoh contoh kasus inbound dan outbound lihat sheet sebelah.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "(Note) Jika muncul notice error KTSP (PSP), dinotice lalu pakai ramp-up.",
+    "answer": "(Note) Jika muncul notice error KTSP (PSP), dinotice lalu pakai ramp-up.",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "Tarif ok Bankverbindung fehlt Schenker/DSV",
+    "answer": "Tarif ok Bankverbindung fehlt Schenker/DSV",
+    "category": "General",
+    "tags": "others",
+    "project": "sgp"
+  },
+  {
+    "question": "Air outbound selalu cek Harus ada TO dan AWB (ORG ID dan UCR dalam invoice harus sama dengan TO) dan (No. HAWB harus sam...",
+    "answer": "Air outbound selalu cek Harus ada TO dan AWB (ORG ID dan UCR dalam invoice harus sama dengan TO) dan (No. HAWB harus sama dengan AWB)",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "AIR INBOUND TIDAK PERLU TO. SIEZCXXXX dalam Kuehne Air sistem OPP = inbound, dilihat penerimanya terlebih dahulu",
+    "answer": "AIR INBOUND TIDAK PERLU TO. SIEZCXXXX dalam Kuehne Air sistem OPP = inbound, dilihat penerimanya terlebih dahulu",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Acuan city ada di TO, atau di lembar ke 4 TO (kalau ada). Bukan AWB.",
+    "answer": "(TO) Acuan city ada di TO, atau di lembar ke 4 TO (kalau ada). Bukan AWB.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Preis acuan ada di TO, even beda service code antara TO dengan invoice, acuan tetap di TO. Kalo semisal undercharge...",
+    "answer": "(TO) Preis acuan ada di TO, even beda service code antara TO dengan invoice, acuan tetap di TO. Kalo semisal undercharge = OK, kalo over claim.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Beda UCR TO dan AWB OK, tapi perlu di cek lagi pengirim - penerimanya dan komponen lainnya.",
+    "answer": "(TO) Beda UCR TO dan AWB OK, tapi perlu di cek lagi pengirim - penerimanya dan komponen lainnya.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(TO) Hati-hati untuk pengerjaan Schencker AIR yang tidak ada lanennya, biasanya ada cost confirmation di TO halaman 2",
+    "answer": "(TO) Hati-hati untuk pengerjaan Schencker AIR yang tidak ada lanennya, biasanya ada cost confirmation di TO halaman 2",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(Ratecard) Falkensee-Ludwig-Berlin = same area!!",
+    "answer": "(Ratecard) Falkensee-Ludwig-Berlin = same area!!",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(Item) Jika negara APAC di charge bukan harga APAC, beri notize \"Rejected: X-Ray APAC is wrong\" dan jangan di release. I...",
+    "answer": "(Item) Jika negara APAC di charge bukan harga APAC, beri notize \"Rejected: X-Ray APAC is wrong\" dan jangan di release. Informasi mengenai Negara APAC ada di INDO FILE SHARING.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(Item) Hand search, warenbeschau = ETD/Sniff charges 25 USD.",
+    "answer": "(Item) Hand search, warenbeschau = ETD/Sniff charges 25 USD.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(Item) Dark Scan Fee, cek semuanya dulu, lalu kasih notice \"Tariff und Oanda ok, tariff info: Dark Scan Fee removed from...",
+    "answer": "(Item) Dark Scan Fee, cek semuanya dulu, lalu kasih notice \"Tariff und Oanda ok, tariff info: Dark Scan Fee removed from Accessorial tab 25 USD.\".",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(Item) LUFTFRACHTZUSCHLAG 30 USD, bisa diterima jika hanya di charge 1x. Harganya sama dengan \"All inclusive Documentati...",
+    "answer": "(Item) LUFTFRACHTZUSCHLAG 30 USD, bisa diterima jika hanya di charge 1x. Harganya sama dengan \"All inclusive Documentation charges at Orgin and Destination\".",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(Item) Kurierkosten 35 EUR Schenker Claim",
+    "answer": "(Item) Kurierkosten 35 EUR Schenker Claim",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(Item) Ras Cargo Schenker Claim",
+    "answer": "(Item) Ras Cargo Schenker Claim",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "(Release) Pengiriman inbound ke DE, tapi UCR di invoice sama TO SIEKI..., Release asn Inbound.",
+    "answer": "(Release) Pengiriman inbound ke DE, tapi UCR di invoice sama TO SIEKI..., Release asn Inbound.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Kalo ada yang nemu accounting WBS dimulai dari \"O-XXXX-01-A\" dalam TO yang tidak komplit, biasanya ditambahkan \"-P000-06...",
+    "answer": "Kalo ada yang nemu accounting WBS dimulai dari \"O-XXXX-01-A\" dalam TO yang tidak komplit, biasanya ditambahkan \"-P000-0640\" (KSP)",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "DHL Express",
+    "answer": "DHL Express",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Go Green Max 25 EUR",
+    "answer": "Go Green Max 25 EUR",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Insurance DHL Express only domestic max 5 Eur per shipment.",
+    "answer": "Insurance DHL Express only domestic max 5 Eur per shipment.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "K+N",
+    "answer": "K+N",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Untuk Pauschalpreis lebih hati2. Sebelumnya dicek dulu ada di Ratecard apa ga (khususnya K+N). Pauschalpreis = Flat pric...",
+    "answer": "Untuk Pauschalpreis lebih hati2. Sebelumnya dicek dulu ada di Ratecard apa ga (khususnya K+N). Pauschalpreis = Flat price (pake Harga LTL/FTL), Disini ada tulisannya 13.2 / 11.4 LDM itu berarti pake harga FTL.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Portalavisierung di-Notice \"PORTALAVISIERUNG 5,20€ nicht vereinbart\" lalu release.",
+    "answer": "Portalavisierung di-Notice \"PORTALAVISIERUNG 5,20€ nicht vereinbart\" lalu release.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Kühne Ground Megatrailer Zuschlag -> tariff ok. Part of FTL - truck interior overheight up to 300 cm.",
+    "answer": "Kühne Ground Megatrailer Zuschlag -> tariff ok. Part of FTL - truck interior overheight up to 300 cm.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Kuehne the order 3314213994 / 670,83 € it is another project > Annex 1.",
+    "answer": "Kuehne the order 3314213994 / 670,83 € it is another project > Annex 1.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Ratecard RUNDLAUF = MILK RUN Ratecard.",
+    "answer": "Ratecard RUNDLAUF = MILK RUN Ratecard.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Zonen Tariff Kuehne = \"Please take over zonen tarif..!!\"",
+    "answer": "Zonen Tariff Kuehne = \"Please take over zonen tarif..!!\"",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "FIXTERMINZUSCHLAG ABHOLUNG 250 EUR same with Collection at the loading point within specified time.",
+    "answer": "FIXTERMINZUSCHLAG ABHOLUNG 250 EUR same with Collection at the loading point within specified time.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Schenker",
+    "answer": "Schenker",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Ada shipment outbound + inbound dalam 1 invoice, take over.",
+    "answer": "Ada shipment outbound + inbound dalam 1 invoice, take over.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Schenker Pauschalfracht = Schenker Milkruns - Mülheim_Mülheim (OPP AH007733) und Duisburg_Düsseldorf sowie Düsseldorf_Mü...",
+    "answer": "Schenker Pauschalfracht = Schenker Milkruns - Mülheim_Mülheim (OPP AH007733) und Duisburg_Düsseldorf sowie Düsseldorf_Mülheim (KSP AH038677), cek dulu.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "1800021792 (SCHENKER) TOMANY.",
+    "answer": "1800021792 (SCHENKER) TOMANY.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "GB-HU charged with VAT 19% di schenker bisa di proses.",
+    "answer": "GB-HU charged with VAT 19% di schenker bisa di proses.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Invoice siemens KFT Pengiriman yang menyangkutkan GB atau CH, dengan atau tanpa pajak, diganti Dm.",
+    "answer": "Invoice siemens KFT Pengiriman yang menyangkutkan GB atau CH, dengan atau tanpa pajak, diganti Dm.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Siemens KTF tidak bisa release ada notif period (OPP), sedang dalam klarifikasi.",
+    "answer": "Siemens KTF tidak bisa release ada notif period (OPP), sedang dalam klarifikasi.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Siemens KTF tetapi ada remark atau atachment SIEZE, tetep pake SIEAX2...",
+    "answer": "Siemens KTF tetapi ada remark atau atachment SIEZE, tetep pake SIEAX2...",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "A-Project",
+    "answer": "A-Project",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Untuk Ground (khususnya AProject), FTL LTL / Servicecode invoice – nya dipastikan lagi lewat TO.",
+    "answer": "Untuk Ground (khususnya AProject), FTL LTL / Servicecode invoice – nya dipastikan lagi lewat TO.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Aproject preis LTL di Charge FTL : (please process like this it is ok that it was billed as FTL -stefanieliss). Yang ngg...",
+    "answer": "Aproject preis LTL di Charge FTL : (please process like this it is ok that it was billed as FTL -stefanieliss). Yang nggak boleh, beda dengan yang di TO (overcharge).",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Aproject ORG ID beda antara atas dan bawah nggak papa, asal ada yang sama.",
+    "answer": "Aproject ORG ID beda antara atas dan bawah nggak papa, asal ada yang sama.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "BDT",
+    "answer": "BDT",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "BDT LKW Brücke 608€/Tag = OKEEE.",
+    "answer": "BDT LKW Brücke 608€/Tag = OKEEE.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "AH007735 UBB bisa diproses Tanpa TO.",
+    "answer": "AH007735 UBB bisa diproses Tanpa TO.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Jika menemukan kontierung G=61510000*C=120003 , bisa di tambahkan angka 0 nya pada cost center menjadi  G=61510000*C=120...",
+    "answer": "Jika menemukan kontierung G=61510000*C=120003 , bisa di tambahkan angka 0 nya pada cost center menjadi  G=61510000*C=12000003",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "KDE",
+    "answer": "KDE",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "KDE di invoice dengan TO WAJIB CEK (SAMAKAN) Service Code. Untuk Numberg, Ise-burg ketentuannya ada di bagian pengirim n...",
+    "answer": "KDE di invoice dengan TO WAJIB CEK (SAMAKAN) Service Code. Untuk Numberg, Ise-burg ketentuannya ada di bagian pengirim nya. (Toleransi 10 km).",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Jika ada rechnung number yang kurang lengkap atau terlalu banyak di SAP, dibetulkan. Yang penting angkanya keliatan sama...",
+    "answer": "Jika ada rechnung number yang kurang lengkap atau terlalu banyak di SAP, dibetulkan. Yang penting angkanya keliatan sama.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "HTL",
+    "answer": "HTL",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Untuk HTL, setiap posisi ditulis sendiri2 ya. Releasenya untuk Org ID A1102698 selalu berdasarkan kontak yang tertulis d...",
+    "answer": "Untuk HTL, setiap posisi ditulis sendiri2 ya. Releasenya untuk Org ID A1102698 selalu berdasarkan kontak yang tertulis di invoice yang terbanyak.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "HTL TERBARU TIDAK PERLU MENYAMAKAN KUNDENUMMER LAGI !!!",
+    "answer": "HTL TERBARU TIDAK PERLU MENYAMAKAN KUNDENUMMER LAGI !!!",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "INFO HTL: zweite Ladestelle = zweite Entladestelle = additional pickup/delivery location. Vereinbarte Zusatzkosten, Verg...",
+    "answer": "INFO HTL: zweite Ladestelle = zweite Entladestelle = additional pickup/delivery location. Vereinbarte Zusatzkosten, Vergebliche Anfahrt, Palettentausch, Wartezeit = Claim.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "For manual billing: km calculation according to Google Maps, fastest way.",
+    "answer": "For manual billing: km calculation according to Google Maps, fastest way.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Rates including toll (national and international).",
+    "answer": "Rates including toll (national and international).",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "HTL tidak perlu TO.",
+    "answer": "HTL tidak perlu TO.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Kalo ada shipment inbound dan outbound dalam 1 invoice Take Over.",
+    "answer": "Kalo ada shipment inbound dan outbound dalam 1 invoice Take Over.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Pengirim dan penerima sama persis bahkan nama perusahaannya = Claim.",
+    "answer": "Pengirim dan penerima sama persis bahkan nama perusahaannya = Claim.",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "A7701708 in HTL, the ESN using UBB",
+    "answer": "A7701708 in HTL, the ESN using UBB",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Info HTL, inbound dan outbound dalam 1 invoice tidak dapat diterima. ( kasus kalo ADA UCR )",
+    "answer": "Info HTL, inbound dan outbound dalam 1 invoice tidak dapat diterima. ( kasus kalo ADA UCR )",
+    "category": "General",
+    "tags": "air",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlende Kostenbestätigung angefordert ; Pauschalfracht, Tagespreis, Frachtkosten, Jetline",
+    "answer": "🇩🇪 SAP Notiz:\nFehlende Kostenbestätigung angefordert ; Pauschalfracht, Tagespreis, Frachtkosten, Jetline\n\n🇬🇧 English:\nMissing cost confirmation requested; flat rate freight, daily rate, Shipping cost, Jetline",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlender AWB angefordert",
+    "answer": "🇩🇪 SAP Notiz:\nFehlender AWB angefordert\n\n🇬🇧 English:\nMissing AWB requested",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlender B/L angefordert",
+    "answer": "🇩🇪 SAP Notiz:\nFehlender B/L angefordert\n\n🇬🇧 English:\nMissing B/L requested",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlende Transportorder angefordert",
+    "answer": "🇩🇪 SAP Notiz:\nFehlende Transportorder angefordert\n\n🇬🇧 English:\nMissing transport order requested",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlender Auslagebeleg angefordert",
+    "answer": "🇩🇪 SAP Notiz:\nFehlender Auslagebeleg angefordert\n\n🇬🇧 English:\nMissing delivery receipt requested",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Falschabrechnung Position: Diesel, Rate, Oanda ….",
+    "answer": "🇩🇪 SAP Notiz:\nFalschabrechnung Position: Diesel, Rate, Oanda ….\n\n🇬🇧 English:\nIncorrect billing position: Flowater, Rate, Oanda ....",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Lane DE/DE 74/13 nicht im Tarif vereinbart",
+    "answer": "🇩🇪 SAP Notiz:\nLane DE/DE 74/13 nicht im Tarif vereinbart\n\n🇬🇧 English:\nLane e.g. DE/DE 12/34 not agreed in the tariff",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "UCR Nummer in Klärung",
+    "answer": "🇩🇪 SAP Notiz:\nUCR Nummer in Klärung\n\n🇬🇧 English:\nUCR number in clarification",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Umsatzsteuer ID falsch angegeben DE129274202",
+    "answer": "🇩🇪 SAP Notiz:\nUmsatzsteuer ID falsch angegeben DE129274202\n\n🇬🇧 English:\nVAT ID incorrectly stated DE129274202",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlender CMR angefordert",
+    "answer": "🇩🇪 SAP Notiz:\nFehlender CMR angefordert\n\n🇬🇧 English:\nMissing CMR requested",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlender ABL, POD angefordert",
+    "answer": "🇩🇪 SAP Notiz:\nFehlender ABL, POD angefordert\n\n🇬🇧 English:\nMissing ABL, POD requested",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Anlagen fehlen komplett - Belegablehnung",
+    "answer": "🇩🇪 SAP Notiz:\nAnlagen fehlen komplett - Belegablehnung\n\n🇬🇧 English:\nAttachments missing completely - rejection of documents",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlende Kreditorenangabe, Bitte ergänzen Sie den Kreditor und starten den WF erneut. Vielen Dank",
+    "answer": "🇩🇪 SAP Notiz:\nFehlende Kreditorenangabe, Bitte ergänzen Sie den Kreditor und starten den WF erneut. Vielen Dank\n\n🇬🇧 English:\nMissing vendor information, please add the vendor and restart the WF. Thank you very much",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Falsche Rechnungsanschrift - Belegablehnung",
+    "answer": "🇩🇪 SAP Notiz:\nFalsche Rechnungsanschrift - Belegablehnung\n\n🇬🇧 English:\nIncorrect invoice address - Document rejection",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Falsche DHL Kundennummer",
+    "answer": "🇩🇪 SAP Notiz:\nFalsche DHL Kundennummer\n\n🇬🇧 English:\nIncorrect DHL Kundennummer",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Insurance in Klärung",
+    "answer": "🇩🇪 SAP Notiz:\nInsurance in Klärung\n\n🇬🇧 English:\nInsurance in clarification",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Falschabrechnung Position:  NON STACKABLE PALLET DOM ....",
+    "answer": "🇩🇪 SAP Notiz:\nFalschabrechnung Position:  NON STACKABLE PALLET DOM ....\n\n🇬🇧 English:\nIncorrect billing position: NON STACKABLE PALLET DOM ....",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlende UST-id.",
+    "answer": "🇩🇪 SAP Notiz:\nFehlende UST-id.\n\n🇬🇧 English:\nMissing UST-Id.",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Falscher MAWB: Die MAWB auf der Hauptrechnung stimmt nicht mit dem AWB-Anhang überein.",
+    "answer": "🇩🇪 SAP Notiz:\nFalscher MAWB: Die MAWB auf der Hauptrechnung stimmt nicht mit dem AWB-Anhang überein.\n\n🇬🇧 English:\nIncorrect MAWB: The MAWB on the main invoice does not match the AWB attachment.",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Wir lehnen diese Rechnung ab, weil die Rechnung nicht steuerfrei war. (DE-GB)",
+    "answer": "🇩🇪 SAP Notiz:\nWir lehnen diese Rechnung ab, weil die Rechnung nicht steuerfrei war. (DE-GB)\n\n🇬🇧 English:\nWe reject this invoice because the billing was not tax-free.",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Fehlende Transportorder und AWB angefordert",
+    "answer": "🇩🇪 SAP Notiz:\nFehlende Transportorder und AWB angefordert\n\n🇬🇧 English:\nMissing TO and AWB requested",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "EXPRESS-16-UHR-ZUSCHLAG nicht vereinbart",
+    "answer": "🇩🇪 SAP Notiz:\nEXPRESS-16-UHR-ZUSCHLAG nicht vereinbart\n\n🇬🇧 English:\nEXPRESS-16-UHR-ZUSCHLAG not agreed",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "ORGID ist nicht in RampUp vorhanden",
+    "answer": "🇩🇪 SAP Notiz:\nORGID ist nicht in RampUp vorhanden\n\n🇬🇧 English:\nORGID is not present in RampUp.",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Tarif nicht nachvollziehbar: Kein KB",
+    "answer": "🇩🇪 SAP Notiz:\nTarif nicht nachvollziehbar: Kein KB\n\n🇬🇧 English:\nTariff not understandable",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Falschabrechnung Position: Rate",
+    "answer": "🇩🇪 SAP Notiz:\nFalschabrechnung Position: Rate\n\n🇬🇧 English:\nExceed Tariff",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Pauschalfrachtabrechnung stimmt nicht mit den bestätigten Kosten überein",
+    "answer": "🇩🇪 SAP Notiz:\nPauschalfrachtabrechnung stimmt nicht mit den bestätigten Kosten überein\n\n🇬🇧 English:\nFlat rate freight invoice does not match confirmed costs",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "CH-Sendung nicht vereinbart",
+    "answer": "🇩🇪 SAP Notiz:\nCH-Sendung nicht vereinbart\n\n🇬🇧 English:\nPREISSER",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Ein Preisangebot fehlt, jedoch ist eine Kostenbestätigung vorhanden.",
+    "answer": "🇩🇪 SAP Notiz:\nEin Preisangebot fehlt, jedoch ist eine Kostenbestätigung vorhanden.\n\n🇬🇧 English:\nA price quote is missing, but a cost confirmation is available.",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "abweichende Kostenbestätigung in der Anlage",
+    "answer": "🇩🇪 SAP Notiz:\nabweichende Kostenbestätigung in der Anlage\n\n🇬🇧 English:\nThe confirmed price in the main invoice differs from the TO",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Position des Kundenauftrags fehlt, daher Ramp-up",
+    "answer": "🇩🇪 SAP Notiz:\nPosition des Kundenauftrags fehlt, daher Ramp-up\n\n🇬🇧 English:\nPosition of the customer order is missing, therefore ramp-up",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Tarifangabe in Euro fehlt.",
+    "answer": "🇩🇪 SAP Notiz:\nTarifangabe in Euro fehlt.\n\n🇬🇧 English:\nTariff information in euros is missing.",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Kilometerdistanz liegt über der Toleranzgrenze",
+    "answer": "🇩🇪 SAP Notiz:\nKilometerdistanz liegt über der Toleranzgrenze\n\n🇬🇧 English:\nKilometre distance is above the tolerance limit",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Falsche ORGID: Die ORGID auf der Hauptrechnung stimmt nicht mit dem TO-Anhang überein.",
+    "answer": "🇩🇪 SAP Notiz:\nFalsche ORGID: Die ORGID auf der Hauptrechnung stimmt nicht mit dem TO-Anhang überein.\n\n🇬🇧 English:\nIncorrect ORGID: The ORGID on the main invoice does not match the TO asset.",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Tarif in der Rechnung stimmt nicht mit der VLM-Anlage überein",
+    "answer": "🇩🇪 SAP Notiz:\nTarif in der Rechnung stimmt nicht mit der VLM-Anlage überein\n\n🇬🇧 English:\nTarif yang tercantum dalam tagihan tidak sesuai dengan yang ada di lampiran VLM",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Falsche document number: Die document number auf der Hauptrechnung stimmt nicht mit dem SAP system.",
+    "answer": "🇩🇪 SAP Notiz:\nFalsche document number: Die document number auf der Hauptrechnung stimmt nicht mit dem SAP system.\n\n🇬🇧 English:\nIncorrect document number: The document number on the main invoice does not match the SAP system.",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Falsche ORGID: Die ORGID auf der Hauptrechnung stimmt nicht mit der Sendung überein.",
+    "answer": "🇩🇪 SAP Notiz:\nFalsche ORGID: Die ORGID auf der Hauptrechnung stimmt nicht mit der Sendung überein.\n\n🇬🇧 English:\nIncorrect ORGID: The ORGID on the main invoice does not match the shipment.",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  },
+  {
+    "question": "Keine Kostenbestätigung für zusätzliche Gebühren",
+    "answer": "🇩🇪 SAP Notiz:\nKeine Kostenbestätigung für zusätzliche Gebühren\n\n🇬🇧 English:\nClarification AWB release = cost confirmation",
+    "category": "General",
+    "tags": "standartwording, notiz, sap",
+    "project": "sgp"
+  }
+];
+
+function log(msg, cls='info') {
+  const div = document.getElementById('log');
+  div.style.display = 'block';
+  const line = document.createElement('div');
+  line.className = 'log-line ' + cls;
+  line.textContent = msg;
+  div.appendChild(line);
+  div.scrollTop = div.scrollHeight;
+}
+
+function setProgress(done, total) {
+  const pct = (done / total * 100).toFixed(1);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-count').textContent = done + ' / ' + total;
+  document.getElementById('progress-text').textContent = done === total ? 'Done!' : 'Uploading...';
+}
+
+async function startImport() {
+  const btn = document.getElementById('import-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Importing...';
+  document.getElementById('progress-wrap').style.display = 'block';
+
+  let ok = 0, fail = 0;
+  const total = ENTRIES.length;
+
+  for (let i = 0; i < total; i++) {
+    const entry = ENTRIES[i];
+    try {
+      await col.add({
+        ...entry,
+        images: [],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      ok++;
+      if (i % 10 === 0 || i === total - 1) {
+        log(`✓ ${i+1}/${total} — ${entry.question.substring(0,60)}...`, 'ok');
+      }
+    } catch(e) {
+      fail++;
+      log(`✗ Failed: ${entry.question.substring(0,50)} — ${e.message}`, 'err');
+    }
+    setProgress(i + 1, total);
+    // Small delay to avoid rate limits
+    if (i % 20 === 19) await new Promise(r => setTimeout(r, 300));
+  }
+
+  document.getElementById('done-box').style.display = 'block';
+  document.getElementById('done-text').textContent = `${ok} entries imported successfully${fail > 0 ? ', ' + fail + ' failed' : ''}.`;
+  btn.textContent = '✅ Done';
+}
+</script>
+</body>
+</html>
