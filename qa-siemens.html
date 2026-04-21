@@ -516,7 +516,7 @@ const firebaseConfig = {
   messagingSenderId:"773245175115",
   appId:"1:773245175115:web:0b6a4f27388f58f026d4ce"
 };
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(), storage = firebase.storage();
 const col = db.collection('sgp_qa_entries');
 const authDoc = db.collection('_config').doc('auth');
