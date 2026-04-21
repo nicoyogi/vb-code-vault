@@ -115,6 +115,13 @@
       cursor: pointer; color: rgba(255,255,255,0.4); transition: all .15s;
     }
     .btn-lock:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+    .btn-nuke {
+      height: 30px; background: rgba(192,57,43,0.15); border: 1px solid rgba(192,57,43,0.35);
+      border-radius: 4px; padding: 0 12px; font-family: var(--ibm-mono); font-size: 11px;
+      cursor: pointer; color: rgba(255,120,100,0.85); transition: all .15s; white-space: nowrap;
+    }
+    .btn-nuke:hover { background: rgba(192,57,43,0.35); border-color: #f87171; color: #f87171; box-shadow: 0 0 10px rgba(248,113,113,0.2); }
+    .btn-nuke:disabled { opacity: .4; cursor: not-allowed; }
 
     /* ── MAIN ── */
     main { max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; position: relative; z-index: 2; }
@@ -408,6 +415,7 @@
     </div>
     <span id="total-badge">— entries</span>
     <button class="btn-lock" onclick="lockApp()" title="Lock">🔒 Lock</button>
+    <button class="btn-nuke" id="delete-all-btn" onclick="deleteAllEntries()" title="Delete all SGP entries">🗑 Delete All</button>
     <button class="btn-primary" onclick="openAdd()">+ New Entry</button>
   </div>
 </header>
@@ -684,6 +692,34 @@ async function deleteEntry(id){if(!confirm('Delete this entry and all its attach
 function handleBgClick(e,id){if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');}
 function showToast(msg,isError){const t=document.getElementById('toast');t.textContent=msg;t.className=isError?'error-toast show':'show';clearTimeout(t._timer);t._timer=setTimeout(()=>{t.className='';},2500);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDetail();closeLightbox();}});
+
+/* ── DELETE ALL ── */
+async function deleteAllEntries(){
+  if(entries.length===0){showToast('No entries to delete.',true);return;}
+  const confirmed=prompt(`⚠️ This will permanently delete all ${entries.length} SGP entries.\n\nType DELETE to confirm:`);
+  if(confirmed!=='DELETE'){showToast('Cancelled — nothing deleted.',false);return;}
+  const btn=document.getElementById('delete-all-btn');
+  const origText=btn.textContent;
+  btn.disabled=true;
+  let ok=0,fail=0;
+  const total=entries.length;
+  for(const e of [...entries]){
+    btn.textContent=`🗑 ${ok+fail+1}/${total}`;
+    try{
+      if(e.images&&e.images.length){
+        for(const url of e.images){try{await storage.refFromURL(url).delete();}catch(x){}}
+      }
+      await col.doc(e.id).delete();
+      ok++;
+    }catch(x){
+      fail++;
+      console.error('Failed to delete',e.id,x);
+    }
+  }
+  btn.disabled=false;
+  btn.textContent=origText;
+  showToast(fail===0?`🗑 Deleted all ${ok} entries.`:`Deleted ${ok}, failed ${fail}.`,fail>0);
+}
 
 /* ── PASSWORD LOCK ── */
 const SESSION_KEY='vb_vault_session';
