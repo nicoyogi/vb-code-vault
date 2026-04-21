@@ -70,8 +70,6 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 
 .pcard.selected{border-color:rgba(212,175,100,.45);background:rgba(20,16,5,.92);box-shadow:0 24px 70px rgba(212,175,100,.2),0 0 0 1px rgba(212,175,100,.12)}
 .pcard.selected::before,.pcard.selected::after{opacity:1}
-.pcard.locked{opacity:.35;cursor:not-allowed}
-.pcard.locked:hover{transform:none !important;border-color:rgba(212,175,100,.1) !important;box-shadow:none !important}
 
 .pcin{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
 
@@ -93,8 +91,6 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .parr{width:30px;height:30px;border-radius:50%;border:1px solid rgba(212,175,100,.12);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(212,175,100,.2);flex-shrink:0;transition:all .3s;font-family:var(--mono)}
 .pcard:hover:not(.locked) .parr,.pcard.selected .parr{transform:translateX(4px);border-color:rgba(212,175,100,.55);color:rgba(212,175,100,.9);box-shadow:0 0 14px rgba(212,175,100,.18)}
 
-.lock-badge{position:absolute;top:12px;right:14px;font-family:var(--cinzel);font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:rgba(212,175,100,.18);border:1px solid rgba(212,175,100,.1);border-radius:20px;padding:2px 9px}
-
 /* ─── REVEAL DIVIDER ─── */
 .sec-div{width:100%;display:flex;align-items:center;gap:14px;margin-bottom:1.6rem;
   opacity:0;transform:translateY(14px);transition:opacity .5s,transform .5s;pointer-events:none}
@@ -112,7 +108,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .pb-name{color:rgba(212,175,100,.9);font-family:var(--cinzel);font-size:12px;font-weight:600;letter-spacing:.1em}
 .pb-sep{color:rgba(212,175,100,.2)}
 
-/* ─── TOOL CARDS (identical to original) ─── */
+/* ─── TOOL CARDS ─── */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}
 .s2{grid-column:1/-1}
 
@@ -288,24 +284,27 @@ footer a:hover{color:rgba(212,175,100,.55)}
       </div>
     </div>
 
-    <!-- Siemens GP — sealed -->
-    <div class="pcard locked" id="proj-siemens">
-      <div class="lock-badge">Sealed</div>
+    <!-- Siemens GP — NOW ACTIVE -->
+    <div class="pcard" id="proj-siemens" onclick="selectProject('siemens',this)">
+      <div class="pcard-top"></div>
+      <div class="pblob" style="background:rgba(59,130,246,0.12)"></div>
+      <div class="pspot"></div>
       <div class="pcin">
         <svg class="pseal" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
           <polygon points="25,2 46,13 46,37 25,48 4,37 4,13"
-                   stroke="rgba(212,175,100,0.1)" stroke-width="1"
-                   fill="rgba(212,175,100,0.02)"/>
+                   stroke="rgba(59,130,246,0.5)" stroke-width="1"
+                   fill="rgba(59,130,246,0.05)"/>
           <polygon points="25,8 40,17 40,33 25,42 10,33 10,17"
-                   stroke="rgba(212,175,100,0.05)" stroke-width=".6" fill="none"/>
+                   stroke="rgba(59,130,246,0.15)" stroke-width=".6" fill="none"/>
           <text x="25" y="29" text-anchor="middle"
                 font-family="Cinzel,serif" font-size="9" font-weight="600"
-                fill="rgba(212,175,100,0.22)">SGP</text>
+                fill="rgba(59,130,246,0.9)">SGP</text>
         </svg>
         <div class="pname">Siemens GP</div>
-        <div class="pdesc">General procurement<br>Rites not yet transcribed<br>into the vault</div>
+        <div class="pdesc">General Procurement<br>Process knowledge base<br>Procurement rites &amp; guidelines</div>
         <div class="pfoot">
-          <div class="pstatus lck"><div class="pdot"></div>Coming Soon</div>
+          <div class="pstatus act" style="color:rgba(59,130,246,.65)"><div class="pdot" style="background:#3b82f6;box-shadow:0 0 7px #3b82f6;animation:dpulse 2.5s ease-in-out infinite"></div>Active</div>
+          <div class="parr">⟶</div>
         </div>
       </div>
     </div>
@@ -416,7 +415,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
 <script>
 (function(){
-/* ─── CANVAS BACKGROUND (exact copy from original) ─── */
+/* ─── CANVAS BACKGROUND ─── */
 const cv=document.getElementById('bg'),cx=cv.getContext('2d');
 let W,H,t=0,pts=[],runeChars=[];
 const PAL=[[91,156,246],[167,139,250],[52,211,153],[244,114,182],[212,175,100]];
@@ -461,7 +460,7 @@ function bindTilt(id){
 ['c0','c1','c2'].forEach(bindTilt);
 
 /* ─── 3D TILT on project cards ─── */
-document.querySelectorAll('.pcard:not(.locked)').forEach(el=>{
+document.querySelectorAll('.pcard').forEach(el=>{
   const spot=el.querySelector('.pspot');
   el.addEventListener('mousemove',e=>{
     const r=el.getBoundingClientRect(),nx=(e.clientX-r.left)/r.width-.5,ny=(e.clientY-r.top)/r.height-.5;
@@ -480,16 +479,14 @@ const PROJECTS={
     code:'code.html?project=wmf',
     qa:'qa.html?project=wmf',
     anmerkung:'anmerkung.html?project=wmf'
-  }
-  /*
-  siemens:{                            ← uncomment when ready
+  },
+  siemens:{
     name:'Siemens GP',
     sub:'General Procurement',
     code:'code.html?project=siemens',
-    qa:'qa.html?project=siemens',
+    qa:'qa-siemens.html?project=siemens',
     anmerkung:'anmerkung.html?project=siemens'
   }
-  */
 };
 
 function selectProject(key,el){
