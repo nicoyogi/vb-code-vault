@@ -114,7 +114,7 @@
     .img-remove:hover { background: #A32D2D; }
     .upload-progress { font-family: var(--mono); font-size: 11px; color: var(--accent-text); margin-top: 6px; }
     .detail-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; flex-shrink: 0; }
-    .detail-images img { width: 100%; border-radius: var(--radius); object-fit: cover; cursor: pointer; border: 1px solid var(--border); transition: opacity .15s; max-height: 160px; }
+    .detail-images img { width: 100%; border-radius: var(--radius); object-fit: cover; cursor: pointer; border: 1px solid var(--border); transition: opacity .15px; max-height: 160px; }
     .detail-images img:hover { opacity: .85; }
 
     #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.94); z-index: 9000; align-items: center; justify-content: center; padding: 1rem; cursor: zoom-out; }
@@ -322,15 +322,25 @@ function fmtDate(ts){if(!ts)return'';const d=ts.toDate?ts.toDate():new Date(ts);
 
 function render(){
   const q=document.getElementById('search').value.toLowerCase().trim();const catF=document.getElementById('filter-cat').value;
-  const cats=[...new Set(entries.map(e=>e.category).filter(Boolean))].sort();
+  const cats=[...new Set(entries.filter(e=>(e.project||'')==='').map(e=>e.category).filter(Boolean))].sort();
   const sel=document.getElementById('filter-cat');const prev=sel.value;
   sel.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option${c===prev?' selected':''}>${esc(c)}</option>`).join('');
-  let list=entries.filter(e=>{const mQ=!q||(e.question||'').toLowerCase().includes(q)||(e.answer||'').toLowerCase().includes(q)||(e.tags||'').toLowerCase().includes(q);return mQ&&(!catF||e.category===catF);});
-  const total=entries.length;
+
+  // ── FILTER: exclude SGP entries (project === 'sgp'), only show entries with no project field ──
+  let list=entries.filter(e=>{
+    const mQ=!q||(e.question||'').toLowerCase().includes(q)||(e.answer||'').toLowerCase().includes(q)||(e.tags||'').toLowerCase().includes(q);
+    return mQ&&(!catF||e.category===catF)&&(e.project||'')==='';
+  });
+
+  const total=list.length;
   document.getElementById('total-badge').textContent=total+' entr'+(total!==1?'ies':'y');
   document.getElementById('stats').textContent=(q||catF)?`Showing ${list.length} of ${total}`:total>0?`${total} entr${total!==1?'ies':'y'} in the oracle`:'';
   const grid=document.getElementById('grid');
-  if(!list.length){grid.innerHTML=total===0?`<div class="empty"><div class="empty-icon">🧠</div><p>The oracle is silent.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ New Oracle Entry</strong> to begin.</p></div>`:`<div class="empty"><div class="empty-icon">🔍</div><p>No entries match your search.</p></div>`;return;}
+  if(!list.length){
+    const allNonSgp=entries.filter(e=>(e.project||'')==='').length;
+    grid.innerHTML=allNonSgp===0?`<div class="empty"><div class="empty-icon">🧠</div><p>The oracle is silent.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ New Oracle Entry</strong> to begin.</p></div>`:`<div class="empty"><div class="empty-icon">🔍</div><p>No entries match your search.</p></div>`;
+    return;
+  }
   grid.innerHTML=list.map(e=>{
     const tags=(e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
     const imgs=e.images||[];
