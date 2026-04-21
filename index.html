@@ -3,158 +3,414 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grimoire</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<title>The Grimoire</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg: #080810; --surface: #0f0f1a; --border: rgba(255,255,255,0.07);
-  --text: #e8e6f0; --text2: #8a88a0; --text3: #4a4860;
-  --accent-code: #5b9cf6; --accent-code-glow: rgba(91,156,246,0.12);
-  --accent-qa: #a78bfa; --accent-qa-glow: rgba(167,139,250,0.12);
-  --accent-xl: #34d399; --accent-xl-glow: rgba(52,211,153,0.12);
-  --mono: 'DM Mono', monospace;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#02020a;
+  --b:91,156,246;--v:167,139,250;--e:52,211,153;--pk:244,114,182;--gold:212,175,100;
+  --cinzel:'Cinzel',serif;--syne:'Syne',sans-serif;--mono:'DM Mono',monospace;
 }
-body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; overflow-x: hidden; }
-body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px); background-size: 48px 48px; pointer-events: none; z-index: 0; }
-.glow-top { position: fixed; top: -180px; left: 50%; transform: translateX(-50%); width: 700px; height: 400px; background: radial-gradient(ellipse, rgba(91,156,246,0.07) 0%, transparent 65%); pointer-events: none; z-index: 0; }
-.container { position: relative; z-index: 1; width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; }
-.eyebrow { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 1.1rem; animation: fadeUp 0.5s ease both; }
-.title { font-size: clamp(2.4rem, 6vw, 3.8rem); font-weight: 800; line-height: 1.08; text-align: center; margin-bottom: 1rem; animation: fadeUp 0.5s 0.08s ease both; letter-spacing: -0.02em; }
-.title .grad { background: linear-gradient(125deg, #5b9cf6 0%, #a78bfa 55%, #f472b6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.subtitle { font-family: var(--mono); font-size: 12.5px; color: var(--text2); text-align: center; margin-bottom: 3.5rem; animation: fadeUp 0.5s 0.16s ease both; }
-.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; animation: fadeUp 0.5s 0.24s ease both; }
-.card-xl { grid-column: 1 / -1; }
-.card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 2rem 1.75rem; cursor: pointer; text-decoration: none; color: inherit; display: flex; flex-direction: column; overflow: hidden; transition: transform 0.22s cubic-bezier(.2,.8,.3,1), border-color 0.22s; }
-.card-glow { position: absolute; inset: 0; border-radius: 22px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
-.card-code .card-glow { background: radial-gradient(ellipse at 20% 20%, var(--accent-code-glow), transparent 65%); }
-.card-qa   .card-glow { background: radial-gradient(ellipse at 20% 20%, var(--accent-qa-glow), transparent 65%); }
-.card-xl   .card-glow { background: radial-gradient(ellipse at 10% 50%, var(--accent-xl-glow), transparent 65%); }
-.card:hover { transform: translateY(-5px); }
-.card:hover .card-glow { opacity: 1; }
-.card-code:hover { border-color: rgba(91,156,246,0.28); }
-.card-qa:hover   { border-color: rgba(167,139,250,0.28); }
-.card-xl:hover   { border-color: rgba(52,211,153,0.28); }
-.card-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 1.4rem; position: relative; z-index: 1; transition: transform 0.22s; }
-.card:hover .card-icon { transform: scale(1.08); }
-.card-code .card-icon { background: rgba(91,156,246,0.1);  box-shadow: 0 0 0 1px rgba(91,156,246,0.15); }
-.card-qa   .card-icon { background: rgba(167,139,250,0.1); box-shadow: 0 0 0 1px rgba(167,139,250,0.15); }
-.card-xl   .card-icon { background: rgba(52,211,153,0.1);  box-shadow: 0 0 0 1px rgba(52,211,153,0.15); }
-.card-num { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 6px; position: relative; z-index: 1; }
-.card-code .card-num { color: var(--accent-code); }
-.card-qa   .card-num { color: var(--accent-qa); }
-.card-xl   .card-num { color: var(--accent-xl); }
-.card-name { font-size: 1.45rem; font-weight: 700; margin-bottom: 10px; position: relative; z-index: 1; line-height: 1.15; letter-spacing: -0.01em; }
-.card-xl .card-name { font-size: 1.3rem; }
-.card-desc { font-family: var(--mono); font-size: 11.5px; color: var(--text2); line-height: 1.75; position: relative; z-index: 1; flex: 1; }
-.card-xl .card-inner { display: flex; align-items: flex-start; gap: 1.5rem; position: relative; z-index: 1; }
-.card-xl .card-icon { margin-bottom: 0; flex-shrink: 0; }
-.card-xl .card-body { flex: 1; }
-.card-xl .card-num  { margin-bottom: 4px; }
-.card-footer { margin-top: 1.6rem; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1; }
-.card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
-.tag { font-family: var(--mono); font-size: 9.5px; padding: 2px 8px; border-radius: 20px; border: 1px solid; }
-.card-code .tag { color: var(--accent-code); border-color: rgba(91,156,246,0.2);  background: rgba(91,156,246,0.06); }
-.card-qa   .tag { color: var(--accent-qa);   border-color: rgba(167,139,250,0.2); background: rgba(167,139,250,0.06); }
-.card-xl   .tag { color: var(--accent-xl);   border-color: rgba(52,211,153,0.2);  background: rgba(52,211,153,0.06); }
-.card-arrow { font-size: 20px; color: var(--text3); transition: transform 0.2s, color 0.2s; line-height: 1; }
-.card:hover .card-arrow { transform: translateX(5px); }
-.card-code:hover .card-arrow { color: var(--accent-code); }
-.card-qa:hover   .card-arrow { color: var(--accent-qa); }
-.card-xl:hover   .card-arrow { color: var(--accent-xl); }
-.card-deco { position: absolute; bottom: 16px; right: 18px; font-family: var(--mono); font-size: 9px; line-height: 1.9; text-align: right; pointer-events: none; user-select: none; transition: opacity 0.3s; opacity: 0.06; }
-.card:hover .card-deco { opacity: 0.13; }
-.card-code .card-deco { color: var(--accent-code); }
-.card-qa   .card-deco { color: var(--accent-qa); }
-.card-xl   .card-deco { color: var(--accent-xl); }
-.download-wrap { margin-top: 2rem; width: 100%; display: flex; justify-content: center; animation: fadeUp 0.5s 0.3s ease both; }
-.btn-download { display: inline-flex; align-items: center; gap: 10px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: #080810; background: linear-gradient(125deg, #5b9cf6 0%, #a78bfa 55%, #f472b6 100%); border: none; border-radius: 50px; padding: 13px 28px; cursor: pointer; text-decoration: none; position: relative; overflow: hidden; transition: transform 0.2s cubic-bezier(.2,.8,.3,1), opacity 0.2s; }
-.btn-download::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.15); opacity: 0; transition: opacity 0.2s; }
-.btn-download:hover { transform: translateY(-3px); }
-.btn-download:hover::before { opacity: 1; }
-.btn-download:active { transform: translateY(0) scale(0.97); }
-.btn-download svg { width: 16px; height: 16px; flex-shrink: 0; }
-.footer { margin-top: 2rem; font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; animation: fadeUp 0.5s 0.38s ease both; line-height: 2; }
-.footer a { color: var(--text3); text-decoration: none; }
-.footer a:hover { color: var(--text2); }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 580px) {
-  .cards { grid-template-columns: 1fr; }
-  .card-xl { grid-column: auto; }
-  .card-xl .card-inner { flex-direction: column; gap: 1rem; }
-  .title { font-size: 2.2rem; }
-  .card { padding: 1.5rem; }
+html,body{width:100%;min-height:100vh;background:var(--bg);overflow-x:hidden}
+body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;align-items:center;padding:0 1.2rem 7rem}
+
+/* ─── CANVAS ─── */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ─── RUNE RING (top center decorative SVG) ─── */
+.rune-ring{position:relative;z-index:3;margin-top:3.5rem;margin-bottom:1.5rem;width:120px;height:120px;animation:ring-enter 1.2s cubic-bezier(.16,.84,.24,1) both}
+@keyframes ring-enter{from{opacity:0;transform:scale(.4) rotate(-120deg)}to{opacity:1;transform:scale(1) rotate(0deg)}}
+.rune-ring svg{width:100%;height:100%}
+.ring-spin{animation:spin-slow 28s linear infinite;transform-origin:center}
+.ring-spin2{animation:spin-slow 18s linear infinite reverse;transform-origin:center}
+@keyframes spin-slow{to{transform:rotate(360deg)}}
+.ring-glow{animation:glow-pulse 3s ease-in-out infinite}
+@keyframes glow-pulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* ─── SHELL ─── */
+.shell{position:relative;z-index:3;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center}
+
+/* ─── HERO TEXT ─── */
+.eyebrow{font-family:var(--cinzel);font-size:10px;letter-spacing:.45em;text-transform:uppercase;color:rgba(212,175,100,.45);margin-bottom:1rem;animation:rise 1s .15s ease both}
+h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;line-height:.95;letter-spacing:-.01em;text-align:center;margin-bottom:.5rem;animation:rise 1s .2s ease both}
+.t-mal{display:block;color:rgba(255,255,255,.7);font-size:.52em;letter-spacing:.22em;font-weight:400;text-transform:uppercase}
+.t-grim{display:block;background:linear-gradient(120deg,#d4af64 0%,#f0dcaa 35%,#a78bfa 60%,#6ec7ff 80%,#d4af64 100%);background-size:300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gold-shift 8s linear infinite}
+@keyframes gold-shift{0%{background-position:0%}100%{background-position:300%}}
+.tagline{font-family:var(--mono);font-size:10.5px;color:rgba(212,175,100,.3);letter-spacing:.18em;text-align:center;margin-top:.9rem;margin-bottom:3.8rem;animation:rise 1s .28s ease both}
+
+/* ornament line */
+.orn{display:flex;align-items:center;gap:12px;width:100%;max-width:500px;margin-bottom:3.2rem;animation:rise 1s .32s ease both}
+.orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.25),transparent)}
+.orn-diamond{width:6px;height:6px;background:rgba(212,175,100,.5);transform:rotate(45deg);flex-shrink:0}
+.orn-text{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(212,175,100,.35);white-space:nowrap}
+
+/* ─── CARD GRID ─── */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;animation:rise 1s .36s ease both}
+.s2{grid-column:1/-1}
+
+.card{position:relative;border-radius:24px;padding:2.2rem 2rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;overflow:hidden;cursor:pointer;
+  background:rgba(10,8,24,.7);
+  border:1px solid rgba(212,175,100,.1);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  transition:transform .45s cubic-bezier(.16,.84,.24,1.05),box-shadow .4s,border-color .4s}
+
+/* corner rune marks */
+.card::before,.card::after{content:'';position:absolute;width:18px;height:18px;pointer-events:none;transition:opacity .4s;opacity:.3}
+.card::before{top:14px;left:14px;border-top:1px solid rgba(212,175,100,.6);border-left:1px solid rgba(212,175,100,.6)}
+.card::after{bottom:14px;right:14px;border-bottom:1px solid rgba(212,175,100,.6);border-right:1px solid rgba(212,175,100,.6)}
+.card:hover::before,.card:hover::after{opacity:1}
+
+/* top shimmer */
+.card-top{position:absolute;top:0;left:8%;right:8%;height:1px;opacity:0;transition:opacity .4s;border-radius:50%}
+.card:hover .card-top{opacity:1}
+.card-b .card-top{background:linear-gradient(90deg,transparent,rgba(var(--b),1),transparent)}
+.card-v .card-top{background:linear-gradient(90deg,transparent,rgba(var(--v),1),transparent)}
+.card-e .card-top{background:linear-gradient(90deg,transparent,rgba(var(--e),.9),transparent)}
+
+/* inner blob */
+.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:0;transition:opacity .6s;pointer-events:none;z-index:0}
+.card:hover .blob{opacity:1}
+.card-b .blob{width:220px;height:200px;background:rgba(var(--b),.15);top:-60px;left:-60px}
+.card-v .blob{width:220px;height:200px;background:rgba(var(--v),.15);top:-60px;right:-60px;left:auto}
+.card-e .blob{width:300px;height:200px;background:rgba(var(--e),.1);bottom:-60px;left:5%}
+
+/* spotlight */
+.spot{position:absolute;inset:0;border-radius:24px;opacity:0;transition:opacity .3s;pointer-events:none;background:radial-gradient(300px circle at var(--cx,50%) var(--cy,50%),rgba(255,255,255,.04),transparent 55%);z-index:1}
+.card:hover .spot{opacity:1}
+
+/* hover states */
+.card:hover{transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-10px)}
+.card-b:hover{border-color:rgba(var(--b),.3);box-shadow:0 28px 80px rgba(var(--b),.18),0 0 0 1px rgba(var(--b),.1),inset 0 1px 0 rgba(var(--b),.1)}
+.card-v:hover{border-color:rgba(var(--v),.3);box-shadow:0 28px 80px rgba(var(--v),.18),0 0 0 1px rgba(var(--v),.1),inset 0 1px 0 rgba(var(--v),.1)}
+.card-e:hover{border-color:rgba(var(--e),.25);box-shadow:0 28px 80px rgba(var(--e),.13),0 0 0 1px rgba(var(--e),.08),inset 0 1px 0 rgba(var(--e),.08)}
+
+/* card content */
+.cin{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
+.s2 .cin{flex-direction:row;align-items:flex-start;gap:2rem}
+.s2 .cbody{flex:1}
+
+/* icon — now a rune-style sigil container */
+.icon{width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;margin-bottom:1.6rem;position:relative;transition:transform .45s cubic-bezier(.16,.84,.24,1.05)}
+.s2 .icon{margin-bottom:0}
+.card:hover .icon{transform:scale(1.15) rotate(-8deg)}
+.card-b .icon{background:rgba(var(--b),.1);box-shadow:0 0 0 1px rgba(var(--b),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--b),1)}
+.card-v .icon{background:rgba(var(--v),.1);box-shadow:0 0 0 1px rgba(var(--v),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--v),1)}
+.card-e .icon{background:rgba(var(--e),.08);box-shadow:0 0 0 1px rgba(var(--e),.18),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--e),1)}
+.icon::after{content:'';position:absolute;inset:-6px;border-radius:22px;border:1px solid transparent;transition:all .45s}
+.card-b:hover .icon::after{border-color:rgba(var(--b),.22);inset:-10px;border-radius:26px}
+.card-v:hover .icon::after{border-color:rgba(var(--v),.22);inset:-10px;border-radius:26px}
+.card-e:hover .icon::after{border-color:rgba(var(--e),.18);inset:-10px;border-radius:26px}
+
+.clabel{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.35em;text-transform:uppercase;margin-bottom:7px;opacity:.7}
+.card-b .clabel{color:rgba(var(--b),1)}
+.card-v .clabel{color:rgba(var(--v),1)}
+.card-e .clabel{color:rgba(var(--e),1)}
+
+.ctitle{font-family:var(--cinzel);font-size:1.35rem;font-weight:600;letter-spacing:.02em;line-height:1.15;margin-bottom:.8rem;color:rgba(255,255,255,.88)}
+.s2 .ctitle{font-size:1.2rem}
+
+.cdesc{font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.28);line-height:1.9;flex:1}
+
+.cfoot{margin-top:1.6rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tags{display:flex;gap:5px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:8px;letter-spacing:.06em;padding:3px 9px;border-radius:20px;border:1px solid}
+.card-b .tag{color:rgba(var(--b),.9);border-color:rgba(var(--b),.22);background:rgba(var(--b),.07)}
+.card-v .tag{color:rgba(var(--v),.9);border-color:rgba(var(--v),.22);background:rgba(var(--v),.07)}
+.card-e .tag{color:rgba(var(--e),.9);border-color:rgba(var(--e),.18);background:rgba(var(--e),.05)}
+
+.arr{width:34px;height:34px;border-radius:50%;border:1px solid rgba(212,175,100,.12);display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(212,175,100,.25);flex-shrink:0;transition:all .35s;font-family:var(--mono)}
+.card:hover .arr{transform:translateX(5px);border-color:rgba(212,175,100,.5);color:rgba(212,175,100,.9);box-shadow:0 0 18px rgba(212,175,100,.2)}
+
+/* ghost deco */
+.deco{position:absolute;bottom:16px;right:18px;font-family:var(--mono);font-size:7.5px;line-height:2.2;text-align:right;pointer-events:none;user-select:none;z-index:2;opacity:.04;transition:opacity .5s}
+.card:hover .deco{opacity:.16}
+.card-b .deco{color:rgba(var(--b),1)}
+.card-v .deco{color:rgba(var(--v),1)}
+.card-e .deco{color:rgba(var(--e),1)}
+
+/* ─── SIGIL DIVIDER ─── */
+.sigil-div{display:flex;align-items:center;gap:16px;width:100%;margin:3rem 0 0;animation:rise 1s .42s ease both}
+.sdl{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.15),transparent)}
+.sigil-sym{font-family:var(--cinzel);font-size:16px;color:rgba(212,175,100,.25);letter-spacing:.1em}
+
+/* ─── DOWNLOAD ─── */
+.dl{display:flex;flex-direction:column;align-items:center;gap:1rem;margin-top:1.8rem;animation:rise 1s .46s ease both}
+.dl-caption{font-family:var(--cinzel);font-size:8px;letter-spacing:.35em;text-transform:uppercase;color:rgba(212,175,100,.28)}
+.btn{display:inline-flex;align-items:center;gap:12px;font-family:var(--cinzel);font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#0a0818;text-decoration:none;border:none;cursor:pointer;padding:15px 38px;border-radius:60px;position:relative;overflow:hidden;transition:transform .35s cubic-bezier(.16,.84,.24,1.05),box-shadow .35s}
+.btn-bg{position:absolute;inset:0;background:linear-gradient(110deg,#c8941e,#f0dcaa 30%,#a78bfa 60%,#6ec7ff 80%,#c8941e 100%);background-size:300%;animation:gold-shift 6s linear infinite}
+.btn-overlay{position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.18) 0%,transparent 55%);pointer-events:none}
+.btn-content{position:relative;z-index:1;display:flex;align-items:center;gap:12px}
+.btn:hover{transform:translateY(-4px) scale(1.06);box-shadow:0 18px 60px rgba(212,175,100,.35)}
+.btn:active{transform:scale(.97)}
+
+/* ─── FOOTER ─── */
+footer{margin-top:2.8rem;font-family:var(--cinzel);font-size:9px;letter-spacing:.22em;color:rgba(212,175,100,.18);text-align:center;line-height:2.8;animation:rise 1s .5s ease both}
+footer a{color:rgba(212,175,100,.18);text-decoration:none;transition:color .2s}
+footer a:hover{color:rgba(212,175,100,.55)}
+.fsep{margin:0 10px;opacity:.4}
+
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:580px){
+.grid{grid-template-columns:1fr}.s2{grid-column:auto}
+.s2 .cin{flex-direction:column;gap:1.2rem}
+h1{font-size:3rem}.card{padding:1.6rem}
+.rune-ring{width:90px;height:90px}
 }
 </style>
 </head>
 <body>
-<div class="glow-top"></div>
-<div class="container">
-  <div class="eyebrow">Workspace</div>
-  <h1 class="title"> Malignant <span class="grad">Grimoire</span></h1>
-  <p class="subtitle">Select an app to get started</p>
-  <div class="cards">
-    <a href="code.html" class="card card-code">
-      <div class="card-glow"></div>
-      <div class="card-icon">💾</div>
-      <div class="card-num">VB Code</div>
-      <div class="card-name">VB Code Vault</div>
-      <div class="card-desc">Store, search &amp; organize your VB/VBA snippets. Syntax highlighted, cloud-synced via Firebase.</div>
-      <div class="card-footer">
-        <div class="card-tags"><span class="tag">VB</span><span class="tag">VBA</span><span class="tag">Excel</span></div>
-        <span class="card-arrow">→</span>
+
+<canvas id="bg"></canvas>
+
+<div class="rune-ring">
+<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g class="ring-spin">
+    <circle cx="60" cy="60" r="56" stroke="rgba(212,175,100,0.18)" stroke-width=".8" stroke-dasharray="4 6"/>
+    <circle cx="60" cy="60" r="56" stroke="rgba(212,175,100,0)" stroke-width="0"/>
+    <polygon points="60,4 63,8 60,12 57,8" fill="rgba(212,175,100,0.6)"/>
+    <polygon points="116,60 112,63 108,60 112,57" fill="rgba(212,175,100,0.4)"/>
+    <polygon points="60,116 57,112 60,108 63,112" fill="rgba(212,175,100,0.3)"/>
+    <polygon points="4,60 8,57 12,60 8,63" fill="rgba(212,175,100,0.35)"/>
+  </g>
+  <g class="ring-spin2">
+    <circle cx="60" cy="60" r="44" stroke="rgba(167,139,250,0.22)" stroke-width=".8" stroke-dasharray="2 8"/>
+    <circle cx="60" cy="16" r="2.5" fill="rgba(167,139,250,0.7)"/>
+    <circle cx="104" cy="60" r="2" fill="rgba(167,139,250,0.5)"/>
+    <circle cx="60" cy="104" r="2" fill="rgba(167,139,250,0.4)"/>
+    <circle cx="16" cy="60" r="2" fill="rgba(167,139,250,0.45)"/>
+  </g>
+  <circle cx="60" cy="60" r="30" stroke="rgba(212,175,100,0.12)" stroke-width=".6"/>
+  <g class="ring-glow">
+    <circle cx="60" cy="60" r="14" fill="rgba(167,139,250,0.08)"/>
+    <circle cx="60" cy="60" r="14" stroke="rgba(212,175,100,0.35)" stroke-width=".7"/>
+    <path d="M60 46 L64 56 L60 74 L56 56 Z" fill="rgba(212,175,100,0.55)" stroke="none"/>
+    <path d="M46 60 L56 56 L74 60 L56 64 Z" fill="rgba(167,139,250,0.5)" stroke="none"/>
+  </g>
+</svg>
+</div>
+
+<div class="shell">
+
+  <div class="eyebrow">Arcane Workspace · Anno MMXXIV</div>
+  <h1>
+    <span class="t-mal">Malignant</span>
+    <span class="t-grim">Grimoire</span>
+  </h1>
+  <div class="tagline">Codex of tools · Bound in fire · Forever current</div>
+
+  <div class="orn">
+    <div class="orn-line"></div>
+    <div class="orn-diamond"></div>
+    <div class="orn-text">Select your instrument</div>
+    <div class="orn-diamond"></div>
+    <div class="orn-line"></div>
+  </div>
+
+  <div class="grid">
+
+    <a href="code.html" class="card card-b" id="c0">
+      <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+      <div class="cin">
+        <div class="icon">💾</div>
+        <div class="clabel">Tome I · The Vault</div>
+        <div class="ctitle">VB Code Vault</div>
+        <div class="cdesc">Store, search &amp; conjure VB/VBA spells. Syntax-illuminated, synced to the cloud via Firebase.</div>
+        <div class="cfoot">
+          <div class="tags"><span class="tag">VB</span><span class="tag">VBA</span><span class="tag">Excel</span></div>
+          <div class="arr">⟶</div>
+        </div>
       </div>
-      <div class="card-deco">Sub Store()<br> snippet.save()<br> highlight()<br>End Sub</div>
+      <div class="deco">Sub Inscribe()<br>&nbsp;spell.bind()<br>&nbsp;illuminate()<br>End Sub</div>
     </a>
-    <a href="qa.html" class="card card-qa">
-      <div class="card-glow"></div>
-      <div class="card-icon">🧠</div>
-      <div class="card-num">Q&A</div>
-      <div class="card-name">Q&amp;A Knowledge Base</div>
-      <div class="card-desc">Save questions, answers &amp; notes. Build your personal knowledge library for quick reference.</div>
-      <div class="card-footer">
-        <div class="card-tags"><span class="tag">Q&amp;A</span><span class="tag">Notes</span><span class="tag">Tips</span></div>
-        <span class="card-arrow">→</span>
+
+    <a href="qa.html" class="card card-v" id="c1">
+      <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+      <div class="cin">
+        <div class="icon">🧠</div>
+        <div class="clabel">Tome II · The Oracle</div>
+        <div class="ctitle">Knowledge Base</div>
+        <div class="cdesc">Inscribe questions, answers &amp; scrolls. Your personal oracle — answers preserved for eternity.</div>
+        <div class="cfoot">
+          <div class="tags"><span class="tag">Q&amp;A</span><span class="tag">Notes</span><span class="tag">Lore</span></div>
+          <div class="arr">⟶</div>
+        </div>
       </div>
-      <div class="card-deco">ask("How to?")<br> .find(answer)<br> .save(note)<br> // done ✓</div>
+      <div class="deco">ask("Riddle")<br>&nbsp;.divine(ans)<br>&nbsp;.seal()<br>// eternal ✦</div>
     </a>
-    <a href="anmerkung.html" class="card card-xl">
-      <div class="card-glow"></div>
-      <div class="card-inner">
-        <div class="card-icon">📊</div>
-        <div class="card-body">
-          <div class="card-num">Excel Processor</div>
-          <div class="card-name">Anmerkung Processor</div>
-          <div class="card-desc">Upload an Excel invoice comparison sheet, select your forwarder (Dachser, K+N, DHL Express, Wackler), and auto-fill the Anmerkung column based on your VB logic — right in the browser.</div>
-          <div class="card-footer">
-            <div class="card-tags"><span class="tag">Dachser</span><span class="tag">K+N</span><span class="tag">DHL</span><span class="tag">Wackler</span><span class="tag">xlsx</span></div>
-            <span class="card-arrow">→</span>
+
+    <a href="anmerkung.html" class="card card-e s2" id="c2">
+      <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+      <div class="cin">
+        <div class="icon">📊</div>
+        <div class="cbody">
+          <div class="clabel">Tome III · The Alchemist · Featured Ritual</div>
+          <div class="ctitle">Anmerkung Processor</div>
+          <div class="cdesc">Upload an Excel invoice scroll, select your forwarder (Dachser, K+N, DHL Express, Wackler), and the Grimoire auto-fills the Anmerkung column via your inscribed VB ritual — no installation, no server, pure browser alchemy.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">Dachser</span><span class="tag">K+N</span><span class="tag">DHL</span><span class="tag">Wackler</span><span class="tag">xlsx</span></div>
+            <div class="arr">⟶</div>
           </div>
         </div>
       </div>
-      <div class="card-deco">upload(file)<br> selectForwarder()<br> fillAnmerkung()<br> download() ✓</div>
+      <div class="deco">transmute(scroll)<br>&nbsp;.forwarder()<br>&nbsp;.alchemize()<br>seal() ✦</div>
     </a>
+
   </div>
 
-  <!-- Download Button -->
-  <div class="download-wrap">
+  <div class="sigil-div">
+    <div class="sdl"></div>
+    <div class="sigil-sym">✦ ᛟ ✦</div>
+    <div class="sdl"></div>
+  </div>
+
+  <div class="dl">
+    <div class="dl-caption">Bind to your machine · Offline Codex</div>
     <a href="https://drive.usercontent.google.com/download?id=1ukOZKreOhH6tOnwgd9z4h5_TrnrvC05q&export=download&authuser=0"
-       class="btn-download"
-       target="_blank"
-       rel="noopener noreferrer">
-      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 1v9M8 10l-3-3M8 10l3-3" stroke="#080810" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M2 12h12" stroke="#080810" stroke-width="1.6" stroke-linecap="round"/>
-        <path d="M3 12v1.5A1.5 1.5 0 0 0 4.5 15h7A1.5 1.5 0 0 0 13 13.5V12" stroke="#080810" stroke-width="1.6" stroke-linecap="round"/>
-      </svg>
-      Download App
+       class="btn" target="_blank" rel="noopener noreferrer">
+      <div class="btn-bg"></div>
+      <div class="btn-overlay"></div>
+      <div class="btn-content">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v7.5M7 8.5L4.5 6M7 8.5L9.5 6" stroke="#0a0818" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M1.5 10.5h11" stroke="#0a0818" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M2.5 10.5v1A1.5 1.5 0 004 13h6a1.5 1.5 0 001.5-1.5v-1" stroke="#0a0818" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Download the Grimoire
+      </div>
     </a>
   </div>
 
-  <div class="footer">
-    codingkuh.my.id &nbsp;·&nbsp; Firebase + GitHub Pages<br>
-    <a href="code.html">Code Vault</a> &nbsp;·&nbsp; <a href="qa.html">Q&amp;A Base</a> &nbsp;·&nbsp; <a href="anmerkung.html">Anmerkung</a>
-  </div>
+  <footer>
+    codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
+    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a>
+  </footer>
+
 </div>
+
+<script>
+(function(){
+/* ─── CANVAS BACKGROUND ─── */
+const cv=document.getElementById('bg');
+const cx=cv.getContext('2d');
+let W,H,t=0,pts=[],sparks=[];
+const PAL=[[91,156,246],[167,139,250],[52,211,153],[244,114,182],[212,175,100]];
+let mouse={x:-9999,y:-9999};
+
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight}
+
+function mkpt(){
+  const c=PAL[Math.floor(Math.random()*PAL.length)];
+  return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.15,
+    r:Math.random()*2+.5,a:Math.random()*.4+.05,da:(Math.random()*.0008+.0003)*(Math.random()<.5?1:-1),c,ph:Math.random()*Math.PI*2}
+}
+
+/* ─── FLOATING RUNE CHARS ─── */
+const RUNES='ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ☽☿♄⊕⊗✦';
+const runeChars=[];
+function mkRune(){
+  return{
+    ch:RUNES[Math.floor(Math.random()*RUNES.length)],
+    x:Math.random()*W, y:Math.random()*H,
+    vy:-(Math.random()*.3+.1),
+    a:Math.random()*.12+.02,
+    size:Math.floor(Math.random()*8)+10,
+    c:PAL[Math.floor(Math.random()*PAL.length)],
+    life:1
+  }
+}
+
+function init(){
+  resize();
+  pts=Array.from({length:Math.min(Math.floor(W*H/9000),140)},mkpt);
+  for(let i=0;i<35;i++)runeChars.push(mkRune());
+}
+
+let last=0;
+function frame(ts){
+  const dt=Math.min((ts-last)/16.67,2.5);last=ts;t+=.003*dt;
+  cx.clearRect(0,0,W,H);
+
+  /* aurora */
+  [{x:W*.15,y:H*-.1,rx:W*.6,ry:H*.4,c:[91,156,246],a:.032},
+   {x:W*.78,y:H*-.12,rx:W*.52,ry:H*.35,c:[167,139,250],a:.03},
+   {x:W*.5,y:H*1.1,rx:W*.6,ry:H*.4,c:[52,211,153],a:.02},
+   {x:W*.88,y:H*.52,rx:W*.32,ry:H*.42,c:[212,175,100],a:.016},
+   {x:W*.05,y:H*.45,rx:W*.28,ry:H*.38,c:[244,114,182],a:.013}
+  ].forEach(a=>{
+    const p=a.a+.009*Math.sin(t*1.4+a.x*.004);
+    const g=cx.createRadialGradient(a.x,a.y,0,a.x,a.y,Math.hypot(a.rx,a.ry)*.62);
+    g.addColorStop(0,`rgba(${a.c},${p})`);
+    g.addColorStop(.5,`rgba(${a.c},${p*.28})`);
+    g.addColorStop(1,'transparent');
+    cx.save();cx.translate(a.x,a.y);cx.scale(a.rx/a.ry,1);cx.translate(-a.x,-a.y);
+    cx.fillStyle=g;cx.beginPath();cx.arc(a.x,a.y,a.ry,0,Math.PI*2);cx.fill();
+    cx.restore();
+  });
+
+  /* floating runes */
+  cx.font='';
+  runeChars.forEach((r,i)=>{
+    r.y+=r.vy*dt;r.life-=.0004*dt;
+    if(r.y<-40||r.life<=0)Object.assign(r,mkRune(),{y:H+20});
+    cx.font=`${r.size}px 'Cinzel', serif`;
+    cx.fillStyle=`rgba(${r.c},${r.a*r.life})`;
+    cx.fillText(r.ch,r.x,r.y);
+  });
+
+  /* connections */
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i];
+    for(let j=i+1;j<pts.length;j++){
+      const q=pts[j];
+      const d=Math.hypot(p.x-q.x,p.y-q.y);
+      if(d<125){cx.strokeStyle=`rgba(${p.c},${(1-d/125)*.055})`;cx.lineWidth=.45;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(q.x,q.y);cx.stroke()}
+    }
+    const md=Math.hypot(p.x-mouse.x,p.y-mouse.y);
+    if(md<170){cx.strokeStyle=`rgba(${p.c},${(1-md/170)*.28})`;cx.lineWidth=.75;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(mouse.x,mouse.y);cx.stroke()}
+  }
+
+  /* particles */
+  pts.forEach(p=>{
+    p.x+=p.vx*dt;p.y+=p.vy*dt;
+    p.a+=p.da*dt;if(p.a<.04||p.a>.52)p.da*=-1;
+    if(p.x<-20)p.x=W+20;if(p.x>W+20)p.x=-20;
+    if(p.y<-20)p.y=H+20;if(p.y>H+20)p.y=-20;
+    const rdx=p.x-mouse.x,rdy=p.y-mouse.y,rd=Math.sqrt(rdx*rdx+rdy*rdy);
+    if(rd<115&&rd>0){const f=(1-rd/115)*.5;p.vx+=(rdx/rd)*f*.04;p.vy+=(rdy/rd)*f*.04}
+    const sp=Math.hypot(p.vx,p.vy);if(sp>.52){p.vx*=.52/sp;p.vy*=.52/sp}
+    const bx=.6*Math.sin(t*1.1+p.ph),by=.6*Math.cos(t*.88+p.ph*1.3);
+    if(p.r>1.7){cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r*3.8,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a*.09})`;cx.fill()}
+    cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a})`;cx.fill();
+  });
+
+  requestAnimationFrame(frame);
+}
+
+window.addEventListener('resize',init);
+window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+window.addEventListener('touchmove',e=>{const tt=e.touches[0];mouse.x=tt.clientX;mouse.y=tt.clientY},{passive:true});
+window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
+
+/* ─── 3D TILT + SPOTLIGHT ─── */
+['c0','c1','c2'].forEach(id=>{
+  const el=document.getElementById(id);if(!el)return;
+  const spot=el.querySelector('.spot');
+  el.addEventListener('mousemove',e=>{
+    const r=el.getBoundingClientRect();
+    const nx=(e.clientX-r.left)/r.width-.5;
+    const ny=(e.clientY-r.top)/r.height-.5;
+    el.style.setProperty('--rx',(-ny*13)+'deg');
+    el.style.setProperty('--ry',(nx*13)+'deg');
+    spot.style.setProperty('--cx',((e.clientX-r.left)/r.width*100).toFixed(1)+'%');
+    spot.style.setProperty('--cy',((e.clientY-r.top)/r.height*100).toFixed(1)+'%');
+  });
+  el.addEventListener('mouseleave',()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg')});
+});
+
+init();requestAnimationFrame(frame);
+})();
+</script>
 </body>
 </html>
