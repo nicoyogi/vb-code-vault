@@ -506,6 +506,13 @@ function selectProject(key,el){
   document.getElementById('c1').href=proj.qa;
   document.getElementById('c2').href=proj.anmerkung;
 
+  // siemens: only show QA card, hide Code Vault and Anmerkung
+  const isSiemens = key === 'siemens';
+  document.getElementById('c0').style.display = isSiemens ? 'none' : '';
+  document.getElementById('c2').style.display = isSiemens ? 'none' : '';
+  // make QA card full-width when alone
+  document.getElementById('c1').style.gridColumn = isSiemens ? '1 / -1' : '';
+
   // reveal section
   document.getElementById('sec-div').classList.add('show');
   document.getElementById('tomes-section').classList.add('show');
