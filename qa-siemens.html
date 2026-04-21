@@ -518,7 +518,7 @@ const firebaseConfig = {
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(), storage = firebase.storage();
-const col = db.collection('sgp_qa_entries');
+const col = db.collection('qa_entries');
 const authDoc = db.collection('_config').doc('auth');
 let entries=[], editId=null, detailId=null, saving=false, pendingImages=[];
 
@@ -527,10 +527,14 @@ function setStatus(s,l){document.getElementById('status-dot').className='status-
 function startListener(){
   setStatus('','Connecting...');
   col.orderBy('createdAt','desc').onSnapshot(snap=>{
-    entries=snap.docs.map(d=>({id:d.id,...d.data()}));
+    entries=snap.docs.map(d=>({id:d.id,...d.data()})).filter(d=>d.project==='sgp');
     setStatus('online','Connected');
     render();
-  },()=>{setStatus('error','Error');showToast('Could not connect.',true);});
+  },err=>{
+    console.error('Firestore error:', err.code, err.message);
+    setStatus('error','Error');
+    showToast('Error: '+err.code+' — '+err.message, true);
+  });
 }
 
 /* ── HELPERS ── */
@@ -645,7 +649,7 @@ async function saveEntry(){
       await col.doc(editId).update({question,answer,tags,category,images:[...existingImgs,...newUrls],updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
       showToast('Entry updated.');
     } else {
-      const docRef=await col.add({question,answer,tags,category,images:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      const docRef=await col.add({question,answer,tags,category,project:'sgp',images:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()});
       let imgUrls=[];
       if(pendingImages.length>0){btn.textContent='Uploading...';imgUrls=await uploadImages(docRef.id);await docRef.update({images:imgUrls});}
       showToast('Entry saved.');
