@@ -522,9 +522,11 @@ function processKN(ws,r,cols){
   // FR Differenz
   if(hasErr(frDiff,T)){
     if(refNr&&refNr!=='-'&&refNr.includes(','))return'hätte gebündelt werden müssen, ok?';
-    if(frDiff>0&&snkDl===5){
+    if(recip.includes('amazon')&&(!refNr||refNr==='-'||!refNr.includes(','))){
+      res=join(res,'hätte nach Amazon Tarif abrechnen müssen');
+    } else if(frDiff>0&&snkDl===5){
       const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);
-      res=join(res,(recip.includes('amazon')&&knGetTier(v1)===knGetTier(v2))
+      res=join(res,(knGetTier(v1)===knGetTier(v2))
         ?'hätte nach Amazon Tarif abrechnen dürfen'
         :'Differenz aufgrund abweichender Gewichte');
     } else {
