@@ -10,6 +10,7 @@
 :root{
   --bg:#02020a;
   --b:91,156,246;--v:167,139,250;--e:52,211,153;--pk:244,114,182;--gold:212,175,100;
+  --amber:251,191,36;
   --cinzel:'Cinzel',serif;--syne:'Syne',sans-serif;--mono:'DM Mono',monospace;
 }
 html,body{width:100%;min-height:100vh;background:var(--bg);overflow-x:hidden}
@@ -103,7 +104,6 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 #tomes-section{width:100%;opacity:0;transform:translateY(22px);transition:opacity .5s .08s,transform .5s .08s;pointer-events:none}
 #tomes-section.show{opacity:1;transform:translateY(0);pointer-events:auto}
 
-/* project context banner */
 .project-banner{display:flex;align-items:center;gap:10px;background:rgba(212,175,100,.04);border:1px solid rgba(212,175,100,.1);border-radius:14px;padding:.75rem 1.2rem;margin-bottom:1.6rem;font-family:var(--mono);font-size:11px;color:rgba(212,175,100,.4);letter-spacing:.06em}
 .pb-name{color:rgba(212,175,100,.9);font-family:var(--cinzel);font-size:12px;font-weight:600;letter-spacing:.1em}
 .pb-sep{color:rgba(212,175,100,.2)}
@@ -127,12 +127,14 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-b .card-top{background:linear-gradient(90deg,transparent,rgba(var(--b),1),transparent)}
 .card-v .card-top{background:linear-gradient(90deg,transparent,rgba(var(--v),1),transparent)}
 .card-e .card-top{background:linear-gradient(90deg,transparent,rgba(var(--e),.9),transparent)}
+.card-a .card-top{background:linear-gradient(90deg,transparent,rgba(var(--amber),1),transparent)}
 
 .blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:0;transition:opacity .6s;pointer-events:none;z-index:0}
 .card:hover .blob{opacity:1}
 .card-b .blob{width:220px;height:200px;background:rgba(var(--b),.15);top:-60px;left:-60px}
 .card-v .blob{width:220px;height:200px;background:rgba(var(--v),.15);top:-60px;right:-60px;left:auto}
 .card-e .blob{width:300px;height:200px;background:rgba(var(--e),.1);bottom:-60px;left:5%}
+.card-a .blob{width:220px;height:200px;background:rgba(var(--amber),.12);top:-60px;left:-60px}
 
 .spot{position:absolute;inset:0;border-radius:24px;opacity:0;transition:opacity .3s;pointer-events:none;background:radial-gradient(300px circle at var(--cx,50%) var(--cy,50%),rgba(255,255,255,.04),transparent 55%);z-index:1}
 .card:hover .spot{opacity:1}
@@ -141,6 +143,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-b:hover{border-color:rgba(var(--b),.3);box-shadow:0 28px 80px rgba(var(--b),.18),0 0 0 1px rgba(var(--b),.1),inset 0 1px 0 rgba(var(--b),.1)}
 .card-v:hover{border-color:rgba(var(--v),.3);box-shadow:0 28px 80px rgba(var(--v),.18),0 0 0 1px rgba(var(--v),.1),inset 0 1px 0 rgba(var(--v),.1)}
 .card-e:hover{border-color:rgba(var(--e),.25);box-shadow:0 28px 80px rgba(var(--e),.13),0 0 0 1px rgba(var(--e),.08),inset 0 1px 0 rgba(var(--e),.08)}
+.card-a:hover{border-color:rgba(var(--amber),.3);box-shadow:0 28px 80px rgba(var(--amber),.15),0 0 0 1px rgba(var(--amber),.1),inset 0 1px 0 rgba(var(--amber),.08)}
 
 .cin{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
 .s2 .cin{flex-direction:row;align-items:flex-start;gap:2rem}
@@ -152,15 +155,18 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-b .icon{background:rgba(var(--b),.1);box-shadow:0 0 0 1px rgba(var(--b),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--b),1)}
 .card-v .icon{background:rgba(var(--v),.1);box-shadow:0 0 0 1px rgba(var(--v),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--v),1)}
 .card-e .icon{background:rgba(var(--e),.08);box-shadow:0 0 0 1px rgba(var(--e),.18),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--e),1)}
+.card-a .icon{background:rgba(var(--amber),.1);box-shadow:0 0 0 1px rgba(var(--amber),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--amber),1)}
 .icon::after{content:'';position:absolute;inset:-6px;border-radius:22px;border:1px solid transparent;transition:all .45s}
 .card-b:hover .icon::after{border-color:rgba(var(--b),.22);inset:-10px;border-radius:26px}
 .card-v:hover .icon::after{border-color:rgba(var(--v),.22);inset:-10px;border-radius:26px}
 .card-e:hover .icon::after{border-color:rgba(var(--e),.18);inset:-10px;border-radius:26px}
+.card-a:hover .icon::after{border-color:rgba(var(--amber),.22);inset:-10px;border-radius:26px}
 
 .clabel{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.35em;text-transform:uppercase;margin-bottom:7px;opacity:.7}
 .card-b .clabel{color:rgba(var(--b),1)}
 .card-v .clabel{color:rgba(var(--v),1)}
 .card-e .clabel{color:rgba(var(--e),1)}
+.card-a .clabel{color:rgba(var(--amber),1)}
 
 .ctitle{font-family:var(--cinzel);font-size:1.35rem;font-weight:600;letter-spacing:.02em;line-height:1.15;margin-bottom:.8rem;color:rgba(255,255,255,.88)}
 .s2 .ctitle{font-size:1.2rem}
@@ -171,6 +177,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-b .tag{color:rgba(var(--b),.9);border-color:rgba(var(--b),.22);background:rgba(var(--b),.07)}
 .card-v .tag{color:rgba(var(--v),.9);border-color:rgba(var(--v),.22);background:rgba(var(--v),.07)}
 .card-e .tag{color:rgba(var(--e),.9);border-color:rgba(var(--e),.18);background:rgba(var(--e),.05)}
+.card-a .tag{color:rgba(var(--amber),.9);border-color:rgba(var(--amber),.22);background:rgba(var(--amber),.07)}
 .arr{width:34px;height:34px;border-radius:50%;border:1px solid rgba(212,175,100,.12);display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(212,175,100,.25);flex-shrink:0;transition:all .35s;font-family:var(--mono)}
 .card:hover .arr{transform:translateX(5px);border-color:rgba(212,175,100,.5);color:rgba(212,175,100,.9);box-shadow:0 0 18px rgba(212,175,100,.2)}
 
@@ -179,6 +186,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-b .deco{color:rgba(var(--b),1)}
 .card-v .deco{color:rgba(var(--v),1)}
 .card-e .deco{color:rgba(var(--e),1)}
+.card-a .deco{color:rgba(var(--amber),1)}
 
 /* ─── DOWNLOAD + FOOTER ─── */
 .sigil-div{display:flex;align-items:center;gap:16px;width:100%;margin:3rem 0 0;animation:rise 1s .5s ease both}
@@ -258,22 +266,15 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
   <!-- PROJECT CARDS -->
   <div class="project-grid">
-
-    <!-- WMF — active -->
     <div class="pcard" id="proj-wmf" onclick="selectProject('wmf',this)">
       <div class="pcard-top"></div>
       <div class="pblob"></div>
       <div class="pspot"></div>
       <div class="pcin">
         <svg class="pseal" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="25,2 46,13 46,37 25,48 4,37 4,13"
-                   stroke="rgba(212,175,100,0.5)" stroke-width="1"
-                   fill="rgba(212,175,100,0.05)"/>
-          <polygon points="25,8 40,17 40,33 25,42 10,33 10,17"
-                   stroke="rgba(212,175,100,0.15)" stroke-width=".6" fill="none"/>
-          <text x="25" y="29" text-anchor="middle"
-                font-family="Cinzel,serif" font-size="11" font-weight="600"
-                fill="rgba(212,175,100,0.9)">WMF</text>
+          <polygon points="25,2 46,13 46,37 25,48 4,37 4,13" stroke="rgba(212,175,100,0.5)" stroke-width="1" fill="rgba(212,175,100,0.05)"/>
+          <polygon points="25,8 40,17 40,33 25,42 10,33 10,17" stroke="rgba(212,175,100,0.15)" stroke-width=".6" fill="none"/>
+          <text x="25" y="29" text-anchor="middle" font-family="Cinzel,serif" font-size="11" font-weight="600" fill="rgba(212,175,100,0.9)">WMF</text>
         </svg>
         <div class="pname">WMF</div>
         <div class="pdesc">Württembergische Metallwarenfabrik<br>Forwarder codex · Surcharge mapping<br>Invoice transmutation rituals</div>
@@ -284,21 +285,15 @@ footer a:hover{color:rgba(212,175,100,.55)}
       </div>
     </div>
 
-    <!-- Siemens GP — NOW ACTIVE -->
     <div class="pcard" id="proj-siemens" onclick="selectProject('siemens',this)">
       <div class="pcard-top"></div>
       <div class="pblob" style="background:rgba(59,130,246,0.12)"></div>
       <div class="pspot"></div>
       <div class="pcin">
         <svg class="pseal" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="25,2 46,13 46,37 25,48 4,37 4,13"
-                   stroke="rgba(59,130,246,0.5)" stroke-width="1"
-                   fill="rgba(59,130,246,0.05)"/>
-          <polygon points="25,8 40,17 40,33 25,42 10,33 10,17"
-                   stroke="rgba(59,130,246,0.15)" stroke-width=".6" fill="none"/>
-          <text x="25" y="29" text-anchor="middle"
-                font-family="Cinzel,serif" font-size="9" font-weight="600"
-                fill="rgba(59,130,246,0.9)">SGP</text>
+          <polygon points="25,2 46,13 46,37 25,48 4,37 4,13" stroke="rgba(59,130,246,0.5)" stroke-width="1" fill="rgba(59,130,246,0.05)"/>
+          <polygon points="25,8 40,17 40,33 25,42 10,33 10,17" stroke="rgba(59,130,246,0.15)" stroke-width=".6" fill="none"/>
+          <text x="25" y="29" text-anchor="middle" font-family="Cinzel,serif" font-size="9" font-weight="600" fill="rgba(59,130,246,0.9)">SGP</text>
         </svg>
         <div class="pname">Siemens GP</div>
         <div class="pdesc">General Procurement<br>Process knowledge base<br>Procurement rites &amp; guidelines</div>
@@ -308,10 +303,9 @@ footer a:hover{color:rgba(212,175,100,.55)}
         </div>
       </div>
     </div>
-
   </div>
 
-  <!-- DIVIDER (reveals on project select) -->
+  <!-- DIVIDER -->
   <div class="sec-div" id="sec-div">
     <div class="sdl"></div>
     <div class="sec-div-sym">✦</div>
@@ -320,9 +314,8 @@ footer a:hover{color:rgba(212,175,100,.55)}
     <div class="sdl"></div>
   </div>
 
-  <!-- TOMES (reveals on project select) -->
+  <!-- TOMES -->
   <div id="tomes-section">
-
     <div class="project-banner">
       <span style="color:rgba(212,175,100,.3);font-size:10px;font-family:var(--mono)">Project</span>
       <span class="pb-sep">·</span>
@@ -333,6 +326,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
     <div class="grid">
 
+      <!-- c0: Code Vault (WMF only) -->
       <a href="#" class="card card-b" id="c0">
         <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
         <div class="cin">
@@ -348,6 +342,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
         <div class="deco">Sub Inscribe()<br>&nbsp;spell.bind()<br>&nbsp;illuminate()<br>End Sub</div>
       </a>
 
+      <!-- c1: Knowledge Base -->
       <a href="#" class="card card-v" id="c1">
         <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
         <div class="cin">
@@ -363,6 +358,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
         <div class="deco">ask("Riddle")<br>&nbsp;.divine(ans)<br>&nbsp;.seal()<br>// eternal ✦</div>
       </a>
 
+      <!-- c2: Anmerkung (WMF only) -->
       <a href="#" class="card card-e s2" id="c2">
         <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
         <div class="cin">
@@ -380,8 +376,24 @@ footer a:hover{color:rgba(212,175,100,.55)}
         <div class="deco">transmute(scroll)<br>&nbsp;.forwarder()<br>&nbsp;.alchemize()<br>seal() ✦</div>
       </a>
 
+      <!-- c3: Standard Wording (Siemens only) -->
+      <a href="#" class="card card-a" id="c3">
+        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+        <div class="cin">
+          <div class="icon">✍️</div>
+          <div class="clabel">Tome III · The Scribe</div>
+          <div class="ctitle">Standard Wording</div>
+          <div class="cdesc">A searchable library of pre-written phrases &amp; standard text. Click any entry to copy instantly — add, edit, or organize by category.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">Phrases</span><span class="tag">Templates</span><span class="tag">Copy</span></div>
+            <div class="arr">⟶</div>
+          </div>
+        </div>
+        <div class="deco">scribe.find()<br>&nbsp;.copy(phrase)<br>&nbsp;.paste()<br>// instant ✦</div>
+      </a>
+
     </div>
-  </div><!-- /tomes-section -->
+  </div>
 
   <!-- DOWNLOAD -->
   <div class="sigil-div">
@@ -408,14 +420,13 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
   <footer>
     codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
-    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a>
+    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a><span class="fsep">✦</span><a href="standard-wording.html">Standard Wording</a>
   </footer>
 
-</div><!-- /shell -->
+</div>
 
 <script>
 (function(){
-/* ─── CANVAS BACKGROUND ─── */
 const cv=document.getElementById('bg'),cx=cv.getContext('2d');
 let W,H,t=0,pts=[],runeChars=[];
 const PAL=[[91,156,246],[167,139,250],[52,211,153],[244,114,182],[212,175,100]];
@@ -446,7 +457,6 @@ window.addEventListener('touchmove',e=>{const tt=e.touches[0];mouse.x=tt.clientX
 window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
 init();requestAnimationFrame(frame);
 
-/* ─── 3D TILT on tool cards ─── */
 function bindTilt(id){
   const el=document.getElementById(id);if(!el)return;
   const spot=el.querySelector('.spot');
@@ -457,9 +467,8 @@ function bindTilt(id){
   });
   el.addEventListener('mouseleave',()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg')});
 }
-['c0','c1','c2'].forEach(bindTilt);
+['c0','c1','c2','c3'].forEach(bindTilt);
 
-/* ─── 3D TILT on project cards ─── */
 document.querySelectorAll('.pcard').forEach(el=>{
   const spot=el.querySelector('.pspot');
   el.addEventListener('mousemove',e=>{
@@ -476,16 +485,18 @@ const PROJECTS={
   wmf:{
     name:'WMF',
     sub:'Württembergische Metallwarenfabrik',
-    code:'code.html?project=wmf',
-    qa:'qa.html?project=wmf',
-    anmerkung:'anmerkung.html?project=wmf'
+    code:'code.html',
+    qa:'qa.html',
+    anmerkung:'anmerkung.html',
+    wording:null
   },
   siemens:{
     name:'Siemens GP',
     sub:'General Procurement',
-    code:'code.html?project=siemens',
-    qa:'qa-siemens.html?project=siemens',
-    anmerkung:'anmerkung.html?project=siemens'
+    code:null,
+    qa:'qa-siemens.html',
+    anmerkung:null,
+    wording:'standard-wording.html'
   }
 };
 
@@ -493,31 +504,34 @@ function selectProject(key,el){
   const proj=PROJECTS[key];
   if(!proj)return;
 
-  // highlight selected project card
   document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('selected'));
   el.classList.add('selected');
 
-  // populate banner
   document.getElementById('banner-name').textContent=proj.name;
   document.getElementById('banner-sub').textContent=proj.sub;
 
-  // wire tool card links
-  document.getElementById('c0').href=proj.code;
-  document.getElementById('c1').href=proj.qa;
-  document.getElementById('c2').href=proj.anmerkung;
+  const isSiemens = key==='siemens';
 
-  // siemens: only show QA card, hide Code Vault and Anmerkung
-  const isSiemens = key === 'siemens';
-  document.getElementById('c0').style.display = isSiemens ? 'none' : '';
-  document.getElementById('c2').style.display = isSiemens ? 'none' : '';
-  // make QA card full-width when alone
-  document.getElementById('c1').style.gridColumn = isSiemens ? '1 / -1' : '';
+  // Wire links
+  document.getElementById('c0').href=proj.code||'#';
+  document.getElementById('c1').href=proj.qa||'#';
+  document.getElementById('c2').href=proj.anmerkung||'#';
+  document.getElementById('c3').href=proj.wording||'#';
 
-  // reveal section
+  // c0: Code Vault — WMF only
+  document.getElementById('c0').style.display=isSiemens?'none':'';
+  // c2: Anmerkung — WMF only
+  document.getElementById('c2').style.display=isSiemens?'none':'';
+  // c3: Standard Wording — Siemens only
+  document.getElementById('c3').style.display=isSiemens?'':'none';
+
+  // c1: Knowledge Base — full width when alone (Siemens has c1+c3, WMF has c0+c1+c2)
+  document.getElementById('c1').style.gridColumn=isSiemens?'':'';
+  document.getElementById('c1').className=isSiemens?'card card-v':'card card-v';
+
   document.getElementById('sec-div').classList.add('show');
   document.getElementById('tomes-section').classList.add('show');
 
-  // scroll into view
   setTimeout(()=>{
     document.getElementById('sec-div').scrollIntoView({behavior:'smooth',block:'start'});
   },100);
