@@ -200,6 +200,18 @@
     .fsep { margin: 0 10px; opacity: .4; }
 
     @media (max-width: 560px) { header { padding: 0 1rem; } main { padding: 1.5rem 1rem 5rem; } }
+
+    /* ESN Table */
+    .esn-row td { padding: .55rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .esn-row:last-child td { border-bottom: none; }
+    .esn-alt { background: var(--surface2); }
+    .esn-vendor { font-family: var(--grotesk); font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; min-width: 160px; }
+    .esn-code { text-align: center; font-family: var(--ibm-mono); font-size: 12px; color: var(--accent); font-weight: 500; white-space: nowrap; }
+    .esn-warn { color: #c0392b !important; font-size: 11px; }
+    .esn-special { color: #7c3aed !important; font-size: 11px; }
+    .esn-note { font-family: var(--ibm-mono); font-size: 11px; color: var(--text2); line-height: 1.6; min-width: 200px; }
+    #esn-panel { animation: slideDown .2s ease; }
+    @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
   </style>
 </head>
 <body>
@@ -242,6 +254,7 @@
     <span id="total-badge">— entries</span>
     <button class="btn-lock" onclick="lockApp()" title="Lock">🔒 Lock</button>
     <button class="btn-lock" id="migrate-btn" onclick="migrateSGP()" title="Migrate SGP entries to sgp_entries" style="border-color:rgba(74,222,128,0.4);color:#4ade80;">⟳ Migrate</button>
+    <button class="btn-lock" onclick="toggleESN()" id="esn-btn" title="ESN Reference Table" style="border-color:rgba(251,191,36,0.4);color:rgba(251,191,36,0.9);">📋 ESN Table</button>
     <button class="btn-nuke" id="delete-all-btn" onclick="deleteAllEntries()" title="Delete all SGP entries">🗑 Delete All</button>
     <button class="btn-primary" onclick="openAdd()">+ New Entry</button>
   </div>
@@ -256,6 +269,114 @@
     </div>
   </div>
   <div class="rule"></div>
+
+  <!-- ESN Reference Table Panel -->
+  <div id="esn-panel" style="display:none;margin-bottom:1.5rem;">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg);">
+      <div style="background:var(--accent);padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-family:var(--ibm-mono);font-size:10px;font-weight:600;color:#fff;letter-spacing:.12em;text-transform:uppercase;">📋 ESN Reference Table</span>
+          <span style="font-family:var(--ibm-mono);font-size:10px;color:rgba(255,255,255,0.55);">Vendor · Shipping Mode · ESN Code</span>
+        </div>
+        <button onclick="toggleESN()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#fff;font-size:12px;padding:3px 10px;cursor:pointer;font-family:var(--ibm-mono);">✕ Close</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-family:var(--ibm-mono);font-size:12px;">
+          <thead>
+            <tr style="background:var(--surface2);border-bottom:2px solid var(--border2);">
+              <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;font-size:10px;white-space:nowrap;">ESN</th>
+              <th style="padding:.6rem 1rem;text-align:center;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;font-size:10px;">Ground</th>
+              <th style="padding:.6rem 1rem;text-align:center;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;font-size:10px;">Air</th>
+              <th style="padding:.6rem 1rem;text-align:center;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;font-size:10px;">KEP</th>
+              <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;font-size:10px;">Notes</th>
+            </tr>
+          </thead>
+          <tbody id="esn-tbody">
+            <tr class="esn-row">
+              <td class="esn-vendor">DB Schenker / DSV</td>
+              <td class="esn-code">QSS</td>
+              <td class="esn-code">QSQ</td>
+              <td class="esn-code">—</td>
+              <td class="esn-note"></td>
+            </tr>
+            <tr class="esn-row esn-alt">
+              <td class="esn-vendor">Kuehne Nagel</td>
+              <td class="esn-code">QSS</td>
+              <td class="esn-code">QSQ</td>
+              <td class="esn-code">—</td>
+              <td class="esn-note">Landverkehr apabila invoice AIR tetap proses dan release dengan ESN = QSQ</td>
+            </tr>
+            <tr class="esn-row">
+              <td class="esn-vendor">A-PROJECT</td>
+              <td class="esn-code">QSS</td>
+              <td class="esn-code esn-warn">tidak dikerjakan</td>
+              <td class="esn-code">—</td>
+              <td class="esn-note">Apabila payment term = Q090. Cek tarif dan beri notiz. Adjust payment terms. Tarif OK</td>
+            </tr>
+            <tr class="esn-row esn-alt">
+              <td class="esn-vendor">DHL Express</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">QST</td>
+              <td class="esn-note"></td>
+            </tr>
+            <tr class="esn-row">
+              <td class="esn-vendor">DHL GLOBAL</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">QSQ</td>
+              <td class="esn-code">—</td>
+              <td class="esn-note"></td>
+            </tr>
+            <tr class="esn-row esn-alt">
+              <td class="esn-vendor">BDT</td>
+              <td class="esn-code esn-special">OPP AH007735</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">—</td>
+              <td class="esn-note"></td>
+            </tr>
+            <tr class="esn-row">
+              <td class="esn-vendor">KDE</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">QST</td>
+              <td class="esn-note"></td>
+            </tr>
+            <tr class="esn-row esn-alt">
+              <td class="esn-vendor">HTL</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">QST</td>
+              <td class="esn-note"></td>
+            </tr>
+            <tr class="esn-row">
+              <td class="esn-vendor">AKP</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">QST</td>
+              <td class="esn-note"></td>
+            </tr>
+            <tr class="esn-row esn-alt">
+              <td class="esn-vendor">Preiser</td>
+              <td class="esn-code">QSS</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">—</td>
+              <td class="esn-note"></td>
+            </tr>
+            <tr class="esn-row">
+              <td class="esn-vendor">Heinen (HSK)</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">—</td>
+              <td class="esn-code">QST</td>
+              <td class="esn-note">Adjust Payment terms ke "D030". Notes apabila VAT ID tidak sama "Richtige Ust-ID im Stammsatz DE454763904 eingetragen"</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:.5rem 1rem;background:var(--surface2);border-top:1px solid var(--border);font-family:var(--ibm-mono);font-size:10px;color:var(--text3);">
+        — = tidak ada ESN untuk mode ini &nbsp;·&nbsp; Data ini hanya referensi, selalu verifikasi dengan dokumen resmi
+      </div>
+    </div>
+  </div>
 
   <div class="toolbar">
     <div class="search-wrap">
@@ -559,6 +680,17 @@ function grantAccess(){
 }
 function lockApp(){sessionStorage.removeItem(SESSION_KEY);document.getElementById('lock-input').value='';document.getElementById('lock-error').textContent='';document.getElementById('lock-screen').classList.add('active');setTimeout(()=>document.getElementById('lock-input').focus(),100);}
 function checkAuth(){if(sessionStorage.getItem(SESSION_KEY)==='1'){grantAccess();return;}document.getElementById('lock-screen').classList.add('active');setTimeout(()=>document.getElementById('lock-input').focus(),100);}
+
+/* ── ESN TABLE TOGGLE ── */
+function toggleESN(){
+  const panel=document.getElementById('esn-panel');
+  const btn=document.getElementById('esn-btn');
+  const open=panel.style.display==='none'||panel.style.display==='';
+  panel.style.display=open?'block':'none';
+  btn.style.background=open?'rgba(251,191,36,0.15)':'rgba(255,255,255,0.06)';
+  btn.style.borderColor=open?'rgba(251,191,36,0.6)':'rgba(74,222,128,0.4)';
+  btn.textContent=open?'✕ ESN Table':'📋 ESN Table';
+}
 checkAuth();
 
 /* ── ONE-TIME MIGRATION: qa_entries → sgp_entries ── */
