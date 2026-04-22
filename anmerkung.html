@@ -308,8 +308,6 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 <!-- Subscription Modal -->
 <div id="sub-overlay" onclick="handleSubBgClick(event)">
   <div class="sub-box" onclick="event.stopPropagation()">
-
-    <!-- Default state -->
     <div id="sub-default">
       <div class="sub-sparkle">💎</div>
       <div class="sub-title">You must buy a<br><span class="grad">Subscription</span></div>
@@ -326,8 +324,6 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
       <button class="sub-buy-btn" onclick="handleBuySubscription()">✦ Buy Subscription ✦</button>
       <button class="sub-cancel-btn" onclick="closeSubModal()">Maybe later</button>
     </div>
-
-    <!-- Thank you state -->
     <div class="sub-thankyou" id="sub-thankyou">
       <div class="sub-thankyou-icon">🎉</div>
       <div class="sub-thankyou-title">Thank you for your purchase!</div>
@@ -338,7 +334,6 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
       </div>
       <button class="sub-continue-btn" onclick="proceedAfterPurchase()">✦ Begin the Ritual ✦</button>
     </div>
-
   </div>
 </div>
 
@@ -502,7 +497,64 @@ function processDachser(ws,r,cols){
 const KN_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8500,9500,99999];
 function knGetTier(kg){if(kg<=0)return 0;for(const b of KN_BP)if(kg<=b)return b;return 99999;}
 function resolveKN(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),recip:fc('','Empf.-Name'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),kost:fc('','Kostenstelle'),sach:fc('','Sachkonto'),fr:fc('FR','Differenz'),exp:fc('EXP','Differenz'),toll:fc('MT','Differenz'),snk_dl:fc('SNK','Kosten DL'),snk_diff:fc('SNK','Differenz'),fuel:fc('TZ','Differenz')};}
-function processKN(ws,r,cols){const T=T_KN;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;const frDiff=cellNum(ws,r,cols.fr),snkDl=cellNum(ws,r,cols.snk_dl),snkDiff=cellNum(ws,r,cols.snk_diff),expDiff=cellNum(ws,r,cols.exp),tollDiff=cellNum(ws,r,cols.toll),fuelDiff=cellNum(ws,r,cols.fuel),refNr=cellStr(ws,r,cols.referenz),recip=cellStr(ws,r,cols.recip).toLowerCase(),kost=cellStr(ws,r,cols.kost),sach=cellStr(ws,r,cols.sach);let res='';if(hasErr(frDiff,T)){if(refNr&&refNr!=='-'&&refNr.includes(','))return'hätte gebündelt werden müssen, ok?';if(frDiff>0&&snkDl===5){const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);res=join(res,(recip.includes('amazon')&&knGetTier(v1)===knGetTier(v2))?'hätte nach Amazon Tarif abrechnen dürfen':'Differenz aufgrund abweichender Gewichte');}else{res=join(res,'Differenz aufgrund abweichender Gewichte');}}if(hasErr(expDiff,T))res=join(res,'FIXTERMIN');if(hasErr(tollDiff,T))res=join(res,'Mautdifferenz');if(snkDiff===9)res=join(res,'Avis, ok?');if(hasErr(snkDiff,T)&&snkDiff!==9){if(snkDl===5||snkDl===25)res=join(res,'Portalavisierung, ok?');else if(snkDl===9)res=join(res,'Avis, ok?');else if(snkDl===18){if(!res.toLowerCase().includes('avis, ok?'))res=join(res,'Avis, ok?');}else if(snkDl===34){res=join(res,'Portalavisierung, ok?');res=join(res,'Avis, ok?');}else res=join(res,'SNK Differenz');}if(hasErr(fuelDiff,T)&&!res)res='Differenz treibstoff';if(!kost||kost==='-'||!sach||sach==='-')res=join(res,'Kontierung?');return res;}
+
+/* ── processKN ──
+   SNK Differenz logic:
+   - If SNK Differenz == 9 (float-safe): write "Avis, ok?"
+   - For all other out-of-threshold values: use SNK Kosten DL switch
+   - Differenz treibstoff only when nothing else was found
+*/
+function processKN(ws,r,cols){
+  const T=T_KN;
+  if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
+  const frDiff=cellNum(ws,r,cols.fr),
+        snkDl=cellNum(ws,r,cols.snk_dl),
+        snkDiff=cellNum(ws,r,cols.snk_diff),
+        expDiff=cellNum(ws,r,cols.exp),
+        tollDiff=cellNum(ws,r,cols.toll),
+        fuelDiff=cellNum(ws,r,cols.fuel),
+        refNr=cellStr(ws,r,cols.referenz),
+        recip=cellStr(ws,r,cols.recip).toLowerCase(),
+        kost=cellStr(ws,r,cols.kost),
+        sach=cellStr(ws,r,cols.sach);
+  let res='';
+
+  // FR Differenz
+  if(hasErr(frDiff,T)){
+    if(refNr&&refNr!=='-'&&refNr.includes(','))return'hätte gebündelt werden müssen, ok?';
+    if(frDiff>0&&snkDl===5){
+      const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);
+      res=join(res,(recip.includes('amazon')&&knGetTier(v1)===knGetTier(v2))
+        ?'hätte nach Amazon Tarif abrechnen dürfen'
+        :'Differenz aufgrund abweichender Gewichte');
+    } else {
+      res=join(res,'Differenz aufgrund abweichender Gewichte');
+    }
+  }
+
+  // EXP / Maut
+  if(hasErr(expDiff,T))res=join(res,'FIXTERMIN');
+  if(hasErr(tollDiff,T))res=join(res,'Mautdifferenz');
+
+  // SNK Differenz — float-safe check for exactly 9
+  if(Math.abs(snkDiff-9)<0.01){
+    res=join(res,'Avis, ok?');
+  } else if(hasErr(snkDiff,T)){
+    if(snkDl===5||snkDl===25)res=join(res,'Portalavisierung, ok?');
+    else if(snkDl===9)res=join(res,'Avis, ok?');
+    else if(snkDl===18){if(!res.toLowerCase().includes('avis, ok?'))res=join(res,'Avis, ok?');}
+    else if(snkDl===34){res=join(res,'Portalavisierung, ok?');res=join(res,'Avis, ok?');}
+    else res=join(res,'SNK Differenz');
+  }
+
+  // Treibstoff only when nothing else found
+  if(hasErr(fuelDiff,T)&&!res)res='Differenz treibstoff';
+
+  // Kontierung check
+  if(!kost||kost==='-'||!sach||sach==='-')res=join(res,'Kontierung?');
+
+  return res;
+}
 
 /* ── DHL Express ── */
 function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),addr:fc('FR','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz')};}
