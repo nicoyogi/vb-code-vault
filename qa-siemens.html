@@ -232,7 +232,7 @@
     </div>
     <button class="lock-btn" onclick="unlock()">Sign In</button>
     <div class="lock-error" id="lock-error"></div>
-    <div class="lock-hint">Shared credentials with the WMF Grimoire.<br>Stored securely in Firebase.</div>
+    <div class="lock-hint">Siemens GP password.<br>Separate from WMF Oracle.</div>
   </div>
 </div>
 
@@ -474,7 +474,7 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore(), storage = firebase.storage();
 const col = db.collection('sgp_entries');  /* ── SGP collection ── */
-const authDoc = db.collection('_config').doc('auth');
+const authDoc = db.collection('_config').doc('auth_sgp');
 let entries=[], editId=null, detailId=null, saving=false, pendingImages=[];
 
 function setStatus(s,l){document.getElementById('status-dot').className='status-dot '+(s||'');document.getElementById('status-label').textContent=l;}
