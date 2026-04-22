@@ -102,8 +102,6 @@
     .date { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-left: auto; }
     .qa-actions { display: flex; gap: 6px; margin-top: 10px; }
 
-    /* Image styles */
-    .qa-thumb { width: 100%; max-height: 140px; object-fit: cover; border-radius: var(--radius); margin-bottom: 10px; border: 1px solid var(--border); cursor: pointer; }
     .img-upload-area { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 1.2rem; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; font-family: var(--mono); font-size: 12px; color: var(--text3); }
     .img-upload-area:hover, .img-upload-area.drag { border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.05); color: var(--accent-text); }
     .img-upload-area input { display: none; }
@@ -114,7 +112,7 @@
     .img-remove:hover { background: #A32D2D; }
     .upload-progress { font-family: var(--mono); font-size: 11px; color: var(--accent-text); margin-top: 6px; }
     .detail-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; flex-shrink: 0; }
-    .detail-images img { width: 100%; border-radius: var(--radius); object-fit: cover; cursor: pointer; border: 1px solid var(--border); transition: opacity .15px; max-height: 160px; }
+    .detail-images img { width: 100%; border-radius: var(--radius); object-fit: cover; cursor: pointer; border: 1px solid var(--border); transition: opacity .15s; max-height: 160px; }
     .detail-images img:hover { opacity: .85; }
 
     #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.94); z-index: 9000; align-items: center; justify-content: center; padding: 1rem; cursor: zoom-out; }
@@ -212,6 +210,7 @@
     </div>
     <span id="total-badge">— scrolls</span>
     <button class="btn-sm" onclick="lockApp()" title="Lock">🔒</button>
+    <button class="btn-sm" id="migrate-btn" onclick="migrateWMF()" title="Migrate old entries to wmf_entries" style="border-color:rgba(52,211,153,0.4);color:#34d399;">⟳ Migrate</button>
     <button class="btn-primary" onclick="openAdd()">+ New Oracle Entry</button>
   </div>
 </header>
@@ -312,35 +311,38 @@
 
 const firebaseConfig={apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",authDomain:"vb-code-vault.firebaseapp.com",projectId:"vb-code-vault",storageBucket:"vb-code-vault.firebasestorage.app",messagingSenderId:"773245175115",appId:"1:773245175115:web:0b6a4f27388f58f026d4ce"};
 firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore(),storage=firebase.storage(),col=db.collection('qa_entries'),authDoc=db.collection('_config').doc('auth');
+const db=firebase.firestore(),storage=firebase.storage();
+const col=db.collection('wmf_entries');  /* ── WMF collection ── */
+const authDoc=db.collection('_config').doc('auth');
 let entries=[],editId=null,detailId=null,saving=false,pendingImages=[];
 
 function setStatus(s,l){document.getElementById('status-dot').className='status-dot '+(s||'');document.getElementById('status-label').textContent=l;}
-function startListener(){setStatus('','Connecting...');col.orderBy('createdAt','desc').onSnapshot(snap=>{entries=snap.docs.map(d=>({id:d.id,...d.data()}));setStatus('online','Online');render();},()=>{setStatus('error','Error');showToast('Could not connect.',true);});}
+function startListener(){
+  setStatus('','Connecting...');
+  col.orderBy('createdAt','desc').onSnapshot(snap=>{
+    entries=snap.docs.map(d=>({id:d.id,...d.data()}));
+    setStatus('online','Online');
+    render();
+  },()=>{setStatus('error','Error');showToast('Could not connect.',true);});
+}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmtDate(ts){if(!ts)return'';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}
 
 function render(){
-  const q=document.getElementById('search').value.toLowerCase().trim();const catF=document.getElementById('filter-cat').value;
-  const cats=[...new Set(entries.filter(e=>(e.project||'')==='').map(e=>e.category).filter(Boolean))].sort();
+  const q=document.getElementById('search').value.toLowerCase().trim();
+  const catF=document.getElementById('filter-cat').value;
+  const cats=[...new Set(entries.map(e=>e.category).filter(Boolean))].sort();
   const sel=document.getElementById('filter-cat');const prev=sel.value;
   sel.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option${c===prev?' selected':''}>${esc(c)}</option>`).join('');
-
-  // ── FILTER: exclude SGP entries (project === 'sgp'), only show entries with no project field ──
   let list=entries.filter(e=>{
     const mQ=!q||(e.question||'').toLowerCase().includes(q)||(e.answer||'').toLowerCase().includes(q)||(e.tags||'').toLowerCase().includes(q);
-    return mQ&&(!catF||e.category===catF)&&(e.project||'')==='';
+    return mQ&&(!catF||e.category===catF);
   });
-
-  const total=list.length;
+  const total=entries.length;
   document.getElementById('total-badge').textContent=total+' entr'+(total!==1?'ies':'y');
   document.getElementById('stats').textContent=(q||catF)?`Showing ${list.length} of ${total}`:total>0?`${total} entr${total!==1?'ies':'y'} in the oracle`:'';
   const grid=document.getElementById('grid');
-  if(!list.length){
-    const allNonSgp=entries.filter(e=>(e.project||'')==='').length;
-    grid.innerHTML=allNonSgp===0?`<div class="empty"><div class="empty-icon">🧠</div><p>The oracle is silent.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ New Oracle Entry</strong> to begin.</p></div>`:`<div class="empty"><div class="empty-icon">🔍</div><p>No entries match your search.</p></div>`;
-    return;
-  }
+  if(!list.length){grid.innerHTML=total===0?`<div class="empty"><div class="empty-icon">🧠</div><p>The oracle is silent.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ New Oracle Entry</strong> to begin.</p></div>`:`<div class="empty"><div class="empty-icon">🔍</div><p>No entries match your search.</p></div>`;return;}
   grid.innerHTML=list.map(e=>{
     const tags=(e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
     const imgs=e.images||[];
@@ -351,13 +353,13 @@ function render(){
 
 function handleDrag(e,on){e.preventDefault();document.getElementById('upload-area').classList.toggle('drag',on);}
 function handleDrop(e){e.preventDefault();document.getElementById('upload-area').classList.remove('drag');handleFiles(e.dataTransfer.files);}
-function handleFiles(files){for(const file of files){if(!file.type.startsWith('image/')){showToast('Only image files allowed.',true);continue;}if(file.size>5*1024*1024){showToast(`${file.name} is too large.`,true);continue;}const reader=new FileReader();reader.onload=ev=>{const id=Date.now()+Math.random();pendingImages.push({id,file,previewUrl:ev.target.result,storagePath:null,downloadUrl:null});renderPreviews();};reader.readAsDataURL(file);}}
+function handleFiles(files){for(const file of files){if(!file.type.startsWith('image/')){showToast('Only image files allowed.',true);continue;}if(file.size>5*1024*1024){showToast(`${file.name} is too large.`,true);continue;}const reader=new FileReader();reader.onload=ev=>{const id=Date.now()+Math.random();pendingImages.push({id,file,previewUrl:ev.target.result});renderPreviews();};reader.readAsDataURL(file);}}
 function renderPreviews(){document.getElementById('img-previews').innerHTML=pendingImages.map(img=>`<div class="img-preview-wrap"><img src="${img.previewUrl}" alt=""><button class="img-remove" onclick="removePreview('${img.id}')">✕</button></div>`).join('');}
 function removePreview(id){pendingImages=pendingImages.filter(i=>String(i.id)!==String(id));renderPreviews();}
-async function uploadImages(entryId){const urls=[],prog=document.getElementById('upload-progress');for(let i=0;i<pendingImages.length;i++){const img=pendingImages[i];prog.textContent=`Uploading image ${i+1} of ${pendingImages.length}...`;const path=`qa_images/${entryId}/${Date.now()}_${img.file.name}`;const ref=storage.ref(path);await ref.put(img.file);urls.push(await ref.getDownloadURL());}prog.textContent='';return urls;}
+async function uploadImages(entryId){const urls=[],prog=document.getElementById('upload-progress');for(let i=0;i<pendingImages.length;i++){const img=pendingImages[i];prog.textContent=`Uploading image ${i+1} of ${pendingImages.length}...`;const path=`wmf_qa/${entryId}/${Date.now()}_${img.file.name}`;const ref=storage.ref(path);await ref.put(img.file);urls.push(await ref.getDownloadURL());}prog.textContent='';return urls;}
 
-function openAdd(){editId=null;pendingImages=[];document.getElementById('modal-title').textContent='New Oracle Entry';document.getElementById('f-q').value='';document.getElementById('f-a').value='';document.getElementById('f-tags').value='';document.getElementById('f-cat').value='General';document.getElementById('img-previews').innerHTML='';document.getElementById('upload-progress').textContent='';document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
-function openEdit(id){const e=entries.find(x=>x.id===id);if(!e)return;editId=id;pendingImages=[];document.getElementById('modal-title').textContent='Edit Oracle Entry';document.getElementById('f-q').value=e.question||'';document.getElementById('f-a').value=e.answer||'';document.getElementById('f-tags').value=e.tags||'';document.getElementById('f-cat').value=e.category||'General';const imgs=e.images||[];document.getElementById('img-previews').innerHTML=imgs.map((url,i)=>`<div class="img-preview-wrap"><img src="${esc(url)}" alt=""><button class="img-remove" onclick="removeExistingImg(${i},'${id}')">✕</button></div>`).join('');document.getElementById('upload-progress').textContent=imgs.length>0?`${imgs.length} existing image${imgs.length>1?'s':''} — upload more below`:'';closeDetail();document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
+function openAdd(){editId=null;pendingImages=[];document.getElementById('modal-title').textContent='New Oracle Entry';document.getElementById('f-q').value='';document.getElementById('f-a').value='';document.getElementById('f-tags').value='';document.getElementById('f-cat').value='K+N';document.getElementById('img-previews').innerHTML='';document.getElementById('upload-progress').textContent='';document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
+function openEdit(id){const e=entries.find(x=>x.id===id);if(!e)return;editId=id;pendingImages=[];document.getElementById('modal-title').textContent='Edit Oracle Entry';document.getElementById('f-q').value=e.question||'';document.getElementById('f-a').value=e.answer||'';document.getElementById('f-tags').value=e.tags||'';document.getElementById('f-cat').value=e.category||'K+N';const imgs=e.images||[];document.getElementById('img-previews').innerHTML=imgs.map((url,i)=>`<div class="img-preview-wrap"><img src="${esc(url)}" alt=""><button class="img-remove" onclick="removeExistingImg(${i},'${id}')">✕</button></div>`).join('');document.getElementById('upload-progress').textContent=imgs.length>0?`${imgs.length} existing image${imgs.length>1?'s':''} — upload more below`:'';closeDetail();document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
 async function removeExistingImg(idx,entryId){const e=entries.find(x=>x.id===entryId);if(!e)return;const imgs=[...(e.images||[])];imgs.splice(idx,1);await col.doc(entryId).update({images:imgs});showToast('Image removed.');}
 function closeModal(){document.getElementById('form-modal').classList.remove('open');}
 async function saveEntry(){
@@ -401,6 +403,31 @@ function grantAccess(){sessionStorage.setItem(SESSION_KEY,'1');document.getEleme
 function lockApp(){sessionStorage.removeItem(SESSION_KEY);document.getElementById('lock-input').value='';document.getElementById('lock-error').textContent='';document.getElementById('lock-screen').classList.add('active');setTimeout(()=>document.getElementById('lock-input').focus(),100);}
 function checkAuth(){if(sessionStorage.getItem(SESSION_KEY)==='1'){grantAccess();return;}document.getElementById('lock-screen').classList.add('active');setTimeout(()=>document.getElementById('lock-input').focus(),100);}
 checkAuth();
+
+/* ── ONE-TIME MIGRATION: qa_entries → wmf_entries ── */
+async function migrateWMF(){
+  const btn=document.getElementById('migrate-btn');
+  if(!confirm('This will copy all WMF entries (no project field) from qa_entries into wmf_entries.\n\nRun migration?'))return;
+  btn.disabled=true;btn.textContent='Migrating...';
+  try{
+    const snap=await db.collection('qa_entries').get();
+    let copied=0,skipped=0;
+    for(const doc of snap.docs){
+      const data=doc.data();
+      if(!data.project){
+        await db.collection('wmf_entries').doc(doc.id).set(data);
+        copied++;
+      } else { skipped++; }
+    }
+    showToast(`✓ Migrated ${copied} WMF entries. Skipped ${skipped} SGP entries.`);
+    btn.textContent='✓ Done';
+    btn.style.color='#34d399';
+    setTimeout(()=>{btn.style.display='none';},3000);
+  }catch(e){
+    showToast('Migration failed: '+e.message,true);
+    btn.disabled=false;btn.textContent='⟳ Migrate';
+  }
+}
 </script>
 </body>
 </html>
