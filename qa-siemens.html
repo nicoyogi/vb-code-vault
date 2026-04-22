@@ -253,9 +253,9 @@
     </div>
     <span id="total-badge">— entries</span>
     <button class="btn-lock" onclick="lockApp()" title="Lock">🔒 Lock</button>
-    <button class="btn-lock" id="migrate-btn" onclick="migrateSGP()" title="Migrate SGP entries to sgp_entries" style="border-color:rgba(74,222,128,0.4);color:#4ade80;">⟳ Migrate</button>
+    <button class="btn-lock" id="migrate-btn" disabled title="Migration complete" style="opacity:.3;cursor:not-allowed;">⟳ Migrate</button>
     <button class="btn-lock" onclick="toggleESN()" id="esn-btn" title="ESN Reference Table" style="border-color:rgba(251,191,36,0.4);color:rgba(251,191,36,0.9);">📋 ESN Table</button>
-    <button class="btn-nuke" id="delete-all-btn" onclick="deleteAllEntries()" title="Delete all SGP entries">🗑 Delete All</button>
+    <button class="btn-nuke" id="delete-all-btn" disabled title="Disabled" style="opacity:.3;cursor:not-allowed;">🗑 Delete All</button>
     <button class="btn-primary" onclick="openAdd()">+ New Entry</button>
   </div>
 </header>
