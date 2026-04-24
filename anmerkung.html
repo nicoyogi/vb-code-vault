@@ -126,6 +126,20 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 .log.err { color: var(--danger); border-color: rgba(248,113,113,0.2); background: rgba(248,113,113,0.04); }
 .log.ok { color: var(--accent); border-color: rgba(52,211,153,0.2); }
 
+/* DOWNLOAD */
+.sigil-div { display: flex; align-items: center; gap: 16px; width: 100%; }
+.sigil-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,100,.15), transparent); }
+.sigil-sym { font-family: var(--cinzel); font-size: 16px; color: rgba(212,175,100,.25); letter-spacing: .1em; }
+.dl-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-top: 1.8rem; margin-bottom: .5rem; }
+.dl-caption { font-family: var(--cinzel); font-size: 8px; letter-spacing: .35em; text-transform: uppercase; color: rgba(212,175,100,.28); }
+.btn-grimoire { display: inline-flex; align-items: center; gap: 12px; font-family: var(--cinzel); font-size: 12px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: #0a0818; text-decoration: none; border: none; cursor: pointer; padding: 15px 38px; border-radius: 60px; position: relative; overflow: hidden; transition: transform .35s cubic-bezier(.16,.84,.24,1.05), box-shadow .35s; }
+.btn-grimoire-bg { position: absolute; inset: 0; background: linear-gradient(110deg,#c8941e,#f0dcaa 30%,#a78bfa 60%,#6ec7ff 80%,#c8941e 100%); background-size: 300%; animation: gold-shift 6s linear infinite; }
+@keyframes gold-shift { 0%{background-position:0%} 100%{background-position:300%} }
+.btn-grimoire-overlay { position: absolute; inset: 0; background: linear-gradient(120deg,rgba(255,255,255,.18) 0%,transparent 55%); pointer-events: none; }
+.btn-grimoire-content { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; }
+.btn-grimoire:hover { transform: translateY(-4px) scale(1.06); box-shadow: 0 18px 60px rgba(212,175,100,.35); }
+.btn-grimoire:active { transform: scale(.97); }
+
 /* FOOTER */
 .footer { margin-top: 3.5rem; font-family: var(--cinzel); font-size: 9px; letter-spacing: .22em; color: var(--text3); text-align: center; line-height: 2.8; }
 .footer a { color: var(--text3); text-decoration: none; transition: color .2s; }
@@ -299,6 +313,29 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   </div>
   <div class="log" id="log"></div>
 
+  <!-- DOWNLOAD THE GRIMOIRE -->
+  <div class="sigil-div" style="margin-top:3.5rem">
+    <div class="sigil-line"></div>
+    <div class="sigil-sym">✦ ᛟ ✦</div>
+    <div class="sigil-line"></div>
+  </div>
+  <div class="dl-wrap">
+    <div class="dl-caption">Bind to your machine · Offline Codex</div>
+    <a href="https://drive.usercontent.google.com/download?id=1ukOZKreOhH6tOnwgd9z4h5_TrnrvC05q&export=download&authuser=0"
+       class="btn-grimoire" target="_blank" rel="noopener noreferrer">
+      <div class="btn-grimoire-bg"></div>
+      <div class="btn-grimoire-overlay"></div>
+      <div class="btn-grimoire-content">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v7.5M7 8.5L4.5 6M7 8.5L9.5 6" stroke="#0a0818" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M1.5 10.5h11" stroke="#0a0818" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M2.5 10.5v1A1.5 1.5 0 004 13h6a1.5 1.5 0 001.5-1.5v-1" stroke="#0a0818" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Download the Grimoire
+      </div>
+    </a>
+  </div>
+
   <div class="footer">
     codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
     <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a>
@@ -437,7 +474,6 @@ function resolveDachser(ws,range){
     fr:       fc('FR','Differenz'),
     maut:     fc('MT','Differenz'),
     tz:       fc('TZ','Differenz'),
-    /* NEW columns */
     c502_dl:  fc('502','Kosten DL'),
     c503_dl:  fc('503','Kosten DL'),
     lg_diff:  fc('LG','Differenz'),
@@ -448,16 +484,6 @@ function resolveDachser(ws,range){
 function daIsTarifZero(ws,r,col){if(col<0)return false;const raw=cellStr(ws,r,col);if(!raw)return false;if(raw==='-')return true;return(cellNum(ws,r,col)===0&&raw.includes('0'));}
 function daIsNonInteger(n){return n!==Math.floor(n);}
 
-/* ─────────────────────────────────────────────────────────────
-   daEvalSNK  —  FIXED VERSION
-   Fix 1: snkDL===11 → "Differenz Telefonische Zustellankündigung"
-           (was incorrectly checked as snkDiff===11)
-   Fix 2: non-integer snkDL + non-integer snkDiff → always
-           "Differenz Laderaumkostenentwicklung"
-           (was incorrectly restricted to K1AV only)
-   Fix 3: Typo 'Laderumzuschlag' → 'Laderaumzuschlag'
-           (affects case 5 K1AV branch)
-───────────────────────────────────────────────────────────── */
 function daEvalSNK(ws,r,cols,isTarifZero,servArt){
   if(cols.snk_diff<0||cols.snk_dl<0)return'';
   const snkDl=cellNum(ws,r,cols.snk_dl),
@@ -471,7 +497,6 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
     case 95:return'AUSFALLFRACHT';
     case 130:return'Standgeld';
     case 75:return(servArt.toUpperCase()==='K1AV')?'Speditionskosten gem. Text':'Ausfallfracht/Schadensersatz';
-    // FIX 1: snkDL===11 triggers this note, not snkDiff===11
     case 11:
       if(!hasErr(snkDiff,T))return'';
       return'Differenz Telefonische Zustellankündigung - Laderaumzuschlag';
@@ -482,7 +507,6 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
     case 5:
       if(!hasErr(snkDiff,T))return'';
       if(servArt.toUpperCase()==='K1AV'){
-        // FIX 3 (typo): was 'Laderumzuschlag', now 'Laderaumzuschlag'
         return(snkTar===0)?'Admin Zeitfensterbuchung Handel':'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag';
       }
       if(isTarifZero)return'';
@@ -492,8 +516,6 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
       return'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag';
     default:
       if(!hasErr(snkDiff,T))return'';
-      // FIX 2: non-integer snkDL + non-integer snkDiff → Laderaumkostenentwicklung
-      // always, regardless of servArt (K1AV or not)
       if(daIsNonInteger(snkDl)&&daIsNonInteger(snkDiff)){
         return'Differenz Laderaumkostenentwicklung';
       }
@@ -514,29 +536,10 @@ function processDachser(ws,r,cols){
         isTarifZero=daIsTarifZero(ws,r,cols.tarif);
   let res='',hasFR=false;
 
-  // ── NEW: 502 Kosten DL → Einlagern ──
-  if(cols.c502_dl>=0){
-    const v=cellStr(ws,r,cols.c502_dl);
-    if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c502_dl)!==0)
-      res=join(res,'Einlagern');
-  }
-
-  // ── NEW: 503 Kosten DL → Auslagern ──
-  if(cols.c503_dl>=0){
-    const v=cellStr(ws,r,cols.c503_dl);
-    if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c503_dl)!==0)
-      res=join(res,'Auslagern');
-  }
-
-  // ── NEW: LG Differenz → Lagergeld ──
-  if(cols.lg_diff>=0&&hasErr(cellNum(ws,r,cols.lg_diff),T))
-    res=join(res,'Lagergeld');
-
-  // ── NEW: AV Differenz → Gebühr für vergeblichen Abholversuch ──
-  if(cols.av_diff>=0&&hasErr(cellNum(ws,r,cols.av_diff),T))
-    res=join(res,'Gebühr für vergeblichen Abholversuch');
-
-  // ── Existing logic ──
+  if(cols.c502_dl>=0){const v=cellStr(ws,r,cols.c502_dl);if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c502_dl)!==0)res=join(res,'Einlagern');}
+  if(cols.c503_dl>=0){const v=cellStr(ws,r,cols.c503_dl);if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c503_dl)!==0)res=join(res,'Auslagern');}
+  if(cols.lg_diff>=0&&hasErr(cellNum(ws,r,cols.lg_diff),T))res=join(res,'Lagergeld');
+  if(cols.av_diff>=0&&hasErr(cellNum(ws,r,cols.av_diff),T))res=join(res,'Gebühr für vergeblichen Abholversuch');
   if(cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T))res=join(res,'2. Zustellung');
   res=join(res,daEvalSNK(ws,r,cols,isTarifZero,servArt));
   if(cols.sam>=0&&hasErr(cellNum(ws,r,cols.sam),T))res=join(res,'Samstagzustellung');
@@ -567,54 +570,26 @@ function resolveKN(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{ta
 function processKN(ws,r,cols){
   const T=T_KN;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
-  const frDiff=cellNum(ws,r,cols.fr),
-        snkDl=cellNum(ws,r,cols.snk_dl),
-        snkDiff=cellNum(ws,r,cols.snk_diff),
-        expDiff=cellNum(ws,r,cols.exp),
-        tollDiff=cellNum(ws,r,cols.toll),
-        fuelDiff=cellNum(ws,r,cols.fuel),
-        refNr=cellStr(ws,r,cols.referenz),
-        recip=cellStr(ws,r,cols.recip).toLowerCase(),
-        kost=cellStr(ws,r,cols.kost),
-        sach=cellStr(ws,r,cols.sach);
+  const frDiff=cellNum(ws,r,cols.fr),snkDl=cellNum(ws,r,cols.snk_dl),snkDiff=cellNum(ws,r,cols.snk_diff),expDiff=cellNum(ws,r,cols.exp),tollDiff=cellNum(ws,r,cols.toll),fuelDiff=cellNum(ws,r,cols.fuel),refNr=cellStr(ws,r,cols.referenz),recip=cellStr(ws,r,cols.recip).toLowerCase(),kost=cellStr(ws,r,cols.kost),sach=cellStr(ws,r,cols.sach);
   let res='';
-
-  // FR Differenz
   if(hasErr(frDiff,T)){
     if(refNr&&refNr!=='-'&&refNr.includes(','))return'hätte gebündelt werden müssen, ok?';
-    if(recip.includes('amazon')&&(!refNr||refNr==='-'||!refNr.includes(','))){
-      res=join(res,'hätte nach Amazon Tarif abrechnen müssen');
-    } else if(frDiff>0&&snkDl===5){
-      const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);
-      res=join(res,(knGetTier(v1)===knGetTier(v2))
-        ?'hätte nach Amazon Tarif abrechnen dürfen'
-        :'Differenz aufgrund abweichender Gewichte');
-    } else {
-      res=join(res,'Differenz aufgrund abweichender Gewichte');
-    }
+    if(recip.includes('amazon')&&(!refNr||refNr==='-'||!refNr.includes(','))){res=join(res,'hätte nach Amazon Tarif abrechnen müssen');}
+    else if(frDiff>0&&snkDl===5){const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);res=join(res,(knGetTier(v1)===knGetTier(v2))?'hätte nach Amazon Tarif abrechnen dürfen':'Differenz aufgrund abweichender Gewichte');}
+    else{res=join(res,'Differenz aufgrund abweichender Gewichte');}
   }
-
-  // EXP / Maut
   if(hasErr(expDiff,T))res=join(res,'FIXTERMIN');
   if(hasErr(tollDiff,T))res=join(res,'Mautdifferenz');
-
-  // SNK Differenz — float-safe check for exactly 9
-  if(Math.abs(snkDiff-9)<0.01){
-    res=join(res,'Avis, ok?');
-  } else if(hasErr(snkDiff,T)){
+  if(Math.abs(snkDiff-9)<0.01){res=join(res,'Avis, ok?');}
+  else if(hasErr(snkDiff,T)){
     if(snkDl===5||snkDl===25)res=join(res,'Portalavisierung, ok?');
     else if(snkDl===9)res=join(res,'Avis, ok?');
     else if(snkDl===18){if(!res.toLowerCase().includes('avis, ok?'))res=join(res,'Avis, ok?');}
     else if(snkDl===34){res=join(res,'Portalavisierung, ok?');res=join(res,'Avis, ok?');}
     else res=join(res,'SNK Differenz');
   }
-
-  // Treibstoff only when nothing else found
   if(hasErr(fuelDiff,T)&&!res)res='Differenz treibstoff';
-
-  // Kontierung check
   if(!kost||kost==='-'||!sach||sach==='-')res=join(res,'Kontierung?');
-
   return res;
 }
 
