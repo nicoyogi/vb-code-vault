@@ -448,6 +448,16 @@ function resolveDachser(ws,range){
 function daIsTarifZero(ws,r,col){if(col<0)return false;const raw=cellStr(ws,r,col);if(!raw)return false;if(raw==='-')return true;return(cellNum(ws,r,col)===0&&raw.includes('0'));}
 function daIsNonInteger(n){return n!==Math.floor(n);}
 
+/* ─────────────────────────────────────────────────────────────
+   daEvalSNK  —  FIXED VERSION
+   Fix 1: snkDL===11 → "Differenz Telefonische Zustellankündigung"
+           (was incorrectly checked as snkDiff===11)
+   Fix 2: non-integer snkDL + non-integer snkDiff → always
+           "Differenz Laderaumkostenentwicklung"
+           (was incorrectly restricted to K1AV only)
+   Fix 3: Typo 'Laderumzuschlag' → 'Laderaumzuschlag'
+           (affects case 5 K1AV branch)
+───────────────────────────────────────────────────────────── */
 function daEvalSNK(ws,r,cols,isTarifZero,servArt){
   if(cols.snk_diff<0||cols.snk_dl<0)return'';
   const snkDl=cellNum(ws,r,cols.snk_dl),
@@ -456,23 +466,23 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
         T=T_DACHSER;
   if(snkDl===0&&snkTar===0&&snkDiff===0)return'';
 
-  // NEW: SNK Differenz exactly 11 → specific note
-  if(Math.abs(snkDiff-11)<0.01&&hasErr(snkDiff,T)){
-    return'Differenz Telefonische Zustellankündigung - Laderumzuschlag';
-  }
-
   switch(snkDl){
     case 190:return'AUSFALLFRACHT';
     case 95:return'AUSFALLFRACHT';
     case 130:return'Standgeld';
     case 75:return(servArt.toUpperCase()==='K1AV')?'Speditionskosten gem. Text':'Ausfallfracht/Schadensersatz';
+    // FIX 1: snkDL===11 triggers this note, not snkDiff===11
+    case 11:
+      if(!hasErr(snkDiff,T))return'';
+      return'Differenz Telefonische Zustellankündigung - Laderaumzuschlag';
     case 14:
       if(!hasErr(snkDiff,T)||isTarifZero)return'';
       return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
     case 5:
       if(!hasErr(snkDiff,T))return'';
       if(servArt.toUpperCase()==='K1AV'){
-        return(snkTar===0)?'Admin Zeitfensterbuchung Handel':'Differenz Admin Zeitfensterbuchung Handel - Laderumzuschlag';
+        // FIX 3 (typo): was 'Laderumzuschlag', now 'Laderaumzuschlag'
+        return(snkTar===0)?'Admin Zeitfensterbuchung Handel':'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag';
       }
       if(isTarifZero)return'';
       return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
@@ -481,25 +491,10 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
       return'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag';
     default:
       if(!hasErr(snkDiff,T))return'';
-      if(isTarifZero){
-        if(daIsNonInteger(snkDl)){
-          // "Differenz Laderaumkostenentwicklung" ONLY when servArt is K1AV
-          if(daIsNonInteger(snkDiff)){
-            return(servArt.toUpperCase()==='K1AV')
-              ?'Differenz Laderaumkostenentwicklung'
-              :'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
-          }
-          return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
-        }
-        return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
-      }
-      if(daIsNonInteger(snkDl)){
-        if(daIsNonInteger(snkDiff)){
-          return(servArt.toUpperCase()==='K1AV')
-            ?'Differenz Laderaumkostenentwicklung'
-            :'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
-        }
-        return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
+      // FIX 2: non-integer snkDL + non-integer snkDiff → Laderaumkostenentwicklung
+      // always, regardless of servArt (K1AV or not)
+      if(daIsNonInteger(snkDl)&&daIsNonInteger(snkDiff)){
+        return'Differenz Laderaumkostenentwicklung';
       }
       return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
   }
