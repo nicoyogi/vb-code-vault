@@ -259,7 +259,7 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   <div class="fw-grid">
     <button class="fw-btn" data-fw="dachser" onclick="selectFW(this)">
       <div class="fw-name">Dachser</div>
-      <div class="fw-desc">CekKondisi_Freigabe · dynamic cols<br>ZZ·SAM·DGR·EXP·SNK·SBFU·FR·ZW·TZ</div>
+      <div class="fw-desc">CekKondisi_Freigabe · dynamic cols<br>ZZ·SAM·DGR·EXP·SNK·SBFU·FR·ZW·TZ<br>502·503·LG·AV</div>
     </button>
     <button class="fw-btn" data-fw="kn" onclick="selectFW(this)">
       <div class="fw-name">K+N</div>
@@ -418,9 +418,36 @@ function join(a,b){if(!b)return a;if(a.toLowerCase().includes(b.toLowerCase()))r
 
 /* ── DACHSER ── */
 const DA_COL_REFERENZ3=15,DA_COL_EMPF_PLZ=13,DA_COL_EMPF_ORT=14,DA_COL_ANZ_SDG=3,DA_COL_SERV_ART=16,DA_COL_SACHKONTO=35;
-function resolveDachser(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),zz:fc('ZZ','Differenz'),dgr:fc('DGR','Differenz'),exp:fc('EXP','Differenz'),exp_dl:fc('EXP','Kosten DL'),snk_diff:fc('SNK','Differenz'),snk_dl:fc('SNK','Kosten DL'),snk_tar:fc('SNK','Kosten lt. Tarif'),sbfu:fc('SBFU','Differenz'),sam:fc('SAM','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz')};}
+
+function resolveDachser(ws,range){
+  const fc=(h2,h3)=>findCol(ws,range,h2,h3);
+  return{
+    target:   fc('','Anmerkung'),
+    stat:     fc('','Stat_Freigabe'),
+    tarif:    fc('Total','Kosten lt. Tarif'),
+    zz:       fc('ZZ','Differenz'),
+    dgr:      fc('DGR','Differenz'),
+    exp:      fc('EXP','Differenz'),
+    exp_dl:   fc('EXP','Kosten DL'),
+    snk_diff: fc('SNK','Differenz'),
+    snk_dl:   fc('SNK','Kosten DL'),
+    snk_tar:  fc('SNK','Kosten lt. Tarif'),
+    sbfu:     fc('SBFU','Differenz'),
+    sam:      fc('SAM','Differenz'),
+    fr:       fc('FR','Differenz'),
+    maut:     fc('MT','Differenz'),
+    tz:       fc('TZ','Differenz'),
+    /* NEW columns */
+    c502_dl:  fc('502','Kosten DL'),
+    c503_dl:  fc('503','Kosten DL'),
+    lg_diff:  fc('LG','Differenz'),
+    av_diff:  fc('AV','Differenz'),
+  };
+}
+
 function daIsTarifZero(ws,r,col){if(col<0)return false;const raw=cellStr(ws,r,col);if(!raw)return false;if(raw==='-')return true;return(cellNum(ws,r,col)===0&&raw.includes('0'));}
 function daIsNonInteger(n){return n!==Math.floor(n);}
+
 function daEvalSNK(ws,r,cols,isTarifZero,servArt){
   if(cols.snk_diff<0||cols.snk_dl<0)return'';
   const snkDl=cellNum(ws,r,cols.snk_dl),
@@ -428,6 +455,12 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
         snkTar=cols.snk_tar>=0?cellNum(ws,r,cols.snk_tar):0,
         T=T_DACHSER;
   if(snkDl===0&&snkTar===0&&snkDiff===0)return'';
+
+  // NEW: SNK Differenz exactly 11 → specific note
+  if(Math.abs(snkDiff-11)<0.01&&hasErr(snkDiff,T)){
+    return'Differenz Telefonische Zustellankündigung - Laderumzuschlag';
+  }
+
   switch(snkDl){
     case 190:return'AUSFALLFRACHT';
     case 95:return'AUSFALLFRACHT';
@@ -450,18 +483,31 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
       if(!hasErr(snkDiff,T))return'';
       if(isTarifZero){
         if(daIsNonInteger(snkDl)){
-          return daIsNonInteger(snkDiff)?'Differenz Laderaumkostenentwicklung':'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
+          // "Differenz Laderaumkostenentwicklung" ONLY when servArt is K1AV
+          if(daIsNonInteger(snkDiff)){
+            return(servArt.toUpperCase()==='K1AV')
+              ?'Differenz Laderaumkostenentwicklung'
+              :'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
+          }
+          return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
         }
         return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
       }
       if(daIsNonInteger(snkDl)){
-        return daIsNonInteger(snkDiff)?'Differenz Laderaumkostenentwicklung':'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
+        if(daIsNonInteger(snkDiff)){
+          return(servArt.toUpperCase()==='K1AV')
+            ?'Differenz Laderaumkostenentwicklung'
+            :'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
+        }
+        return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
       }
       return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
   }
 }
+
 function daEvalEXP(ws,r,cols){if(cols.exp<0)return'';const expDiff=cellNum(ws,r,cols.exp);if(!hasErr(expDiff,T_DACHSER))return'';const expDl=cols.exp_dl>=0?cellNum(ws,r,cols.exp_dl):0;return(expDl===95)?'Termin-zuschlag':'Produktzuschlag';}
 function daZWNote(ws,r){const plz=cellStr(ws,r,DA_COL_EMPF_PLZ),ort=cellStr(ws,r,DA_COL_EMPF_ORT),loc=(plz&&ort)?plz+' '+ort:(plz||ort);return'Differenz aufgrund abweichender Zwischenempfänger'+(loc?' '+loc:'');}
+
 function processDachser(ws,r,cols){
   const T=T_DACHSER;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
@@ -471,6 +517,30 @@ function processDachser(ws,r,cols){
         anzSdg=parseInt(cellStr(ws,r,DA_COL_ANZ_SDG))||0,
         isTarifZero=daIsTarifZero(ws,r,cols.tarif);
   let res='',hasFR=false;
+
+  // ── NEW: 502 Kosten DL → Einlagern ──
+  if(cols.c502_dl>=0){
+    const v=cellStr(ws,r,cols.c502_dl);
+    if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c502_dl)!==0)
+      res=join(res,'Einlagern');
+  }
+
+  // ── NEW: 503 Kosten DL → Auslagern ──
+  if(cols.c503_dl>=0){
+    const v=cellStr(ws,r,cols.c503_dl);
+    if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c503_dl)!==0)
+      res=join(res,'Auslagern');
+  }
+
+  // ── NEW: LG Differenz → Lagergeld ──
+  if(cols.lg_diff>=0&&hasErr(cellNum(ws,r,cols.lg_diff),T))
+    res=join(res,'Lagergeld');
+
+  // ── NEW: AV Differenz → Gebühr für vergeblichen Abholversuch ──
+  if(cols.av_diff>=0&&hasErr(cellNum(ws,r,cols.av_diff),T))
+    res=join(res,'Gebühr für vergeblichen Abholversuch');
+
+  // ── Existing logic ──
   if(cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T))res=join(res,'2. Zustellung');
   res=join(res,daEvalSNK(ws,r,cols,isTarifZero,servArt));
   if(cols.sam>=0&&hasErr(cellNum(ws,r,cols.sam),T))res=join(res,'Samstagzustellung');
@@ -498,12 +568,6 @@ const KN_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,12
 function knGetTier(kg){if(kg<=0)return 0;for(const b of KN_BP)if(kg<=b)return b;return 99999;}
 function resolveKN(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),recip:fc('','Empf.-Name'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),kost:fc('','Kostenstelle'),sach:fc('','Sachkonto'),fr:fc('FR','Differenz'),exp:fc('EXP','Differenz'),toll:fc('MT','Differenz'),snk_dl:fc('SNK','Kosten DL'),snk_diff:fc('SNK','Differenz'),fuel:fc('TZ','Differenz')};}
 
-/* ── processKN ──
-   SNK Differenz logic:
-   - If SNK Differenz == 9 (float-safe): write "Avis, ok?"
-   - For all other out-of-threshold values: use SNK Kosten DL switch
-   - Differenz treibstoff only when nothing else was found
-*/
 function processKN(ws,r,cols){
   const T=T_KN;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
