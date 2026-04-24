@@ -477,6 +477,7 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
       return'Differenz Telefonische Zustellankündigung - Laderaumzuschlag';
     case 14:
       if(!hasErr(snkDiff,T)||isTarifZero)return'';
+      if(servArt.toUpperCase()==='K1AV')return'Differenz Laderaumkostenentwicklung';
       return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
     case 5:
       if(!hasErr(snkDiff,T))return'';
