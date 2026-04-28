@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ledger · WMF Grimoire</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#02020a;
+  --b:91,156,246;--v:167,139,250;--e:52,211,153;--pk:244,114,182;--gold:212,175,100;
+  --amber:251,191,36;
+  --cinzel:'Cinzel',serif;--syne:'Syne',sans-serif;--mono:'DM Mono',monospace;
+}
+html,body{width:100%;min-height:100vh;background:var(--bg);overflow-x:hidden}
+body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;align-items:center;padding:0 1.2rem 7rem}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ─── SHELL ─── */
+.shell{position:relative;z-index:3;width:100%;max-width:860px;display:flex;flex-direction:column;align-items:center}
+
+/* ─── NAV BACK ─── */
+.nav-back{align-self:flex-start;margin-top:2rem;margin-bottom:2.5rem;display:flex;align-items:center;gap:10px;font-family:var(--cinzel);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:rgba(212,175,100,.3);text-decoration:none;transition:color .2s;cursor:pointer}
+.nav-back:hover{color:rgba(212,175,100,.75)}
+.nav-back-arr{font-size:14px;transition:transform .2s}
+.nav-back:hover .nav-back-arr{transform:translateX(-4px)}
+
+/* ─── HEADER ─── */
+.page-eyebrow{font-family:var(--cinzel);font-size:9px;letter-spacing:.45em;text-transform:uppercase;color:rgba(244,114,182,.4);margin-bottom:.9rem;animation:rise .9s .1s ease both}
+.page-title{font-family:var(--cinzel);font-size:clamp(2.4rem,6vw,4rem);font-weight:900;line-height:.95;text-align:center;margin-bottom:.5rem;animation:rise .9s .15s ease both}
+.pt-sub{display:block;color:rgba(255,255,255,.55);font-size:.46em;letter-spacing:.2em;font-weight:400;text-transform:uppercase}
+.pt-main{display:block;background:linear-gradient(120deg,#f472b6 0%,#fda4d0 35%,#a78bfa 65%,#f472b6 100%);background-size:300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:pk-shift 8s linear infinite}
+@keyframes pk-shift{0%{background-position:0%}100%{background-position:300%}}
+.page-tagline{font-family:var(--mono);font-size:10px;color:rgba(244,114,182,.25);letter-spacing:.18em;text-align:center;margin-top:.8rem;margin-bottom:2.8rem;animation:rise .9s .22s ease both}
+
+/* ─── ORNAMENT ─── */
+.orn{display:flex;align-items:center;gap:12px;width:100%;max-width:500px;margin-bottom:2rem;animation:rise .9s .28s ease both}
+.orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.2),transparent)}
+.orn-diamond{width:5px;height:5px;background:rgba(244,114,182,.45);transform:rotate(45deg);flex-shrink:0}
+.orn-text{font-family:var(--cinzel);font-size:8px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.3);white-space:nowrap}
+
+/* ─── STATS BAR ─── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;margin-bottom:1.8rem;animation:rise .9s .3s ease both}
+.stat{background:rgba(10,8,24,.7);border:1px solid rgba(244,114,182,.1);border-radius:16px;padding:.9rem 1rem;text-align:center;backdrop-filter:blur(20px);transition:border-color .3s}
+.stat:hover{border-color:rgba(244,114,182,.22)}
+.stat-num{font-family:var(--cinzel);font-size:1.7rem;font-weight:600;color:rgba(255,255,255,.85);line-height:1}
+.stat-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:rgba(244,114,182,.35);margin-top:.4rem;text-transform:uppercase}
+.stat-num.s-pending{color:rgba(251,191,36,.8)}
+.stat-num.s-done{color:rgba(52,211,153,.8)}
+.stat-num.s-fwds{color:rgba(244,114,182,.8)}
+
+/* ─── ADD FORM ─── */
+.add-ritual{width:100%;background:rgba(10,8,24,.75);border:1px solid rgba(244,114,182,.12);border-radius:22px;padding:1.8rem 1.8rem 1.5rem;margin-bottom:1.6rem;backdrop-filter:blur(24px);animation:rise .9s .34s ease both;position:relative;overflow:hidden}
+.add-ritual::before{content:'';position:absolute;width:16px;height:16px;top:14px;left:14px;border-top:1px solid rgba(244,114,182,.35);border-left:1px solid rgba(244,114,182,.35)}
+.add-ritual::after{content:'';position:absolute;width:16px;height:16px;bottom:14px;right:14px;border-bottom:1px solid rgba(244,114,182,.35);border-right:1px solid rgba(244,114,182,.35)}
+.ritual-top{position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.5),transparent)}
+.form-label-head{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.35em;text-transform:uppercase;color:rgba(244,114,182,.5);margin-bottom:1rem}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field label{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:rgba(212,175,100,.35);text-transform:uppercase}
+.form-field input,.form-field select,.form-field textarea{
+  background:rgba(2,2,10,.6);
+  border:1px solid rgba(244,114,182,.1);
+  border-radius:10px;
+  color:rgba(237,232,255,.85);
+  font-family:var(--mono);
+  font-size:11.5px;
+  padding:.55rem .85rem;
+  outline:none;
+  transition:border-color .25s,box-shadow .25s;
+  width:100%
+}
+.form-field input::placeholder,.form-field textarea::placeholder{color:rgba(237,232,255,.18)}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:rgba(244,114,182,.38);box-shadow:0 0 0 3px rgba(244,114,182,.07)}
+.form-field select option{background:#0e0b1a;color:#ede8ff}
+.form-field textarea{resize:vertical;min-height:52px;line-height:1.6}
+.form-full{grid-column:1/-1}
+.btn-inscribe{margin-top:.8rem;font-family:var(--cinzel);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.9);background:rgba(244,114,182,.07);border:1px solid rgba(244,114,182,.25);border-radius:30px;padding:.6rem 1.8rem;cursor:pointer;transition:all .3s;display:flex;align-items:center;gap:8px}
+.btn-inscribe:hover{background:rgba(244,114,182,.14);border-color:rgba(244,114,182,.5);box-shadow:0 0 20px rgba(244,114,182,.15);color:#fff}
+
+/* ─── FILTER BAR ─── */
+.filter-bar{width:100%;display:flex;gap:10px;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;animation:rise .9s .38s ease both}
+.filter-bar select{background:rgba(10,8,24,.7);border:1px solid rgba(212,175,100,.1);border-radius:10px;color:rgba(237,232,255,.6);font-family:var(--mono);font-size:11px;padding:.45rem .85rem;outline:none;cursor:pointer;transition:border-color .25s}
+.filter-bar select:focus,.filter-bar select:hover{border-color:rgba(244,114,182,.25)}
+.filter-bar select option{background:#0e0b1a}
+.filter-sep{flex:1}
+.filter-count{font-family:var(--mono);font-size:9.5px;color:rgba(212,175,100,.25);letter-spacing:.1em;white-space:nowrap}
+
+/* ─── TASK LIST ─── */
+.task-list{width:100%;display:flex;flex-direction:column;gap:8px;animation:rise .9s .42s ease both}
+
+.task-card{position:relative;background:rgba(10,8,24,.72);border:1px solid rgba(212,175,100,.09);border-radius:18px;padding:1.1rem 1.3rem;display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:start;backdrop-filter:blur(20px);transition:border-color .3s,background .3s,transform .25s;overflow:hidden}
+.task-card::before{content:'';position:absolute;top:0;left:6%;right:6%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.18),transparent);opacity:0;transition:opacity .3s}
+.task-card:hover{border-color:rgba(244,114,182,.18);background:rgba(14,10,28,.8);transform:translateY(-1px)}
+.task-card:hover::before{opacity:1}
+.task-card.is-done{opacity:.45}
+.task-card.is-done:hover{opacity:.65}
+
+/* checkbox */
+.task-check-wrap{padding-top:2px}
+.task-check{appearance:none;-webkit-appearance:none;width:16px;height:16px;border-radius:5px;border:1px solid rgba(244,114,182,.28);background:transparent;cursor:pointer;position:relative;flex-shrink:0;transition:all .2s}
+.task-check:checked{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.5)}
+.task-check:checked::after{content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;color:rgba(52,211,153,.9)}
+.task-check:hover:not(:checked){border-color:rgba(244,114,182,.55)}
+
+/* task body */
+.task-title{font-family:var(--cinzel);font-size:13px;font-weight:600;color:rgba(255,255,255,.85);letter-spacing:.02em;margin-bottom:.4rem}
+.is-done .task-title{text-decoration:line-through;color:rgba(255,255,255,.3)}
+.task-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:.4rem}
+.badge{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;padding:2px 9px;border-radius:20px;border:1px solid}
+.badge-fwd{color:rgba(244,114,182,.9);border-color:rgba(244,114,182,.22);background:rgba(244,114,182,.07)}
+.badge-pending{color:rgba(251,191,36,.85);border-color:rgba(251,191,36,.2);background:rgba(251,191,36,.06)}
+.badge-done{color:rgba(52,211,153,.85);border-color:rgba(52,211,153,.2);background:rgba(52,211,153,.06)}
+.task-data{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.35);letter-spacing:.05em}
+.task-notes{font-family:var(--mono);font-size:10.5px;color:rgba(237,232,255,.22);line-height:1.65;margin-top:.5rem;border-left:2px solid rgba(244,114,182,.12);padding-left:.7rem}
+.task-date{font-family:var(--mono);font-size:9px;color:rgba(212,175,100,.2);margin-top:.35rem;letter-spacing:.05em}
+
+/* actions */
+.task-actions{display:flex;gap:4px;padding-top:1px}
+.btn-del{background:none;border:none;cursor:pointer;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(212,175,100,.2);transition:all .2s}
+.btn-del:hover{background:rgba(244,114,182,.1);color:rgba(244,114,182,.8)}
+
+/* empty */
+.empty-state{width:100%;text-align:center;padding:3.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.8rem}
+.empty-rune{font-family:var(--cinzel);font-size:2.8rem;color:rgba(244,114,182,.12)}
+.empty-text{font-family:var(--cinzel);font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:rgba(212,175,100,.2)}
+.empty-sub{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.12);letter-spacing:.08em}
+
+/* ─── FOOTER ─── */
+.sigil-div{display:flex;align-items:center;gap:16px;width:100%;margin:3rem 0 0}
+.sdl2{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.12),transparent)}
+.sigil-sym{font-family:var(--cinzel);font-size:15px;color:rgba(212,175,100,.2);letter-spacing:.1em}
+footer{margin-top:2.5rem;font-family:var(--cinzel);font-size:9px;letter-spacing:.22em;color:rgba(212,175,100,.18);text-align:center;line-height:2.8}
+footer a{color:rgba(212,175,100,.18);text-decoration:none;transition:color .2s}
+footer a:hover{color:rgba(212,175,100,.5)}
+.fsep{margin:0 10px;opacity:.4}
+
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes task-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:580px){
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .form-grid{grid-template-columns:1fr}
+  .form-full{grid-column:auto}
+  .page-title{font-size:2.2rem}
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="shell">
+
+  <a class="nav-back" href="index.html">
+    <span class="nav-back-arr">⟵</span>
+    <span>Return to Grimoire</span>
+  </a>
+
+  <div class="page-eyebrow">Tome IV · WMF Arcane Workspace</div>
+  <h1 class="page-title">
+    <span class="pt-sub">Forwarder</span>
+    <span class="pt-main">Task Ledger</span>
+  </h1>
+  <div class="page-tagline">Track open tasks · Bound by forwarder · Sealed when done</div>
+
+  <div class="orn">
+    <div class="orn-line"></div>
+    <div class="orn-diamond"></div>
+    <div class="orn-text">I — Inscribe a new task</div>
+    <div class="orn-diamond"></div>
+    <div class="orn-line"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Total tasks</div></div>
+    <div class="stat"><div class="stat-num s-pending" id="st-pending">0</div><div class="stat-lbl">Pending</div></div>
+    <div class="stat"><div class="stat-num s-done" id="st-done">0</div><div class="stat-lbl">Done</div></div>
+    <div class="stat"><div class="stat-num s-fwds" id="st-fwds">0</div><div class="stat-lbl">Forwarders</div></div>
+  </div>
+
+  <!-- ADD FORM -->
+  <div class="add-ritual">
+    <div class="ritual-top"></div>
+    <div class="form-label-head">Inscribe a new task into the ledger</div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Task title</label>
+        <input type="text" id="inp-title" placeholder="e.g. Chase AWB status" />
+      </div>
+      <div class="form-field">
+        <label>Forwarder</label>
+        <select id="inp-fwd">
+          <option value="">— select —</option>
+          <option>Dachser</option>
+          <option>K+N</option>
+          <option>DHL Express</option>
+          <option>Wackler</option>
+          <option>Honold</option>
+          <option>ERKA</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Total data</label>
+        <input type="text" id="inp-total" placeholder="e.g. 3 AWBs · 120 kg" />
+      </div>
+      <div class="form-field form-full">
+        <label>Notes</label>
+        <textarea id="inp-notes" placeholder="Any additional details, references, or remarks..."></textarea>
+      </div>
+    </div>
+    <button class="btn-inscribe" onclick="addTask()">
+      <span>✦</span>
+      <span>Inscribe Task</span>
+    </button>
+  </div>
+
+  <!-- FILTER -->
+  <div class="filter-bar">
+    <select id="flt-fwd" onchange="render()">
+      <option value="">All forwarders</option>
+      <option>Dachser</option>
+      <option>K+N</option>
+      <option>DHL Express</option>
+      <option>Wackler</option>
+      <option>Honold</option>
+      <option>ERKA</option>
+    </select>
+    <select id="flt-status" onchange="render()">
+      <option value="">All statuses</option>
+      <option value="pending">Pending</option>
+      <option value="done">Done</option>
+    </select>
+    <div class="filter-sep"></div>
+    <div class="filter-count" id="filter-count"></div>
+  </div>
+
+  <!-- TASK LIST -->
+  <div class="task-list" id="task-list"></div>
+
+  <div class="sigil-div">
+    <div class="sdl2"></div>
+    <div class="sigil-sym">✦ ᛟ ✦</div>
+    <div class="sdl2"></div>
+  </div>
+
+  <footer>
+    codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
+    <a href="index.html">The Grimoire</a><span class="fsep">✦</span><a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a>
+  </footer>
+
+</div>
+
+<script>
+/* ─── PARTICLE BG ─── */
+(function(){
+const cv=document.getElementById('bg'),cx=cv.getContext('2d');
+let W,H,t=0,pts=[],runeChars=[];
+const PAL=[[91,156,246],[167,139,250],[52,211,153],[244,114,182],[212,175,100]];
+let mouse={x:-9999,y:-9999};
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight}
+function mkpt(){const c=PAL[Math.floor(Math.random()*PAL.length)];return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.15,r:Math.random()*2+.5,a:Math.random()*.4+.05,da:(Math.random()*.0008+.0003)*(Math.random()<.5?1:-1),c,ph:Math.random()*Math.PI*2}}
+const RUNES='ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ☽☿♄⊕⊗✦';
+function mkRune(){return{ch:RUNES[Math.floor(Math.random()*RUNES.length)],x:Math.random()*W,y:Math.random()*H,vy:-(Math.random()*.3+.1),a:Math.random()*.12+.02,size:Math.floor(Math.random()*8)+10,c:PAL[Math.floor(Math.random()*PAL.length)],life:1}}
+function init(){resize();pts=Array.from({length:Math.min(Math.floor(W*H/9000),120)},mkpt);for(let i=0;i<30;i++)runeChars.push(mkRune())}
+let last=0;
+function frame(ts){
+  const dt=Math.min((ts-last)/16.67,2.5);last=ts;t+=.003*dt;
+  cx.clearRect(0,0,W,H);
+  [{x:W*.1,y:H*-.1,rx:W*.55,ry:H*.4,c:[244,114,182],a:.025},{x:W*.82,y:H*-.1,rx:W*.5,ry:H*.35,c:[167,139,250],a:.022},{x:W*.5,y:H*1.1,rx:W*.6,ry:H*.4,c:[52,211,153],a:.016},{x:W*.05,y:H*.5,rx:W*.3,ry:H*.4,c:[212,175,100],a:.013}].forEach(a=>{
+    const p=a.a+.008*Math.sin(t*1.4+a.x*.004);
+    const g=cx.createRadialGradient(a.x,a.y,0,a.x,a.y,Math.hypot(a.rx,a.ry)*.62);
+    g.addColorStop(0,`rgba(${a.c},${p})`);g.addColorStop(.5,`rgba(${a.c},${p*.25})`);g.addColorStop(1,'transparent');
+    cx.save();cx.translate(a.x,a.y);cx.scale(a.rx/a.ry,1);cx.translate(-a.x,-a.y);cx.fillStyle=g;cx.beginPath();cx.arc(a.x,a.y,a.ry,0,Math.PI*2);cx.fill();cx.restore();
+  });
+  runeChars.forEach(r=>{r.y+=r.vy*dt;r.life-=.0004*dt;if(r.y<-40||r.life<=0)Object.assign(r,mkRune(),{y:H+20});cx.font=`${r.size}px 'Cinzel',serif`;cx.fillStyle=`rgba(${r.c},${r.a*r.life})`;cx.fillText(r.ch,r.x,r.y)});
+  for(let i=0;i<pts.length;i++){const p=pts[i];for(let j=i+1;j<pts.length;j++){const q=pts[j];const d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){cx.strokeStyle=`rgba(${p.c},${(1-d/120)*.05})`;cx.lineWidth=.4;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(q.x,q.y);cx.stroke()}}const md=Math.hypot(p.x-mouse.x,p.y-mouse.y);if(md<160){cx.strokeStyle=`rgba(${p.c},${(1-md/160)*.24})`;cx.lineWidth=.7;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(mouse.x,mouse.y);cx.stroke()}}
+  pts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.da*dt;if(p.a<.04||p.a>.5)p.da*=-1;if(p.x<-20)p.x=W+20;if(p.x>W+20)p.x=-20;if(p.y<-20)p.y=H+20;if(p.y>H+20)p.y=-20;const rdx=p.x-mouse.x,rdy=p.y-mouse.y,rd=Math.sqrt(rdx*rdx+rdy*rdy);if(rd<110&&rd>0){const f=(1-rd/110)*.5;p.vx+=(rdx/rd)*f*.04;p.vy+=(rdy/rd)*f*.04}const sp=Math.hypot(p.vx,p.vy);if(sp>.5){p.vx*=.5/sp;p.vy*=.5/sp}const bx=.5*Math.sin(t*1.1+p.ph),by=.5*Math.cos(t*.88+p.ph*1.3);if(p.r>1.7){cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r*3.5,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a*.08})`;cx.fill()}cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a})`;cx.fill()});
+  requestAnimationFrame(frame);
+}
+window.addEventListener('resize',init);
+window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+window.addEventListener('touchmove',e=>{const tt=e.touches[0];mouse.x=tt.clientX;mouse.y=tt.clientY},{passive:true});
+window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
+init();requestAnimationFrame(frame);
+})();
+
+/* ─── TASK ENGINE ─── */
+const STORAGE_KEY='grimoire_wmf_tasks';
+let tasks=[];
+let nextId=1;
+
+function loadTasks(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed=JSON.parse(raw);
+      tasks=parsed.tasks||[];
+      nextId=parsed.nextId||tasks.length+1;
+    }
+  }catch(e){}
+}
+
+function saveTasks(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId}))}catch(e){}
+}
+
+function addTask(){
+  const title=document.getElementById('inp-title').value.trim();
+  const fwd=document.getElementById('inp-fwd').value;
+  const total=document.getElementById('inp-total').value.trim();
+  const notes=document.getElementById('inp-notes').value.trim();
+  if(!title||!fwd){
+    shake(document.getElementById(title?'inp-fwd':'inp-title'));
+    return;
+  }
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  tasks.unshift({id:nextId++,title,fwd,total,notes,status:'pending',created:dateStr});
+  saveTasks();
+  document.getElementById('inp-title').value='';
+  document.getElementById('inp-fwd').value='';
+  document.getElementById('inp-total').value='';
+  document.getElementById('inp-notes').value='';
+  render();
+}
+
+function toggleDone(id){
+  const t=tasks.find(x=>x.id===id);
+  if(t)t.status=t.status==='done'?'pending':'done';
+  saveTasks();render();
+}
+
+function deleteTask(id){
+  tasks=tasks.filter(x=>x.id!==id);
+  saveTasks();render();
+}
+
+function shake(el){
+  el.style.borderColor='rgba(244,114,182,.6)';
+  el.style.animation='none';
+  setTimeout(()=>{el.style.animation='';el.style.borderColor='';},600);
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function render(){
+  const fltFwd=document.getElementById('flt-fwd').value;
+  const fltStatus=document.getElementById('flt-status').value;
+  const filtered=tasks.filter(t=>{
+    if(fltFwd&&t.fwd!==fltFwd)return false;
+    if(fltStatus&&t.status!==fltStatus)return false;
+    return true;
+  });
+
+  const list=document.getElementById('task-list');
+
+  if(filtered.length===0){
+    list.innerHTML=`<div class="empty-state">
+      <div class="empty-rune">ᛟ</div>
+      <div class="empty-text">${tasks.length===0?'The ledger is empty':'No tasks match the sigil'}</div>
+      <div class="empty-sub">${tasks.length===0?'Inscribe your first task above':'Adjust your filters to reveal hidden entries'}</div>
+    </div>`;
+  } else {
+    list.innerHTML=filtered.map((t,i)=>`
+      <div class="task-card${t.status==='done'?' is-done':''}" style="animation:task-in .3s ${i*0.04}s ease both">
+        <div class="task-check-wrap">
+          <input type="checkbox" class="task-check" ${t.status==='done'?'checked':''} onchange="toggleDone(${t.id})" />
+        </div>
+        <div class="task-body">
+          <div class="task-title">${esc(t.title)}</div>
+          <div class="task-meta">
+            <span class="badge badge-fwd">${esc(t.fwd)}</span>
+            <span class="badge badge-${t.status}">${t.status}</span>
+            ${t.total?`<span class="task-data">⬡ ${esc(t.total)}</span>`:''}
+          </div>
+          ${t.notes?`<div class="task-notes">${esc(t.notes)}</div>`:''}
+          <div class="task-date">Inscribed ${t.created}</div>
+        </div>
+        <div class="task-actions">
+          <button class="btn-del" onclick="deleteTask(${t.id})" title="Banish task">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  const pending=tasks.filter(t=>t.status==='pending').length;
+  const done=tasks.filter(t=>t.status==='done').length;
+  const fwds=new Set(tasks.map(t=>t.fwd)).size;
+  document.getElementById('st-total').textContent=tasks.length;
+  document.getElementById('st-pending').textContent=pending;
+  document.getElementById('st-done').textContent=done;
+  document.getElementById('st-fwds').textContent=fwds;
+  document.getElementById('filter-count').textContent=
+    filtered.length<tasks.length?`Showing ${filtered.length} of ${tasks.length} entries`:`${tasks.length} entr${tasks.length===1?'y':'ies'}`;
+}
+
+/* Enter key to submit */
+document.getElementById('inp-title').addEventListener('keydown',e=>{if(e.key==='Enter')addTask()});
+
+loadTasks();
+render();
+</script>
+</body>
+</html>
