@@ -40,6 +40,13 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .orn-diamond{width:5px;height:5px;background:rgba(244,114,182,.45);transform:rotate(45deg);flex-shrink:0}
 .orn-text{font-family:var(--cinzel);font-size:8px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.3);white-space:nowrap}
 
+/* ─── STATUS BAR ─── */
+.status-bar{width:100%;display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:1rem;animation:rise .9s .28s ease both}
+.status-dot{width:7px;height:7px;border-radius:50%;background:rgba(212,175,100,.3);transition:background .3s,box-shadow .3s;flex-shrink:0}
+.status-dot.online{background:#34d399;box-shadow:0 0 8px #34d399}
+.status-dot.error{background:#f87171;box-shadow:0 0 8px #f87171}
+.status-label{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.35);letter-spacing:.08em}
+
 /* ─── STATS BAR ─── */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;margin-bottom:1.8rem;animation:rise .9s .3s ease both}
 .stat{background:rgba(10,8,24,.7);border:1px solid rgba(244,114,182,.1);border-radius:16px;padding:.9rem 1rem;text-align:center;backdrop-filter:blur(20px);transition:border-color .3s}
@@ -77,7 +84,8 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .form-field textarea{resize:vertical;min-height:52px;line-height:1.6}
 .form-full{grid-column:1/-1}
 .btn-inscribe{margin-top:.8rem;font-family:var(--cinzel);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.9);background:rgba(244,114,182,.07);border:1px solid rgba(244,114,182,.25);border-radius:30px;padding:.6rem 1.8rem;cursor:pointer;transition:all .3s;display:flex;align-items:center;gap:8px}
-.btn-inscribe:hover{background:rgba(244,114,182,.14);border-color:rgba(244,114,182,.5);box-shadow:0 0 20px rgba(244,114,182,.15);color:#fff}
+.btn-inscribe:hover:not(:disabled){background:rgba(244,114,182,.14);border-color:rgba(244,114,182,.5);box-shadow:0 0 20px rgba(244,114,182,.15);color:#fff}
+.btn-inscribe:disabled{opacity:.45;cursor:not-allowed}
 
 /* ─── FILTER BAR ─── */
 .filter-bar{width:100%;display:flex;gap:10px;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;animation:rise .9s .38s ease both}
@@ -96,6 +104,11 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .task-card:hover::before{opacity:1}
 .task-card.is-done{opacity:.45}
 .task-card.is-done:hover{opacity:.65}
+
+/* skeleton */
+.task-skel{border-radius:18px;background:rgba(10,8,24,.6);border:1px solid rgba(212,175,100,.06);padding:1.2rem 1.3rem;display:flex;flex-direction:column;gap:10px}
+.skel-line{border-radius:4px;background:rgba(244,114,182,.05);animation:shimmer 1.6s ease-in-out infinite}
+@keyframes shimmer{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* checkbox */
 .task-check-wrap{padding-top:2px}
@@ -126,6 +139,11 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .empty-rune{font-family:var(--cinzel);font-size:2.8rem;color:rgba(244,114,182,.12)}
 .empty-text{font-family:var(--cinzel);font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:rgba(212,175,100,.2)}
 .empty-sub{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.12);letter-spacing:.08em}
+
+/* ─── TOAST ─── */
+#toast{position:fixed;bottom:2.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:#0e0e1c;color:#ede8ff;border:1px solid rgba(212,175,100,.22);padding:10px 22px;border-radius:24px;font-family:var(--mono);font-size:12px;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;backdrop-filter:blur(10px)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.error{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.3);color:#f87171}
 
 /* ─── FOOTER ─── */
 .sigil-div{display:flex;align-items:center;gap:16px;width:100%;margin:3rem 0 0}
@@ -173,12 +191,18 @@ footer a:hover{color:rgba(212,175,100,.5)}
     <div class="orn-line"></div>
   </div>
 
+  <!-- STATUS -->
+  <div class="status-bar">
+    <div class="status-dot" id="status-dot"></div>
+    <span class="status-label" id="status-label">Connecting to ether...</span>
+  </div>
+
   <!-- STATS -->
   <div class="stats-row">
-    <div class="stat"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Total tasks</div></div>
-    <div class="stat"><div class="stat-num s-pending" id="st-pending">0</div><div class="stat-lbl">Pending</div></div>
-    <div class="stat"><div class="stat-num s-done" id="st-done">0</div><div class="stat-lbl">Done</div></div>
-    <div class="stat"><div class="stat-num s-fwds" id="st-fwds">0</div><div class="stat-lbl">Forwarders</div></div>
+    <div class="stat"><div class="stat-num" id="st-total">—</div><div class="stat-lbl">Total tasks</div></div>
+    <div class="stat"><div class="stat-num s-pending" id="st-pending">—</div><div class="stat-lbl">Pending</div></div>
+    <div class="stat"><div class="stat-num s-done" id="st-done">—</div><div class="stat-lbl">Done</div></div>
+    <div class="stat"><div class="stat-num s-fwds" id="st-fwds">—</div><div class="stat-lbl">Forwarders</div></div>
   </div>
 
   <!-- ADD FORM -->
@@ -211,7 +235,7 @@ footer a:hover{color:rgba(212,175,100,.5)}
         <textarea id="inp-notes" placeholder="Any additional details, references, or remarks..."></textarea>
       </div>
     </div>
-    <button class="btn-inscribe" onclick="addTask()">
+    <button class="btn-inscribe" id="btn-inscribe" onclick="addTask()">
       <span>✦</span>
       <span>Inscribe Task</span>
     </button>
@@ -238,7 +262,10 @@ footer a:hover{color:rgba(212,175,100,.5)}
   </div>
 
   <!-- TASK LIST -->
-  <div class="task-list" id="task-list"></div>
+  <div class="task-list" id="task-list">
+    <!-- skeletons while loading -->
+    ${[1,2,3].map(()=>`<div class="task-skel"><div class="skel-line" style="height:14px;width:45%"></div><div class="skel-line" style="height:10px;width:22%"></div><div class="skel-line" style="height:10px;width:70%"></div></div>`).join('')}
+  </div>
 
   <div class="sigil-div">
     <div class="sdl2"></div>
@@ -252,6 +279,12 @@ footer a:hover{color:rgba(212,175,100,.5)}
   </footer>
 
 </div>
+
+<div id="toast"></div>
+
+<!-- Firebase SDKs (same version as code.html) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
 /* ─── PARTICLE BG ─── */
@@ -287,121 +320,208 @@ window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
 init();requestAnimationFrame(frame);
 })();
 
-/* ─── TASK ENGINE ─── */
-const STORAGE_KEY='grimoire_wmf_tasks';
-let tasks=[];
-let nextId=1;
+/* ─── FIREBASE INIT (same project as code.html) ─── */
+const firebaseConfig = {
+  apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
+  authDomain: "vb-code-vault.firebaseapp.com",
+  projectId: "vb-code-vault",
+  storageBucket: "vb-code-vault.firebasestorage.app",
+  messagingSenderId: "773245175115",
+  appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
+};
 
-function loadTasks(){
-  try{
-    const raw=localStorage.getItem(STORAGE_KEY);
-    if(raw){
-      const parsed=JSON.parse(raw);
-      tasks=parsed.tasks||[];
-      nextId=parsed.nextId||tasks.length+1;
-    }
-  }catch(e){}
+// Only init if not already done (shared with code.html if loaded on same page)
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db  = firebase.firestore();
+const col = db.collection('wmf_tasks');  // separate collection from 'snippets'
+
+/* ─── STATE ─── */
+let tasks = [];        // live-synced from Firestore
+let saving = false;
+
+/* ─── STATUS HELPERS ─── */
+function setStatus(state, label) {
+  document.getElementById('status-dot').className = 'status-dot ' + (state || '');
+  document.getElementById('status-label').textContent = label;
 }
 
-function saveTasks(){
-  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId}))}catch(e){}
+/* ─── FIRESTORE REAL-TIME LISTENER ─── */
+function startListener() {
+  setStatus('', 'Connecting to ether...');
+  col.orderBy('createdAt', 'desc').onSnapshot(snap => {
+    tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    setStatus('online', 'Online · Live sync');
+    render();
+  }, err => {
+    setStatus('error', 'Connection failed');
+    showToast('Could not reach the ether. Check your connection.', true);
+    console.error(err);
+  });
 }
 
-function addTask(){
-  const title=document.getElementById('inp-title').value.trim();
-  const fwd=document.getElementById('inp-fwd').value;
-  const total=document.getElementById('inp-total').value.trim();
-  const notes=document.getElementById('inp-notes').value.trim();
-  if(!title||!fwd){
-    shake(document.getElementById(title?'inp-fwd':'inp-title'));
-    return;
+/* ─── HELPERS ─── */
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = isError ? 'error show' : 'show';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = ''; }, 2600);
+}
+
+function shake(el) {
+  el.style.borderColor = 'rgba(244,114,182,.6)';
+  setTimeout(() => { el.style.borderColor = ''; }, 600);
+}
+
+/* ─── ADD TASK ─── */
+async function addTask() {
+  if (saving) return;
+  const title  = document.getElementById('inp-title').value.trim();
+  const fwd    = document.getElementById('inp-fwd').value;
+  const total  = document.getElementById('inp-total').value.trim();
+  const notes  = document.getElementById('inp-notes').value.trim();
+
+  if (!title) { shake(document.getElementById('inp-title')); showToast('Please enter a task title.', true); return; }
+  if (!fwd)   { shake(document.getElementById('inp-fwd'));   showToast('Please select a forwarder.', true); return; }
+
+  saving = true;
+  const btn = document.getElementById('btn-inscribe');
+  btn.disabled = true;
+  btn.querySelector('span:last-child').textContent = 'Sealing...';
+
+  try {
+    await col.add({
+      title,
+      fwd,
+      total,
+      notes,
+      status: 'pending',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // clear form
+    document.getElementById('inp-title').value  = '';
+    document.getElementById('inp-fwd').value    = '';
+    document.getElementById('inp-total').value  = '';
+    document.getElementById('inp-notes').value  = '';
+    showToast('Task inscribed into the ledger!');
+  } catch(e) {
+    showToast('Failed to inscribe. Check your connection.', true);
+    console.error(e);
+  } finally {
+    saving = false;
+    btn.disabled = false;
+    btn.querySelector('span:last-child').textContent = 'Inscribe Task';
   }
-  const now=new Date();
-  const dateStr=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-  tasks.unshift({id:nextId++,title,fwd,total,notes,status:'pending',created:dateStr});
-  saveTasks();
-  document.getElementById('inp-title').value='';
-  document.getElementById('inp-fwd').value='';
-  document.getElementById('inp-total').value='';
-  document.getElementById('inp-notes').value='';
-  render();
 }
 
-function toggleDone(id){
-  const t=tasks.find(x=>x.id===id);
-  if(t)t.status=t.status==='done'?'pending':'done';
-  saveTasks();render();
+/* ─── TOGGLE STATUS ─── */
+async function toggleDone(id) {
+  const task = tasks.find(x => x.id === id);
+  if (!task) return;
+  const newStatus = task.status === 'done' ? 'pending' : 'done';
+  try {
+    await col.doc(id).update({
+      status: newStatus,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) {
+    showToast('Could not update task.', true);
+    console.error(e);
+  }
 }
 
-function deleteTask(id){
-  tasks=tasks.filter(x=>x.id!==id);
-  saveTasks();render();
+/* ─── DELETE TASK ─── */
+async function deleteTask(id) {
+  if (!confirm('Banish this task from the ledger? This cannot be undone.')) return;
+  try {
+    await col.doc(id).delete();
+    showToast('Task dissolved.');
+  } catch(e) {
+    showToast('Delete failed.', true);
+    console.error(e);
+  }
 }
 
-function shake(el){
-  el.style.borderColor='rgba(244,114,182,.6)';
-  el.style.animation='none';
-  setTimeout(()=>{el.style.animation='';el.style.borderColor='';},600);
-}
+/* ─── RENDER ─── */
+function render() {
+  const fltFwd    = document.getElementById('flt-fwd').value;
+  const fltStatus = document.getElementById('flt-status').value;
 
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-
-function render(){
-  const fltFwd=document.getElementById('flt-fwd').value;
-  const fltStatus=document.getElementById('flt-status').value;
-  const filtered=tasks.filter(t=>{
-    if(fltFwd&&t.fwd!==fltFwd)return false;
-    if(fltStatus&&t.status!==fltStatus)return false;
+  const filtered = tasks.filter(t => {
+    if (fltFwd    && t.fwd    !== fltFwd)    return false;
+    if (fltStatus && t.status !== fltStatus) return false;
     return true;
   });
 
-  const list=document.getElementById('task-list');
+  // stats (all tasks, unfiltered)
+  const pending = tasks.filter(t => t.status === 'pending').length;
+  const done    = tasks.filter(t => t.status === 'done').length;
+  const fwds    = new Set(tasks.map(t => t.fwd).filter(Boolean)).size;
+  document.getElementById('st-total').textContent   = tasks.length;
+  document.getElementById('st-pending').textContent = pending;
+  document.getElementById('st-done').textContent    = done;
+  document.getElementById('st-fwds').textContent    = fwds;
+  document.getElementById('filter-count').textContent =
+    filtered.length < tasks.length
+      ? `Showing ${filtered.length} of ${tasks.length} entries`
+      : `${tasks.length} entr${tasks.length === 1 ? 'y' : 'ies'}`;
 
-  if(filtered.length===0){
-    list.innerHTML=`<div class="empty-state">
+  const list = document.getElementById('task-list');
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state">
       <div class="empty-rune">ᛟ</div>
-      <div class="empty-text">${tasks.length===0?'The ledger is empty':'No tasks match the sigil'}</div>
-      <div class="empty-sub">${tasks.length===0?'Inscribe your first task above':'Adjust your filters to reveal hidden entries'}</div>
+      <div class="empty-text">${tasks.length === 0 ? 'The ledger is empty' : 'No tasks match the sigil'}</div>
+      <div class="empty-sub">${tasks.length === 0 ? 'Inscribe your first task above' : 'Adjust your filters to reveal hidden entries'}</div>
     </div>`;
-  } else {
-    list.innerHTML=filtered.map((t,i)=>`
-      <div class="task-card${t.status==='done'?' is-done':''}" style="animation:task-in .3s ${i*0.04}s ease both">
+    return;
+  }
+
+  list.innerHTML = filtered.map((t, i) => {
+    const dateStr = t.createdAt
+      ? (t.createdAt.toDate ? t.createdAt.toDate() : new Date(t.createdAt))
+          .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      : '—';
+    return `
+      <div class="task-card${t.status === 'done' ? ' is-done' : ''}" style="animation:task-in .3s ${i * 0.04}s ease both">
         <div class="task-check-wrap">
-          <input type="checkbox" class="task-check" ${t.status==='done'?'checked':''} onchange="toggleDone(${t.id})" />
+          <input type="checkbox" class="task-check" ${t.status === 'done' ? 'checked' : ''} onchange="toggleDone('${t.id}')" />
         </div>
         <div class="task-body">
           <div class="task-title">${esc(t.title)}</div>
           <div class="task-meta">
             <span class="badge badge-fwd">${esc(t.fwd)}</span>
             <span class="badge badge-${t.status}">${t.status}</span>
-            ${t.total?`<span class="task-data">⬡ ${esc(t.total)}</span>`:''}
+            ${t.total ? `<span class="task-data">⬡ ${esc(t.total)}</span>` : ''}
           </div>
-          ${t.notes?`<div class="task-notes">${esc(t.notes)}</div>`:''}
-          <div class="task-date">Inscribed ${t.created}</div>
+          ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ''}
+          <div class="task-date">Inscribed ${dateStr}</div>
         </div>
         <div class="task-actions">
-          <button class="btn-del" onclick="deleteTask(${t.id})" title="Banish task">✕</button>
+          <button class="btn-del" onclick="deleteTask('${t.id}')" title="Banish task">✕</button>
         </div>
-      </div>
-    `).join('');
-  }
-
-  const pending=tasks.filter(t=>t.status==='pending').length;
-  const done=tasks.filter(t=>t.status==='done').length;
-  const fwds=new Set(tasks.map(t=>t.fwd)).size;
-  document.getElementById('st-total').textContent=tasks.length;
-  document.getElementById('st-pending').textContent=pending;
-  document.getElementById('st-done').textContent=done;
-  document.getElementById('st-fwds').textContent=fwds;
-  document.getElementById('filter-count').textContent=
-    filtered.length<tasks.length?`Showing ${filtered.length} of ${tasks.length} entries`:`${tasks.length} entr${tasks.length===1?'y':'ies'}`;
+      </div>`;
+  }).join('');
 }
 
-/* Enter key to submit */
-document.getElementById('inp-title').addEventListener('keydown',e=>{if(e.key==='Enter')addTask()});
+/* ─── ENTER KEY ─── */
+document.getElementById('inp-title').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
 
-loadTasks();
-render();
+/* ─── BOOT ─── */
+// Show skeletons immediately, then start listener
+document.getElementById('task-list').innerHTML = [1,2,3].map(() =>
+  `<div class="task-skel">
+    <div class="skel-line" style="height:14px;width:45%;margin-bottom:0"></div>
+    <div class="skel-line" style="height:10px;width:22%;margin-top:10px"></div>
+    <div class="skel-line" style="height:10px;width:70%;margin-top:8px"></div>
+  </div>`
+).join('');
+
+startListener();
 </script>
 </body>
 </html>
