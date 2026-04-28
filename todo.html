@@ -87,6 +87,13 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .btn-inscribe:hover:not(:disabled){background:rgba(244,114,182,.14);border-color:rgba(244,114,182,.5);box-shadow:0 0 20px rgba(244,114,182,.15);color:#fff}
 .btn-inscribe:disabled{opacity:.45;cursor:not-allowed}
 
+/* ─── VIEW TOGGLE ─── */
+.view-toggle-row{width:100%;display:flex;align-items:center;gap:8px;margin-bottom:1.2rem;animation:rise .9s .36s ease both}
+.view-btn{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;padding:.45rem 1.2rem;border-radius:20px;border:1px solid rgba(212,175,100,.12);background:rgba(10,8,24,.6);color:rgba(212,175,100,.3);cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:6px}
+.view-btn:hover{border-color:rgba(244,114,182,.25);color:rgba(244,114,182,.7)}
+.view-btn.active{background:rgba(244,114,182,.1);border-color:rgba(244,114,182,.35);color:rgba(244,114,182,.95);box-shadow:0 0 14px rgba(244,114,182,.08)}
+.view-sep{flex:1}
+
 /* ─── FILTER BAR ─── */
 .filter-bar{width:100%;display:flex;gap:10px;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;animation:rise .9s .38s ease both}
 .filter-bar select{background:rgba(10,8,24,.7);border:1px solid rgba(212,175,100,.1);border-radius:10px;color:rgba(237,232,255,.6);font-family:var(--mono);font-size:11px;padding:.45rem .85rem;outline:none;cursor:pointer;transition:border-color .25s}
@@ -104,6 +111,36 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .task-card:hover::before{opacity:1}
 .task-card.is-done{opacity:.45}
 .task-card.is-done:hover{opacity:.65}
+
+/* ─── FORWARDER GROUP VIEW ─── */
+.fwd-group{width:100%;margin-bottom:10px;animation:rise .4s ease both}
+.fwd-group-header{display:flex;align-items:center;gap:12px;padding:.85rem 1.2rem;background:rgba(10,8,24,.8);border:1px solid rgba(244,114,182,.14);border-radius:16px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;user-select:none}
+.fwd-group-header::before{content:'';position:absolute;top:0;left:6%;right:6%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.3),transparent)}
+.fwd-group-header:hover{border-color:rgba(244,114,182,.28);background:rgba(14,10,28,.88)}
+.fwd-group-header.open{border-color:rgba(244,114,182,.22);border-bottom-left-radius:0;border-bottom-right-radius:0}
+.fwd-group-icon{font-size:12px;color:rgba(244,114,182,.55);flex-shrink:0;transition:transform .3s}
+.fwd-group-header.open .fwd-group-icon{transform:rotate(90deg)}
+.fwd-group-name{font-family:var(--cinzel);font-size:13px;font-weight:600;letter-spacing:.06em;color:rgba(255,255,255,.8);flex:1}
+.fwd-group-pills{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.fwd-pill{font-family:var(--mono);font-size:9px;letter-spacing:.08em;padding:2px 10px;border-radius:20px;border:1px solid}
+.fwd-pill-total{color:rgba(212,175,100,.7);border-color:rgba(212,175,100,.18);background:rgba(212,175,100,.06)}
+.fwd-pill-pending{color:rgba(251,191,36,.8);border-color:rgba(251,191,36,.2);background:rgba(251,191,36,.06)}
+.fwd-pill-done{color:rgba(52,211,153,.8);border-color:rgba(52,211,153,.2);background:rgba(52,211,153,.06)}
+.fwd-progress-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fwd-progress-bar{width:64px;height:4px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.fwd-progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,rgba(52,211,153,.6),rgba(52,211,153,.9));transition:width .5s ease}
+.fwd-progress-pct{font-family:var(--mono);font-size:9px;color:rgba(52,211,153,.5);letter-spacing:.06em;min-width:26px;text-align:right}
+
+.fwd-group-body{display:none;flex-direction:column;gap:0;border:1px solid rgba(244,114,182,.14);border-top:none;border-bottom-left-radius:16px;border-bottom-right-radius:16px;overflow:hidden;background:rgba(6,4,18,.5)}
+.fwd-group-body.open{display:flex}
+/* nested task cards inside group — no border-radius on top side */
+.fwd-group-body .task-card{border-radius:0;border-left:none;border-right:none;border-top:none;border-bottom:1px solid rgba(212,175,100,.06)}
+.fwd-group-body .task-card:last-child{border-bottom:none;border-bottom-left-radius:14px;border-bottom-right-radius:14px}
+.fwd-group-body .task-card:first-child{border-top:none}
+.fwd-group-body .task-card:hover{transform:none;background:rgba(14,10,28,.9)}
+
+/* empty group */
+.fwd-group-empty{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.18);letter-spacing:.1em;text-align:center;padding:1.2rem;border:1px solid rgba(244,114,182,.14);border-top:none;border-bottom-left-radius:14px;border-bottom-right-radius:14px;background:rgba(6,4,18,.5)}
 
 /* skeleton */
 .task-skel{border-radius:18px;background:rgba(10,8,24,.6);border:1px solid rgba(212,175,100,.06);padding:1.2rem 1.3rem;display:flex;flex-direction:column;gap:10px}
@@ -162,6 +199,7 @@ footer a:hover{color:rgba(212,175,100,.5)}
   .form-grid{grid-template-columns:1fr}
   .form-full{grid-column:auto}
   .page-title{font-size:2.2rem}
+  .fwd-group-pills{display:none}
 }
 </style>
 </head>
@@ -241,8 +279,19 @@ footer a:hover{color:rgba(212,175,100,.5)}
     </button>
   </div>
 
-  <!-- FILTER -->
-  <div class="filter-bar">
+  <!-- VIEW TOGGLE + FILTER -->
+  <div class="view-toggle-row">
+    <button class="view-btn active" id="btn-view-list" onclick="setView('list')">
+      <span>☰</span> All Tasks
+    </button>
+    <button class="view-btn" id="btn-view-fwd" onclick="setView('forwarder')">
+      <span>◈</span> By Forwarder
+    </button>
+    <div class="view-sep"></div>
+  </div>
+
+  <!-- FILTER (list view only) -->
+  <div class="filter-bar" id="filter-bar">
     <select id="flt-fwd" onchange="render()">
       <option value="">All forwarders</option>
       <option>Dachser</option>
@@ -261,11 +310,15 @@ footer a:hover{color:rgba(212,175,100,.5)}
     <div class="filter-count" id="filter-count"></div>
   </div>
 
-  <!-- TASK LIST -->
+  <!-- TASK LIST (list view) -->
   <div class="task-list" id="task-list">
-    <!-- skeletons while loading -->
-    ${[1,2,3].map(()=>`<div class="task-skel"><div class="skel-line" style="height:14px;width:45%"></div><div class="skel-line" style="height:10px;width:22%"></div><div class="skel-line" style="height:10px;width:70%"></div></div>`).join('')}
+    <div class="task-skel"><div class="skel-line" style="height:14px;width:45%;margin-bottom:0"></div><div class="skel-line" style="height:10px;width:22%;margin-top:10px"></div><div class="skel-line" style="height:10px;width:70%;margin-top:8px"></div></div>
+    <div class="task-skel"><div class="skel-line" style="height:14px;width:38%;margin-bottom:0"></div><div class="skel-line" style="height:10px;width:18%;margin-top:10px"></div><div class="skel-line" style="height:10px;width:62%;margin-top:8px"></div></div>
+    <div class="task-skel"><div class="skel-line" style="height:14px;width:52%;margin-bottom:0"></div><div class="skel-line" style="height:10px;width:25%;margin-top:10px"></div><div class="skel-line" style="height:10px;width:58%;margin-top:8px"></div></div>
   </div>
+
+  <!-- FORWARDER VIEW -->
+  <div id="fwd-view" style="display:none;width:100%;flex-direction:column;gap:8px;animation:rise .9s .42s ease both"></div>
 
   <div class="sigil-div">
     <div class="sdl2"></div>
@@ -282,7 +335,7 @@ footer a:hover{color:rgba(212,175,100,.5)}
 
 <div id="toast"></div>
 
-<!-- Firebase SDKs (same version as code.html) -->
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
@@ -320,7 +373,7 @@ window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
 init();requestAnimationFrame(frame);
 })();
 
-/* ─── FIREBASE INIT (same project as code.html) ─── */
+/* ─── FIREBASE INIT ─── */
 const firebaseConfig = {
   apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
   authDomain: "vb-code-vault.firebaseapp.com",
@@ -330,14 +383,28 @@ const firebaseConfig = {
   appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
 };
 
-// Only init if not already done (shared with code.html if loaded on same page)
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db  = firebase.firestore();
-const col = db.collection('wmf_tasks');  // separate collection from 'snippets'
+const col = db.collection('wmf_tasks');
 
 /* ─── STATE ─── */
-let tasks = [];        // live-synced from Firestore
-let saving = false;
+let tasks   = [];
+let saving  = false;
+let curView = 'list';  // 'list' | 'forwarder'
+
+// Which forwarder groups are open (by forwarder name)
+let openGroups = new Set();
+
+/* ─── VIEW SWITCH ─── */
+function setView(v) {
+  curView = v;
+  document.getElementById('btn-view-list').classList.toggle('active', v === 'list');
+  document.getElementById('btn-view-fwd').classList.toggle('active',  v === 'forwarder');
+  document.getElementById('filter-bar').style.display  = v === 'list' ? 'flex' : 'none';
+  document.getElementById('task-list').style.display   = v === 'list' ? 'flex' : 'none';
+  document.getElementById('fwd-view').style.display    = v === 'forwarder' ? 'flex' : 'none';
+  render();
+}
 
 /* ─── STATUS HELPERS ─── */
 function setStatus(state, label) {
@@ -395,19 +462,17 @@ async function addTask() {
 
   try {
     await col.add({
-      title,
-      fwd,
-      total,
-      notes,
+      title, fwd, total, notes,
       status: 'pending',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    // clear form
     document.getElementById('inp-title').value  = '';
     document.getElementById('inp-fwd').value    = '';
     document.getElementById('inp-total').value  = '';
     document.getElementById('inp-notes').value  = '';
     showToast('Task inscribed into the ledger!');
+    // auto-open that forwarder group if in forwarder view
+    if (curView === 'forwarder') openGroups.add(fwd);
   } catch(e) {
     showToast('Failed to inscribe. Check your connection.', true);
     console.error(e);
@@ -446,8 +511,62 @@ async function deleteTask(id) {
   }
 }
 
+/* ─── TOGGLE GROUP OPEN/CLOSE ─── */
+function toggleGroup(fwdName) {
+  if (openGroups.has(fwdName)) {
+    openGroups.delete(fwdName);
+  } else {
+    openGroups.add(fwdName);
+  }
+  render();
+}
+
+/* ─── TASK CARD HTML ─── */
+function taskCardHTML(t, i, hideForwarderBadge) {
+  const dateStr = t.createdAt
+    ? (t.createdAt.toDate ? t.createdAt.toDate() : new Date(t.createdAt))
+        .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '—';
+  return `
+    <div class="task-card${t.status === 'done' ? ' is-done' : ''}" style="animation:task-in .3s ${i * 0.04}s ease both">
+      <div class="task-check-wrap">
+        <input type="checkbox" class="task-check" ${t.status === 'done' ? 'checked' : ''} onchange="toggleDone('${t.id}')" />
+      </div>
+      <div class="task-body">
+        <div class="task-title">${esc(t.title)}</div>
+        <div class="task-meta">
+          ${!hideForwarderBadge ? `<span class="badge badge-fwd">${esc(t.fwd)}</span>` : ''}
+          <span class="badge badge-${t.status}">${t.status}</span>
+          ${t.total ? `<span class="task-data">⬡ ${esc(t.total)}</span>` : ''}
+        </div>
+        ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ''}
+        <div class="task-date">Inscribed ${dateStr}</div>
+      </div>
+      <div class="task-actions">
+        <button class="btn-del" onclick="deleteTask('${t.id}')" title="Banish task">✕</button>
+      </div>
+    </div>`;
+}
+
 /* ─── RENDER ─── */
 function render() {
+  // ── global stats (always from all tasks) ──
+  const pending = tasks.filter(t => t.status === 'pending').length;
+  const done    = tasks.filter(t => t.status === 'done').length;
+  const fwds    = new Set(tasks.map(t => t.fwd).filter(Boolean)).size;
+  document.getElementById('st-total').textContent   = tasks.length;
+  document.getElementById('st-pending').textContent = pending;
+  document.getElementById('st-done').textContent    = done;
+  document.getElementById('st-fwds').textContent    = fwds;
+
+  if (curView === 'list') {
+    renderList();
+  } else {
+    renderForwarderView();
+  }
+}
+
+function renderList() {
   const fltFwd    = document.getElementById('flt-fwd').value;
   const fltStatus = document.getElementById('flt-status').value;
 
@@ -457,14 +576,6 @@ function render() {
     return true;
   });
 
-  // stats (all tasks, unfiltered)
-  const pending = tasks.filter(t => t.status === 'pending').length;
-  const done    = tasks.filter(t => t.status === 'done').length;
-  const fwds    = new Set(tasks.map(t => t.fwd).filter(Boolean)).size;
-  document.getElementById('st-total').textContent   = tasks.length;
-  document.getElementById('st-pending').textContent = pending;
-  document.getElementById('st-done').textContent    = done;
-  document.getElementById('st-fwds').textContent    = fwds;
   document.getElementById('filter-count').textContent =
     filtered.length < tasks.length
       ? `Showing ${filtered.length} of ${tasks.length} entries`
@@ -481,28 +592,61 @@ function render() {
     return;
   }
 
-  list.innerHTML = filtered.map((t, i) => {
-    const dateStr = t.createdAt
-      ? (t.createdAt.toDate ? t.createdAt.toDate() : new Date(t.createdAt))
-          .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-      : '—';
+  list.innerHTML = filtered.map((t, i) => taskCardHTML(t, i, false)).join('');
+}
+
+function renderForwarderView() {
+  const container = document.getElementById('fwd-view');
+
+  // Get all known forwarders — from tasks + the hardcoded list (so empty ones show too)
+  const knownFwds = ['Dachser','K+N','DHL Express','Wackler','Honold','ERKA'];
+  // Also include any forwarders that exist in tasks but aren't in the list
+  const extraFwds = [...new Set(tasks.map(t => t.fwd).filter(Boolean))].filter(f => !knownFwds.includes(f));
+  const allFwds = [...knownFwds, ...extraFwds];
+
+  // Only show forwarders that have tasks
+  const activeFwds = allFwds.filter(f => tasks.some(t => t.fwd === f));
+
+  if (activeFwds.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-rune">ᛟ</div>
+      <div class="empty-text">The ledger is empty</div>
+      <div class="empty-sub">Inscribe your first task above</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = activeFwds.map((fwdName, gi) => {
+    const fwdTasks   = tasks.filter(t => t.fwd === fwdName);
+    const fwdPending = fwdTasks.filter(t => t.status === 'pending').length;
+    const fwdDone    = fwdTasks.filter(t => t.status === 'done').length;
+    const fwdTotal   = fwdTasks.length;
+    const pct        = fwdTotal > 0 ? Math.round((fwdDone / fwdTotal) * 100) : 0;
+    const isOpen     = openGroups.has(fwdName);
+
+    const tasksHTML = fwdTasks.length > 0
+      ? fwdTasks.map((t, i) => taskCardHTML(t, i, true)).join('')
+      : `<div class="fwd-group-empty">No tasks for this forwarder</div>`;
+
     return `
-      <div class="task-card${t.status === 'done' ? ' is-done' : ''}" style="animation:task-in .3s ${i * 0.04}s ease both">
-        <div class="task-check-wrap">
-          <input type="checkbox" class="task-check" ${t.status === 'done' ? 'checked' : ''} onchange="toggleDone('${t.id}')" />
-        </div>
-        <div class="task-body">
-          <div class="task-title">${esc(t.title)}</div>
-          <div class="task-meta">
-            <span class="badge badge-fwd">${esc(t.fwd)}</span>
-            <span class="badge badge-${t.status}">${t.status}</span>
-            ${t.total ? `<span class="task-data">⬡ ${esc(t.total)}</span>` : ''}
+      <div class="fwd-group" style="animation-delay:${gi * 0.06}s">
+        <div class="fwd-group-header${isOpen ? ' open' : ''}" onclick="toggleGroup('${esc(fwdName)}')">
+          <span class="fwd-group-icon">▶</span>
+          <span class="fwd-group-name">${esc(fwdName)}</span>
+          <div class="fwd-group-pills">
+            <span class="fwd-pill fwd-pill-total">${fwdTotal} task${fwdTotal !== 1 ? 's' : ''}</span>
+            ${fwdPending > 0 ? `<span class="fwd-pill fwd-pill-pending">${fwdPending} pending</span>` : ''}
+            ${fwdDone    > 0 ? `<span class="fwd-pill fwd-pill-done">${fwdDone} done</span>` : ''}
           </div>
-          ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ''}
-          <div class="task-date">Inscribed ${dateStr}</div>
+          <div class="fwd-progress-wrap">
+            <div class="fwd-progress-bar">
+              <div class="fwd-progress-fill" style="width:${pct}%"></div>
+            </div>
+            <span class="fwd-progress-pct">${pct}%</span>
+          </div>
         </div>
-        <div class="task-actions">
-          <button class="btn-del" onclick="deleteTask('${t.id}')" title="Banish task">✕</button>
+        <div class="fwd-group-body${isOpen ? ' open' : ''}">
+          ${tasksHTML}
         </div>
       </div>`;
   }).join('');
@@ -512,15 +656,6 @@ function render() {
 document.getElementById('inp-title').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
 
 /* ─── BOOT ─── */
-// Show skeletons immediately, then start listener
-document.getElementById('task-list').innerHTML = [1,2,3].map(() =>
-  `<div class="task-skel">
-    <div class="skel-line" style="height:14px;width:45%;margin-bottom:0"></div>
-    <div class="skel-line" style="height:10px;width:22%;margin-top:10px"></div>
-    <div class="skel-line" style="height:10px;width:70%;margin-top:8px"></div>
-  </div>`
-).join('');
-
 startListener();
 </script>
 </body>
