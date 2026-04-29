@@ -9,13 +9,177 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#02020a;
+  --surface:rgba(10,8,24,.72);
+  --surface-hover:rgba(14,10,28,.8);
+  --surface-deep:rgba(6,4,18,.5);
+  --border:rgba(212,175,100,.09);
+  --border-pk:rgba(244,114,182,.14);
+  --border-e:rgba(52,211,153,.1);
+  --text-main:rgba(237,232,255,.85);
+  --text-dim:rgba(237,232,255,.22);
+  --text-sub:rgba(212,175,100,.35);
+  --text-faint:rgba(212,175,100,.2);
+  --input-bg:rgba(2,2,10,.6);
+  --input-border:rgba(244,114,182,.1);
+  --footer-link:rgba(212,175,100,.18);
+  --status-label:rgba(212,175,100,.35);
+  --filter-bg:rgba(10,8,24,.7);
+  --filter-border:rgba(212,175,100,.1);
+  --filter-text:rgba(237,232,255,.6);
+  --modal-bg:rgba(10,8,24,.96);
+  --modal-border:rgba(167,139,250,.25);
+  --group-bg:rgba(10,8,24,.8);
+  --group-hover:rgba(14,10,28,.88);
   --b:91,156,246;--v:167,139,250;--e:52,211,153;--pk:244,114,182;--gold:212,175,100;
   --amber:251,191,36;
   --cinzel:'Cinzel',serif;--syne:'Syne',sans-serif;--mono:'DM Mono',monospace;
 }
+
+/* ── LIGHT MODE ── */
+html.light{
+  --bg:#f5f0e8;
+  --surface:rgba(255,252,245,.88);
+  --surface-hover:rgba(255,250,240,.96);
+  --surface-deep:rgba(245,240,228,.7);
+  --border:rgba(160,130,60,.14);
+  --border-pk:rgba(180,80,120,.15);
+  --border-e:rgba(30,160,110,.14);
+  --text-main:rgba(30,20,50,.85);
+  --text-dim:rgba(30,20,50,.38);
+  --text-sub:rgba(120,90,30,.55);
+  --text-faint:rgba(120,90,30,.32);
+  --input-bg:rgba(255,252,245,.8);
+  --input-border:rgba(180,80,120,.18);
+  --footer-link:rgba(120,90,30,.3);
+  --status-label:rgba(120,90,30,.45);
+  --filter-bg:rgba(255,252,245,.85);
+  --filter-border:rgba(160,130,60,.18);
+  --filter-text:rgba(30,20,50,.6);
+  --modal-bg:rgba(250,245,235,.98);
+  --modal-border:rgba(130,100,200,.28);
+  --group-bg:rgba(255,252,245,.85);
+  --group-hover:rgba(255,250,240,.98);
+}
+html.light body{background:#f5f0e8;color:rgba(30,20,50,.85)}
+html.light #bg{opacity:.28}
+html.light .page-eyebrow{color:rgba(180,80,120,.55)}
+html.light .pt-sub{color:rgba(30,20,50,.45)}
+html.light .page-tagline{color:rgba(180,80,120,.38)}
+html.light .orn-line{background:linear-gradient(90deg,transparent,rgba(180,80,120,.25),transparent)}
+html.light .orn-diamond{background:rgba(180,80,120,.45)}
+html.light .orn-text{color:rgba(180,80,120,.45)}
+html.light .stat{background:rgba(255,252,245,.88);border-color:rgba(180,80,120,.12)}
+html.light .stat-num{color:rgba(30,20,50,.8)}
+html.light .stat-num.s-pending{color:rgba(160,110,0,.8)}
+html.light .stat-num.s-done{color:rgba(20,140,90,.8)}
+html.light .stat-num.s-fwds{color:rgba(160,60,100,.8)}
+html.light .stat-lbl{color:rgba(180,80,120,.45)}
+html.light .add-ritual{background:rgba(255,252,245,.88);border-color:rgba(180,80,120,.15)}
+html.light .add-ritual::before,html.light .add-ritual::after{border-color:rgba(180,80,120,.3)}
+html.light .ritual-top{background:linear-gradient(90deg,transparent,rgba(180,80,120,.4),transparent)}
+html.light .form-label-head{color:rgba(180,80,120,.55)}
+html.light .form-field label{color:rgba(120,90,30,.5)}
+html.light .form-field input,html.light .form-field select,html.light .form-field textarea{background:rgba(255,252,245,.8);border-color:rgba(180,80,120,.16);color:rgba(30,20,50,.85)}
+html.light .form-field input::placeholder,html.light .form-field textarea::placeholder{color:rgba(30,20,50,.25)}
+html.light .form-field input:focus,html.light .form-field select:focus,html.light .form-field textarea:focus{border-color:rgba(180,80,120,.42);box-shadow:0 0 0 3px rgba(180,80,120,.07)}
+html.light .form-field select option{background:#faf5eb;color:rgba(30,20,50,.85)}
+html.light .btn-inscribe{color:rgba(160,60,100,.9);background:rgba(180,80,120,.07);border-color:rgba(180,80,120,.25)}
+html.light .btn-inscribe:hover:not(:disabled){background:rgba(180,80,120,.14);border-color:rgba(180,80,120,.5);box-shadow:0 0 20px rgba(180,80,120,.12)}
+html.light .view-btn{background:rgba(255,252,245,.7);border-color:rgba(160,130,60,.18);color:rgba(120,90,30,.45)}
+html.light .view-btn:hover{border-color:rgba(180,80,120,.3);color:rgba(180,80,120,.75)}
+html.light .view-btn.active{background:rgba(180,80,120,.1);border-color:rgba(180,80,120,.38);color:rgba(160,60,100,.9)}
+html.light .view-btn.scribe-active{background:rgba(20,140,90,.07);border-color:rgba(20,140,90,.3);color:rgba(10,120,75,.9)}
+html.light .filter-bar select{background:rgba(255,252,245,.85);border-color:rgba(160,130,60,.15);color:rgba(30,20,50,.6)}
+html.light .filter-bar select:hover,html.light .filter-bar select:focus{border-color:rgba(180,80,120,.28)}
+html.light .filter-bar select option{background:#faf5eb}
+html.light .filter-count{color:rgba(120,90,30,.3)}
+html.light .task-card{background:rgba(255,252,245,.82);border-color:rgba(160,130,60,.1)}
+html.light .task-card:hover{border-color:rgba(180,80,120,.2);background:rgba(255,250,240,.95)}
+html.light .task-card.is-done{border-color:rgba(20,140,90,.1)}
+html.light .task-card.is-done:hover{border-color:rgba(20,140,90,.22)}
+html.light .task-card::before{background:linear-gradient(90deg,transparent,rgba(180,80,120,.18),transparent)}
+html.light .task-title{color:rgba(30,20,50,.85)}
+html.light .is-done .task-title{color:rgba(30,20,50,.3)}
+html.light .badge-fwd{color:rgba(160,60,100,.9);border-color:rgba(180,80,120,.22);background:rgba(180,80,120,.07)}
+html.light .badge-pending{color:rgba(140,90,0,.85);border-color:rgba(200,140,0,.2);background:rgba(200,140,0,.06)}
+html.light .badge-done{color:rgba(10,120,75,.85);border-color:rgba(30,160,110,.2);background:rgba(30,160,110,.06)}
+html.light .badge-scribe{color:rgba(110,80,190,.9);border-color:rgba(130,100,200,.22);background:rgba(130,100,200,.07)}
+html.light .task-data{color:rgba(120,90,30,.45)}
+html.light .task-notes{color:rgba(30,20,50,.38);border-left-color:rgba(180,80,120,.18)}
+html.light .task-date{color:rgba(120,90,30,.28)}
+html.light .task-done-by{color:rgba(20,140,90,.4)}
+html.light .btn-del{color:rgba(120,90,30,.25)}
+html.light .btn-del:hover{background:rgba(180,80,120,.1);color:rgba(160,60,100,.8)}
+html.light .task-check{border-color:rgba(180,80,120,.32)}
+html.light .task-check:checked{background:rgba(20,140,90,.12);border-color:rgba(20,140,90,.55)}
+html.light .task-check:checked::after{color:rgba(10,120,75,.9)}
+html.light .fwd-group-header{background:rgba(255,252,245,.88);border-color:rgba(180,80,120,.16)}
+html.light .fwd-group-header::before{background:linear-gradient(90deg,transparent,rgba(180,80,120,.28),transparent)}
+html.light .fwd-group-header:hover{border-color:rgba(180,80,120,.3);background:rgba(255,250,240,.96)}
+html.light .fwd-group-header.open{border-color:rgba(180,80,120,.22)}
+html.light .fwd-group-icon{color:rgba(180,80,120,.6)}
+html.light .fwd-group-name{color:rgba(30,20,50,.8)}
+html.light .fwd-pill-total{color:rgba(120,90,30,.7);border-color:rgba(160,130,60,.2);background:rgba(160,130,60,.06)}
+html.light .fwd-pill-pending{color:rgba(140,90,0,.8);border-color:rgba(200,140,0,.2);background:rgba(200,140,0,.06)}
+html.light .fwd-pill-done{color:rgba(10,120,75,.8);border-color:rgba(30,160,110,.2);background:rgba(30,160,110,.06)}
+html.light .fwd-group-body{border-color:rgba(180,80,120,.14);background:rgba(245,240,228,.6)}
+html.light .fwd-group-body .task-card{background:rgba(255,252,245,.82)}
+html.light .fwd-group-body .task-card:hover{background:rgba(255,250,240,.96)}
+html.light .fwd-group-empty{color:rgba(120,90,30,.22);border-color:rgba(180,80,120,.14);background:rgba(245,240,228,.5)}
+html.light .empty-rune{color:rgba(180,80,120,.15)}
+html.light .empty-text{color:rgba(120,90,30,.25)}
+html.light .empty-sub{color:rgba(120,90,30,.16)}
+html.light .modal-box{background:rgba(250,245,235,.98);border-color:rgba(130,100,200,.28);box-shadow:0 0 60px rgba(130,100,200,.1)}
+html.light .modal-corner.tl{border-color:rgba(130,100,200,.4)}
+html.light .modal-corner.br{border-color:rgba(130,100,200,.4)}
+html.light .modal-shine{background:linear-gradient(90deg,transparent,rgba(130,100,200,.4),transparent)}
+html.light .modal-title{color:rgba(110,80,190,.7)}
+html.light .modal-task-name{color:rgba(30,20,50,.8)}
+html.light .modal-label{color:rgba(120,90,30,.45)}
+html.light .modal-input{background:rgba(255,252,245,.8);border-color:rgba(130,100,200,.2);color:rgba(30,20,50,.9)}
+html.light .modal-input:focus{border-color:rgba(130,100,200,.5);box-shadow:0 0 0 3px rgba(130,100,200,.07)}
+html.light .modal-input::placeholder{color:rgba(30,20,50,.25)}
+html.light .modal-btn-confirm{color:rgba(10,120,75,.9);border-color:rgba(30,160,110,.28);background:rgba(30,160,110,.07)}
+html.light .modal-btn-cancel{color:rgba(120,90,30,.45);border-color:rgba(160,130,60,.18)}
+html.light .modal-btn-cancel:hover{color:rgba(120,90,30,.7);border-color:rgba(160,130,60,.3)}
+html.light .modal-skip{color:rgba(120,90,30,.28)}
+html.light .modal-skip:hover{color:rgba(120,90,30,.55)}
+html.light .modal-overlay{background:rgba(245,240,228,.82)}
+html.light .scribes-title{color:rgba(10,120,75,.55)}
+html.light .scribes-line{background:linear-gradient(90deg,rgba(10,120,75,.14),transparent)}
+html.light .scribe-card{background:rgba(255,252,245,.85);border-color:rgba(20,140,90,.12)}
+html.light .scribe-card::before{background:linear-gradient(90deg,transparent,rgba(20,140,90,.18),transparent)}
+html.light .scribe-card:hover{border-color:rgba(20,140,90,.28)}
+html.light .scribe-card.selected{border-color:rgba(20,140,90,.5);background:rgba(255,250,240,.95)}
+html.light .scribe-avatar{background:linear-gradient(135deg,rgba(20,140,90,.12),rgba(110,80,190,.12));border-color:rgba(20,140,90,.25);color:rgba(10,120,75,.8)}
+html.light .scribe-name{color:rgba(30,20,50,.8)}
+html.light .scribe-done-pill{color:rgba(10,120,75,.8);border-color:rgba(30,160,110,.2);background:rgba(30,160,110,.05)}
+html.light .scribe-fwd-pill{color:rgba(110,80,190,.75);border-color:rgba(130,100,200,.2);background:rgba(130,100,200,.05)}
+html.light .scribe-bar-wrap{background:rgba(30,20,50,.06)}
+html.light .scribe-bar-label{color:rgba(10,120,75,.38)}
+html.light .scribe-detail-name{color:rgba(10,120,75,.8)}
+html.light .scribe-detail-count{color:rgba(10,120,75,.38)}
+html.light .btn-close-detail{color:rgba(120,90,30,.38);border-color:rgba(160,130,60,.18)}
+html.light .btn-close-detail:hover{color:rgba(120,90,30,.7);border-color:rgba(160,130,60,.3)}
+html.light .task-skel{background:rgba(255,252,245,.7);border-color:rgba(160,130,60,.08)}
+html.light .skel-line{background:rgba(180,80,120,.06)}
+html.light .sigil-sym{color:rgba(120,90,30,.25)}
+html.light .sdl2{background:linear-gradient(90deg,transparent,rgba(120,90,30,.14),transparent)}
+html.light footer{color:rgba(120,90,30,.25)}
+html.light footer a{color:rgba(120,90,30,.25)}
+html.light footer a:hover{color:rgba(120,90,30,.55)}
+html.light #toast{background:rgba(250,245,235,.96);border-color:rgba(160,130,60,.25);color:rgba(30,20,50,.8)}
+html.light #toast.error{background:rgba(200,50,50,.06);border-color:rgba(200,50,50,.25);color:rgba(180,30,30,.8)}
+html.light .nav-back{color:rgba(120,90,30,.35)}
+html.light .nav-back:hover{color:rgba(120,90,30,.7)}
+html.light .status-label{color:rgba(120,90,30,.45)}
+html.light .status-dot{background:rgba(120,90,30,.2)}
+html.light .status-dot.online{background:#1e8a5a;box-shadow:0 0 8px rgba(30,138,90,.5)}
+html.light .status-dot.error{background:#c04040;box-shadow:0 0 8px rgba(192,64,64,.5)}
+
 html,body{width:100%;min-height:100vh;background:var(--bg);overflow-x:hidden}
-body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;align-items:center;padding:0 1.2rem 7rem}
-#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;align-items:center;padding:0 1.2rem 7rem;transition:background .35s,color .35s}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;transition:opacity .35s}
 
 /* ─── SHELL ─── */
 .shell{position:relative;z-index:3;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center}
@@ -25,6 +189,15 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .nav-back:hover{color:rgba(212,175,100,.75)}
 .nav-back-arr{font-size:14px;transition:transform .2s}
 .nav-back:hover .nav-back-arr{transform:translateX(-4px)}
+
+/* ─── THEME TOGGLE ─── */
+.theme-toggle{position:fixed;top:1.2rem;right:1.4rem;z-index:50;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border-pk);border-radius:24px;padding:.38rem .9rem .38rem .7rem;cursor:pointer;transition:all .3s;backdrop-filter:blur(16px)}
+.theme-toggle:hover{border-color:rgba(244,114,182,.35);box-shadow:0 0 16px rgba(244,114,182,.1)}
+.theme-icon{font-size:13px;line-height:1;transition:transform .4s}
+.theme-toggle:hover .theme-icon{transform:rotate(18deg)}
+.theme-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--text-sub);text-transform:uppercase;transition:color .3s}
+html.light .theme-toggle{border-color:rgba(180,80,120,.2)}
+html.light .theme-toggle:hover{border-color:rgba(180,80,120,.45);box-shadow:0 0 16px rgba(180,80,120,.1)}
 
 /* ─── HEADER ─── */
 .page-eyebrow{font-family:var(--cinzel);font-size:9px;letter-spacing:.45em;text-transform:uppercase;color:rgba(244,114,182,.4);margin-bottom:.9rem;animation:rise .9s .1s ease both}
@@ -49,7 +222,7 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 
 /* ─── STATS BAR ─── */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;margin-bottom:1.8rem;animation:rise .9s .3s ease both}
-.stat{background:rgba(10,8,24,.7);border:1px solid rgba(244,114,182,.1);border-radius:16px;padding:.9rem 1rem;text-align:center;backdrop-filter:blur(20px);transition:border-color .3s}
+.stat{background:var(--surface);border:1px solid var(--border-pk);border-radius:16px;padding:.9rem 1rem;text-align:center;backdrop-filter:blur(20px);transition:border-color .3s}
 .stat:hover{border-color:rgba(244,114,182,.22)}
 .stat-num{font-family:var(--cinzel);font-size:1.7rem;font-weight:600;color:rgba(255,255,255,.85);line-height:1}
 .stat-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:rgba(244,114,182,.35);margin-top:.4rem;text-transform:uppercase}
@@ -58,7 +231,7 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .stat-num.s-fwds{color:rgba(244,114,182,.8)}
 
 /* ─── ADD FORM ─── */
-.add-ritual{width:100%;background:rgba(10,8,24,.75);border:1px solid rgba(244,114,182,.12);border-radius:22px;padding:1.8rem 1.8rem 1.5rem;margin-bottom:1.6rem;backdrop-filter:blur(24px);animation:rise .9s .34s ease both;position:relative;overflow:hidden}
+.add-ritual{width:100%;background:var(--surface);border:1px solid var(--border-pk);border-radius:22px;padding:1.8rem 1.8rem 1.5rem;margin-bottom:1.6rem;backdrop-filter:blur(24px);animation:rise .9s .34s ease both;position:relative;overflow:hidden}
 .add-ritual::before{content:'';position:absolute;width:16px;height:16px;top:14px;left:14px;border-top:1px solid rgba(244,114,182,.35);border-left:1px solid rgba(244,114,182,.35)}
 .add-ritual::after{content:'';position:absolute;width:16px;height:16px;bottom:14px;right:14px;border-bottom:1px solid rgba(244,114,182,.35);border-right:1px solid rgba(244,114,182,.35)}
 .ritual-top{position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.5),transparent)}
@@ -67,10 +240,10 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .form-field{display:flex;flex-direction:column;gap:5px}
 .form-field label{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:rgba(212,175,100,.35);text-transform:uppercase}
 .form-field input,.form-field select,.form-field textarea{
-  background:rgba(2,2,10,.6);
-  border:1px solid rgba(244,114,182,.1);
+  background:var(--input-bg);
+  border:1px solid var(--input-border);
   border-radius:10px;
-  color:rgba(237,232,255,.85);
+  color:var(--text-main);
   font-family:var(--mono);
   font-size:11.5px;
   padding:.55rem .85rem;
@@ -97,7 +270,7 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 
 /* ─── FILTER BAR ─── */
 .filter-bar{width:100%;display:flex;gap:10px;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;animation:rise .9s .38s ease both}
-.filter-bar select{background:rgba(10,8,24,.7);border:1px solid rgba(212,175,100,.1);border-radius:10px;color:rgba(237,232,255,.6);font-family:var(--mono);font-size:11px;padding:.45rem .85rem;outline:none;cursor:pointer;transition:border-color .25s}
+.filter-bar select{background:var(--filter-bg);border:1px solid var(--filter-border);border-radius:10px;color:var(--filter-text);font-family:var(--mono);font-size:11px;padding:.45rem .85rem;outline:none;cursor:pointer;transition:border-color .25s}
 .filter-bar select:focus,.filter-bar select:hover{border-color:rgba(244,114,182,.25)}
 .filter-bar select option{background:#0e0b1a}
 .filter-sep{flex:1}
@@ -106,9 +279,9 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 /* ─── TASK LIST ─── */
 .task-list{width:100%;display:flex;flex-direction:column;gap:8px;animation:rise .9s .42s ease both}
 
-.task-card{position:relative;background:rgba(10,8,24,.72);border:1px solid rgba(212,175,100,.09);border-radius:18px;padding:1.1rem 1.3rem;display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:start;backdrop-filter:blur(20px);transition:border-color .3s,background .3s,transform .25s;overflow:hidden}
+.task-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.1rem 1.3rem;display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:start;backdrop-filter:blur(20px);transition:border-color .3s,background .3s,transform .25s;overflow:hidden}
 .task-card::before{content:'';position:absolute;top:0;left:6%;right:6%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.18),transparent);opacity:0;transition:opacity .3s}
-.task-card:hover{border-color:rgba(244,114,182,.18);background:rgba(14,10,28,.8);transform:translateY(-1px)}
+.task-card:hover{border-color:rgba(244,114,182,.18);background:var(--surface-hover);transform:translateY(-1px)}
 .task-card:hover::before{opacity:1}
 .task-card.is-done{opacity:.55}
 .task-card.is-done:hover{opacity:.75}
@@ -117,9 +290,9 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 
 /* ─── FORWARDER GROUP VIEW ─── */
 .fwd-group{width:100%;margin-bottom:10px;animation:rise .4s ease both}
-.fwd-group-header{display:flex;align-items:center;gap:12px;padding:.85rem 1.2rem;background:rgba(10,8,24,.8);border:1px solid rgba(244,114,182,.14);border-radius:16px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;user-select:none}
+.fwd-group-header{display:flex;align-items:center;gap:12px;padding:.85rem 1.2rem;background:var(--group-bg);border:1px solid var(--border-pk);border-radius:16px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;user-select:none}
 .fwd-group-header::before{content:'';position:absolute;top:0;left:6%;right:6%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.3),transparent)}
-.fwd-group-header:hover{border-color:rgba(244,114,182,.28);background:rgba(14,10,28,.88)}
+.fwd-group-header:hover{border-color:rgba(244,114,182,.28);background:var(--group-hover)}
 .fwd-group-header.open{border-color:rgba(244,114,182,.22);border-bottom-left-radius:0;border-bottom-right-radius:0}
 .fwd-group-icon{font-size:12px;color:rgba(244,114,182,.55);flex-shrink:0;transition:transform .3s}
 .fwd-group-header.open .fwd-group-icon{transform:rotate(90deg)}
@@ -134,13 +307,13 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .fwd-progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,rgba(52,211,153,.6),rgba(52,211,153,.9));transition:width .5s ease}
 .fwd-progress-pct{font-family:var(--mono);font-size:9px;color:rgba(52,211,153,.5);letter-spacing:.06em;min-width:26px;text-align:right}
 
-.fwd-group-body{display:none;flex-direction:column;gap:0;border:1px solid rgba(244,114,182,.14);border-top:none;border-bottom-left-radius:16px;border-bottom-right-radius:16px;overflow:hidden;background:rgba(6,4,18,.5)}
+.fwd-group-body{display:none;flex-direction:column;gap:0;border:1px solid rgba(244,114,182,.14);border-top:none;border-bottom-left-radius:16px;border-bottom-right-radius:16px;overflow:hidden;background:var(--surface-deep)}
 .fwd-group-body.open{display:flex}
 .fwd-group-body .task-card{border-radius:0;border-left:none;border-right:none;border-top:none;border-bottom:1px solid rgba(212,175,100,.06)}
 .fwd-group-body .task-card:last-child{border-bottom:none;border-bottom-left-radius:14px;border-bottom-right-radius:14px}
 .fwd-group-body .task-card:first-child{border-top:none}
 .fwd-group-body .task-card:hover{transform:none;background:rgba(14,10,28,.9)}
-.fwd-group-empty{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.18);letter-spacing:.1em;text-align:center;padding:1.2rem;border:1px solid rgba(244,114,182,.14);border-top:none;border-bottom-left-radius:14px;border-bottom-right-radius:14px;background:rgba(6,4,18,.5)}
+.fwd-group-empty{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.18);letter-spacing:.1em;text-align:center;padding:1.2rem;border:1px solid rgba(244,114,182,.14);border-top:none;border-bottom-left-radius:14px;border-bottom-right-radius:14px;background:var(--surface-deep)}
 
 /* skeleton */
 .task-skel{border-radius:18px;background:rgba(10,8,24,.6);border:1px solid rgba(212,175,100,.06);padding:1.2rem 1.3rem;display:flex;flex-direction:column;gap:10px}
@@ -155,7 +328,7 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .task-check:hover:not(:checked){border-color:rgba(244,114,182,.55)}
 
 /* task body */
-.task-title{font-family:var(--cinzel);font-size:13px;font-weight:600;color:rgba(255,255,255,.85);letter-spacing:.02em;margin-bottom:.4rem}
+.task-title{font-family:var(--cinzel);font-size:13px;font-weight:600;color:var(--text-main);letter-spacing:.02em;margin-bottom:.4rem}
 .is-done .task-title{text-decoration:line-through;color:rgba(255,255,255,.3)}
 .task-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:.4rem}
 .badge{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;padding:2px 9px;border-radius:20px;border:1px solid}
@@ -164,7 +337,7 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .badge-done{color:rgba(52,211,153,.85);border-color:rgba(52,211,153,.2);background:rgba(52,211,153,.06)}
 .badge-scribe{color:rgba(167,139,250,.9);border-color:rgba(167,139,250,.22);background:rgba(167,139,250,.07);display:inline-flex;align-items:center;gap:4px}
 .task-data{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.35);letter-spacing:.05em}
-.task-notes{font-family:var(--mono);font-size:10.5px;color:rgba(237,232,255,.22);line-height:1.65;margin-top:.5rem;border-left:2px solid rgba(244,114,182,.12);padding-left:.7rem}
+.task-notes{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);line-height:1.65;margin-top:.5rem;border-left:2px solid rgba(244,114,182,.12);padding-left:.7rem}
 .task-date{font-family:var(--mono);font-size:9px;color:rgba(212,175,100,.2);margin-top:.35rem;letter-spacing:.05em}
 .task-done-by{font-family:var(--mono);font-size:9px;color:rgba(52,211,153,.3);margin-top:.2rem;letter-spacing:.05em}
 
@@ -182,7 +355,7 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 /* ─── SCRIBE MODAL ─── */
 .modal-overlay{position:fixed;inset:0;background:rgba(2,2,10,.85);backdrop-filter:blur(8px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
 .modal-overlay.open{opacity:1;pointer-events:all}
-.modal-box{background:rgba(10,8,24,.96);border:1px solid rgba(167,139,250,.25);border-radius:24px;padding:2rem 2rem 1.6rem;width:90%;max-width:420px;position:relative;transform:scale(.92) translateY(20px);transition:transform .3s ease;box-shadow:0 0 60px rgba(167,139,250,.12)}
+.modal-box{background:var(--modal-bg);border:1px solid var(--modal-border);border-radius:24px;padding:2rem 2rem 1.6rem;width:90%;max-width:420px;position:relative;transform:scale(.92) translateY(20px);transition:transform .3s ease;box-shadow:0 0 60px rgba(167,139,250,.12)}
 .modal-overlay.open .modal-box{transform:scale(1) translateY(0)}
 .modal-corner{position:absolute;width:14px;height:14px}
 .modal-corner.tl{top:12px;left:12px;border-top:1px solid rgba(167,139,250,.4);border-left:1px solid rgba(167,139,250,.4)}
@@ -209,7 +382,7 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .scribes-title{font-family:var(--cinzel);font-size:9px;letter-spacing:.38em;text-transform:uppercase;color:rgba(52,211,153,.5)}
 .scribes-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(52,211,153,.12),transparent)}
 .scribe-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:1.6rem}
-.scribe-card{background:rgba(10,8,24,.75);border:1px solid rgba(52,211,153,.1);border-radius:18px;padding:1.2rem 1.2rem 1rem;backdrop-filter:blur(20px);transition:border-color .3s,transform .25s;position:relative;overflow:hidden;cursor:pointer}
+.scribe-card{background:var(--surface);border:1px solid var(--border-e);border-radius:18px;padding:1.2rem 1.2rem 1rem;backdrop-filter:blur(20px);transition:border-color .3s,transform .25s;position:relative;overflow:hidden;cursor:pointer}
 .scribe-card::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(52,211,153,.2),transparent)}
 .scribe-card:hover{border-color:rgba(52,211,153,.25);transform:translateY(-2px)}
 .scribe-card.selected{border-color:rgba(52,211,153,.45);background:rgba(14,10,28,.85);box-shadow:0 0 24px rgba(52,211,153,.08)}
@@ -223,6 +396,11 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .scribe-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,rgba(52,211,153,.5),rgba(52,211,153,.85));transition:width .6s ease}
 .scribe-bar-label{font-family:var(--mono);font-size:8px;color:rgba(52,211,153,.3);margin-top:4px;letter-spacing:.06em}
 
+/* ─── SCRIBE LATEST DATE ─── */
+.scribe-latest{font-family:var(--mono);font-size:8.5px;color:rgba(212,175,100,.28);letter-spacing:.06em;margin-top:.55rem;display:flex;align-items:center;gap:5px}
+.scribe-latest-icon{font-size:9px;opacity:.6}
+html.light .scribe-latest{color:rgba(120,90,30,.32)}
+
 /* ─── SCRIBE TASK DETAIL ─── */
 .scribe-detail{width:100%;margin-bottom:1.6rem;animation:rise .4s ease both}
 .scribe-detail-header{display:flex;align-items:center;gap:12px;margin-bottom:.9rem}
@@ -231,6 +409,10 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .btn-close-detail{font-family:var(--cinzel);font-size:8px;letter-spacing:.25em;color:rgba(212,175,100,.3);border:1px solid rgba(212,175,100,.12);background:none;border-radius:16px;padding:.3rem .9rem;cursor:pointer;margin-left:auto;transition:all .25s}
 .btn-close-detail:hover{color:rgba(212,175,100,.7);border-color:rgba(212,175,100,.28)}
 .scribe-detail-tasks{display:flex;flex-direction:column;gap:7px}
+
+/* ─── DETAIL TASK COMPLETION DATE ─── */
+.task-completed-date{font-family:var(--mono);font-size:9px;color:rgba(52,211,153,.28);margin-top:.2rem;letter-spacing:.05em;display:flex;align-items:center;gap:4px}
+html.light .task-completed-date{color:rgba(10,120,75,.32)}
 
 /* ─── TOAST ─── */
 #toast{position:fixed;bottom:2.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:#0e0e1c;color:#ede8ff;border:1px solid rgba(212,175,100,.22);padding:10px 22px;border-radius:24px;font-family:var(--mono);font-size:12px;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;backdrop-filter:blur(10px)}
@@ -262,6 +444,12 @@ footer a:hover{color:rgba(212,175,100,.5)}
 <body>
 
 <canvas id="bg"></canvas>
+
+<!-- ─── THEME TOGGLE ─── -->
+<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+  <span class="theme-icon" id="theme-icon">☽</span>
+  <span class="theme-label" id="theme-label">Dark</span>
+</button>
 
 <!-- ─── COMPLETE MODAL ─── -->
 <div class="modal-overlay" id="complete-modal">
@@ -399,7 +587,6 @@ footer a:hover{color:rgba(212,175,100,.5)}
 
   <!-- SCRIBES VIEW -->
   <div id="scribes-view" style="display:none;width:100%;flex-direction:column;gap:0">
-    <!-- scribe cards injected here -->
     <div class="scribe-detail" id="scribe-detail" style="display:none"></div>
   </div>
 
@@ -456,6 +643,39 @@ window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
 init();requestAnimationFrame(frame);
 })();
 
+/* ─── THEME TOGGLE ─── */
+(function(){
+  const saved = localStorage.getItem('grimoire-theme');
+  if (saved === 'light') applyLight();
+})();
+
+function applyLight(){
+  document.documentElement.classList.add('light');
+  document.body.style.color = 'rgba(30,20,50,.85)';
+  const icon = document.getElementById('theme-icon');
+  const lbl  = document.getElementById('theme-label');
+  if (icon) icon.textContent = '☀';
+  if (lbl)  lbl.textContent  = 'Light';
+}
+function applyDark(){
+  document.documentElement.classList.remove('light');
+  document.body.style.color = '#ede8ff';
+  const icon = document.getElementById('theme-icon');
+  const lbl  = document.getElementById('theme-label');
+  if (icon) icon.textContent = '☽';
+  if (lbl)  lbl.textContent  = 'Dark';
+}
+function toggleTheme(){
+  const isLight = document.documentElement.classList.contains('light');
+  if (isLight) {
+    applyDark();
+    localStorage.setItem('grimoire-theme','dark');
+  } else {
+    applyLight();
+    localStorage.setItem('grimoire-theme','light');
+  }
+}
+
 /* ─── FIREBASE INIT ─── */
 const firebaseConfig = {
   apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
@@ -477,9 +697,8 @@ let curView    = 'list';
 let openGroups = new Set();
 let selectedScribe = null;
 
-// modal state
 let pendingToggleId   = null;
-let pendingToggleMode = null; // 'mark_done' or 'mark_pending'
+let pendingToggleMode = null;
 
 /* ─── VIEW SWITCH ─── */
 function setView(v) {
@@ -487,7 +706,6 @@ function setView(v) {
   document.getElementById('btn-view-list').classList.toggle('active',    v === 'list');
   document.getElementById('btn-view-fwd').classList.toggle('active',     v === 'forwarder');
   document.getElementById('btn-view-scribes').classList.toggle('active', v === 'scribes');
-  // dim scribes button differently
   document.getElementById('btn-view-scribes').classList.toggle('scribe-active', v === 'scribes');
   document.getElementById('filter-bar').style.display    = v === 'list'    ? 'flex' : 'none';
   document.getElementById('task-list').style.display     = v === 'list'    ? 'flex' : 'none';
@@ -537,6 +755,16 @@ function shake(el) {
 function initials(name) {
   if (!name) return '?';
   return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0,2);
+}
+
+function fmtDate(ts, opts) {
+  if (!ts) return null;
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('en-GB', opts || { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtDateShort(ts) {
+  return fmtDate(ts, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 /* ─── ADD TASK ─── */
@@ -629,7 +857,6 @@ async function toggleDone(id) {
   if (!task) return;
 
   if (task.status === 'done') {
-    // Mark back to pending — no name needed
     try {
       await col.doc(id).update({
         status: 'pending',
@@ -643,7 +870,6 @@ async function toggleDone(id) {
       console.error(e);
     }
   } else {
-    // Going to done — open modal to capture name
     openCompleteModal(id);
   }
 }
@@ -678,15 +904,18 @@ function selectScribe(name) {
 }
 
 /* ─── TASK CARD HTML ─── */
-function taskCardHTML(t, i, hideForwarderBadge) {
-  const dateStr = t.createdAt
-    ? (t.createdAt.toDate ? t.createdAt.toDate() : new Date(t.createdAt))
-        .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    : '—';
+function taskCardHTML(t, i, hideForwarderBadge, showCompletedDate) {
+  const dateStr = fmtDateShort(t.createdAt) || '—';
+
+  const completedDateStr = (showCompletedDate && t.completedAt)
+    ? `<div class="task-completed-date">⊕ Sealed ${fmtDateShort(t.completedAt)}</div>`
+    : '';
 
   const doneByStr = t.completedBy
-    ? `<div class="task-done-by">⊕ Sealed by <strong style="color:rgba(52,211,153,.55)">${esc(t.completedBy)}</strong></div>`
-    : (t.status === 'done' ? `<div class="task-done-by" style="color:rgba(212,175,100,.18)">⊕ Sealed anonymously</div>` : '');
+    ? `<div class="task-done-by">⊕ Sealed by <strong style="color:rgba(52,211,153,.55)">${esc(t.completedBy)}</strong>${(showCompletedDate && t.completedAt) ? ` · ${fmtDateShort(t.completedAt)}` : ''}</div>`
+    : (t.status === 'done'
+        ? `<div class="task-done-by" style="color:rgba(212,175,100,.18)">⊕ Sealed anonymously${(showCompletedDate && t.completedAt) ? ` · ${fmtDateShort(t.completedAt)}` : ''}</div>`
+        : completedDateStr);
 
   return `
     <div class="task-card${t.status === 'done' ? ' is-done' : ''}" style="animation:task-in .3s ${i * 0.04}s ease both">
@@ -752,7 +981,7 @@ function renderList() {
     return;
   }
 
-  list.innerHTML = filtered.map((t, i) => taskCardHTML(t, i, false)).join('');
+  list.innerHTML = filtered.map((t, i) => taskCardHTML(t, i, false, false)).join('');
 }
 
 function renderForwarderView() {
@@ -781,7 +1010,7 @@ function renderForwarderView() {
     const isOpen     = openGroups.has(fwdName);
 
     const tasksHTML = fwdTasks.length > 0
-      ? fwdTasks.map((t, i) => taskCardHTML(t, i, true)).join('')
+      ? fwdTasks.map((t, i) => taskCardHTML(t, i, true, false)).join('')
       : `<div class="fwd-group-empty">No tasks for this forwarder</div>`;
 
     return `
@@ -813,10 +1042,8 @@ function renderScribesView() {
   const container = document.getElementById('scribes-view');
   const detail    = document.getElementById('scribe-detail');
 
-  // Gather all done tasks with a name
   const doneTasks = tasks.filter(t => t.status === 'done');
 
-  // Build scribe map
   const scribeMap = {};
   doneTasks.forEach(t => {
     const name = (t.completedBy || '').trim() || '(Anonymous)';
@@ -837,7 +1064,17 @@ function renderScribesView() {
 
   const maxDone = Math.max(...scribeNames.map(n => scribeMap[n].length));
 
-  // scribe cards HTML
+  // Helper: find latest completedAt among scribe's tasks
+  function latestCompletion(ts) {
+    let latest = null;
+    ts.forEach(t => {
+      if (!t.completedAt) return;
+      const d = t.completedAt.toDate ? t.completedAt.toDate() : new Date(t.completedAt);
+      if (!latest || d > latest) latest = d;
+    });
+    return latest;
+  }
+
   const cardsHTML = `
     <div class="scribes-section">
       <div class="scribes-header">
@@ -851,6 +1088,11 @@ function renderScribesView() {
           const fwdSet = new Set(ts.map(t => t.fwd).filter(Boolean));
           const pct  = Math.round((cnt / maxDone) * 100);
           const sel  = selectedScribe === name;
+          const latest = latestCompletion(ts);
+          const latestStr = latest
+            ? latest.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            : null;
+
           return `
             <div class="scribe-card${sel ? ' selected' : ''}" onclick="selectScribe('${esc(name)}')" style="animation:task-in .35s ${i * 0.05}s ease both">
               <div class="scribe-avatar">${initials(name)}</div>
@@ -863,16 +1105,16 @@ function renderScribesView() {
                 <div class="scribe-bar-fill" style="width:${pct}%"></div>
               </div>
               <div class="scribe-bar-label">${pct}% of top scribe</div>
+              ${latestStr ? `<div class="scribe-latest"><span class="scribe-latest-icon">⊕</span>Last sealed ${latestStr}</div>` : ''}
             </div>`;
         }).join('')}
       </div>
     </div>`;
 
-  // detail section
+  // detail section — show completion date inline on each task
   let detailHTML = '';
   if (selectedScribe && scribeMap[selectedScribe]) {
     const scribeTasks = scribeMap[selectedScribe];
-    // Group by forwarder
     const byFwd = {};
     scribeTasks.forEach(t => {
       const f = t.fwd || 'Unknown';
@@ -883,7 +1125,7 @@ function renderScribesView() {
     const fwdSections = Object.entries(byFwd).map(([fwdName, ts]) => `
       <div style="margin-bottom:.9rem">
         <div style="font-family:var(--cinzel);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.4);margin-bottom:.5rem;padding-left:.3rem">${esc(fwdName)}</div>
-        ${ts.map((t, i) => taskCardHTML(t, i, true)).join('')}
+        ${ts.map((t, i) => taskCardHTML(t, i, true, true)).join('')}
       </div>`).join('');
 
     detailHTML = `
