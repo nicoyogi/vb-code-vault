@@ -8,57 +8,25 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#02020a;
-  --surface:rgba(10,8,24,.72);
-  --surface-hover:rgba(14,10,28,.8);
-  --surface-deep:rgba(6,4,18,.5);
-  --border:rgba(212,175,100,.14);
-  --border-pk:rgba(244,114,182,.2);
-  --border-e:rgba(52,211,153,.15);
-  --text-main:rgba(237,232,255,.95);
-  --text-dim:rgba(237,232,255,.55);
-  --text-sub:rgba(212,175,100,.65);
-  --text-faint:rgba(212,175,100,.45);
-  --input-bg:rgba(2,2,10,.6);
-  --input-border:rgba(244,114,182,.18);
-  --footer-link:rgba(212,175,100,.45);
-  --status-label:rgba(212,175,100,.65);
-  --filter-bg:rgba(10,8,24,.7);
-  --filter-border:rgba(212,175,100,.18);
-  --filter-text:rgba(237,232,255,.75);
-  --modal-bg:rgba(10,8,24,.96);
-  --modal-border:rgba(167,139,250,.35);
-  --group-bg:rgba(10,8,24,.8);
-  --group-hover:rgba(14,10,28,.88);
-  --b:91,156,246;--v:167,139,250;--e:52,211,153;--pk:244,114,182;--gold:212,175,100;
-  --amber:251,191,36;
+  --bg:#02020a;--surface:rgba(10,8,24,.72);--surface-hover:rgba(14,10,28,.8);--surface-deep:rgba(6,4,18,.5);
+  --border:rgba(212,175,100,.14);--border-pk:rgba(244,114,182,.2);--border-e:rgba(52,211,153,.15);
+  --text-main:rgba(237,232,255,.95);--text-dim:rgba(237,232,255,.55);--text-sub:rgba(212,175,100,.65);
+  --text-faint:rgba(212,175,100,.45);--input-bg:rgba(2,2,10,.6);--input-border:rgba(244,114,182,.18);
+  --footer-link:rgba(212,175,100,.45);--status-label:rgba(212,175,100,.65);
+  --filter-bg:rgba(10,8,24,.7);--filter-border:rgba(212,175,100,.18);--filter-text:rgba(237,232,255,.75);
+  --modal-bg:rgba(10,8,24,.96);--modal-border:rgba(167,139,250,.35);
+  --group-bg:rgba(10,8,24,.8);--group-hover:rgba(14,10,28,.88);
+  --b:91,156,246;--v:167,139,250;--e:52,211,153;--pk:244,114,182;--gold:212,175,100;--amber:251,191,36;
   --cinzel:'Cinzel',serif;--syne:'Syne',sans-serif;--mono:'DM Mono',monospace;
 }
-
-/* LIGHT MODE */
 html.light{
-  --bg:#f5f0e8;
-  --surface:rgba(255,252,245,.92);
-  --surface-hover:rgba(255,250,240,.98);
-  --surface-deep:rgba(245,240,228,.75);
-  --border:rgba(160,130,60,.2);
-  --border-pk:rgba(180,80,120,.22);
-  --border-e:rgba(30,160,110,.2);
-  --text-main:rgba(20,12,36,.9);
-  --text-dim:rgba(20,12,36,.62);
-  --text-sub:rgba(100,70,20,.75);
-  --text-faint:rgba(100,70,20,.55);
-  --input-bg:rgba(255,252,245,.85);
-  --input-border:rgba(180,80,120,.22);
-  --footer-link:rgba(100,70,20,.55);
-  --status-label:rgba(100,70,20,.7);
-  --filter-bg:rgba(255,252,245,.9);
-  --filter-border:rgba(160,130,60,.25);
-  --filter-text:rgba(20,12,36,.75);
-  --modal-bg:rgba(250,245,235,.99);
-  --modal-border:rgba(130,100,200,.35);
-  --group-bg:rgba(255,252,245,.88);
-  --group-hover:rgba(255,250,240,.99);
+  --bg:#f5f0e8;--surface:rgba(255,252,245,.92);--surface-hover:rgba(255,250,240,.98);--surface-deep:rgba(245,240,228,.75);
+  --border:rgba(160,130,60,.2);--border-pk:rgba(180,80,120,.22);--border-e:rgba(30,160,110,.2);
+  --text-main:rgba(20,12,36,.9);--text-dim:rgba(20,12,36,.62);--text-sub:rgba(100,70,20,.75);--text-faint:rgba(100,70,20,.55);
+  --input-bg:rgba(255,252,245,.85);--input-border:rgba(180,80,120,.22);--footer-link:rgba(100,70,20,.55);
+  --status-label:rgba(100,70,20,.7);--filter-bg:rgba(255,252,245,.9);--filter-border:rgba(160,130,60,.25);
+  --filter-text:rgba(20,12,36,.75);--modal-bg:rgba(250,245,235,.99);--modal-border:rgba(130,100,200,.35);
+  --group-bg:rgba(255,252,245,.88);--group-hover:rgba(255,250,240,.99);
 }
 html.light body{background:#f5f0e8;color:rgba(20,12,36,.9)}
 html.light #bg{opacity:.28}
@@ -176,18 +144,23 @@ html.light .status-label{color:rgba(100,70,20,.68)}
 html.light .status-dot{background:rgba(100,70,20,.28)}
 html.light .status-dot.online{background:#1a8050;box-shadow:0 0 8px rgba(26,128,80,.55)}
 html.light .status-dot.error{background:#b83535;box-shadow:0 0 8px rgba(184,53,53,.55)}
+html.light .del-month-box{background:rgba(250,245,235,.99);border-color:rgba(200,50,50,.35)}
+html.light .del-month-title{color:rgba(180,30,30,.82)}
+html.light .del-month-desc{color:rgba(20,12,36,.52)}
+html.light .del-month-label{color:rgba(100,70,20,.65)}
+html.light .del-month-select{background:rgba(255,252,245,.85);border-color:rgba(200,50,50,.28);color:rgba(20,12,36,.95)}
+html.light .del-month-preview{background:rgba(200,50,50,.06);border-color:rgba(200,50,50,.2);color:rgba(160,30,30,.82)}
+html.light .btn-del-month-trigger{color:rgba(160,30,30,.72);border-color:rgba(200,50,50,.28);background:rgba(200,50,50,.06)}
+html.light .btn-del-month-trigger:hover{color:rgba(160,30,30,.95);border-color:rgba(200,50,50,.5);background:rgba(200,50,50,.12)}
 
 html,body{width:100%;min-height:100vh;background:var(--bg);overflow-x:hidden}
 body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;align-items:center;padding:0 1.2rem 7rem;transition:background .35s,color .35s}
 #bg{position:fixed;inset:0;z-index:0;pointer-events:none;transition:opacity .35s}
-
 .shell{position:relative;z-index:3;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center}
-
 .nav-back{align-self:flex-start;margin-top:2rem;margin-bottom:2.5rem;display:flex;align-items:center;gap:10px;font-family:var(--cinzel);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:rgba(212,175,100,.55);text-decoration:none;transition:color .2s;cursor:pointer}
 .nav-back:hover{color:rgba(212,175,100,.9)}
 .nav-back-arr{font-size:14px;transition:transform .2s}
 .nav-back:hover .nav-back-arr{transform:translateX(-4px)}
-
 .theme-toggle{position:fixed;top:1.2rem;right:1.4rem;z-index:50;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border-pk);border-radius:24px;padding:.38rem .9rem .38rem .7rem;cursor:pointer;transition:all .3s;backdrop-filter:blur(16px)}
 .theme-toggle:hover{border-color:rgba(244,114,182,.5);box-shadow:0 0 16px rgba(244,114,182,.12)}
 .theme-icon{font-size:13px;line-height:1;transition:transform .4s}
@@ -195,25 +168,21 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .theme-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--text-sub);text-transform:uppercase;transition:color .3s}
 html.light .theme-toggle{border-color:rgba(180,80,120,.28)}
 html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 16px rgba(180,80,120,.12)}
-
 .page-eyebrow{font-family:var(--cinzel);font-size:9px;letter-spacing:.45em;text-transform:uppercase;color:rgba(244,114,182,.65);margin-bottom:.9rem;animation:rise .9s .1s ease both}
 .page-title{font-family:var(--cinzel);font-size:clamp(2.4rem,6vw,4rem);font-weight:900;line-height:.95;text-align:center;margin-bottom:.5rem;animation:rise .9s .15s ease both}
 .pt-sub{display:block;color:rgba(255,255,255,.7);font-size:.46em;letter-spacing:.2em;font-weight:400;text-transform:uppercase}
 .pt-main{display:block;background:linear-gradient(120deg,#f472b6 0%,#fda4d0 35%,#a78bfa 65%,#f472b6 100%);background-size:300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:pk-shift 8s linear infinite}
 @keyframes pk-shift{0%{background-position:0%}100%{background-position:300%}}
 .page-tagline{font-family:var(--mono);font-size:10px;color:rgba(244,114,182,.55);letter-spacing:.18em;text-align:center;margin-top:.8rem;margin-bottom:2.8rem;animation:rise .9s .22s ease both}
-
 .orn{display:flex;align-items:center;gap:12px;width:100%;max-width:500px;margin-bottom:2rem;animation:rise .9s .28s ease both}
 .orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.3),transparent)}
 .orn-diamond{width:5px;height:5px;background:rgba(244,114,182,.6);transform:rotate(45deg);flex-shrink:0}
 .orn-text{font-family:var(--cinzel);font-size:8px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.6);white-space:nowrap}
-
 .status-bar{width:100%;display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:1rem;animation:rise .9s .28s ease both}
 .status-dot{width:7px;height:7px;border-radius:50%;background:rgba(212,175,100,.45);transition:background .3s,box-shadow .3s;flex-shrink:0}
 .status-dot.online{background:#34d399;box-shadow:0 0 8px #34d399}
 .status-dot.error{background:#f87171;box-shadow:0 0 8px #f87171}
 .status-label{font-family:var(--mono);font-size:10px;color:var(--status-label);letter-spacing:.08em}
-
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;margin-bottom:1.8rem;animation:rise .9s .3s ease both}
 .stat{background:var(--surface);border:1px solid var(--border-pk);border-radius:16px;padding:.9rem 1rem;text-align:center;backdrop-filter:blur(20px);transition:border-color .3s}
 .stat:hover{border-color:rgba(244,114,182,.35)}
@@ -222,7 +191,6 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .stat-num.s-pending{color:rgba(251,191,36,.95)}
 .stat-num.s-done{color:rgba(52,211,153,.95)}
 .stat-num.s-fwds{color:rgba(244,114,182,.95)}
-
 .add-ritual{width:100%;background:var(--surface);border:1px solid var(--border-pk);border-radius:22px;padding:1.8rem 1.8rem 1.5rem;margin-bottom:1.6rem;backdrop-filter:blur(24px);animation:rise .9s .34s ease both;position:relative;overflow:hidden}
 .add-ritual::before{content:'';position:absolute;width:16px;height:16px;top:14px;left:14px;border-top:1px solid rgba(244,114,182,.45);border-left:1px solid rgba(244,114,182,.45)}
 .add-ritual::after{content:'';position:absolute;width:16px;height:16px;bottom:14px;right:14px;border-bottom:1px solid rgba(244,114,182,.45);border-right:1px solid rgba(244,114,182,.45)}
@@ -231,18 +199,7 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
 .form-field{display:flex;flex-direction:column;gap:5px}
 .form-field label{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:rgba(212,175,100,.68);text-transform:uppercase}
-.form-field input,.form-field select,.form-field textarea{
-  background:var(--input-bg);
-  border:1px solid var(--input-border);
-  border-radius:10px;
-  color:var(--text-main);
-  font-family:var(--mono);
-  font-size:11.5px;
-  padding:.55rem .85rem;
-  outline:none;
-  transition:border-color .25s,box-shadow .25s;
-  width:100%
-}
+.form-field input,.form-field select,.form-field textarea{background:var(--input-bg);border:1px solid var(--input-border);border-radius:10px;color:var(--text-main);font-family:var(--mono);font-size:11.5px;padding:.55rem .85rem;outline:none;transition:border-color .25s,box-shadow .25s;width:100%}
 .form-field input::placeholder,.form-field textarea::placeholder{color:rgba(237,232,255,.32)}
 .form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:rgba(244,114,182,.5);box-shadow:0 0 0 3px rgba(244,114,182,.09)}
 .form-field select option{background:#0e0b1a;color:#ede8ff}
@@ -251,14 +208,12 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .btn-inscribe{margin-top:.8rem;font-family:var(--cinzel);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.98);background:rgba(244,114,182,.1);border:1px solid rgba(244,114,182,.35);border-radius:30px;padding:.6rem 1.8rem;cursor:pointer;transition:all .3s;display:flex;align-items:center;gap:8px}
 .btn-inscribe:hover:not(:disabled){background:rgba(244,114,182,.18);border-color:rgba(244,114,182,.6);box-shadow:0 0 20px rgba(244,114,182,.18);color:#fff}
 .btn-inscribe:disabled{opacity:.45;cursor:not-allowed}
-
 .view-toggle-row{width:100%;display:flex;align-items:center;gap:8px;margin-bottom:1.2rem;animation:rise .9s .36s ease both;flex-wrap:wrap}
 .view-btn{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;padding:.45rem 1.2rem;border-radius:20px;border:1px solid rgba(212,175,100,.22);background:rgba(10,8,24,.6);color:rgba(212,175,100,.58);cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:6px}
 .view-btn:hover{border-color:rgba(244,114,182,.4);color:rgba(244,114,182,.88)}
 .view-btn.active{background:rgba(244,114,182,.12);border-color:rgba(244,114,182,.45);color:rgba(244,114,182,.98);box-shadow:0 0 14px rgba(244,114,182,.1)}
 .view-btn.scribe-active{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.38);color:rgba(52,211,153,.98);box-shadow:0 0 14px rgba(52,211,153,.1)}
 .view-sep{flex:1}
-
 .filter-bar{width:100%;display:flex;gap:10px;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;animation:rise .9s .38s ease both}
 .filter-bar select{background:var(--filter-bg);border:1px solid var(--filter-border);border-radius:10px;color:var(--filter-text);font-family:var(--mono);font-size:11px;padding:.45rem .85rem;outline:none;cursor:pointer;transition:border-color .25s}
 .filter-bar select:focus,.filter-bar select:hover{border-color:rgba(244,114,182,.4)}
@@ -266,8 +221,35 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .filter-sep{flex:1}
 .filter-count{font-family:var(--mono);font-size:9.5px;color:rgba(212,175,100,.52);letter-spacing:.1em;white-space:nowrap}
 
-.task-list{width:100%;display:flex;flex-direction:column;gap:8px;animation:rise .9s .42s ease both}
+/* DELETE BY MONTH BUTTON */
+.btn-del-month-trigger{font-family:var(--cinzel);font-size:8px;letter-spacing:.22em;text-transform:uppercase;padding:.4rem 1rem;border-radius:20px;border:1px solid rgba(248,113,113,.28);background:rgba(248,113,113,.07);color:rgba(248,113,113,.72);cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-del-month-trigger:hover{border-color:rgba(248,113,113,.55);background:rgba(248,113,113,.14);color:rgba(248,113,113,.98);box-shadow:0 0 14px rgba(248,113,113,.12)}
 
+/* DELETE BY MONTH MODAL */
+.del-month-overlay{position:fixed;inset:0;background:rgba(2,2,10,.88);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.del-month-overlay.open{opacity:1;pointer-events:all}
+.del-month-box{background:rgba(10,8,24,.97);border:1px solid rgba(248,113,113,.38);border-radius:24px;padding:2rem 2rem 1.6rem;width:90%;max-width:460px;position:relative;transform:scale(.92) translateY(20px);transition:transform .3s ease;box-shadow:0 0 60px rgba(248,113,113,.18)}
+.del-month-overlay.open .del-month-box{transform:scale(1) translateY(0)}
+.del-month-corner{position:absolute;width:14px;height:14px}
+.del-month-corner.tl{top:12px;left:12px;border-top:1px solid rgba(248,113,113,.48);border-left:1px solid rgba(248,113,113,.48)}
+.del-month-corner.br{bottom:12px;right:12px;border-bottom:1px solid rgba(248,113,113,.48);border-right:1px solid rgba(248,113,113,.48)}
+.del-month-shine{position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(248,113,113,.55),transparent)}
+.del-month-title{font-family:var(--cinzel);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:rgba(248,113,113,.92);margin-bottom:.35rem}
+.del-month-desc{font-family:var(--mono);font-size:10px;color:rgba(237,232,255,.42);letter-spacing:.06em;margin-bottom:1.4rem;line-height:1.75}
+.del-month-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:rgba(212,175,100,.62);text-transform:uppercase;margin-bottom:6px}
+.del-month-select{width:100%;background:rgba(2,2,10,.7);border:1px solid rgba(248,113,113,.28);border-radius:10px;color:rgba(237,232,255,.95);font-family:var(--mono);font-size:13px;padding:.65rem 1rem;outline:none;transition:border-color .25s,box-shadow .25s;cursor:pointer;margin-bottom:1rem}
+.del-month-select:focus{border-color:rgba(248,113,113,.55);box-shadow:0 0 0 3px rgba(248,113,113,.1)}
+.del-month-select option{background:#0e0b1a}
+.del-month-preview{font-family:var(--mono);font-size:10.5px;color:rgba(248,113,113,.75);background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:.65rem 1rem;margin-bottom:1.4rem;min-height:3rem;line-height:1.75;letter-spacing:.05em}
+.del-month-btns{display:flex;gap:10px}
+.modal-btn{flex:1;font-family:var(--cinzel);font-size:9px;letter-spacing:.28em;text-transform:uppercase;padding:.65rem 1rem;border-radius:20px;border:1px solid;cursor:pointer;transition:all .25s;background:transparent}
+.btn-del-month-confirm{color:rgba(248,113,113,.98);border-color:rgba(248,113,113,.42);background:rgba(248,113,113,.1)}
+.btn-del-month-confirm:hover:not(:disabled){background:rgba(248,113,113,.22);border-color:rgba(248,113,113,.65);box-shadow:0 0 18px rgba(248,113,113,.18)}
+.btn-del-month-confirm:disabled{opacity:.35;cursor:not-allowed}
+.modal-btn-cancel{color:rgba(212,175,100,.68);border-color:rgba(212,175,100,.22)}
+.modal-btn-cancel:hover{color:rgba(212,175,100,.92);border-color:rgba(212,175,100,.42)}
+
+.task-list{width:100%;display:flex;flex-direction:column;gap:8px;animation:rise .9s .42s ease both}
 .task-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.1rem 1.3rem;display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:start;backdrop-filter:blur(20px);transition:border-color .3s,background .3s,transform .25s;overflow:hidden}
 .task-card::before{content:'';position:absolute;top:0;left:6%;right:6%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.22),transparent);opacity:0;transition:opacity .3s}
 .task-card:hover{border-color:rgba(244,114,182,.25);background:var(--surface-hover);transform:translateY(-1px)}
@@ -276,7 +258,6 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .task-card.is-done:hover{opacity:.82}
 .task-card.is-done{border-color:rgba(52,211,153,.12)}
 .task-card.is-done:hover{border-color:rgba(52,211,153,.28)}
-
 .fwd-group{width:100%;margin-bottom:10px;animation:rise .4s ease both}
 .fwd-group-header{display:flex;align-items:center;gap:12px;padding:.85rem 1.2rem;background:var(--group-bg);border:1px solid var(--border-pk);border-radius:16px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;user-select:none}
 .fwd-group-header::before{content:'';position:absolute;top:0;left:6%;right:6%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.38),transparent)}
@@ -294,7 +275,6 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .fwd-progress-bar{width:64px;height:4px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
 .fwd-progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,rgba(52,211,153,.6),rgba(52,211,153,.95));transition:width .5s ease}
 .fwd-progress-pct{font-family:var(--mono);font-size:9px;color:rgba(52,211,153,.72);letter-spacing:.06em;min-width:26px;text-align:right}
-
 .fwd-group-body{display:none;flex-direction:column;gap:0;border:1px solid rgba(244,114,182,.2);border-top:none;border-bottom-left-radius:16px;border-bottom-right-radius:16px;overflow:hidden;background:var(--surface-deep)}
 .fwd-group-body.open{display:flex}
 .fwd-group-body .task-card{border-radius:0;border-left:none;border-right:none;border-top:none;border-bottom:1px solid rgba(212,175,100,.09)}
@@ -302,17 +282,14 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .fwd-group-body .task-card:first-child{border-top:none}
 .fwd-group-body .task-card:hover{transform:none;background:rgba(14,10,28,.9)}
 .fwd-group-empty{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.42);letter-spacing:.1em;text-align:center;padding:1.2rem;border:1px solid rgba(244,114,182,.18);border-top:none;border-bottom-left-radius:14px;border-bottom-right-radius:14px;background:var(--surface-deep)}
-
 .task-skel{border-radius:18px;background:rgba(10,8,24,.6);border:1px solid rgba(212,175,100,.08);padding:1.2rem 1.3rem;display:flex;flex-direction:column;gap:10px}
 .skel-line{border-radius:4px;background:rgba(244,114,182,.07);animation:shimmer 1.6s ease-in-out infinite}
 @keyframes shimmer{0%,100%{opacity:1}50%{opacity:.3}}
-
 .task-check-wrap{padding-top:2px}
 .task-check{appearance:none;-webkit-appearance:none;width:16px;height:16px;border-radius:5px;border:1px solid rgba(244,114,182,.38);background:transparent;cursor:pointer;position:relative;flex-shrink:0;transition:all .2s}
 .task-check:checked{background:rgba(52,211,153,.18);border-color:rgba(52,211,153,.6)}
-.task-check:checked::after{content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;color:rgba(52,211,153,.98)}
+.task-check:checked::after{content:'checkmark';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;color:rgba(52,211,153,.98);content:'\2713'}
 .task-check:hover:not(:checked){border-color:rgba(244,114,182,.65)}
-
 .task-title{font-family:var(--cinzel);font-size:13px;font-weight:600;color:var(--text-main);letter-spacing:.02em;margin-bottom:.4rem}
 .is-done .task-title{text-decoration:line-through;color:rgba(255,255,255,.38)}
 .task-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:.4rem}
@@ -325,16 +302,13 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .task-notes{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);line-height:1.65;margin-top:.5rem;border-left:2px solid rgba(244,114,182,.2);padding-left:.7rem}
 .task-date{font-family:var(--mono);font-size:9px;color:rgba(212,175,100,.48);margin-top:.35rem;letter-spacing:.05em}
 .task-done-by{font-family:var(--mono);font-size:9px;color:rgba(52,211,153,.55);margin-top:.2rem;letter-spacing:.05em}
-
 .task-actions{display:flex;gap:4px;padding-top:1px}
 .btn-del{background:none;border:none;cursor:pointer;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(212,175,100,.42);transition:all .2s}
 .btn-del:hover{background:rgba(244,114,182,.12);color:rgba(244,114,182,.92)}
-
 .empty-state{width:100%;text-align:center;padding:3.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.8rem}
 .empty-rune{font-family:var(--cinzel);font-size:2.8rem;color:rgba(244,114,182,.22)}
 .empty-text{font-family:var(--cinzel);font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:rgba(212,175,100,.48)}
 .empty-sub{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.35);letter-spacing:.08em}
-
 .modal-overlay{position:fixed;inset:0;background:rgba(2,2,10,.85);backdrop-filter:blur(8px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
 .modal-overlay.open{opacity:1;pointer-events:all}
 .modal-box{background:var(--modal-bg);border:1px solid var(--modal-border);border-radius:24px;padding:2rem 2rem 1.6rem;width:90%;max-width:420px;position:relative;transform:scale(.92) translateY(20px);transition:transform .3s ease;box-shadow:0 0 60px rgba(167,139,250,.14)}
@@ -350,14 +324,12 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .modal-input:focus{border-color:rgba(167,139,250,.55);box-shadow:0 0 0 3px rgba(167,139,250,.1)}
 .modal-input::placeholder{color:rgba(237,232,255,.32)}
 .modal-btns{display:flex;gap:10px;margin-top:1.4rem}
-.modal-btn{flex:1;font-family:var(--cinzel);font-size:9px;letter-spacing:.28em;text-transform:uppercase;padding:.65rem 1rem;border-radius:20px;border:1px solid;cursor:pointer;transition:all .25s}
 .modal-btn-confirm{color:rgba(52,211,153,.98);border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.1)}
 .modal-btn-confirm:hover{background:rgba(52,211,153,.2);border-color:rgba(52,211,153,.6);box-shadow:0 0 18px rgba(52,211,153,.14)}
 .modal-btn-cancel{color:rgba(212,175,100,.68);border-color:rgba(212,175,100,.22);background:transparent}
 .modal-btn-cancel:hover{color:rgba(212,175,100,.92);border-color:rgba(212,175,100,.42)}
 .modal-skip{font-family:var(--mono);font-size:9px;color:rgba(212,175,100,.42);text-align:center;margin-top:.8rem;cursor:pointer;letter-spacing:.08em;transition:color .2s}
 .modal-skip:hover{color:rgba(212,175,100,.72)}
-
 .scribes-section{width:100%;animation:rise .9s .4s ease both}
 .scribes-header{display:flex;align-items:center;gap:12px;margin-bottom:1.2rem}
 .scribes-title{font-family:var(--cinzel);font-size:9px;letter-spacing:.38em;text-transform:uppercase;color:rgba(52,211,153,.72)}
@@ -376,11 +348,9 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .scribe-bar-wrap{height:3px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden}
 .scribe-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,rgba(52,211,153,.5),rgba(52,211,153,.9));transition:width .6s ease}
 .scribe-bar-label{font-family:var(--mono);font-size:8px;color:rgba(52,211,153,.52);margin-top:4px;letter-spacing:.06em}
-
 .scribe-latest{font-family:var(--mono);font-size:8.5px;color:rgba(212,175,100,.52);letter-spacing:.06em;margin-top:.55rem;display:flex;align-items:center;gap:5px}
 .scribe-latest-icon{font-size:9px;opacity:.7}
 html.light .scribe-latest{color:rgba(100,70,20,.52)}
-
 .scribe-detail{width:100%;margin-bottom:1.6rem;animation:rise .4s ease both}
 .scribe-detail-header{display:flex;align-items:center;gap:12px;margin-bottom:.9rem}
 .scribe-detail-name{font-family:var(--cinzel);font-size:14px;font-weight:600;color:rgba(52,211,153,.92);letter-spacing:.04em}
@@ -388,14 +358,11 @@ html.light .scribe-latest{color:rgba(100,70,20,.52)}
 .btn-close-detail{font-family:var(--cinzel);font-size:8px;letter-spacing:.25em;color:rgba(212,175,100,.58);border:1px solid rgba(212,175,100,.22);background:none;border-radius:16px;padding:.3rem .9rem;cursor:pointer;margin-left:auto;transition:all .25s}
 .btn-close-detail:hover{color:rgba(212,175,100,.92);border-color:rgba(212,175,100,.45)}
 .scribe-detail-tasks{display:flex;flex-direction:column;gap:7px}
-
 .task-completed-date{font-family:var(--mono);font-size:9px;color:rgba(52,211,153,.48);margin-top:.2rem;letter-spacing:.05em;display:flex;align-items:center;gap:4px}
 html.light .task-completed-date{color:rgba(10,115,65,.52)}
-
 #toast{position:fixed;bottom:2.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:#0e0e1c;color:#ede8ff;border:1px solid rgba(212,175,100,.35);padding:10px 22px;border-radius:24px;font-family:var(--mono);font-size:12px;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;backdrop-filter:blur(10px)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.error{background:rgba(248,113,113,.14);border-color:rgba(248,113,113,.4);color:#f87171}
-
 .sigil-div{display:flex;align-items:center;gap:16px;width:100%;margin:3rem 0 0}
 .sdl2{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.18),transparent)}
 .sigil-sym{font-family:var(--cinzel);font-size:15px;color:rgba(212,175,100,.42);letter-spacing:.1em}
@@ -403,10 +370,8 @@ footer{margin-top:2.5rem;font-family:var(--cinzel);font-size:9px;letter-spacing:
 footer a{color:rgba(212,175,100,.45);text-decoration:none;transition:color .2s}
 footer a:hover{color:rgba(212,175,100,.82)}
 .fsep{margin:0 10px;opacity:.5}
-
 @keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
 @keyframes task-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
 @media(max-width:580px){
   .stats-row{grid-template-columns:repeat(2,1fr)}
   .form-grid{grid-template-columns:1fr}
@@ -418,122 +383,108 @@ footer a:hover{color:rgba(212,175,100,.82)}
 </style>
 </head>
 <body>
-
 <canvas id="bg"></canvas>
-
 <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
-  <span class="theme-icon" id="theme-icon">☽</span>
+  <span class="theme-icon" id="theme-icon">&#9789;</span>
   <span class="theme-label" id="theme-label">Dark</span>
 </button>
 
+<!-- COMPLETE TASK MODAL -->
 <div class="modal-overlay" id="complete-modal">
   <div class="modal-box">
     <div class="modal-corner tl"></div>
     <div class="modal-corner br"></div>
     <div class="modal-shine"></div>
     <div class="modal-title">Seal this task</div>
-    <div class="modal-task-name" id="modal-task-name">—</div>
+    <div class="modal-task-name" id="modal-task-name">&mdash;</div>
     <div class="modal-label">Completed by (your name)</div>
     <input class="modal-input" type="text" id="modal-scribe-input" placeholder="e.g. Nico, Marco, Ana..." autocomplete="off" />
     <div class="modal-btns">
       <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="modal-btn modal-btn-confirm" onclick="confirmDone()">Seal · Mark Done</button>
+      <button class="modal-btn modal-btn-confirm" onclick="confirmDone()">Seal &middot; Mark Done</button>
     </div>
-    <div class="modal-skip" onclick="confirmDoneAnonymous()">Skip — mark done without a name</div>
+    <div class="modal-skip" onclick="confirmDoneAnonymous()">Skip &mdash; mark done without a name</div>
+  </div>
+</div>
+
+<!-- DELETE BY MONTH MODAL -->
+<div class="del-month-overlay" id="del-month-modal">
+  <div class="del-month-box">
+    <div class="del-month-corner tl"></div>
+    <div class="del-month-corner br"></div>
+    <div class="del-month-shine"></div>
+    <div class="del-month-title">&#9888; Purge Tasks by Month</div>
+    <div class="del-month-desc">Select a month to permanently dissolve all tasks inscribed during that period.<br>This action cannot be undone.</div>
+    <div class="del-month-label">Select month to purge</div>
+    <select class="del-month-select" id="del-month-select" onchange="updateDelPreview()">
+      <option value="">&mdash; choose a month &mdash;</option>
+    </select>
+    <div class="del-month-label">Tasks that will be dissolved</div>
+    <div class="del-month-preview" id="del-month-preview">Select a month to preview affected tasks...</div>
+    <div class="del-month-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeDelMonthModal()">Cancel</button>
+      <button class="modal-btn btn-del-month-confirm" id="btn-del-month-confirm" onclick="execDelByMonth()" disabled>&#10005; Dissolve All</button>
+    </div>
   </div>
 </div>
 
 <div class="shell">
-
   <a class="nav-back" href="index.html">
-    <span class="nav-back-arr">⟵</span>
+    <span class="nav-back-arr">&#10232;</span>
     <span>Return to Grimoire</span>
   </a>
-
-  <div class="page-eyebrow">Tome IV · WMF Arcane Workspace</div>
+  <div class="page-eyebrow">Tome IV &middot; WMF Arcane Workspace</div>
   <h1 class="page-title">
     <span class="pt-sub">Forwarder</span>
     <span class="pt-main">Task Ledger</span>
   </h1>
-  <div class="page-tagline">Track open tasks · Bound by forwarder · Sealed when done</div>
-
+  <div class="page-tagline">Track open tasks &middot; Bound by forwarder &middot; Sealed when done</div>
   <div class="orn">
     <div class="orn-line"></div>
     <div class="orn-diamond"></div>
-    <div class="orn-text">I — Inscribe a new task</div>
+    <div class="orn-text">I &mdash; Inscribe a new task</div>
     <div class="orn-diamond"></div>
     <div class="orn-line"></div>
   </div>
-
   <div class="status-bar">
     <div class="status-dot" id="status-dot"></div>
     <span class="status-label" id="status-label">Connecting to ether...</span>
   </div>
-
   <div class="stats-row">
-    <div class="stat"><div class="stat-num" id="st-total">—</div><div class="stat-lbl">Total tasks</div></div>
-    <div class="stat"><div class="stat-num s-pending" id="st-pending">—</div><div class="stat-lbl">Pending</div></div>
-    <div class="stat"><div class="stat-num s-done" id="st-done">—</div><div class="stat-lbl">Done</div></div>
-    <div class="stat"><div class="stat-num s-fwds" id="st-fwds">—</div><div class="stat-lbl">Forwarders</div></div>
+    <div class="stat"><div class="stat-num" id="st-total">&mdash;</div><div class="stat-lbl">Total tasks</div></div>
+    <div class="stat"><div class="stat-num s-pending" id="st-pending">&mdash;</div><div class="stat-lbl">Pending</div></div>
+    <div class="stat"><div class="stat-num s-done" id="st-done">&mdash;</div><div class="stat-lbl">Done</div></div>
+    <div class="stat"><div class="stat-num s-fwds" id="st-fwds">&mdash;</div><div class="stat-lbl">Forwarders</div></div>
   </div>
-
   <div class="add-ritual">
     <div class="ritual-top"></div>
     <div class="form-label-head">Inscribe a new task into the ledger</div>
     <div class="form-grid">
-      <div class="form-field">
-        <label>Task title</label>
-        <input type="text" id="inp-title" placeholder="e.g. Chase AWB status" />
-      </div>
+      <div class="form-field"><label>Task title</label><input type="text" id="inp-title" placeholder="e.g. Chase AWB status" /></div>
       <div class="form-field">
         <label>Forwarder</label>
         <select id="inp-fwd">
-          <option value="">— select —</option>
-          <option>Dachser</option>
-          <option>K+N</option>
-          <option>DHL Express</option>
-          <option>Wackler</option>
-          <option>Honold</option>
-          <option>ERKA</option>
+          <option value="">&mdash; select &mdash;</option>
+          <option>Dachser</option><option>K+N</option><option>DHL Express</option>
+          <option>Wackler</option><option>Honold</option><option>ERKA</option>
         </select>
       </div>
-      <div class="form-field">
-        <label>Total data</label>
-        <input type="text" id="inp-total" placeholder="e.g. 3 AWBs · 120 kg" />
-      </div>
-      <div class="form-field form-full">
-        <label>Notes</label>
-        <textarea id="inp-notes" placeholder="Any additional details, references, or remarks..."></textarea>
-      </div>
+      <div class="form-field"><label>Total data</label><input type="text" id="inp-total" placeholder="e.g. 3 AWBs &middot; 120 kg" /></div>
+      <div class="form-field form-full"><label>Notes</label><textarea id="inp-notes" placeholder="Any additional details, references, or remarks..."></textarea></div>
     </div>
-    <button class="btn-inscribe" id="btn-inscribe" onclick="addTask()">
-      <span>✦</span>
-      <span>Inscribe Task</span>
-    </button>
+    <button class="btn-inscribe" id="btn-inscribe" onclick="addTask()"><span>&#10022;</span><span>Inscribe Task</span></button>
   </div>
-
   <div class="view-toggle-row">
-    <button class="view-btn active" id="btn-view-list" onclick="setView('list')">
-      <span>☰</span> All Tasks
-    </button>
-    <button class="view-btn" id="btn-view-fwd" onclick="setView('forwarder')">
-      <span>◈</span> By Forwarder
-    </button>
-    <button class="view-btn" id="btn-view-scribes" onclick="setView('scribes')">
-      <span>⊕</span> Hall of Scribes
-    </button>
+    <button class="view-btn active" id="btn-view-list" onclick="setView('list')"><span>&#9776;</span> All Tasks</button>
+    <button class="view-btn" id="btn-view-fwd" onclick="setView('forwarder')"><span>&#9672;</span> By Forwarder</button>
+    <button class="view-btn" id="btn-view-scribes" onclick="setView('scribes')"><span>&#8853;</span> Hall of Scribes</button>
     <div class="view-sep"></div>
   </div>
-
   <div class="filter-bar" id="filter-bar">
     <select id="flt-fwd" onchange="render()">
       <option value="">All forwarders</option>
-      <option>Dachser</option>
-      <option>K+N</option>
-      <option>DHL Express</option>
-      <option>Wackler</option>
-      <option>Honold</option>
-      <option>ERKA</option>
+      <option>Dachser</option><option>K+N</option><option>DHL Express</option>
+      <option>Wackler</option><option>Honold</option><option>ERKA</option>
     </select>
     <select id="flt-status" onchange="render()">
       <option value="">All statuses</option>
@@ -542,38 +493,29 @@ footer a:hover{color:rgba(212,175,100,.82)}
     </select>
     <div class="filter-sep"></div>
     <div class="filter-count" id="filter-count"></div>
+    <button class="btn-del-month-trigger" onclick="openDelMonthModal()" title="Delete all tasks from a specific month">
+      <span>&#9904;</span> Delete by Month
+    </button>
   </div>
-
   <div class="task-list" id="task-list">
     <div class="task-skel"><div class="skel-line" style="height:14px;width:45%;margin-bottom:0"></div><div class="skel-line" style="height:10px;width:22%;margin-top:10px"></div><div class="skel-line" style="height:10px;width:70%;margin-top:8px"></div></div>
     <div class="task-skel"><div class="skel-line" style="height:14px;width:38%;margin-bottom:0"></div><div class="skel-line" style="height:10px;width:18%;margin-top:10px"></div><div class="skel-line" style="height:10px;width:62%;margin-top:8px"></div></div>
     <div class="task-skel"><div class="skel-line" style="height:14px;width:52%;margin-bottom:0"></div><div class="skel-line" style="height:10px;width:25%;margin-top:10px"></div><div class="skel-line" style="height:10px;width:58%;margin-top:8px"></div></div>
   </div>
-
   <div id="fwd-view" style="display:none;width:100%;flex-direction:column;gap:8px;animation:rise .9s .42s ease both"></div>
-
   <div id="scribes-view" style="display:none;width:100%;flex-direction:column;gap:0">
     <div class="scribe-detail" id="scribe-detail" style="display:none"></div>
   </div>
-
-  <div class="sigil-div">
-    <div class="sdl2"></div>
-    <div class="sigil-sym">✦ ᛟ ✦</div>
-    <div class="sdl2"></div>
-  </div>
-
+  <div class="sigil-div"><div class="sdl2"></div><div class="sigil-sym">&#10022; &#5807; &#10022;</div><div class="sdl2"></div></div>
   <footer>
-    codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
-    <a href="index.html">The Grimoire</a><span class="fsep">✦</span><a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a>
+    codingkuh.my.id<span class="fsep">&middot;</span>Firebase + GitHub Pages<br>
+    <a href="index.html">The Grimoire</a><span class="fsep">&#10022;</span><a href="code.html">The Vault</a><span class="fsep">&#10022;</span><a href="qa.html">The Oracle</a><span class="fsep">&#10022;</span><a href="anmerkung.html">The Alchemist</a>
   </footer>
-
 </div>
-
 <div id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
 <script>
 (function(){
 const cv=document.getElementById('bg'),cx=cv.getContext('2d');
@@ -582,7 +524,7 @@ const PAL=[[91,156,246],[167,139,250],[52,211,153],[244,114,182],[212,175,100]];
 let mouse={x:-9999,y:-9999};
 function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight}
 function mkpt(){const c=PAL[Math.floor(Math.random()*PAL.length)];return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.15,r:Math.random()*2+.5,a:Math.random()*.4+.05,da:(Math.random()*.0008+.0003)*(Math.random()<.5?1:-1),c,ph:Math.random()*Math.PI*2}}
-const RUNES='ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ☽☿♄⊕⊗✦';
+const RUNES='\u16A0\u16A2\u16A6\u16A8\u16B1\u16B2\u16B7\u16B9\u16BA\u16BE\u16C1\u16C3\u16C7\u16C8\u16C9\u16CA\u16CF\u16D2\u16D6\u16D7\u16DA\u16DC\u16DE\u16DF\u263D\u263F\u2644\u2295\u2297\u2726';
 function mkRune(){return{ch:RUNES[Math.floor(Math.random()*RUNES.length)],x:Math.random()*W,y:Math.random()*H,vy:-(Math.random()*.3+.1),a:Math.random()*.12+.02,size:Math.floor(Math.random()*8)+10,c:PAL[Math.floor(Math.random()*PAL.length)],life:1}}
 function init(){resize();pts=Array.from({length:Math.min(Math.floor(W*H/9000),120)},mkpt);for(let i=0;i<30;i++)runeChars.push(mkRune())}
 let last=0;
@@ -607,496 +549,270 @@ window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
 init();requestAnimationFrame(frame);
 })();
 
-(function(){
-  const saved = localStorage.getItem('grimoire-theme');
-  if (saved === 'light') applyLight();
-})();
+(function(){const s=localStorage.getItem('grimoire-theme');if(s==='light')applyLight();})();
+function applyLight(){document.documentElement.classList.add('light');document.body.style.color='rgba(20,12,36,.9)';const i=document.getElementById('theme-icon'),l=document.getElementById('theme-label');if(i)i.textContent='\u2600';if(l)l.textContent='Light';}
+function applyDark(){document.documentElement.classList.remove('light');document.body.style.color='#ede8ff';const i=document.getElementById('theme-icon'),l=document.getElementById('theme-label');if(i)i.textContent='\u263D';if(l)l.textContent='Dark';}
+function toggleTheme(){const isLight=document.documentElement.classList.contains('light');if(isLight){applyDark();localStorage.setItem('grimoire-theme','dark');}else{applyLight();localStorage.setItem('grimoire-theme','light');}}
 
-function applyLight(){
-  document.documentElement.classList.add('light');
-  document.body.style.color = 'rgba(20,12,36,.9)';
-  const icon = document.getElementById('theme-icon');
-  const lbl  = document.getElementById('theme-label');
-  if (icon) icon.textContent = '☀';
-  if (lbl)  lbl.textContent  = 'Light';
-}
-function applyDark(){
-  document.documentElement.classList.remove('light');
-  document.body.style.color = '#ede8ff';
-  const icon = document.getElementById('theme-icon');
-  const lbl  = document.getElementById('theme-label');
-  if (icon) icon.textContent = '☽';
-  if (lbl)  lbl.textContent  = 'Dark';
-}
-function toggleTheme(){
-  const isLight = document.documentElement.classList.contains('light');
-  if (isLight) {
-    applyDark();
-    localStorage.setItem('grimoire-theme','dark');
-  } else {
-    applyLight();
-    localStorage.setItem('grimoire-theme','light');
-  }
-}
+const firebaseConfig={apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",authDomain:"vb-code-vault.firebaseapp.com",projectId:"vb-code-vault",storageBucket:"vb-code-vault.firebasestorage.app",messagingSenderId:"773245175115",appId:"1:773245175115:web:0b6a4f27388f58f026d4ce"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore(),col=db.collection('wmf_tasks');
 
-const firebaseConfig = {
-  apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
-  authDomain: "vb-code-vault.firebaseapp.com",
-  projectId: "vb-code-vault",
-  storageBucket: "vb-code-vault.firebasestorage.app",
-  messagingSenderId: "773245175115",
-  appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
-};
+let tasks=[],saving=false,curView='list',openGroups=new Set(),selectedScribe=null,pendingToggleId=null;
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db  = firebase.firestore();
-const col = db.collection('wmf_tasks');
+function setView(v){curView=v;document.getElementById('btn-view-list').classList.toggle('active',v==='list');document.getElementById('btn-view-fwd').classList.toggle('active',v==='forwarder');document.getElementById('btn-view-scribes').classList.toggle('active',v==='scribes');document.getElementById('btn-view-scribes').classList.toggle('scribe-active',v==='scribes');document.getElementById('filter-bar').style.display=v==='list'?'flex':'none';document.getElementById('task-list').style.display=v==='list'?'flex':'none';document.getElementById('fwd-view').style.display=v==='forwarder'?'flex':'none';document.getElementById('scribes-view').style.display=v==='scribes'?'flex':'none';render();}
+function setStatus(s,l){document.getElementById('status-dot').className='status-dot '+(s||'');document.getElementById('status-label').textContent=l;}
+function startListener(){setStatus('','Connecting to ether...');col.orderBy('createdAt','desc').onSnapshot(snap=>{tasks=snap.docs.map(d=>({id:d.id,...d.data()}));setStatus('online','Online \u00b7 Live sync');render();},err=>{setStatus('error','Connection failed');showToast('Could not reach the ether.',true);console.error(err);});}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(msg,isError){const t=document.getElementById('toast');t.textContent=msg;t.className=isError?'error show':'show';clearTimeout(t._timer);t._timer=setTimeout(()=>{t.className='';},2600);}
+function shake(el){el.style.borderColor='rgba(244,114,182,.6)';setTimeout(()=>{el.style.borderColor='';},600);}
+function initials(n){if(!n)return'?';return n.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+function fmtDate(ts,opts){if(!ts)return null;const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-GB',opts||{day:'2-digit',month:'short',year:'numeric'});}
+function fmtDateShort(ts){return fmtDate(ts,{day:'2-digit',month:'short',year:'numeric'});}
+function tsToMonthKey(ts){if(!ts)return null;const d=ts.toDate?ts.toDate():new Date(ts);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+function monthKeyToLabel(k){const[y,m]=k.split('-');return new Date(+y,+m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});}
 
-let tasks      = [];
-let saving     = false;
-let curView    = 'list';
-let openGroups = new Set();
-let selectedScribe = null;
-let pendingToggleId   = null;
-let pendingToggleMode = null;
-
-function setView(v) {
-  curView = v;
-  document.getElementById('btn-view-list').classList.toggle('active',    v === 'list');
-  document.getElementById('btn-view-fwd').classList.toggle('active',     v === 'forwarder');
-  document.getElementById('btn-view-scribes').classList.toggle('active', v === 'scribes');
-  document.getElementById('btn-view-scribes').classList.toggle('scribe-active', v === 'scribes');
-  document.getElementById('filter-bar').style.display    = v === 'list'    ? 'flex' : 'none';
-  document.getElementById('task-list').style.display     = v === 'list'    ? 'flex' : 'none';
-  document.getElementById('fwd-view').style.display      = v === 'forwarder' ? 'flex' : 'none';
-  document.getElementById('scribes-view').style.display  = v === 'scribes' ? 'flex' : 'none';
-  render();
-}
-
-function setStatus(state, label) {
-  document.getElementById('status-dot').className = 'status-dot ' + (state || '');
-  document.getElementById('status-label').textContent = label;
-}
-
-function startListener() {
-  setStatus('', 'Connecting to ether...');
-  col.orderBy('createdAt', 'desc').onSnapshot(snap => {
-    tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    setStatus('online', 'Online · Live sync');
-    render();
-  }, err => {
-    setStatus('error', 'Connection failed');
-    showToast('Could not reach the ether. Check your connection.', true);
-    console.error(err);
-  });
-}
-
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function showToast(msg, isError) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = isError ? 'error show' : 'show';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => { t.className = ''; }, 2600);
-}
-
-function shake(el) {
-  el.style.borderColor = 'rgba(244,114,182,.6)';
-  setTimeout(() => { el.style.borderColor = ''; }, 600);
-}
-
-function initials(name) {
-  if (!name) return '?';
-  return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0,2);
-}
-
-function fmtDate(ts, opts) {
-  if (!ts) return null;
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('en-GB', opts || { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function fmtDateShort(ts) {
-  return fmtDate(ts, { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-async function addTask() {
-  if (saving) return;
-  const title  = document.getElementById('inp-title').value.trim();
-  const fwd    = document.getElementById('inp-fwd').value;
-  const total  = document.getElementById('inp-total').value.trim();
-  const notes  = document.getElementById('inp-notes').value.trim();
-
-  if (!title) { shake(document.getElementById('inp-title')); showToast('Please enter a task title.', true); return; }
-  if (!fwd)   { shake(document.getElementById('inp-fwd'));   showToast('Please select a forwarder.', true); return; }
-
-  saving = true;
-  const btn = document.getElementById('btn-inscribe');
-  btn.disabled = true;
-  btn.querySelector('span:last-child').textContent = 'Sealing...';
-
-  try {
-    await col.add({
-      title, fwd, total, notes,
-      status: 'pending',
-      completedBy: '',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    document.getElementById('inp-title').value  = '';
-    document.getElementById('inp-fwd').value    = '';
-    document.getElementById('inp-total').value  = '';
-    document.getElementById('inp-notes').value  = '';
+async function addTask(){
+  if(saving)return;
+  const title=document.getElementById('inp-title').value.trim();
+  const fwd=document.getElementById('inp-fwd').value;
+  const total=document.getElementById('inp-total').value.trim();
+  const notes=document.getElementById('inp-notes').value.trim();
+  if(!title){shake(document.getElementById('inp-title'));showToast('Please enter a task title.',true);return;}
+  if(!fwd){shake(document.getElementById('inp-fwd'));showToast('Please select a forwarder.',true);return;}
+  saving=true;const btn=document.getElementById('btn-inscribe');btn.disabled=true;btn.querySelector('span:last-child').textContent='Sealing...';
+  try{
+    await col.add({title,fwd,total,notes,status:'pending',completedBy:'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    document.getElementById('inp-title').value='';document.getElementById('inp-fwd').value='';document.getElementById('inp-total').value='';document.getElementById('inp-notes').value='';
     showToast('Task inscribed into the ledger!');
-    if (curView === 'forwarder') openGroups.add(fwd);
-  } catch(e) {
-    showToast('Failed to inscribe. Check your connection.', true);
-    console.error(e);
-  } finally {
-    saving = false;
-    btn.disabled = false;
-    btn.querySelector('span:last-child').textContent = 'Inscribe Task';
-  }
+    if(curView==='forwarder')openGroups.add(fwd);
+  }catch(e){showToast('Failed to inscribe.',true);console.error(e);}
+  finally{saving=false;btn.disabled=false;btn.querySelector('span:last-child').textContent='Inscribe Task';}
 }
 
-function openCompleteModal(id) {
-  const task = tasks.find(x => x.id === id);
-  if (!task) return;
-  pendingToggleId = id;
-  document.getElementById('modal-task-name').textContent = task.title;
-  document.getElementById('modal-scribe-input').value = '';
+/* ── COMPLETE MODAL ── */
+function openCompleteModal(id){
+  const task=tasks.find(x=>x.id===id);if(!task)return;
+  pendingToggleId=id;
+  document.getElementById('modal-task-name').textContent=task.title;
+  document.getElementById('modal-scribe-input').value='';
   document.getElementById('complete-modal').classList.add('open');
-  setTimeout(() => document.getElementById('modal-scribe-input').focus(), 300);
+  setTimeout(()=>document.getElementById('modal-scribe-input').focus(),300);
+}
+function closeModal(){document.getElementById('complete-modal').classList.remove('open');pendingToggleId=null;}
+async function confirmDone(){if(!pendingToggleId)return;const id=pendingToggleId;const name=document.getElementById('modal-scribe-input').value.trim();closeModal();await applyDone(id,name);}
+async function confirmDoneAnonymous(){if(!pendingToggleId)return;const id=pendingToggleId;closeModal();await applyDone(id,'');}
+async function applyDone(id,scribeName){
+  try{
+    await col.doc(id).update({status:'done',completedBy:scribeName||'',completedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    showToast(scribeName?`Sealed by ${scribeName}!`:'Task marked done.');
+  }catch(e){showToast('Could not update task.',true);console.error(e);}
 }
 
-function closeModal() {
-  document.getElementById('complete-modal').classList.remove('open');
-  pendingToggleId = null;
+/**
+ * FIX: toggleDone now uses e.preventDefault() to stop the checkbox from
+ * visually toggling before Firestore confirms — the snapshot listener will
+ * re-render with the correct state. Done tasks go directly to reopenTask(),
+ * pending tasks open the scribe modal.
+ */
+function toggleDone(id,evt){
+  if(evt){evt.preventDefault();evt.stopPropagation();}
+  const task=tasks.find(x=>x.id===id);if(!task)return;
+  if(task.status==='done'){reopenTask(id);}
+  else{openCompleteModal(id);}
+}
+async function reopenTask(id){
+  try{
+    await col.doc(id).update({status:'pending',completedBy:'',completedAt:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    showToast('Task reopened \u2014 back in the ledger.');
+  }catch(e){showToast('Could not reopen task.',true);console.error(e);}
+}
+async function deleteTask(id){
+  if(!confirm('Banish this task from the ledger? This cannot be undone.'))return;
+  try{await col.doc(id).delete();showToast('Task dissolved.');}
+  catch(e){showToast('Delete failed.',true);console.error(e);}
 }
 
-async function confirmDone() {
-  if (!pendingToggleId) return;
-  const id = pendingToggleId;          // ✅ save it first
-  const name = document.getElementById('modal-scribe-input').value.trim();
-  closeModal();                        // now safe to close
-  await applyDone(id, name);           // use the saved id
+/* ── DELETE BY MONTH ── */
+function openDelMonthModal(){
+  const monthSet=new Set();
+  tasks.forEach(t=>{const k=tsToMonthKey(t.createdAt);if(k)monthSet.add(k);});
+  const months=Array.from(monthSet).sort().reverse();
+  const sel=document.getElementById('del-month-select');
+  sel.innerHTML='<option value="">\u2014 choose a month \u2014</option>';
+  months.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=monthKeyToLabel(k);sel.appendChild(o);});
+  document.getElementById('del-month-preview').textContent='Select a month to preview affected tasks...';
+  document.getElementById('btn-del-month-confirm').disabled=true;
+  document.getElementById('del-month-modal').classList.add('open');
 }
-
-async function confirmDoneAnonymous() {
-  if (!pendingToggleId) return;
-  const id = pendingToggleId;
-  closeModal();
-  await applyDone(id, '');
+function closeDelMonthModal(){document.getElementById('del-month-modal').classList.remove('open');}
+function updateDelPreview(){
+  const k=document.getElementById('del-month-select').value;
+  const btn=document.getElementById('btn-del-month-confirm');
+  const pre=document.getElementById('del-month-preview');
+  if(!k){pre.textContent='Select a month to preview affected tasks...';btn.disabled=true;return;}
+  const affected=tasks.filter(t=>tsToMonthKey(t.createdAt)===k);
+  const pending=affected.filter(t=>t.status==='pending').length;
+  const done=affected.filter(t=>t.status==='done').length;
+  if(affected.length===0){pre.textContent='No tasks found for this month.';btn.disabled=true;}
+  else{pre.innerHTML=`<strong style="color:rgba(248,113,113,.98)">${affected.length} task${affected.length!==1?'s':''}</strong> will be dissolved from <strong>${monthKeyToLabel(k)}</strong><br>${pending} pending \u00b7 ${done} done`;btn.disabled=false;}
 }
-
-async function applyDone(id, scribeName) {
-  try {
-    await col.doc(id).update({
-      status: 'done',
-      completedBy: scribeName || '',
-      completedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    showToast(scribeName ? `Sealed by ${scribeName}!` : 'Task marked done.');
-  } catch(e) {
-    showToast('Could not update task.', true);
-    console.error(e);
+async function execDelByMonth(){
+  const k=document.getElementById('del-month-select').value;if(!k)return;
+  const affected=tasks.filter(t=>tsToMonthKey(t.createdAt)===k);
+  if(affected.length===0)return;
+  const label=monthKeyToLabel(k);
+  if(!confirm(`Permanently dissolve all ${affected.length} task(s) from ${label}? This cannot be undone.`))return;
+  closeDelMonthModal();
+  let count=0;
+  for(let i=0;i<affected.length;i+=500){
+    const batch=db.batch();
+    affected.slice(i,i+500).forEach(t=>batch.delete(col.doc(t.id)));
+    try{await batch.commit();count+=Math.min(500,affected.length-i);}
+    catch(e){showToast(`Batch delete error: ${e.message}`,true);console.error(e);return;}
   }
+  showToast(`${count} task${count!==1?'s':''} from ${label} dissolved.`);
 }
 
-async function toggleDone(id) {
-  const task = tasks.find(x => x.id === id);
-  if (!task) return;
+function toggleGroup(n){if(openGroups.has(n))openGroups.delete(n);else openGroups.add(n);render();}
+function selectScribe(n){selectedScribe=selectedScribe===n?null:n;render();}
 
-  if (task.status === 'done') {
-    try {
-      await col.doc(id).update({
-        status: 'pending',
-        completedBy: '',
-        completedAt: null,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      showToast('Task reopened.');
-    } catch(e) {
-      showToast('Could not update task.', true);
-      console.error(e);
-    }
-  } else {
-    openCompleteModal(id);
-  }
-}
-
-async function deleteTask(id) {
-  if (!confirm('Banish this task from the ledger? This cannot be undone.')) return;
-  try {
-    await col.doc(id).delete();
-    showToast('Task dissolved.');
-  } catch(e) {
-    showToast('Delete failed.', true);
-    console.error(e);
-  }
-}
-
-function toggleGroup(fwdName) {
-  if (openGroups.has(fwdName)) openGroups.delete(fwdName);
-  else openGroups.add(fwdName);
-  render();
-}
-
-function selectScribe(name) {
-  if (selectedScribe === name) {
-    selectedScribe = null;
-  } else {
-    selectedScribe = name;
-  }
-  render();
-}
-
-function taskCardHTML(t, i, hideForwarderBadge, showCompletedDate) {
-  const dateStr = fmtDateShort(t.createdAt) || '—';
-
-  const completedDateStr = (showCompletedDate && t.completedAt)
-    ? `<div class="task-completed-date">⊕ Sealed ${fmtDateShort(t.completedAt)}</div>`
-    : '';
-
-  const doneByStr = t.completedBy
-    ? `<div class="task-done-by">⊕ Sealed by <strong style="color:rgba(52,211,153,.72)">${esc(t.completedBy)}</strong>${(showCompletedDate && t.completedAt) ? ` · ${fmtDateShort(t.completedAt)}` : ''}</div>`
-    : (t.status === 'done'
-        ? `<div class="task-done-by" style="color:rgba(212,175,100,.35)">⊕ Sealed anonymously${(showCompletedDate && t.completedAt) ? ` · ${fmtDateShort(t.completedAt)}` : ''}</div>`
-        : completedDateStr);
-
-  return `
-    <div class="task-card${t.status === 'done' ? ' is-done' : ''}" style="animation:task-in .3s ${i * 0.04}s ease both">
-      <div class="task-check-wrap">
-        <input type="checkbox" class="task-check" ${t.status === 'done' ? 'checked' : ''} onchange="toggleDone('${t.id}')" />
+function taskCardHTML(t,i,hideForwarderBadge,showCompletedDate){
+  const dateStr=fmtDateShort(t.createdAt)||'\u2014';
+  const doneByStr=t.completedBy
+    ?`<div class="task-done-by">\u2295 Sealed by <strong style="color:rgba(52,211,153,.72)">${esc(t.completedBy)}</strong>${(showCompletedDate&&t.completedAt)?` \u00b7 ${fmtDateShort(t.completedAt)}`:''}</div>`
+    :(t.status==='done'
+      ?`<div class="task-done-by" style="color:rgba(212,175,100,.35)">\u2295 Sealed anonymously${(showCompletedDate&&t.completedAt)?` \u00b7 ${fmtDateShort(t.completedAt)}`:''}</div>`
+      :'');
+  return `<div class="task-card${t.status==='done'?' is-done':''}" style="animation:task-in .3s ${i*.04}s ease both">
+    <div class="task-check-wrap"><input type="checkbox" class="task-check" ${t.status==='done'?'checked':''} onchange="toggleDone('${t.id}',event)" /></div>
+    <div class="task-body">
+      <div class="task-title">${esc(t.title)}</div>
+      <div class="task-meta">
+        ${!hideForwarderBadge?`<span class="badge badge-fwd">${esc(t.fwd)}</span>`:''}
+        <span class="badge badge-${t.status}">${t.status}</span>
+        ${t.completedBy?`<span class="badge badge-scribe">\u2295 ${esc(t.completedBy)}</span>`:''}
+        ${t.total?`<span class="task-data">\u2B21 ${esc(t.total)}</span>`:''}
       </div>
-      <div class="task-body">
-        <div class="task-title">${esc(t.title)}</div>
-        <div class="task-meta">
-          ${!hideForwarderBadge ? `<span class="badge badge-fwd">${esc(t.fwd)}</span>` : ''}
-          <span class="badge badge-${t.status}">${t.status}</span>
-          ${t.completedBy ? `<span class="badge badge-scribe">⊕ ${esc(t.completedBy)}</span>` : ''}
-          ${t.total ? `<span class="task-data">⬡ ${esc(t.total)}</span>` : ''}
+      ${t.notes?`<div class="task-notes">${esc(t.notes)}</div>`:''}
+      ${doneByStr}
+      <div class="task-date">Inscribed ${dateStr}</div>
+    </div>
+    <div class="task-actions"><button class="btn-del" onclick="deleteTask('${t.id}')" title="Banish task">\u2715</button></div>
+  </div>`;
+}
+
+function render(){
+  const pending=tasks.filter(t=>t.status==='pending').length;
+  const done=tasks.filter(t=>t.status==='done').length;
+  const fwds=new Set(tasks.map(t=>t.fwd).filter(Boolean)).size;
+  document.getElementById('st-total').textContent=tasks.length;
+  document.getElementById('st-pending').textContent=pending;
+  document.getElementById('st-done').textContent=done;
+  document.getElementById('st-fwds').textContent=fwds;
+  if(curView==='list')renderList();
+  else if(curView==='forwarder')renderForwarderView();
+  else if(curView==='scribes')renderScribesView();
+}
+
+function renderList(){
+  const fltFwd=document.getElementById('flt-fwd').value;
+  const fltStatus=document.getElementById('flt-status').value;
+  const filtered=tasks.filter(t=>{if(fltFwd&&t.fwd!==fltFwd)return false;if(fltStatus&&t.status!==fltStatus)return false;return true;});
+  document.getElementById('filter-count').textContent=filtered.length<tasks.length?`Showing ${filtered.length} of ${tasks.length} entries`:`${tasks.length} entr${tasks.length===1?'y':'ies'}`;
+  const list=document.getElementById('task-list');
+  if(filtered.length===0){list.innerHTML=`<div class="empty-state"><div class="empty-rune">\u16DF</div><div class="empty-text">${tasks.length===0?'The ledger is empty':'No tasks match the sigil'}</div><div class="empty-sub">${tasks.length===0?'Inscribe your first task above':'Adjust your filters to reveal hidden entries'}</div></div>`;return;}
+  list.innerHTML=filtered.map((t,i)=>taskCardHTML(t,i,false,false)).join('');
+}
+
+function renderForwarderView(){
+  const container=document.getElementById('fwd-view');
+  const knownFwds=['Dachser','K+N','DHL Express','Wackler','Honold','ERKA'];
+  const extraFwds=[...new Set(tasks.map(t=>t.fwd).filter(Boolean))].filter(f=>!knownFwds.includes(f));
+  const allFwds=[...knownFwds,...extraFwds];
+  const activeFwds=allFwds.filter(f=>tasks.some(t=>t.fwd===f));
+  if(activeFwds.length===0){container.innerHTML=`<div class="empty-state"><div class="empty-rune">\u16DF</div><div class="empty-text">The ledger is empty</div><div class="empty-sub">Inscribe your first task above</div></div>`;return;}
+  container.innerHTML=activeFwds.map((fwdName,gi)=>{
+    const fwdTasks=tasks.filter(t=>t.fwd===fwdName);
+    const fwdPending=fwdTasks.filter(t=>t.status==='pending').length;
+    const fwdDone=fwdTasks.filter(t=>t.status==='done').length;
+    const fwdTotal=fwdTasks.length;
+    const pct=fwdTotal>0?Math.round((fwdDone/fwdTotal)*100):0;
+    const isOpen=openGroups.has(fwdName);
+    const tasksHTML=fwdTasks.length>0?fwdTasks.map((t,i)=>taskCardHTML(t,i,true,false)).join(''):`<div class="fwd-group-empty">No tasks for this forwarder</div>`;
+    return `<div class="fwd-group" style="animation-delay:${gi*.06}s">
+      <div class="fwd-group-header${isOpen?' open':''}" onclick="toggleGroup('${esc(fwdName)}')">
+        <span class="fwd-group-icon">\u25B6</span>
+        <span class="fwd-group-name">${esc(fwdName)}</span>
+        <div class="fwd-group-pills">
+          <span class="fwd-pill fwd-pill-total">${fwdTotal} task${fwdTotal!==1?'s':''}</span>
+          ${fwdPending>0?`<span class="fwd-pill fwd-pill-pending">${fwdPending} pending</span>`:''}
+          ${fwdDone>0?`<span class="fwd-pill fwd-pill-done">${fwdDone} done</span>`:''}
         </div>
-        ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ''}
-        ${doneByStr}
-        <div class="task-date">Inscribed ${dateStr}</div>
+        <div class="fwd-progress-wrap">
+          <div class="fwd-progress-bar"><div class="fwd-progress-fill" style="width:${pct}%"></div></div>
+          <span class="fwd-progress-pct">${pct}%</span>
+        </div>
       </div>
-      <div class="task-actions">
-        <button class="btn-del" onclick="deleteTask('${t.id}')" title="Banish task">✕</button>
-      </div>
+      <div class="fwd-group-body${isOpen?' open':''}">${tasksHTML}</div>
     </div>`;
-}
-
-function render() {
-  const pending = tasks.filter(t => t.status === 'pending').length;
-  const done    = tasks.filter(t => t.status === 'done').length;
-  const fwds    = new Set(tasks.map(t => t.fwd).filter(Boolean)).size;
-  document.getElementById('st-total').textContent   = tasks.length;
-  document.getElementById('st-pending').textContent = pending;
-  document.getElementById('st-done').textContent    = done;
-  document.getElementById('st-fwds').textContent    = fwds;
-
-  if (curView === 'list')      renderList();
-  else if (curView === 'forwarder') renderForwarderView();
-  else if (curView === 'scribes')   renderScribesView();
-}
-
-function renderList() {
-  const fltFwd    = document.getElementById('flt-fwd').value;
-  const fltStatus = document.getElementById('flt-status').value;
-
-  const filtered = tasks.filter(t => {
-    if (fltFwd    && t.fwd    !== fltFwd)    return false;
-    if (fltStatus && t.status !== fltStatus) return false;
-    return true;
-  });
-
-  document.getElementById('filter-count').textContent =
-    filtered.length < tasks.length
-      ? `Showing ${filtered.length} of ${tasks.length} entries`
-      : `${tasks.length} entr${tasks.length === 1 ? 'y' : 'ies'}`;
-
-  const list = document.getElementById('task-list');
-
-  if (filtered.length === 0) {
-    list.innerHTML = `<div class="empty-state">
-      <div class="empty-rune">ᛟ</div>
-      <div class="empty-text">${tasks.length === 0 ? 'The ledger is empty' : 'No tasks match the sigil'}</div>
-      <div class="empty-sub">${tasks.length === 0 ? 'Inscribe your first task above' : 'Adjust your filters to reveal hidden entries'}</div>
-    </div>`;
-    return;
-  }
-
-  list.innerHTML = filtered.map((t, i) => taskCardHTML(t, i, false, false)).join('');
-}
-
-function renderForwarderView() {
-  const container = document.getElementById('fwd-view');
-
-  const knownFwds = ['Dachser','K+N','DHL Express','Wackler','Honold','ERKA'];
-  const extraFwds = [...new Set(tasks.map(t => t.fwd).filter(Boolean))].filter(f => !knownFwds.includes(f));
-  const allFwds   = [...knownFwds, ...extraFwds];
-  const activeFwds = allFwds.filter(f => tasks.some(t => t.fwd === f));
-
-  if (activeFwds.length === 0) {
-    container.innerHTML = `<div class="empty-state">
-      <div class="empty-rune">ᛟ</div>
-      <div class="empty-text">The ledger is empty</div>
-      <div class="empty-sub">Inscribe your first task above</div>
-    </div>`;
-    return;
-  }
-
-  container.innerHTML = activeFwds.map((fwdName, gi) => {
-    const fwdTasks   = tasks.filter(t => t.fwd === fwdName);
-    const fwdPending = fwdTasks.filter(t => t.status === 'pending').length;
-    const fwdDone    = fwdTasks.filter(t => t.status === 'done').length;
-    const fwdTotal   = fwdTasks.length;
-    const pct        = fwdTotal > 0 ? Math.round((fwdDone / fwdTotal) * 100) : 0;
-    const isOpen     = openGroups.has(fwdName);
-
-    const tasksHTML = fwdTasks.length > 0
-      ? fwdTasks.map((t, i) => taskCardHTML(t, i, true, false)).join('')
-      : `<div class="fwd-group-empty">No tasks for this forwarder</div>`;
-
-    return `
-      <div class="fwd-group" style="animation-delay:${gi * 0.06}s">
-        <div class="fwd-group-header${isOpen ? ' open' : ''}" onclick="toggleGroup('${esc(fwdName)}')">
-          <span class="fwd-group-icon">▶</span>
-          <span class="fwd-group-name">${esc(fwdName)}</span>
-          <div class="fwd-group-pills">
-            <span class="fwd-pill fwd-pill-total">${fwdTotal} task${fwdTotal !== 1 ? 's' : ''}</span>
-            ${fwdPending > 0 ? `<span class="fwd-pill fwd-pill-pending">${fwdPending} pending</span>` : ''}
-            ${fwdDone    > 0 ? `<span class="fwd-pill fwd-pill-done">${fwdDone} done</span>` : ''}
-          </div>
-          <div class="fwd-progress-wrap">
-            <div class="fwd-progress-bar">
-              <div class="fwd-progress-fill" style="width:${pct}%"></div>
-            </div>
-            <span class="fwd-progress-pct">${pct}%</span>
-          </div>
-        </div>
-        <div class="fwd-group-body${isOpen ? ' open' : ''}">
-          ${tasksHTML}
-        </div>
-      </div>`;
   }).join('');
 }
 
-function renderScribesView() {
-  const container = document.getElementById('scribes-view');
-
-  const doneTasks = tasks.filter(t => t.status === 'done');
-
-  const scribeMap = {};
-  doneTasks.forEach(t => {
-    const name = (t.completedBy || '').trim() || '(Anonymous)';
-    if (!scribeMap[name]) scribeMap[name] = [];
-    scribeMap[name].push(t);
-  });
-
-  const scribeNames = Object.keys(scribeMap).sort((a, b) => scribeMap[b].length - scribeMap[a].length);
-
-  if (scribeNames.length === 0) {
-    container.innerHTML = `<div class="empty-state">
-      <div class="empty-rune">⊕</div>
-      <div class="empty-text">No tasks sealed yet</div>
-      <div class="empty-sub">When tasks are marked done, scribes will appear here</div>
-    </div>`;
-    return;
+function renderScribesView(){
+  const container=document.getElementById('scribes-view');
+  const doneTasks=tasks.filter(t=>t.status==='done');
+  const scribeMap={};
+  doneTasks.forEach(t=>{const n=(t.completedBy||'').trim()||'(Anonymous)';if(!scribeMap[n])scribeMap[n]=[];scribeMap[n].push(t);});
+  const scribeNames=Object.keys(scribeMap).sort((a,b)=>scribeMap[b].length-scribeMap[a].length);
+  if(scribeNames.length===0){container.innerHTML=`<div class="empty-state"><div class="empty-rune">\u2295</div><div class="empty-text">No tasks sealed yet</div><div class="empty-sub">When tasks are marked done, scribes will appear here</div></div>`;return;}
+  const maxDone=Math.max(...scribeNames.map(n=>scribeMap[n].length));
+  function latestCompletion(ts){let l=null;ts.forEach(t=>{if(!t.completedAt)return;const d=t.completedAt.toDate?t.completedAt.toDate():new Date(t.completedAt);if(!l||d>l)l=d;});return l;}
+  const cardsHTML=`<div class="scribes-section">
+    <div class="scribes-header"><div class="scribes-title">Hall of Scribes \u2014 completions by person</div><div class="scribes-line"></div></div>
+    <div class="scribe-cards">
+      ${scribeNames.map((name,i)=>{
+        const ts=scribeMap[name];const cnt=ts.length;
+        const fwdSet=new Set(ts.map(t=>t.fwd).filter(Boolean));
+        const pct=Math.round((cnt/maxDone)*100);const sel=selectedScribe===name;
+        const latest=latestCompletion(ts);
+        const latestStr=latest?latest.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):null;
+        return `<div class="scribe-card${sel?' selected':''}" onclick="selectScribe('${esc(name)}')" style="animation:task-in .35s ${i*.05}s ease both">
+          <div class="scribe-avatar">${initials(name)}</div>
+          <div class="scribe-name">${esc(name)}</div>
+          <div class="scribe-stats">
+            <span class="scribe-stat-pill scribe-done-pill">\u2713 ${cnt} task${cnt!==1?'s':''}</span>
+            ${fwdSet.size>0?`<span class="scribe-stat-pill scribe-fwd-pill">${fwdSet.size} fwd${fwdSet.size!==1?'s':''}</span>`:''}
+          </div>
+          <div class="scribe-bar-wrap"><div class="scribe-bar-fill" style="width:${pct}%"></div></div>
+          <div class="scribe-bar-label">${pct}% of top scribe</div>
+          ${latestStr?`<div class="scribe-latest"><span class="scribe-latest-icon">\u2295</span>Last sealed ${latestStr}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  let detailHTML='';
+  if(selectedScribe&&scribeMap[selectedScribe]){
+    const scribeTasks=scribeMap[selectedScribe];
+    const byFwd={};scribeTasks.forEach(t=>{const f=t.fwd||'Unknown';if(!byFwd[f])byFwd[f]=[];byFwd[f].push(t);});
+    const fwdSections=Object.entries(byFwd).map(([fn,ts])=>`<div style="margin-bottom:.9rem"><div style="font-family:var(--cinzel);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.6);margin-bottom:.5rem;padding-left:.3rem">${esc(fn)}</div>${ts.map((t,i)=>taskCardHTML(t,i,true,true)).join('')}</div>`).join('');
+    detailHTML=`<div class="scribe-detail-header">
+      <div class="scribe-avatar" style="width:28px;height:28px;font-size:11px;flex-shrink:0">${initials(selectedScribe)}</div>
+      <div class="scribe-detail-name">${esc(selectedScribe)}</div>
+      <div class="scribe-detail-count">${scribeTasks.length} task${scribeTasks.length!==1?'s':''} sealed</div>
+      <button class="btn-close-detail" onclick="selectScribe('${esc(selectedScribe)}')">\u2715 Close</button>
+    </div>
+    <div class="scribe-detail-tasks">${fwdSections}</div>`;
   }
-
-  const maxDone = Math.max(...scribeNames.map(n => scribeMap[n].length));
-
-  function latestCompletion(ts) {
-    let latest = null;
-    ts.forEach(t => {
-      if (!t.completedAt) return;
-      const d = t.completedAt.toDate ? t.completedAt.toDate() : new Date(t.completedAt);
-      if (!latest || d > latest) latest = d;
-    });
-    return latest;
-  }
-
-  const cardsHTML = `
-    <div class="scribes-section">
-      <div class="scribes-header">
-        <div class="scribes-title">Hall of Scribes — completions by person</div>
-        <div class="scribes-line"></div>
-      </div>
-      <div class="scribe-cards">
-        ${scribeNames.map((name, i) => {
-          const ts   = scribeMap[name];
-          const cnt  = ts.length;
-          const fwdSet = new Set(ts.map(t => t.fwd).filter(Boolean));
-          const pct  = Math.round((cnt / maxDone) * 100);
-          const sel  = selectedScribe === name;
-          const latest = latestCompletion(ts);
-          const latestStr = latest
-            ? latest.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-            : null;
-
-          return `
-            <div class="scribe-card${sel ? ' selected' : ''}" onclick="selectScribe('${esc(name)}')" style="animation:task-in .35s ${i * 0.05}s ease both">
-              <div class="scribe-avatar">${initials(name)}</div>
-              <div class="scribe-name">${esc(name)}</div>
-              <div class="scribe-stats">
-                <span class="scribe-stat-pill scribe-done-pill">✓ ${cnt} task${cnt !== 1 ? 's' : ''}</span>
-                ${fwdSet.size > 0 ? `<span class="scribe-stat-pill scribe-fwd-pill">${fwdSet.size} fwd${fwdSet.size !== 1 ? 's' : ''}</span>` : ''}
-              </div>
-              <div class="scribe-bar-wrap">
-                <div class="scribe-bar-fill" style="width:${pct}%"></div>
-              </div>
-              <div class="scribe-bar-label">${pct}% of top scribe</div>
-              ${latestStr ? `<div class="scribe-latest"><span class="scribe-latest-icon">⊕</span>Last sealed ${latestStr}</div>` : ''}
-            </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-
-  let detailHTML = '';
-  if (selectedScribe && scribeMap[selectedScribe]) {
-    const scribeTasks = scribeMap[selectedScribe];
-    const byFwd = {};
-    scribeTasks.forEach(t => {
-      const f = t.fwd || 'Unknown';
-      if (!byFwd[f]) byFwd[f] = [];
-      byFwd[f].push(t);
-    });
-
-    const fwdSections = Object.entries(byFwd).map(([fwdName, ts]) => `
-      <div style="margin-bottom:.9rem">
-        <div style="font-family:var(--cinzel);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.6);margin-bottom:.5rem;padding-left:.3rem">${esc(fwdName)}</div>
-        ${ts.map((t, i) => taskCardHTML(t, i, true, true)).join('')}
-      </div>`).join('');
-
-    detailHTML = `
-      <div class="scribe-detail-header">
-        <div class="scribe-avatar" style="width:28px;height:28px;font-size:11px;flex-shrink:0">${initials(selectedScribe)}</div>
-        <div class="scribe-detail-name">${esc(selectedScribe)}</div>
-        <div class="scribe-detail-count">${scribeTasks.length} task${scribeTasks.length !== 1 ? 's' : ''} sealed</div>
-        <button class="btn-close-detail" onclick="selectScribe('${esc(selectedScribe)}')">✕ Close</button>
-      </div>
-      <div class="scribe-detail-tasks">${fwdSections}</div>`;
-  }
-
-  container.innerHTML = cardsHTML + `<div class="scribe-detail" style="display:${selectedScribe ? 'block' : 'none'}">${detailHTML}</div>`;
+  container.innerHTML=cardsHTML+`<div class="scribe-detail" style="display:${selectedScribe?'block':'none'}">${detailHTML}</div>`;
 }
 
-document.getElementById('modal-scribe-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') confirmDone();
-  if (e.key === 'Escape') closeModal();
-});
-document.getElementById('complete-modal').addEventListener('click', e => {
-  if (e.target === document.getElementById('complete-modal')) closeModal();
-});
-
-document.getElementById('inp-title').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+document.getElementById('modal-scribe-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmDone();if(e.key==='Escape')closeModal();});
+document.getElementById('complete-modal').addEventListener('click',e=>{if(e.target===document.getElementById('complete-modal'))closeModal();});
+document.getElementById('del-month-modal').addEventListener('click',e=>{if(e.target===document.getElementById('del-month-modal'))closeDelMonthModal();});
+document.getElementById('inp-title').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
 
 startListener();
 </script>
 </body>
-</html>
+</html>""")
