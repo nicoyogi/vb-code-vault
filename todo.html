@@ -57,10 +57,6 @@ html.light .view-btn{background:rgba(255,252,245,.75);border-color:rgba(160,130,
 html.light .view-btn:hover{border-color:rgba(180,80,120,.4);color:rgba(160,60,100,.85)}
 html.light .view-btn.active{background:rgba(180,80,120,.12);border-color:rgba(180,80,120,.45);color:rgba(140,50,90,.95)}
 html.light .view-btn.scribe-active{background:rgba(10,140,80,.1);border-color:rgba(10,140,80,.38);color:rgba(10,120,70,.95)}
-html.light .filter-bar select{background:rgba(255,252,245,.9);border-color:rgba(160,130,60,.22);color:rgba(20,12,36,.75)}
-html.light .filter-bar select:hover,html.light .filter-bar select:focus{border-color:rgba(180,80,120,.38)}
-html.light .filter-bar select option{background:#faf5eb}
-html.light .filter-count{color:rgba(100,70,20,.55)}
 html.light .task-card{background:rgba(255,252,245,.86);border-color:rgba(160,130,60,.16)}
 html.light .task-card:hover{border-color:rgba(180,80,120,.28);background:rgba(255,250,240,.97)}
 html.light .task-card.is-done{border-color:rgba(10,140,80,.14)}
@@ -81,6 +77,7 @@ html.light .btn-del:hover{background:rgba(180,80,120,.12);color:rgba(140,50,90,.
 html.light .task-check{border-color:rgba(180,80,120,.42)}
 html.light .task-check:checked{background:rgba(10,140,80,.15);border-color:rgba(10,140,80,.65)}
 html.light .task-check:checked::after{color:rgba(10,115,65,.95)}
+html.light .task-check:disabled{opacity:.5;cursor:not-allowed}
 html.light .fwd-group-header{background:rgba(255,252,245,.92);border-color:rgba(180,80,120,.22)}
 html.light .fwd-group-header::before{background:linear-gradient(90deg,transparent,rgba(180,80,120,.38),transparent)}
 html.light .fwd-group-header:hover{border-color:rgba(180,80,120,.38);background:rgba(255,250,240,.98)}
@@ -152,6 +149,8 @@ html.light .del-month-select{background:rgba(255,252,245,.85);border-color:rgba(
 html.light .del-month-preview{background:rgba(200,50,50,.06);border-color:rgba(200,50,50,.2);color:rgba(160,30,30,.82)}
 html.light .btn-del-month-trigger{color:rgba(160,30,30,.72);border-color:rgba(200,50,50,.28);background:rgba(200,50,50,.06)}
 html.light .btn-del-month-trigger:hover{color:rgba(160,30,30,.95);border-color:rgba(200,50,50,.5);background:rgba(200,50,50,.12)}
+html.light .fwd-view-toolbar{background:rgba(255,252,245,.85);border-color:rgba(180,80,120,.18)}
+html.light .fwd-view-toolbar-label{color:rgba(100,70,20,.55)}
 
 html,body{width:100%;min-height:100vh;background:var(--bg);overflow-x:hidden}
 body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;align-items:center;padding:0 1.2rem 7rem;transition:background .35s,color .35s}
@@ -214,12 +213,10 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .view-btn.active{background:rgba(244,114,182,.12);border-color:rgba(244,114,182,.45);color:rgba(244,114,182,.98);box-shadow:0 0 14px rgba(244,114,182,.1)}
 .view-btn.scribe-active{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.38);color:rgba(52,211,153,.98);box-shadow:0 0 14px rgba(52,211,153,.1)}
 .view-sep{flex:1}
-.filter-bar{width:100%;display:flex;gap:10px;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;animation:rise .9s .38s ease both}
-.filter-bar select{background:var(--filter-bg);border:1px solid var(--filter-border);border-radius:10px;color:var(--filter-text);font-family:var(--mono);font-size:11px;padding:.45rem .85rem;outline:none;cursor:pointer;transition:border-color .25s}
-.filter-bar select:focus,.filter-bar select:hover{border-color:rgba(244,114,182,.4)}
-.filter-bar select option{background:#0e0b1a}
-.filter-sep{flex:1}
-.filter-count{font-family:var(--mono);font-size:9.5px;color:rgba(212,175,100,.52);letter-spacing:.1em;white-space:nowrap}
+
+/* ── FORWARDER VIEW TOOLBAR (holds Delete by Month) ── */
+.fwd-view-toolbar{width:100%;display:flex;align-items:center;gap:10px;margin-bottom:1.2rem;padding:.65rem 1.1rem;background:var(--surface);border:1px solid var(--border-pk);border-radius:14px;backdrop-filter:blur(16px);animation:rise .9s .38s ease both}
+.fwd-view-toolbar-label{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:rgba(212,175,100,.48);flex:1}
 
 /* DELETE BY MONTH BUTTON */
 .btn-del-month-trigger{font-family:var(--cinzel);font-size:8px;letter-spacing:.22em;text-transform:uppercase;padding:.4rem 1rem;border-radius:20px;border:1px solid rgba(248,113,113,.28);background:rgba(248,113,113,.07);color:rgba(248,113,113,.72);cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:6px;white-space:nowrap}
@@ -288,8 +285,11 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .task-check-wrap{padding-top:2px}
 .task-check{appearance:none;-webkit-appearance:none;width:16px;height:16px;border-radius:5px;border:1px solid rgba(244,114,182,.38);background:transparent;cursor:pointer;position:relative;flex-shrink:0;transition:all .2s}
 .task-check:checked{background:rgba(52,211,153,.18);border-color:rgba(52,211,153,.6)}
-.task-check:checked::after{content:'checkmark';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;color:rgba(52,211,153,.98);content:'\2713'}
-.task-check:hover:not(:checked){border-color:rgba(244,114,182,.65)}
+.task-check:checked::after{content:'\2713';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;color:rgba(52,211,153,.98)}
+.task-check:hover:not(:checked):not(:disabled){border-color:rgba(244,114,182,.65)}
+/* Disabled state for done tasks */
+.task-check:disabled{cursor:not-allowed;opacity:.55}
+.task-check:checked:disabled{background:rgba(52,211,153,.14);border-color:rgba(52,211,153,.4);opacity:.6}
 .task-title{font-family:var(--cinzel);font-size:13px;font-weight:600;color:var(--text-main);letter-spacing:.02em;margin-bottom:.4rem}
 .is-done .task-title{text-decoration:line-through;color:rgba(255,255,255,.38)}
 .task-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:.4rem}
@@ -474,35 +474,23 @@ footer a:hover{color:rgba(212,175,100,.82)}
     </div>
     <button class="btn-inscribe" id="btn-inscribe" onclick="addTask()"><span>&#10022;</span><span>Inscribe Task</span></button>
   </div>
+
+  <!-- VIEW TOGGLE — only 2 views now -->
   <div class="view-toggle-row">
-    <button class="view-btn active" id="btn-view-list" onclick="setView('list')"><span>&#9776;</span> All Tasks</button>
-    <button class="view-btn" id="btn-view-fwd" onclick="setView('forwarder')"><span>&#9672;</span> By Forwarder</button>
+    <button class="view-btn active" id="btn-view-fwd" onclick="setView('forwarder')"><span>&#9672;</span> By Forwarder</button>
     <button class="view-btn" id="btn-view-scribes" onclick="setView('scribes')"><span>&#8853;</span> Hall of Scribes</button>
     <div class="view-sep"></div>
   </div>
-  <div class="filter-bar" id="filter-bar">
-    <select id="flt-fwd" onchange="render()">
-      <option value="">All forwarders</option>
-      <option>Dachser</option><option>K+N</option><option>DHL Express</option>
-      <option>Wackler</option><option>Honold</option><option>ERKA</option>
-    </select>
-    <select id="flt-status" onchange="render()">
-      <option value="">All statuses</option>
-      <option value="pending">Pending</option>
-      <option value="done">Done</option>
-    </select>
-    <div class="filter-sep"></div>
-    <div class="filter-count" id="filter-count"></div>
+
+  <!-- FORWARDER VIEW TOOLBAR — Delete by Month lives here -->
+  <div class="fwd-view-toolbar" id="fwd-toolbar">
+    <span class="fwd-view-toolbar-label">&#9672; Tasks grouped by forwarder</span>
     <button class="btn-del-month-trigger" onclick="openDelMonthModal()" title="Delete all tasks from a specific month">
       <span>&#9904;</span> Delete by Month
     </button>
   </div>
-  <div class="task-list" id="task-list">
-    <div class="task-skel"><div class="skel-line" style="height:14px;width:45%;margin-bottom:0"></div><div class="skel-line" style="height:10px;width:22%;margin-top:10px"></div><div class="skel-line" style="height:10px;width:70%;margin-top:8px"></div></div>
-    <div class="task-skel"><div class="skel-line" style="height:14px;width:38%;margin-bottom:0"></div><div class="skel-line" style="height:10px;width:18%;margin-top:10px"></div><div class="skel-line" style="height:10px;width:62%;margin-top:8px"></div></div>
-    <div class="task-skel"><div class="skel-line" style="height:14px;width:52%;margin-bottom:0"></div><div class="skel-line" style="height:10px;width:25%;margin-top:10px"></div><div class="skel-line" style="height:10px;width:58%;margin-top:8px"></div></div>
-  </div>
-  <div id="fwd-view" style="display:none;width:100%;flex-direction:column;gap:8px;animation:rise .9s .42s ease both"></div>
+
+  <div id="fwd-view" style="width:100%;flex-direction:column;gap:8px;animation:rise .9s .42s ease both;display:flex"></div>
   <div id="scribes-view" style="display:none;width:100%;flex-direction:column;gap:0">
     <div class="scribe-detail" id="scribe-detail" style="display:none"></div>
   </div>
@@ -558,9 +546,19 @@ const firebaseConfig={apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",authDomai
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore(),col=db.collection('wmf_tasks');
 
-let tasks=[],saving=false,curView='list',openGroups=new Set(),selectedScribe=null,pendingToggleId=null;
+let tasks=[],saving=false,curView='forwarder',openGroups=new Set(),selectedScribe=null,pendingToggleId=null;
 
-function setView(v){curView=v;document.getElementById('btn-view-list').classList.toggle('active',v==='list');document.getElementById('btn-view-fwd').classList.toggle('active',v==='forwarder');document.getElementById('btn-view-scribes').classList.toggle('active',v==='scribes');document.getElementById('btn-view-scribes').classList.toggle('scribe-active',v==='scribes');document.getElementById('filter-bar').style.display=v==='list'?'flex':'none';document.getElementById('task-list').style.display=v==='list'?'flex':'none';document.getElementById('fwd-view').style.display=v==='forwarder'?'flex':'none';document.getElementById('scribes-view').style.display=v==='scribes'?'flex':'none';render();}
+function setView(v){
+  curView=v;
+  document.getElementById('btn-view-fwd').classList.toggle('active',v==='forwarder');
+  document.getElementById('btn-view-scribes').classList.toggle('active',v==='scribes');
+  document.getElementById('btn-view-scribes').classList.toggle('scribe-active',v==='scribes');
+  // Show toolbar only on forwarder view
+  document.getElementById('fwd-toolbar').style.display=v==='forwarder'?'flex':'none';
+  document.getElementById('fwd-view').style.display=v==='forwarder'?'flex':'none';
+  document.getElementById('scribes-view').style.display=v==='scribes'?'flex':'none';
+  render();
+}
 function setStatus(s,l){document.getElementById('status-dot').className='status-dot '+(s||'');document.getElementById('status-label').textContent=l;}
 function startListener(){setStatus('','Connecting to ether...');col.orderBy('createdAt','desc').onSnapshot(snap=>{tasks=snap.docs.map(d=>({id:d.id,...d.data()}));setStatus('online','Online \u00b7 Live sync');render();},err=>{setStatus('error','Connection failed');showToast('Could not reach the ether.',true);console.error(err);});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -610,23 +608,17 @@ async function applyDone(id,scribeName){
 }
 
 /**
- * FIX: toggleDone now uses e.preventDefault() to stop the checkbox from
- * visually toggling before Firestore confirms — the snapshot listener will
- * re-render with the correct state. Done tasks go directly to reopenTask(),
- * pending tasks open the scribe modal.
+ * toggleDone: only works for PENDING tasks — opens the scribe modal.
+ * Done tasks have their checkbox disabled, so this is a safeguard only.
  */
 function toggleDone(id,evt){
   if(evt){evt.preventDefault();evt.stopPropagation();}
   const task=tasks.find(x=>x.id===id);if(!task)return;
-  if(task.status==='done'){reopenTask(id);}
-  else{openCompleteModal(id);}
+  // Guard: done tasks cannot be toggled via checkbox (checkbox is disabled)
+  if(task.status==='done')return;
+  openCompleteModal(id);
 }
-async function reopenTask(id){
-  try{
-    await col.doc(id).update({status:'pending',completedBy:'',completedAt:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-    showToast('Task reopened \u2014 back in the ledger.');
-  }catch(e){showToast('Could not reopen task.',true);console.error(e);}
-}
+
 async function deleteTask(id){
   if(!confirm('Banish this task from the ledger? This cannot be undone.'))return;
   try{await col.doc(id).delete();showToast('Task dissolved.');}
@@ -677,15 +669,24 @@ async function execDelByMonth(){
 function toggleGroup(n){if(openGroups.has(n))openGroups.delete(n);else openGroups.add(n);render();}
 function selectScribe(n){selectedScribe=selectedScribe===n?null:n;render();}
 
+/**
+ * taskCardHTML: done tasks get a disabled checkbox — they cannot be unchecked.
+ */
 function taskCardHTML(t,i,hideForwarderBadge,showCompletedDate){
   const dateStr=fmtDateShort(t.createdAt)||'\u2014';
+  const isDone=t.status==='done';
   const doneByStr=t.completedBy
     ?`<div class="task-done-by">\u2295 Sealed by <strong style="color:rgba(52,211,153,.72)">${esc(t.completedBy)}</strong>${(showCompletedDate&&t.completedAt)?` \u00b7 ${fmtDateShort(t.completedAt)}`:''}</div>`
-    :(t.status==='done'
+    :(isDone
       ?`<div class="task-done-by" style="color:rgba(212,175,100,.35)">\u2295 Sealed anonymously${(showCompletedDate&&t.completedAt)?` \u00b7 ${fmtDateShort(t.completedAt)}`:''}</div>`
       :'');
-  return `<div class="task-card${t.status==='done'?' is-done':''}" style="animation:task-in .3s ${i*.04}s ease both">
-    <div class="task-check-wrap"><input type="checkbox" class="task-check" ${t.status==='done'?'checked':''} onchange="toggleDone('${t.id}',event)" /></div>
+  // Done tasks: checkbox is checked + disabled (cannot uncheck)
+  // Pending tasks: checkbox is unchecked + enabled (click opens modal)
+  const checkAttrs=isDone
+    ? 'checked disabled title="Task is sealed — cannot be reopened via checkbox"'
+    : `onchange="toggleDone('${t.id}',event)"`;
+  return `<div class="task-card${isDone?' is-done':''}" style="animation:task-in .3s ${i*.04}s ease both">
+    <div class="task-check-wrap"><input type="checkbox" class="task-check" ${checkAttrs} /></div>
     <div class="task-body">
       <div class="task-title">${esc(t.title)}</div>
       <div class="task-meta">
@@ -710,19 +711,8 @@ function render(){
   document.getElementById('st-pending').textContent=pending;
   document.getElementById('st-done').textContent=done;
   document.getElementById('st-fwds').textContent=fwds;
-  if(curView==='list')renderList();
-  else if(curView==='forwarder')renderForwarderView();
+  if(curView==='forwarder')renderForwarderView();
   else if(curView==='scribes')renderScribesView();
-}
-
-function renderList(){
-  const fltFwd=document.getElementById('flt-fwd').value;
-  const fltStatus=document.getElementById('flt-status').value;
-  const filtered=tasks.filter(t=>{if(fltFwd&&t.fwd!==fltFwd)return false;if(fltStatus&&t.status!==fltStatus)return false;return true;});
-  document.getElementById('filter-count').textContent=filtered.length<tasks.length?`Showing ${filtered.length} of ${tasks.length} entries`:`${tasks.length} entr${tasks.length===1?'y':'ies'}`;
-  const list=document.getElementById('task-list');
-  if(filtered.length===0){list.innerHTML=`<div class="empty-state"><div class="empty-rune">\u16DF</div><div class="empty-text">${tasks.length===0?'The ledger is empty':'No tasks match the sigil'}</div><div class="empty-sub">${tasks.length===0?'Inscribe your first task above':'Adjust your filters to reveal hidden entries'}</div></div>`;return;}
-  list.innerHTML=filtered.map((t,i)=>taskCardHTML(t,i,false,false)).join('');
 }
 
 function renderForwarderView(){
@@ -812,7 +802,9 @@ document.getElementById('complete-modal').addEventListener('click',e=>{if(e.targ
 document.getElementById('del-month-modal').addEventListener('click',e=>{if(e.target===document.getElementById('del-month-modal'))closeDelMonthModal();});
 document.getElementById('inp-title').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
 
+// Initialize — default view is forwarder
+setView('forwarder');
 startListener();
 </script>
 </body>
-</html>""")
+</html>
