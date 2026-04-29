@@ -214,6 +214,29 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .view-btn.scribe-active{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.38);color:rgba(52,211,153,.98);box-shadow:0 0 14px rgba(52,211,153,.1)}
 .view-sep{flex:1}
 
+/* ── SEARCH BAR ── */
+.search-wrap{width:100%;margin-bottom:1.2rem;position:relative;animation:rise .9s .37s ease both}
+.search-icon{position:absolute;left:1rem;top:50%;transform:translateY(-50%);font-size:13px;color:rgba(244,114,182,.5);pointer-events:none;transition:color .25s;line-height:1}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border-pk);border-radius:14px;color:var(--text-main);font-family:var(--mono);font-size:12px;padding:.75rem 3rem .75rem 2.8rem;outline:none;transition:border-color .25s,box-shadow .25s;backdrop-filter:blur(20px);letter-spacing:.04em}
+.search-input::placeholder{color:rgba(237,232,255,.28);letter-spacing:.06em}
+.search-input:focus{border-color:rgba(244,114,182,.5);box-shadow:0 0 0 3px rgba(244,114,182,.08)}
+.search-input:focus~.search-icon,.search-wrap:focus-within .search-icon{color:rgba(244,114,182,.85)}
+.search-clear{position:absolute;right:.9rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:11px;color:rgba(212,175,100,.42);width:22px;height:22px;border-radius:6px;display:none;align-items:center;justify-content:center;transition:all .2s}
+.search-clear:hover{background:rgba(244,114,182,.12);color:rgba(244,114,182,.9)}
+.search-clear.visible{display:flex}
+.search-count{position:absolute;right:2.8rem;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:9px;color:rgba(212,175,100,.48);letter-spacing:.08em;pointer-events:none;white-space:nowrap}
+/* Highlight matched text */
+.srch-hl{background:rgba(244,114,182,.22);color:rgba(255,255,255,.98);border-radius:3px;padding:0 2px}
+html.light .search-input{background:rgba(255,252,245,.92);border-color:rgba(180,80,120,.22);color:rgba(20,12,36,.9)}
+html.light .search-input::placeholder{color:rgba(20,12,36,.28)}
+html.light .search-input:focus{border-color:rgba(180,80,120,.5);box-shadow:0 0 0 3px rgba(180,80,120,.08)}
+html.light .search-icon{color:rgba(180,80,120,.5)}
+html.light .search-wrap:focus-within .search-icon{color:rgba(180,80,120,.85)}
+html.light .search-clear{color:rgba(100,70,20,.42)}
+html.light .search-clear:hover{background:rgba(180,80,120,.12);color:rgba(140,50,90,.9)}
+html.light .search-count{color:rgba(100,70,20,.48)}
+html.light .srch-hl{background:rgba(180,80,120,.2);color:rgba(20,12,36,.98)}
+
 /* ── FORWARDER VIEW TOOLBAR (holds Delete by Month) ── */
 .fwd-view-toolbar{width:100%;display:flex;align-items:center;gap:10px;margin-bottom:1.2rem;padding:.65rem 1.1rem;background:var(--surface);border:1px solid var(--border-pk);border-radius:14px;backdrop-filter:blur(16px);animation:rise .9s .38s ease both}
 .fwd-view-toolbar-label{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:rgba(212,175,100,.48);flex:1}
@@ -482,6 +505,14 @@ footer a:hover{color:rgba(212,175,100,.82)}
     <div class="view-sep"></div>
   </div>
 
+  <!-- SEARCH BAR — always visible across views -->
+  <div class="search-wrap" id="search-wrap">
+    <span class="search-icon">&#9906;</span>
+    <input class="search-input" id="search-input" type="text" placeholder="Search tasks by title, notes, forwarder, scribe..." autocomplete="off" oninput="onSearch()" />
+    <span class="search-count" id="search-count"></span>
+    <button class="search-clear" id="search-clear" onclick="clearSearch()" title="Clear search">&#10005;</button>
+  </div>
+
   <!-- FORWARDER VIEW TOOLBAR — Delete by Month lives here -->
   <div class="fwd-view-toolbar" id="fwd-toolbar">
     <span class="fwd-view-toolbar-label">&#9672; Tasks grouped by forwarder</span>
@@ -546,7 +577,7 @@ const firebaseConfig={apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",authDomai
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore(),col=db.collection('wmf_tasks');
 
-let tasks=[],saving=false,curView='forwarder',openGroups=new Set(),selectedScribe=null,pendingToggleId=null;
+let tasks=[],saving=false,curView='forwarder',openGroups=new Set(),selectedScribe=null,pendingToggleId=null,searchQuery='';
 
 function setView(v){
   curView=v;
@@ -560,6 +591,37 @@ function setView(v){
   render();
 }
 function setStatus(s,l){document.getElementById('status-dot').className='status-dot '+(s||'');document.getElementById('status-label').textContent=l;}
+
+/* ── SEARCH ── */
+function onSearch(){
+  searchQuery=document.getElementById('search-input').value;
+  const hasTerm=searchQuery.trim().length>0;
+  document.getElementById('search-clear').classList.toggle('visible',hasTerm);
+  if(hasTerm&&curView==='forwarder'){
+    // Auto-expand all groups that have matches
+    const q=searchQuery.trim().toLowerCase();
+    tasks.forEach(t=>{if(taskMatchesSearch(t,q))openGroups.add(t.fwd);});
+  }
+  render();
+}
+function clearSearch(){
+  document.getElementById('search-input').value='';
+  searchQuery='';
+  document.getElementById('search-clear').classList.remove('visible');
+  document.getElementById('search-count').textContent='';
+  render();
+}
+function taskMatchesSearch(t,q){
+  if(!q)return true;
+  return [t.title,t.notes,t.fwd,t.total,t.completedBy].some(f=>f&&String(f).toLowerCase().includes(q));
+}
+/* Wrap matched text in a highlight span, safely escaping HTML first */
+function highlight(raw,q){
+  const safe=esc(raw||'');
+  if(!q)return safe;
+  const qi=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return safe.replace(new RegExp(qi,'gi'),m=>`<span class="srch-hl">${m}</span>`);
+}
 function startListener(){setStatus('','Connecting to ether...');col.orderBy('createdAt','desc').onSnapshot(snap=>{tasks=snap.docs.map(d=>({id:d.id,...d.data()}));setStatus('online','Online \u00b7 Live sync');render();},err=>{setStatus('error','Connection failed');showToast('Could not reach the ether.',true);console.error(err);});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function showToast(msg,isError){const t=document.getElementById('toast');t.textContent=msg;t.className=isError?'error show':'show';clearTimeout(t._timer);t._timer=setTimeout(()=>{t.className='';},2600);}
@@ -669,33 +731,29 @@ async function execDelByMonth(){
 function toggleGroup(n){if(openGroups.has(n))openGroups.delete(n);else openGroups.add(n);render();}
 function selectScribe(n){selectedScribe=selectedScribe===n?null:n;render();}
 
-/**
- * taskCardHTML: done tasks get a disabled checkbox — they cannot be unchecked.
- */
 function taskCardHTML(t,i,hideForwarderBadge,showCompletedDate){
   const dateStr=fmtDateShort(t.createdAt)||'\u2014';
   const isDone=t.status==='done';
+  const q=searchQuery.trim().toLowerCase();
   const doneByStr=t.completedBy
-    ?`<div class="task-done-by">\u2295 Sealed by <strong style="color:rgba(52,211,153,.72)">${esc(t.completedBy)}</strong>${(showCompletedDate&&t.completedAt)?` \u00b7 ${fmtDateShort(t.completedAt)}`:''}</div>`
+    ?`<div class="task-done-by">\u2295 Sealed by <strong style="color:rgba(52,211,153,.72)">${highlight(t.completedBy,q)}</strong>${(showCompletedDate&&t.completedAt)?` \u00b7 ${fmtDateShort(t.completedAt)}`:''}</div>`
     :(isDone
       ?`<div class="task-done-by" style="color:rgba(212,175,100,.35)">\u2295 Sealed anonymously${(showCompletedDate&&t.completedAt)?` \u00b7 ${fmtDateShort(t.completedAt)}`:''}</div>`
       :'');
-  // Done tasks: checkbox is checked + disabled (cannot uncheck)
-  // Pending tasks: checkbox is unchecked + enabled (click opens modal)
   const checkAttrs=isDone
     ? 'checked disabled title="Task is sealed — cannot be reopened via checkbox"'
     : `onchange="toggleDone('${t.id}',event)"`;
   return `<div class="task-card${isDone?' is-done':''}" style="animation:task-in .3s ${i*.04}s ease both">
     <div class="task-check-wrap"><input type="checkbox" class="task-check" ${checkAttrs} /></div>
     <div class="task-body">
-      <div class="task-title">${esc(t.title)}</div>
+      <div class="task-title">${highlight(t.title,q)}</div>
       <div class="task-meta">
-        ${!hideForwarderBadge?`<span class="badge badge-fwd">${esc(t.fwd)}</span>`:''}
+        ${!hideForwarderBadge?`<span class="badge badge-fwd">${highlight(t.fwd,q)}</span>`:''}
         <span class="badge badge-${t.status}">${t.status}</span>
-        ${t.completedBy?`<span class="badge badge-scribe">\u2295 ${esc(t.completedBy)}</span>`:''}
-        ${t.total?`<span class="task-data">\u2B21 ${esc(t.total)}</span>`:''}
+        ${t.completedBy?`<span class="badge badge-scribe">\u2295 ${highlight(t.completedBy,q)}</span>`:''}
+        ${t.total?`<span class="task-data">\u2B21 ${highlight(t.total,q)}</span>`:''}
       </div>
-      ${t.notes?`<div class="task-notes">${esc(t.notes)}</div>`:''}
+      ${t.notes?`<div class="task-notes">${highlight(t.notes,q)}</div>`:''}
       ${doneByStr}
       <div class="task-date">Inscribed ${dateStr}</div>
     </div>
@@ -717,23 +775,37 @@ function render(){
 
 function renderForwarderView(){
   const container=document.getElementById('fwd-view');
+  const q=searchQuery.trim().toLowerCase();
   const knownFwds=['Dachser','K+N','DHL Express','Wackler','Honold','ERKA'];
   const extraFwds=[...new Set(tasks.map(t=>t.fwd).filter(Boolean))].filter(f=>!knownFwds.includes(f));
   const allFwds=[...knownFwds,...extraFwds];
   const activeFwds=allFwds.filter(f=>tasks.some(t=>t.fwd===f));
-  if(activeFwds.length===0){container.innerHTML=`<div class="empty-state"><div class="empty-rune">\u16DF</div><div class="empty-text">The ledger is empty</div><div class="empty-sub">Inscribe your first task above</div></div>`;return;}
-  container.innerHTML=activeFwds.map((fwdName,gi)=>{
-    const fwdTasks=tasks.filter(t=>t.fwd===fwdName);
+
+  // Apply search filter
+  const matchedTasks=q?tasks.filter(t=>taskMatchesSearch(t,q)):tasks;
+  const matchCount=matchedTasks.length;
+  const cntEl=document.getElementById('search-count');
+  if(q){cntEl.textContent=`${matchCount} result${matchCount!==1?'s':''}`;} else{cntEl.textContent='';}
+
+  const activeFwdsFiltered=activeFwds.filter(f=>q?matchedTasks.some(t=>t.fwd===f):true);
+  if(activeFwdsFiltered.length===0){
+    container.innerHTML=`<div class="empty-state"><div class="empty-rune">\u16DF</div><div class="empty-text">${tasks.length===0?'The ledger is empty':q?'No tasks match your search':'No tasks found'}</div><div class="empty-sub">${tasks.length===0?'Inscribe your first task above':q?'Try different search terms':'...'}</div></div>`;
+    return;
+  }
+  container.innerHTML=activeFwdsFiltered.map((fwdName,gi)=>{
+    const fwdTasks=(q?matchedTasks:tasks).filter(t=>t.fwd===fwdName);
+    const allFwdTasks=tasks.filter(t=>t.fwd===fwdName);
     const fwdPending=fwdTasks.filter(t=>t.status==='pending').length;
     const fwdDone=fwdTasks.filter(t=>t.status==='done').length;
     const fwdTotal=fwdTasks.length;
-    const pct=fwdTotal>0?Math.round((fwdDone/fwdTotal)*100):0;
-    const isOpen=openGroups.has(fwdName);
+    const totalForPct=allFwdTasks.length;
+    const pct=totalForPct>0?Math.round((allFwdTasks.filter(t=>t.status==='done').length/totalForPct)*100):0;
+    const isOpen=openGroups.has(fwdName)||q;
     const tasksHTML=fwdTasks.length>0?fwdTasks.map((t,i)=>taskCardHTML(t,i,true,false)).join(''):`<div class="fwd-group-empty">No tasks for this forwarder</div>`;
     return `<div class="fwd-group" style="animation-delay:${gi*.06}s">
       <div class="fwd-group-header${isOpen?' open':''}" onclick="toggleGroup('${esc(fwdName)}')">
         <span class="fwd-group-icon">\u25B6</span>
-        <span class="fwd-group-name">${esc(fwdName)}</span>
+        <span class="fwd-group-name">${highlight(fwdName,q)}</span>
         <div class="fwd-group-pills">
           <span class="fwd-pill fwd-pill-total">${fwdTotal} task${fwdTotal!==1?'s':''}</span>
           ${fwdPending>0?`<span class="fwd-pill fwd-pill-pending">${fwdPending} pending</span>`:''}
@@ -751,11 +823,22 @@ function renderForwarderView(){
 
 function renderScribesView(){
   const container=document.getElementById('scribes-view');
-  const doneTasks=tasks.filter(t=>t.status==='done');
+  const q=searchQuery.trim().toLowerCase();
+  const doneTasks=tasks.filter(t=>t.status==='done'&&(q?taskMatchesSearch(t,q):true));
+
+  // Update search count display
+  const allDone=tasks.filter(t=>t.status==='done');
+  const cntEl=document.getElementById('search-count');
+  if(q){const m=tasks.filter(t=>taskMatchesSearch(t,q)).length;cntEl.textContent=`${m} result${m!==1?'s':''}`;}
+  else{cntEl.textContent='';}
+
   const scribeMap={};
   doneTasks.forEach(t=>{const n=(t.completedBy||'').trim()||'(Anonymous)';if(!scribeMap[n])scribeMap[n]=[];scribeMap[n].push(t);});
   const scribeNames=Object.keys(scribeMap).sort((a,b)=>scribeMap[b].length-scribeMap[a].length);
-  if(scribeNames.length===0){container.innerHTML=`<div class="empty-state"><div class="empty-rune">\u2295</div><div class="empty-text">No tasks sealed yet</div><div class="empty-sub">When tasks are marked done, scribes will appear here</div></div>`;return;}
+  if(scribeNames.length===0){
+    container.innerHTML=`<div class="empty-state"><div class="empty-rune">\u2295</div><div class="empty-text">${allDone.length===0?'No tasks sealed yet':q?'No matches found':''}</div><div class="empty-sub">${allDone.length===0?'When tasks are marked done, scribes will appear here':q?'Try different search terms':''}</div></div>`;
+    return;
+  }
   const maxDone=Math.max(...scribeNames.map(n=>scribeMap[n].length));
   function latestCompletion(ts){let l=null;ts.forEach(t=>{if(!t.completedAt)return;const d=t.completedAt.toDate?t.completedAt.toDate():new Date(t.completedAt);if(!l||d>l)l=d;});return l;}
   const cardsHTML=`<div class="scribes-section">
@@ -769,7 +852,7 @@ function renderScribesView(){
         const latestStr=latest?latest.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):null;
         return `<div class="scribe-card${sel?' selected':''}" onclick="selectScribe('${esc(name)}')" style="animation:task-in .35s ${i*.05}s ease both">
           <div class="scribe-avatar">${initials(name)}</div>
-          <div class="scribe-name">${esc(name)}</div>
+          <div class="scribe-name">${highlight(name,q)}</div>
           <div class="scribe-stats">
             <span class="scribe-stat-pill scribe-done-pill">\u2713 ${cnt} task${cnt!==1?'s':''}</span>
             ${fwdSet.size>0?`<span class="scribe-stat-pill scribe-fwd-pill">${fwdSet.size} fwd${fwdSet.size!==1?'s':''}</span>`:''}
@@ -798,6 +881,7 @@ function renderScribesView(){
 }
 
 document.getElementById('modal-scribe-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmDone();if(e.key==='Escape')closeModal();});
+document.getElementById('search-input').addEventListener('keydown',e=>{if(e.key==='Escape')clearSearch();});
 document.getElementById('complete-modal').addEventListener('click',e=>{if(e.target===document.getElementById('complete-modal'))closeModal();});
 document.getElementById('del-month-modal').addEventListener('click',e=>{if(e.target===document.getElementById('del-month-modal'))closeDelMonthModal();});
 document.getElementById('inp-title').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
