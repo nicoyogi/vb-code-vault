@@ -18,7 +18,7 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 #bg{position:fixed;inset:0;z-index:0;pointer-events:none}
 
 /* ─── SHELL ─── */
-.shell{position:relative;z-index:3;width:100%;max-width:860px;display:flex;flex-direction:column;align-items:center}
+.shell{position:relative;z-index:3;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center}
 
 /* ─── NAV BACK ─── */
 .nav-back{align-self:flex-start;margin-top:2rem;margin-bottom:2.5rem;display:flex;align-items:center;gap:10px;font-family:var(--cinzel);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:rgba(212,175,100,.3);text-decoration:none;transition:color .2s;cursor:pointer}
@@ -88,10 +88,11 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .btn-inscribe:disabled{opacity:.45;cursor:not-allowed}
 
 /* ─── VIEW TOGGLE ─── */
-.view-toggle-row{width:100%;display:flex;align-items:center;gap:8px;margin-bottom:1.2rem;animation:rise .9s .36s ease both}
+.view-toggle-row{width:100%;display:flex;align-items:center;gap:8px;margin-bottom:1.2rem;animation:rise .9s .36s ease both;flex-wrap:wrap}
 .view-btn{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;padding:.45rem 1.2rem;border-radius:20px;border:1px solid rgba(212,175,100,.12);background:rgba(10,8,24,.6);color:rgba(212,175,100,.3);cursor:pointer;transition:all .25s;display:flex;align-items:center;gap:6px}
 .view-btn:hover{border-color:rgba(244,114,182,.25);color:rgba(244,114,182,.7)}
 .view-btn.active{background:rgba(244,114,182,.1);border-color:rgba(244,114,182,.35);color:rgba(244,114,182,.95);box-shadow:0 0 14px rgba(244,114,182,.08)}
+.view-btn.scribe-active{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.3);color:rgba(52,211,153,.9);box-shadow:0 0 14px rgba(52,211,153,.08)}
 .view-sep{flex:1}
 
 /* ─── FILTER BAR ─── */
@@ -109,8 +110,10 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .task-card::before{content:'';position:absolute;top:0;left:6%;right:6%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.18),transparent);opacity:0;transition:opacity .3s}
 .task-card:hover{border-color:rgba(244,114,182,.18);background:rgba(14,10,28,.8);transform:translateY(-1px)}
 .task-card:hover::before{opacity:1}
-.task-card.is-done{opacity:.45}
-.task-card.is-done:hover{opacity:.65}
+.task-card.is-done{opacity:.55}
+.task-card.is-done:hover{opacity:.75}
+.task-card.is-done{border-color:rgba(52,211,153,.08)}
+.task-card.is-done:hover{border-color:rgba(52,211,153,.2)}
 
 /* ─── FORWARDER GROUP VIEW ─── */
 .fwd-group{width:100%;margin-bottom:10px;animation:rise .4s ease both}
@@ -133,13 +136,10 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 
 .fwd-group-body{display:none;flex-direction:column;gap:0;border:1px solid rgba(244,114,182,.14);border-top:none;border-bottom-left-radius:16px;border-bottom-right-radius:16px;overflow:hidden;background:rgba(6,4,18,.5)}
 .fwd-group-body.open{display:flex}
-/* nested task cards inside group — no border-radius on top side */
 .fwd-group-body .task-card{border-radius:0;border-left:none;border-right:none;border-top:none;border-bottom:1px solid rgba(212,175,100,.06)}
 .fwd-group-body .task-card:last-child{border-bottom:none;border-bottom-left-radius:14px;border-bottom-right-radius:14px}
 .fwd-group-body .task-card:first-child{border-top:none}
 .fwd-group-body .task-card:hover{transform:none;background:rgba(14,10,28,.9)}
-
-/* empty group */
 .fwd-group-empty{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.18);letter-spacing:.1em;text-align:center;padding:1.2rem;border:1px solid rgba(244,114,182,.14);border-top:none;border-bottom-left-radius:14px;border-bottom-right-radius:14px;background:rgba(6,4,18,.5)}
 
 /* skeleton */
@@ -162,9 +162,11 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .badge-fwd{color:rgba(244,114,182,.9);border-color:rgba(244,114,182,.22);background:rgba(244,114,182,.07)}
 .badge-pending{color:rgba(251,191,36,.85);border-color:rgba(251,191,36,.2);background:rgba(251,191,36,.06)}
 .badge-done{color:rgba(52,211,153,.85);border-color:rgba(52,211,153,.2);background:rgba(52,211,153,.06)}
+.badge-scribe{color:rgba(167,139,250,.9);border-color:rgba(167,139,250,.22);background:rgba(167,139,250,.07);display:inline-flex;align-items:center;gap:4px}
 .task-data{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.35);letter-spacing:.05em}
 .task-notes{font-family:var(--mono);font-size:10.5px;color:rgba(237,232,255,.22);line-height:1.65;margin-top:.5rem;border-left:2px solid rgba(244,114,182,.12);padding-left:.7rem}
 .task-date{font-family:var(--mono);font-size:9px;color:rgba(212,175,100,.2);margin-top:.35rem;letter-spacing:.05em}
+.task-done-by{font-family:var(--mono);font-size:9px;color:rgba(52,211,153,.3);margin-top:.2rem;letter-spacing:.05em}
 
 /* actions */
 .task-actions{display:flex;gap:4px;padding-top:1px}
@@ -176,6 +178,59 @@ body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;al
 .empty-rune{font-family:var(--cinzel);font-size:2.8rem;color:rgba(244,114,182,.12)}
 .empty-text{font-family:var(--cinzel);font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:rgba(212,175,100,.2)}
 .empty-sub{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.12);letter-spacing:.08em}
+
+/* ─── SCRIBE MODAL ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(2,2,10,.85);backdrop-filter:blur(8px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-box{background:rgba(10,8,24,.96);border:1px solid rgba(167,139,250,.25);border-radius:24px;padding:2rem 2rem 1.6rem;width:90%;max-width:420px;position:relative;transform:scale(.92) translateY(20px);transition:transform .3s ease;box-shadow:0 0 60px rgba(167,139,250,.12)}
+.modal-overlay.open .modal-box{transform:scale(1) translateY(0)}
+.modal-corner{position:absolute;width:14px;height:14px}
+.modal-corner.tl{top:12px;left:12px;border-top:1px solid rgba(167,139,250,.4);border-left:1px solid rgba(167,139,250,.4)}
+.modal-corner.br{bottom:12px;right:12px;border-bottom:1px solid rgba(167,139,250,.4);border-right:1px solid rgba(167,139,250,.4)}
+.modal-shine{position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(167,139,250,.5),transparent)}
+.modal-title{font-family:var(--cinzel);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:rgba(167,139,250,.7);margin-bottom:.5rem}
+.modal-task-name{font-family:var(--cinzel);font-size:15px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:1.4rem;line-height:1.4}
+.modal-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:rgba(212,175,100,.35);text-transform:uppercase;margin-bottom:6px}
+.modal-input{width:100%;background:rgba(2,2,10,.7);border:1px solid rgba(167,139,250,.18);border-radius:10px;color:rgba(237,232,255,.9);font-family:var(--mono);font-size:13px;padding:.65rem 1rem;outline:none;transition:border-color .25s,box-shadow .25s}
+.modal-input:focus{border-color:rgba(167,139,250,.45);box-shadow:0 0 0 3px rgba(167,139,250,.08)}
+.modal-input::placeholder{color:rgba(237,232,255,.2)}
+.modal-btns{display:flex;gap:10px;margin-top:1.4rem}
+.modal-btn{flex:1;font-family:var(--cinzel);font-size:9px;letter-spacing:.28em;text-transform:uppercase;padding:.65rem 1rem;border-radius:20px;border:1px solid;cursor:pointer;transition:all .25s}
+.modal-btn-confirm{color:rgba(52,211,153,.9);border-color:rgba(52,211,153,.25);background:rgba(52,211,153,.07)}
+.modal-btn-confirm:hover{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.5);box-shadow:0 0 18px rgba(52,211,153,.12)}
+.modal-btn-cancel{color:rgba(212,175,100,.4);border-color:rgba(212,175,100,.12);background:transparent}
+.modal-btn-cancel:hover{color:rgba(212,175,100,.7);border-color:rgba(212,175,100,.25)}
+.modal-skip{font-family:var(--mono);font-size:9px;color:rgba(212,175,100,.2);text-align:center;margin-top:.8rem;cursor:pointer;letter-spacing:.08em;transition:color .2s}
+.modal-skip:hover{color:rgba(212,175,100,.5)}
+
+/* ─── HALL OF SCRIBES ─── */
+.scribes-section{width:100%;animation:rise .9s .4s ease both}
+.scribes-header{display:flex;align-items:center;gap:12px;margin-bottom:1.2rem}
+.scribes-title{font-family:var(--cinzel);font-size:9px;letter-spacing:.38em;text-transform:uppercase;color:rgba(52,211,153,.5)}
+.scribes-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(52,211,153,.12),transparent)}
+.scribe-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:1.6rem}
+.scribe-card{background:rgba(10,8,24,.75);border:1px solid rgba(52,211,153,.1);border-radius:18px;padding:1.2rem 1.2rem 1rem;backdrop-filter:blur(20px);transition:border-color .3s,transform .25s;position:relative;overflow:hidden;cursor:pointer}
+.scribe-card::before{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(52,211,153,.2),transparent)}
+.scribe-card:hover{border-color:rgba(52,211,153,.25);transform:translateY(-2px)}
+.scribe-card.selected{border-color:rgba(52,211,153,.45);background:rgba(14,10,28,.85);box-shadow:0 0 24px rgba(52,211,153,.08)}
+.scribe-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,rgba(52,211,153,.15),rgba(167,139,250,.15));border:1px solid rgba(52,211,153,.2);display:flex;align-items:center;justify-content:center;font-family:var(--cinzel);font-size:14px;font-weight:600;color:rgba(52,211,153,.8);margin-bottom:.8rem;letter-spacing:.05em}
+.scribe-name{font-family:var(--cinzel);font-size:13px;font-weight:600;color:rgba(255,255,255,.8);letter-spacing:.03em;margin-bottom:.5rem}
+.scribe-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.8rem}
+.scribe-stat-pill{font-family:var(--mono);font-size:8.5px;padding:2px 8px;border-radius:20px;border:1px solid}
+.scribe-done-pill{color:rgba(52,211,153,.8);border-color:rgba(52,211,153,.18);background:rgba(52,211,153,.05)}
+.scribe-fwd-pill{color:rgba(167,139,250,.7);border-color:rgba(167,139,250,.18);background:rgba(167,139,250,.05)}
+.scribe-bar-wrap{height:3px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.scribe-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,rgba(52,211,153,.5),rgba(52,211,153,.85));transition:width .6s ease}
+.scribe-bar-label{font-family:var(--mono);font-size:8px;color:rgba(52,211,153,.3);margin-top:4px;letter-spacing:.06em}
+
+/* ─── SCRIBE TASK DETAIL ─── */
+.scribe-detail{width:100%;margin-bottom:1.6rem;animation:rise .4s ease both}
+.scribe-detail-header{display:flex;align-items:center;gap:12px;margin-bottom:.9rem}
+.scribe-detail-name{font-family:var(--cinzel);font-size:14px;font-weight:600;color:rgba(52,211,153,.8);letter-spacing:.04em}
+.scribe-detail-count{font-family:var(--mono);font-size:10px;color:rgba(52,211,153,.3);letter-spacing:.08em}
+.btn-close-detail{font-family:var(--cinzel);font-size:8px;letter-spacing:.25em;color:rgba(212,175,100,.3);border:1px solid rgba(212,175,100,.12);background:none;border-radius:16px;padding:.3rem .9rem;cursor:pointer;margin-left:auto;transition:all .25s}
+.btn-close-detail:hover{color:rgba(212,175,100,.7);border-color:rgba(212,175,100,.28)}
+.scribe-detail-tasks{display:flex;flex-direction:column;gap:7px}
 
 /* ─── TOAST ─── */
 #toast{position:fixed;bottom:2.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:#0e0e1c;color:#ede8ff;border:1px solid rgba(212,175,100,.22);padding:10px 22px;border-radius:24px;font-family:var(--mono);font-size:12px;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;backdrop-filter:blur(10px)}
@@ -200,12 +255,31 @@ footer a:hover{color:rgba(212,175,100,.5)}
   .form-full{grid-column:auto}
   .page-title{font-size:2.2rem}
   .fwd-group-pills{display:none}
+  .scribe-cards{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
 <body>
 
 <canvas id="bg"></canvas>
+
+<!-- ─── COMPLETE MODAL ─── -->
+<div class="modal-overlay" id="complete-modal">
+  <div class="modal-box">
+    <div class="modal-corner tl"></div>
+    <div class="modal-corner br"></div>
+    <div class="modal-shine"></div>
+    <div class="modal-title">Seal this task</div>
+    <div class="modal-task-name" id="modal-task-name">—</div>
+    <div class="modal-label">Completed by (your name)</div>
+    <input class="modal-input" type="text" id="modal-scribe-input" placeholder="e.g. Nico, Marco, Ana..." autocomplete="off" />
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-confirm" onclick="confirmDone()">Seal · Mark Done</button>
+    </div>
+    <div class="modal-skip" onclick="confirmDoneAnonymous()">Skip — mark done without a name</div>
+  </div>
+</div>
 
 <div class="shell">
 
@@ -279,13 +353,16 @@ footer a:hover{color:rgba(212,175,100,.5)}
     </button>
   </div>
 
-  <!-- VIEW TOGGLE + FILTER -->
+  <!-- VIEW TOGGLE -->
   <div class="view-toggle-row">
     <button class="view-btn active" id="btn-view-list" onclick="setView('list')">
       <span>☰</span> All Tasks
     </button>
     <button class="view-btn" id="btn-view-fwd" onclick="setView('forwarder')">
       <span>◈</span> By Forwarder
+    </button>
+    <button class="view-btn" id="btn-view-scribes" onclick="setView('scribes')">
+      <span>⊕</span> Hall of Scribes
     </button>
     <div class="view-sep"></div>
   </div>
@@ -319,6 +396,12 @@ footer a:hover{color:rgba(212,175,100,.5)}
 
   <!-- FORWARDER VIEW -->
   <div id="fwd-view" style="display:none;width:100%;flex-direction:column;gap:8px;animation:rise .9s .42s ease both"></div>
+
+  <!-- SCRIBES VIEW -->
+  <div id="scribes-view" style="display:none;width:100%;flex-direction:column;gap:0">
+    <!-- scribe cards injected here -->
+    <div class="scribe-detail" id="scribe-detail" style="display:none"></div>
+  </div>
 
   <div class="sigil-div">
     <div class="sdl2"></div>
@@ -388,21 +471,28 @@ const db  = firebase.firestore();
 const col = db.collection('wmf_tasks');
 
 /* ─── STATE ─── */
-let tasks   = [];
-let saving  = false;
-let curView = 'list';  // 'list' | 'forwarder'
-
-// Which forwarder groups are open (by forwarder name)
+let tasks      = [];
+let saving     = false;
+let curView    = 'list';
 let openGroups = new Set();
+let selectedScribe = null;
+
+// modal state
+let pendingToggleId   = null;
+let pendingToggleMode = null; // 'mark_done' or 'mark_pending'
 
 /* ─── VIEW SWITCH ─── */
 function setView(v) {
   curView = v;
-  document.getElementById('btn-view-list').classList.toggle('active', v === 'list');
-  document.getElementById('btn-view-fwd').classList.toggle('active',  v === 'forwarder');
-  document.getElementById('filter-bar').style.display  = v === 'list' ? 'flex' : 'none';
-  document.getElementById('task-list').style.display   = v === 'list' ? 'flex' : 'none';
-  document.getElementById('fwd-view').style.display    = v === 'forwarder' ? 'flex' : 'none';
+  document.getElementById('btn-view-list').classList.toggle('active',    v === 'list');
+  document.getElementById('btn-view-fwd').classList.toggle('active',     v === 'forwarder');
+  document.getElementById('btn-view-scribes').classList.toggle('active', v === 'scribes');
+  // dim scribes button differently
+  document.getElementById('btn-view-scribes').classList.toggle('scribe-active', v === 'scribes');
+  document.getElementById('filter-bar').style.display    = v === 'list'    ? 'flex' : 'none';
+  document.getElementById('task-list').style.display     = v === 'list'    ? 'flex' : 'none';
+  document.getElementById('fwd-view').style.display      = v === 'forwarder' ? 'flex' : 'none';
+  document.getElementById('scribes-view').style.display  = v === 'scribes' ? 'flex' : 'none';
   render();
 }
 
@@ -444,6 +534,11 @@ function shake(el) {
   setTimeout(() => { el.style.borderColor = ''; }, 600);
 }
 
+function initials(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0,2);
+}
+
 /* ─── ADD TASK ─── */
 async function addTask() {
   if (saving) return;
@@ -464,6 +559,7 @@ async function addTask() {
     await col.add({
       title, fwd, total, notes,
       status: 'pending',
+      completedBy: '',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     document.getElementById('inp-title').value  = '';
@@ -471,7 +567,6 @@ async function addTask() {
     document.getElementById('inp-total').value  = '';
     document.getElementById('inp-notes').value  = '';
     showToast('Task inscribed into the ledger!');
-    // auto-open that forwarder group if in forwarder view
     if (curView === 'forwarder') openGroups.add(fwd);
   } catch(e) {
     showToast('Failed to inscribe. Check your connection.', true);
@@ -483,19 +578,73 @@ async function addTask() {
   }
 }
 
+/* ─── MODAL ─── */
+function openCompleteModal(id) {
+  const task = tasks.find(x => x.id === id);
+  if (!task) return;
+  pendingToggleId = id;
+  document.getElementById('modal-task-name').textContent = task.title;
+  document.getElementById('modal-scribe-input').value = '';
+  document.getElementById('complete-modal').classList.add('open');
+  setTimeout(() => document.getElementById('modal-scribe-input').focus(), 300);
+}
+
+function closeModal() {
+  document.getElementById('complete-modal').classList.remove('open');
+  pendingToggleId = null;
+}
+
+async function confirmDone() {
+  if (!pendingToggleId) return;
+  const name = document.getElementById('modal-scribe-input').value.trim();
+  closeModal();
+  await applyDone(pendingToggleId, name);
+}
+
+async function confirmDoneAnonymous() {
+  if (!pendingToggleId) return;
+  const id = pendingToggleId;
+  closeModal();
+  await applyDone(id, '');
+}
+
+async function applyDone(id, scribeName) {
+  try {
+    await col.doc(id).update({
+      status: 'done',
+      completedBy: scribeName || '',
+      completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(scribeName ? `Sealed by ${scribeName}!` : 'Task marked done.');
+  } catch(e) {
+    showToast('Could not update task.', true);
+    console.error(e);
+  }
+}
+
 /* ─── TOGGLE STATUS ─── */
 async function toggleDone(id) {
   const task = tasks.find(x => x.id === id);
   if (!task) return;
-  const newStatus = task.status === 'done' ? 'pending' : 'done';
-  try {
-    await col.doc(id).update({
-      status: newStatus,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  } catch(e) {
-    showToast('Could not update task.', true);
-    console.error(e);
+
+  if (task.status === 'done') {
+    // Mark back to pending — no name needed
+    try {
+      await col.doc(id).update({
+        status: 'pending',
+        completedBy: '',
+        completedAt: null,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast('Task reopened.');
+    } catch(e) {
+      showToast('Could not update task.', true);
+      console.error(e);
+    }
+  } else {
+    // Going to done — open modal to capture name
+    openCompleteModal(id);
   }
 }
 
@@ -511,12 +660,19 @@ async function deleteTask(id) {
   }
 }
 
-/* ─── TOGGLE GROUP OPEN/CLOSE ─── */
+/* ─── TOGGLE FORWARDER GROUP ─── */
 function toggleGroup(fwdName) {
-  if (openGroups.has(fwdName)) {
-    openGroups.delete(fwdName);
+  if (openGroups.has(fwdName)) openGroups.delete(fwdName);
+  else openGroups.add(fwdName);
+  render();
+}
+
+/* ─── TOGGLE SCRIBE DETAIL ─── */
+function selectScribe(name) {
+  if (selectedScribe === name) {
+    selectedScribe = null;
   } else {
-    openGroups.add(fwdName);
+    selectedScribe = name;
   }
   render();
 }
@@ -527,6 +683,11 @@ function taskCardHTML(t, i, hideForwarderBadge) {
     ? (t.createdAt.toDate ? t.createdAt.toDate() : new Date(t.createdAt))
         .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     : '—';
+
+  const doneByStr = t.completedBy
+    ? `<div class="task-done-by">⊕ Sealed by <strong style="color:rgba(52,211,153,.55)">${esc(t.completedBy)}</strong></div>`
+    : (t.status === 'done' ? `<div class="task-done-by" style="color:rgba(212,175,100,.18)">⊕ Sealed anonymously</div>` : '');
+
   return `
     <div class="task-card${t.status === 'done' ? ' is-done' : ''}" style="animation:task-in .3s ${i * 0.04}s ease both">
       <div class="task-check-wrap">
@@ -537,9 +698,11 @@ function taskCardHTML(t, i, hideForwarderBadge) {
         <div class="task-meta">
           ${!hideForwarderBadge ? `<span class="badge badge-fwd">${esc(t.fwd)}</span>` : ''}
           <span class="badge badge-${t.status}">${t.status}</span>
+          ${t.completedBy ? `<span class="badge badge-scribe">⊕ ${esc(t.completedBy)}</span>` : ''}
           ${t.total ? `<span class="task-data">⬡ ${esc(t.total)}</span>` : ''}
         </div>
         ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ''}
+        ${doneByStr}
         <div class="task-date">Inscribed ${dateStr}</div>
       </div>
       <div class="task-actions">
@@ -550,7 +713,6 @@ function taskCardHTML(t, i, hideForwarderBadge) {
 
 /* ─── RENDER ─── */
 function render() {
-  // ── global stats (always from all tasks) ──
   const pending = tasks.filter(t => t.status === 'pending').length;
   const done    = tasks.filter(t => t.status === 'done').length;
   const fwds    = new Set(tasks.map(t => t.fwd).filter(Boolean)).size;
@@ -559,11 +721,9 @@ function render() {
   document.getElementById('st-done').textContent    = done;
   document.getElementById('st-fwds').textContent    = fwds;
 
-  if (curView === 'list') {
-    renderList();
-  } else {
-    renderForwarderView();
-  }
+  if (curView === 'list')      renderList();
+  else if (curView === 'forwarder') renderForwarderView();
+  else if (curView === 'scribes')   renderScribesView();
 }
 
 function renderList() {
@@ -598,13 +758,9 @@ function renderList() {
 function renderForwarderView() {
   const container = document.getElementById('fwd-view');
 
-  // Get all known forwarders — from tasks + the hardcoded list (so empty ones show too)
   const knownFwds = ['Dachser','K+N','DHL Express','Wackler','Honold','ERKA'];
-  // Also include any forwarders that exist in tasks but aren't in the list
   const extraFwds = [...new Set(tasks.map(t => t.fwd).filter(Boolean))].filter(f => !knownFwds.includes(f));
-  const allFwds = [...knownFwds, ...extraFwds];
-
-  // Only show forwarders that have tasks
+  const allFwds   = [...knownFwds, ...extraFwds];
   const activeFwds = allFwds.filter(f => tasks.some(t => t.fwd === f));
 
   if (activeFwds.length === 0) {
@@ -652,7 +808,107 @@ function renderForwarderView() {
   }).join('');
 }
 
-/* ─── ENTER KEY ─── */
+/* ─── SCRIBES VIEW ─── */
+function renderScribesView() {
+  const container = document.getElementById('scribes-view');
+  const detail    = document.getElementById('scribe-detail');
+
+  // Gather all done tasks with a name
+  const doneTasks = tasks.filter(t => t.status === 'done');
+
+  // Build scribe map
+  const scribeMap = {};
+  doneTasks.forEach(t => {
+    const name = (t.completedBy || '').trim() || '(Anonymous)';
+    if (!scribeMap[name]) scribeMap[name] = [];
+    scribeMap[name].push(t);
+  });
+
+  const scribeNames = Object.keys(scribeMap).sort((a, b) => scribeMap[b].length - scribeMap[a].length);
+
+  if (scribeNames.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-rune">⊕</div>
+      <div class="empty-text">No tasks sealed yet</div>
+      <div class="empty-sub">When tasks are marked done, scribes will appear here</div>
+    </div>`;
+    return;
+  }
+
+  const maxDone = Math.max(...scribeNames.map(n => scribeMap[n].length));
+
+  // scribe cards HTML
+  const cardsHTML = `
+    <div class="scribes-section">
+      <div class="scribes-header">
+        <div class="scribes-title">Hall of Scribes — completions by person</div>
+        <div class="scribes-line"></div>
+      </div>
+      <div class="scribe-cards">
+        ${scribeNames.map((name, i) => {
+          const ts   = scribeMap[name];
+          const cnt  = ts.length;
+          const fwdSet = new Set(ts.map(t => t.fwd).filter(Boolean));
+          const pct  = Math.round((cnt / maxDone) * 100);
+          const sel  = selectedScribe === name;
+          return `
+            <div class="scribe-card${sel ? ' selected' : ''}" onclick="selectScribe('${esc(name)}')" style="animation:task-in .35s ${i * 0.05}s ease both">
+              <div class="scribe-avatar">${initials(name)}</div>
+              <div class="scribe-name">${esc(name)}</div>
+              <div class="scribe-stats">
+                <span class="scribe-stat-pill scribe-done-pill">✓ ${cnt} task${cnt !== 1 ? 's' : ''}</span>
+                ${fwdSet.size > 0 ? `<span class="scribe-stat-pill scribe-fwd-pill">${fwdSet.size} fwd${fwdSet.size !== 1 ? 's' : ''}</span>` : ''}
+              </div>
+              <div class="scribe-bar-wrap">
+                <div class="scribe-bar-fill" style="width:${pct}%"></div>
+              </div>
+              <div class="scribe-bar-label">${pct}% of top scribe</div>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  // detail section
+  let detailHTML = '';
+  if (selectedScribe && scribeMap[selectedScribe]) {
+    const scribeTasks = scribeMap[selectedScribe];
+    // Group by forwarder
+    const byFwd = {};
+    scribeTasks.forEach(t => {
+      const f = t.fwd || 'Unknown';
+      if (!byFwd[f]) byFwd[f] = [];
+      byFwd[f].push(t);
+    });
+
+    const fwdSections = Object.entries(byFwd).map(([fwdName, ts]) => `
+      <div style="margin-bottom:.9rem">
+        <div style="font-family:var(--cinzel);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.4);margin-bottom:.5rem;padding-left:.3rem">${esc(fwdName)}</div>
+        ${ts.map((t, i) => taskCardHTML(t, i, true)).join('')}
+      </div>`).join('');
+
+    detailHTML = `
+      <div class="scribe-detail-header">
+        <div class="scribe-avatar" style="width:28px;height:28px;font-size:11px;flex-shrink:0">${initials(selectedScribe)}</div>
+        <div class="scribe-detail-name">${esc(selectedScribe)}</div>
+        <div class="scribe-detail-count">${scribeTasks.length} task${scribeTasks.length !== 1 ? 's' : ''} sealed</div>
+        <button class="btn-close-detail" onclick="selectScribe('${esc(selectedScribe)}')">✕ Close</button>
+      </div>
+      <div class="scribe-detail-tasks">${fwdSections}</div>`;
+  }
+
+  container.innerHTML = cardsHTML + `<div class="scribe-detail" style="display:${selectedScribe ? 'block' : 'none'}">${detailHTML}</div>`;
+}
+
+/* ─── MODAL KEYBOARD ─── */
+document.getElementById('modal-scribe-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmDone();
+  if (e.key === 'Escape') closeModal();
+});
+document.getElementById('complete-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('complete-modal')) closeModal();
+});
+
+/* ─── ENTER KEY (add task) ─── */
 document.getElementById('inp-title').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
 
 /* ─── BOOT ─── */
