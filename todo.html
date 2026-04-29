@@ -778,9 +778,10 @@ function closeModal() {
 
 async function confirmDone() {
   if (!pendingToggleId) return;
+  const id = pendingToggleId;          // ✅ save it first
   const name = document.getElementById('modal-scribe-input').value.trim();
-  closeModal();
-  await applyDone(pendingToggleId, name);
+  closeModal();                        // now safe to close
+  await applyDone(id, name);           // use the saved id
 }
 
 async function confirmDoneAnonymous() {
