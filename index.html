@@ -128,6 +128,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-v .card-top{background:linear-gradient(90deg,transparent,rgba(var(--v),1),transparent)}
 .card-e .card-top{background:linear-gradient(90deg,transparent,rgba(var(--e),.9),transparent)}
 .card-a .card-top{background:linear-gradient(90deg,transparent,rgba(var(--amber),1),transparent)}
+.card-pk .card-top{background:linear-gradient(90deg,transparent,rgba(var(--pk),1),transparent)}
 
 .blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:0;transition:opacity .6s;pointer-events:none;z-index:0}
 .card:hover .blob{opacity:1}
@@ -135,6 +136,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-v .blob{width:220px;height:200px;background:rgba(var(--v),.15);top:-60px;right:-60px;left:auto}
 .card-e .blob{width:300px;height:200px;background:rgba(var(--e),.1);bottom:-60px;left:5%}
 .card-a .blob{width:220px;height:200px;background:rgba(var(--amber),.12);top:-60px;left:-60px}
+.card-pk .blob{width:220px;height:200px;background:rgba(var(--pk),.13);top:-60px;right:-60px;left:auto}
 
 .spot{position:absolute;inset:0;border-radius:24px;opacity:0;transition:opacity .3s;pointer-events:none;background:radial-gradient(300px circle at var(--cx,50%) var(--cy,50%),rgba(255,255,255,.04),transparent 55%);z-index:1}
 .card:hover .spot{opacity:1}
@@ -144,6 +146,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-v:hover{border-color:rgba(var(--v),.3);box-shadow:0 28px 80px rgba(var(--v),.18),0 0 0 1px rgba(var(--v),.1),inset 0 1px 0 rgba(var(--v),.1)}
 .card-e:hover{border-color:rgba(var(--e),.25);box-shadow:0 28px 80px rgba(var(--e),.13),0 0 0 1px rgba(var(--e),.08),inset 0 1px 0 rgba(var(--e),.08)}
 .card-a:hover{border-color:rgba(var(--amber),.3);box-shadow:0 28px 80px rgba(var(--amber),.15),0 0 0 1px rgba(var(--amber),.1),inset 0 1px 0 rgba(var(--amber),.08)}
+.card-pk:hover{border-color:rgba(var(--pk),.3);box-shadow:0 28px 80px rgba(var(--pk),.18),0 0 0 1px rgba(var(--pk),.1),inset 0 1px 0 rgba(var(--pk),.1)}
 
 .cin{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
 .s2 .cin{flex-direction:row;align-items:flex-start;gap:2rem}
@@ -156,17 +159,20 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-v .icon{background:rgba(var(--v),.1);box-shadow:0 0 0 1px rgba(var(--v),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--v),1)}
 .card-e .icon{background:rgba(var(--e),.08);box-shadow:0 0 0 1px rgba(var(--e),.18),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--e),1)}
 .card-a .icon{background:rgba(var(--amber),.1);box-shadow:0 0 0 1px rgba(var(--amber),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--amber),1)}
+.card-pk .icon{background:rgba(var(--pk),.1);box-shadow:0 0 0 1px rgba(var(--pk),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--pk),1)}
 .icon::after{content:'';position:absolute;inset:-6px;border-radius:22px;border:1px solid transparent;transition:all .45s}
 .card-b:hover .icon::after{border-color:rgba(var(--b),.22);inset:-10px;border-radius:26px}
 .card-v:hover .icon::after{border-color:rgba(var(--v),.22);inset:-10px;border-radius:26px}
 .card-e:hover .icon::after{border-color:rgba(var(--e),.18);inset:-10px;border-radius:26px}
 .card-a:hover .icon::after{border-color:rgba(var(--amber),.22);inset:-10px;border-radius:26px}
+.card-pk:hover .icon::after{border-color:rgba(var(--pk),.22);inset:-10px;border-radius:26px}
 
 .clabel{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.35em;text-transform:uppercase;margin-bottom:7px;opacity:.7}
 .card-b .clabel{color:rgba(var(--b),1)}
 .card-v .clabel{color:rgba(var(--v),1)}
 .card-e .clabel{color:rgba(var(--e),1)}
 .card-a .clabel{color:rgba(var(--amber),1)}
+.card-pk .clabel{color:rgba(var(--pk),1)}
 
 .ctitle{font-family:var(--cinzel);font-size:1.35rem;font-weight:600;letter-spacing:.02em;line-height:1.15;margin-bottom:.8rem;color:rgba(255,255,255,.88)}
 .s2 .ctitle{font-size:1.2rem}
@@ -178,6 +184,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-v .tag{color:rgba(var(--v),.9);border-color:rgba(var(--v),.22);background:rgba(var(--v),.07)}
 .card-e .tag{color:rgba(var(--e),.9);border-color:rgba(var(--e),.18);background:rgba(var(--e),.05)}
 .card-a .tag{color:rgba(var(--amber),.9);border-color:rgba(var(--amber),.22);background:rgba(var(--amber),.07)}
+.card-pk .tag{color:rgba(var(--pk),.9);border-color:rgba(var(--pk),.22);background:rgba(var(--pk),.07)}
 .arr{width:34px;height:34px;border-radius:50%;border:1px solid rgba(212,175,100,.12);display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(212,175,100,.25);flex-shrink:0;transition:all .35s;font-family:var(--mono)}
 .card:hover .arr{transform:translateX(5px);border-color:rgba(212,175,100,.5);color:rgba(212,175,100,.9);box-shadow:0 0 18px rgba(212,175,100,.2)}
 
@@ -187,6 +194,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-v .deco{color:rgba(var(--v),1)}
 .card-e .deco{color:rgba(var(--e),1)}
 .card-a .deco{color:rgba(var(--amber),1)}
+.card-pk .deco{color:rgba(var(--pk),1)}
 
 /* ─── FOOTER ─── */
 .sigil-div{display:flex;align-items:center;gap:16px;width:100%;margin:3rem 0 0;animation:rise 1s .5s ease both}
@@ -368,6 +376,22 @@ footer a:hover{color:rgba(212,175,100,.55)}
         <div class="deco">transmute(scroll)<br>&nbsp;.forwarder()<br>&nbsp;.alchemize()<br>seal() ✦</div>
       </a>
 
+      <!-- c4: Forwarder To-Do Tracker (WMF only) -->
+      <a href="todo.html" class="card card-pk" id="c4">
+        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+        <div class="cin">
+          <div class="icon">🗂️</div>
+          <div class="clabel">Tome IV · The Ledger</div>
+          <div class="ctitle">Forwarder Task Ledger</div>
+          <div class="cdesc">Track open tasks across Dachser, K+N, DHL Express, Wackler, Honold &amp; ERKA. Log forwarder, data totals, notes &amp; status — mark done when the ritual is complete.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">Tasks</span><span class="tag">Tracking</span><span class="tag">Forwarder</span></div>
+            <div class="arr">⟶</div>
+          </div>
+        </div>
+        <div class="deco">ledger.open()<br>&nbsp;.track(fwd)<br>&nbsp;.seal(done)<br>// bound ✦</div>
+      </a>
+
       <!-- c3: Standard Wording (Siemens only) -->
       <a href="#" class="card card-a" id="c3">
         <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
@@ -396,7 +420,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
   <footer>
     codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
-    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a><span class="fsep">✦</span><a href="standard-wording.html">Standard Wording</a>
+    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a><span class="fsep">✦</span><a href="todo.html">The Ledger</a><span class="fsep">✦</span><a href="standard-wording.html">Standard Wording</a>
   </footer>
 
 </div>
@@ -443,7 +467,7 @@ function bindTilt(id){
   });
   el.addEventListener('mouseleave',()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg')});
 }
-['c0','c1','c2','c3'].forEach(bindTilt);
+['c0','c1','c2','c3','c4'].forEach(bindTilt);
 
 document.querySelectorAll('.pcard').forEach(el=>{
   const spot=el.querySelector('.pspot');
@@ -464,6 +488,7 @@ const PROJECTS={
     code:'code.html',
     qa:'qa.html',
     anmerkung:'anmerkung.html',
+    todo:'todo.html',
     wording:null
   },
   siemens:{
@@ -472,6 +497,7 @@ const PROJECTS={
     code:null,
     qa:'qa-siemens.html',
     anmerkung:null,
+    todo:null,
     wording:'standard-wording.html'
   }
 };
@@ -493,17 +519,16 @@ function selectProject(key,el){
   document.getElementById('c1').href=proj.qa||'#';
   document.getElementById('c2').href=proj.anmerkung||'#';
   document.getElementById('c3').href=proj.wording||'#';
+  document.getElementById('c4').href=proj.todo||'#';
 
   // c0: Code Vault — WMF only
   document.getElementById('c0').style.display=isSiemens?'none':'';
   // c2: Anmerkung — WMF only
   document.getElementById('c2').style.display=isSiemens?'none':'';
+  // c4: Task Ledger — WMF only
+  document.getElementById('c4').style.display=isSiemens?'none':'';
   // c3: Standard Wording — Siemens only
   document.getElementById('c3').style.display=isSiemens?'':'none';
-
-  // c1: Knowledge Base — full width when alone (Siemens has c1+c3, WMF has c0+c1+c2)
-  document.getElementById('c1').style.gridColumn=isSiemens?'':'';
-  document.getElementById('c1').className=isSiemens?'card card-v':'card card-v';
 
   document.getElementById('sec-div').classList.add('show');
   document.getElementById('tomes-section').classList.add('show');
