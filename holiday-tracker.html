@@ -1026,7 +1026,9 @@ function getColor(personId) {
   return PALETTE[(idx >= 0 ? idx : 0) % PALETTE.length];
 }
 function initials(name) { return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2); }
-function dateStr(d) { return d.toISOString().slice(0, 10); }
+function dateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
 function fmtDate(s) { return parseDate(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
 function getPerson(id) { return people.find(p => p.id === id); }
