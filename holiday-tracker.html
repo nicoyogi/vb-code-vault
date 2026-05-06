@@ -1218,23 +1218,37 @@ function setAuthLoading(btnId, spinnerId, loading) {
 }
 
 async function loadPeopleForRegister() {
+  const sel = document.getElementById('registerPerson');
+  sel.innerHTML = '<option value="">— Loading team… —</option>';
   try {
     const snap = await peopleCol.orderBy('name').get();
-    const sel = document.getElementById('registerPerson');
     sel.innerHTML = '<option value="">— Select your name —</option>';
-    // Only show people who DON'T yet have an account
-    const profSnap = await userProfCol.get();
-    const linkedPersonIds = new Set(profSnap.docs.map(d => d.data().personId));
+
+    // Try to filter out already-linked people, but don't fail if profiles are auth-gated
+    let linkedPersonIds = new Set();
+    try {
+      const profSnap = await userProfCol.get();
+      linkedPersonIds = new Set(profSnap.docs.map(d => d.data().personId));
+    } catch(e) {
+      // Not signed in — can't read profiles, show all people
+      // doRegister() will catch duplicates server-side anyway
+    }
+
     snap.docs.forEach(d => {
       if (!linkedPersonIds.has(d.id)) {
-        sel.innerHTML += `<option value="${d.id}">${d.data().name} (${d.data().dept})</option>`;
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = `${d.data().name} (${d.data().dept})`;
+        sel.appendChild(opt);
       }
     });
+
     if (sel.options.length === 1) {
       sel.innerHTML = '<option value="">— All team members have accounts —</option>';
     }
   } catch(e) {
-    document.getElementById('registerPerson').innerHTML = '<option value="">— Error loading —</option>';
+    sel.innerHTML = '<option value="">— Error loading —</option>';
+    console.error('loadPeopleForRegister:', e);
   }
 }
 
