@@ -164,6 +164,7 @@
   .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
   .btn-danger { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
   .btn-danger:hover { background: rgba(248,113,113,0.25); }
+  .btn-sm { padding: 5px 10px; font-size: 0.72rem; }
 
   /* Main grid */
   .main-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
@@ -216,8 +217,9 @@
 
   /* Panel card */
   .panel-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
-  .panel-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .panel-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
   .panel-title { font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+  .panel-header-right { display: flex; align-items: center; gap: 8px; }
   .badge { font-family: 'DM Mono', monospace; font-size: 0.65rem; padding: 2px 8px; border-radius: 99px; background: rgba(110,231,183,0.15); color: var(--accent); border: 1px solid rgba(110,231,183,0.25); }
   .panel-body { padding: 12px; }
 
@@ -228,6 +230,80 @@
   .person-name { font-size: 0.85rem; font-weight: 500; }
   .person-dept { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--text-muted); }
   .leave-badge { font-family: 'DM Mono', monospace; font-size: 0.62rem; padding: 2px 7px; border-radius: 5px; letter-spacing: 0.04em; }
+
+  /* ── VACATION BALANCE PANEL ── */
+  .vac-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    animation: fadeIn 0.2s ease;
+    transition: border-color 0.15s;
+  }
+  .vac-row:hover { border-color: rgba(110,231,183,0.2); }
+  .vac-info { flex: 1; min-width: 0; }
+  .vac-name { font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vac-dept { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--text-muted); }
+  .vac-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+  .vac-counter { display: flex; align-items: center; gap: 4px; }
+  .vac-remaining {
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .vac-remaining.ok { color: var(--accent); }
+  .vac-remaining.warn { color: var(--accent2); }
+  .vac-remaining.exhausted { color: var(--red); }
+  .vac-of {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+  }
+  .vac-bar-wrap {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 3px;
+  }
+  .vac-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+  .reset-vac-btn {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    title: 'Reset vacation balance';
+  }
+  .reset-vac-btn:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(245,158,11,0.1);
+  }
+
+  .vac-year-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    padding: 2px 7px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
 
   /* Modals */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
@@ -280,6 +356,164 @@
   /* Saving indicator */
   .saving-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); animation: blink 1s ease-in-out infinite; margin-right: 4px; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+  /* ── ACTIVITY LOG DRAWER ── */
+  .log-drawer {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 400px;
+    max-width: 100vw;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -20px 0 60px rgba(0,0,0,0.4);
+  }
+  .log-drawer.open { transform: translateX(0); }
+  .log-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(2px);
+    z-index: 199;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .log-drawer-backdrop.open { opacity: 1; pointer-events: all; }
+  .log-drawer-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .log-drawer-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem;
+  }
+  .log-drawer-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .log-close-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    transition: all 0.15s;
+  }
+  .log-close-btn:hover { border-color: var(--red); color: var(--red); }
+  .log-filter-row {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .log-filter-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    padding: 4px 10px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+  }
+  .log-filter-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+  .log-filter-btn.active { background: rgba(129,140,248,0.15); border-color: var(--accent3); color: var(--accent3); }
+  .log-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+  .log-body::-webkit-scrollbar { width: 3px; }
+  .log-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .log-entry {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(46,49,69,0.5);
+    animation: fadeIn 0.2s ease;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .log-icon.add    { background: rgba(110,231,183,0.12); }
+  .log-icon.delete { background: rgba(248,113,113,0.12); }
+  .log-icon.reset  { background: rgba(245,158,11,0.12); }
+  .log-icon.person { background: rgba(129,140,248,0.12); }
+  .log-content { flex: 1; min-width: 0; }
+  .log-msg {
+    font-size: 0.81rem;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .log-msg strong { color: var(--accent); font-weight: 600; }
+  .log-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+  .log-action-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .log-loading {
+    text-align: center;
+    padding: 32px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .log-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(129,140,248,0.25);
+    background: rgba(129,140,248,0.08);
+    color: var(--accent3);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .log-btn:hover { background: rgba(129,140,248,0.16); border-color: rgba(129,140,248,0.4); }
+  .log-unread-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    box-shadow: 0 0 6px var(--accent3);
+    display: none;
+  }
+  .log-unread-dot.visible { display: inline-block; }
 </style>
 </head>
 <body>
@@ -299,6 +533,10 @@
     <span id="savingIndicator" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);display:none;">
       <span class="saving-dot"></span>Saving...
     </span>
+    <button class="log-btn" onclick="openLog()">
+      <span class="log-unread-dot" id="logUnreadDot"></span>
+      📋 Log
+    </button>
   </div>
 </div>
 
@@ -350,6 +588,20 @@
           <input type="date" id="searchDate" onchange="searchByDate()">
         </div>
         <div id="searchResults"></div>
+      </div>
+
+      <!-- Vacation Balance Panel -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <span class="panel-title">🌴 Vacation Balance</span>
+          <div class="panel-header-right">
+            <span class="vac-year-tag" id="vacYearTag"></span>
+            <span class="badge">12 days/yr</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="scrollable" id="vacBalanceList"></div>
+        </div>
       </div>
 
       <div class="panel-card">
@@ -409,6 +661,8 @@
       <label class="form-label">Note (optional)</label>
       <input type="text" id="formNote" placeholder="e.g. Bali trip, doctor appointment…">
     </div>
+    <!-- Vacation day count warning -->
+    <div id="vacWarning" style="display:none;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--accent2);margin-bottom:4px;"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveHoliday()">Save Holiday</button>
@@ -435,6 +689,29 @@
 
 <div id="toast"></div>
 
+<!-- Activity Log Drawer -->
+<div class="log-drawer-backdrop" id="logBackdrop" onclick="closeLog()"></div>
+<div class="log-drawer" id="logDrawer">
+  <div class="log-drawer-header">
+    <div>
+      <div class="log-drawer-title">Activity Log</div>
+      <div class="log-drawer-sub" id="logCount">Loading…</div>
+    </div>
+    <button class="log-close-btn" onclick="closeLog()">✕</button>
+  </div>
+  <div class="log-filter-row">
+    <button class="log-filter-btn active" data-filter="all" onclick="setLogFilter('all',this)">All</button>
+    <button class="log-filter-btn" data-filter="holiday_add" onclick="setLogFilter('holiday_add',this)">🌴 Added</button>
+    <button class="log-filter-btn" data-filter="holiday_delete" onclick="setLogFilter('holiday_delete',this)">🗑 Deleted</button>
+    <button class="log-filter-btn" data-filter="vac_reset" onclick="setLogFilter('vac_reset',this)">↺ Reset</button>
+    <button class="log-filter-btn" data-filter="person" onclick="setLogFilter('person',this)">👤 People</button>
+  </div>
+  <div class="log-body" id="logBody">
+    <div class="log-loading">Loading activity…</div>
+  </div>
+</div>
+
+
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -452,6 +729,8 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const peopleCol = db.collection('wmf_holiday_people');
 const holidaysCol = db.collection('wmf_holidays');
+const vacResetCol = db.collection('wmf_vac_resets');
+const activityCol = db.collection('wmf_activity_log');
 
 function setStatus(cls, label) {
   document.getElementById('statusDot').className = 'status-dot ' + (cls || '');
@@ -468,7 +747,113 @@ function showToast(msg, isError) {
   t._t = setTimeout(() => t.className = '', 2500);
 }
 
+
+/* ── ACTIVITY LOG ── */
+async function writeLog(action, message, meta) {
+  try {
+    await activityCol.add({
+      action,        // 'holiday_add' | 'holiday_delete' | 'vac_reset' | 'person_add' | 'person_remove'
+      message,
+      meta: meta || {},
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) { /* non-fatal */ }
+}
+
+let activityLogs = [];
+let logFilter = 'all';
+let logUnreadCount = 0;
+let logOpen = false;
+
+function startLogListener() {
+  activityCol.orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
+    activityLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!logOpen && snap.docChanges().some(c => c.type === 'added')) {
+      logUnreadCount++;
+      document.getElementById('logUnreadDot').classList.add('visible');
+    }
+    if (logOpen) renderLogEntries();
+    document.getElementById('logCount').textContent = activityLogs.length + ' entries';
+  }, () => {});
+}
+
+function openLog() {
+  logUnreadCount = 0;
+  logOpen = true;
+  document.getElementById('logUnreadDot').classList.remove('visible');
+  document.getElementById('logDrawer').classList.add('open');
+  document.getElementById('logBackdrop').classList.add('open');
+  renderLogEntries();
+}
+
+function closeLog() {
+  logOpen = false;
+  document.getElementById('logDrawer').classList.remove('open');
+  document.getElementById('logBackdrop').classList.remove('open');
+}
+
+function setLogFilter(filter, btn) {
+  logFilter = filter;
+  document.querySelectorAll('.log-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLogEntries();
+}
+
+const LOG_META = {
+  holiday_add:    { icon: '🌴', cls: 'add',    tag: 'ADDED',   tagColor: 'rgba(110,231,183,0.15)', tagText: 'var(--accent)' },
+  holiday_delete: { icon: '🗑', cls: 'delete', tag: 'DELETED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
+  vac_reset:      { icon: '↺',  cls: 'reset',  tag: 'RESET',   tagColor: 'rgba(245,158,11,0.15)',  tagText: 'var(--accent2)' },
+  person_add:     { icon: '➕', cls: 'person', tag: 'NEW',     tagColor: 'rgba(129,140,248,0.15)', tagText: 'var(--accent3)' },
+  person_remove:  { icon: '➖', cls: 'person', tag: 'REMOVED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
+};
+
+function fmtLogTime(ts) {
+  if (!ts) return 'just now';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderLogEntries() {
+  const body = document.getElementById('logBody');
+  const filtered = logFilter === 'all'
+    ? activityLogs
+    : activityLogs.filter(l => l.action === logFilter || l.action === logFilter.replace('holiday_','holiday_').replace('person','person_add') || l.action.startsWith(logFilter.replace('person','person')));
+
+  // Filter for person tab covers both person_add and person_remove
+  const display = logFilter === 'person'
+    ? activityLogs.filter(l => l.action === 'person_add' || l.action === 'person_remove')
+    : logFilter === 'all' ? activityLogs : activityLogs.filter(l => l.action === logFilter);
+
+  document.getElementById('logCount').textContent = display.length + ' of ' + activityLogs.length + ' entries';
+
+  if (!display.length) {
+    body.innerHTML = '<div class="log-loading">No entries for this filter</div>';
+    return;
+  }
+
+  body.innerHTML = display.map(log => {
+    const m = LOG_META[log.action] || { icon: '📌', cls: 'add', tag: log.action, tagColor: 'rgba(110,231,183,0.1)', tagText: 'var(--accent)' };
+    return `<div class="log-entry">
+      <div class="log-icon ${m.cls}">${m.icon}</div>
+      <div class="log-content">
+        <div class="log-msg">
+          ${log.message}
+          <span class="log-action-tag" style="background:${m.tagColor};color:${m.tagText};">${m.tag}</span>
+        </div>
+        <div class="log-time">${fmtLogTime(log.ts)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 /* ── CONSTANTS ── */
+const VACATION_DAYS_PER_YEAR = 12;
+
 const PALETTE = [
   { bg: '#6ee7b7', text: '#0e0f13' },
   { bg: '#818cf8', text: '#0e0f13' },
@@ -484,16 +869,58 @@ const LEAVE_TYPE_ICONS = {
 };
 
 /* ── STATE (in-memory, synced from Firestore) ── */
-let people = [];    // [{ id, name, dept, colorIdx }]
-let holidays = [];  // [{ id, personId, start, end, type, note }]
+let people = [];
+let holidays = [];
+let vacResets = []; // [{ id, personId, year, resetDays }]
 let viewYear = new Date().getFullYear();
 let viewMonth = new Date().getMonth();
+
+/* ── VACATION DAY UTILS ── */
+
+// Count actual calendar days between two ISO date strings (inclusive), Mon–Sat only (skip Sunday)
+// But since the original code uses plain calendar days, we keep it simple: count all inclusive days
+function countDays(startIso, endIso) {
+  const s = parseDate(startIso);
+  const e = parseDate(endIso);
+  const msPerDay = 86400000;
+  return Math.round((e - s) / msPerDay) + 1;
+}
+
+// Get total vacation days USED by a person in a given year (from actual holiday entries)
+function vacUsedByYear(personId, year) {
+  return holidays
+    .filter(h => h.personId === personId && h.type === 'vacation')
+    .reduce((sum, h) => {
+      // Clip the range to just the given year
+      const yStart = `${year}-01-01`;
+      const yEnd = `${year}-12-31`;
+      const start = h.start > yStart ? h.start : yStart;
+      const end = h.end < yEnd ? h.end : yEnd;
+      if (start > end) return sum;
+      return sum + countDays(start, end);
+    }, 0);
+}
+
+// Get reset bonus days for a person in a given year
+function vacResetBonus(personId, year) {
+  const rec = vacResets.find(r => r.personId === personId && r.year === year);
+  return rec ? (rec.resetDays || 0) : 0;
+}
+
+// Total allotment = base + bonus from resets
+function vacAllotment(personId, year) {
+  return VACATION_DAYS_PER_YEAR + vacResetBonus(personId, year);
+}
+
+// Remaining vacation days
+function vacRemaining(personId, year) {
+  return vacAllotment(personId, year) - vacUsedByYear(personId, year);
+}
 
 /* ── FIRESTORE LISTENERS ── */
 function startListeners() {
   setStatus('', 'Connecting...');
 
-  // People listener
   peopleCol.orderBy('name').onSnapshot(snap => {
     people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     render();
@@ -503,12 +930,18 @@ function startListeners() {
     showToast('Connection error: ' + err.message, true);
   });
 
-  // Holidays listener
   holidaysCol.orderBy('start').onSnapshot(snap => {
     holidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     render();
   }, err => {
     showToast('Holidays sync error: ' + err.message, true);
+  });
+
+  vacResetCol.onSnapshot(snap => {
+    vacResets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }, err => {
+    // Non-fatal: resets collection may not exist yet
   });
 }
 
@@ -532,6 +965,7 @@ function getPersonName(id) { const p = getPerson(id); return p ? p.name : 'Unkno
 function render() {
   renderStats();
   renderCalendar();
+  renderVacBalance();
   renderAway();
   renderAllList();
   renderLegend();
@@ -595,6 +1029,55 @@ function renderCalendar() {
   });
 }
 
+function renderVacBalance() {
+  const year = new Date().getFullYear();
+  document.getElementById('vacYearTag').textContent = year;
+
+  const list = document.getElementById('vacBalanceList');
+  if (!people.length) {
+    list.innerHTML = '<div class="empty-state">No team members yet</div>';
+    return;
+  }
+
+  list.innerHTML = people.map(p => {
+    const color = getColor(p.id);
+    const allot = vacAllotment(p.id, year);
+    const used = vacUsedByYear(p.id, year);
+    const remaining = allot - used;
+    const pct = Math.max(0, Math.min(100, (remaining / allot) * 100));
+
+    let remainClass = 'ok';
+    let barColor = '#6ee7b7';
+    if (remaining <= 0) { remainClass = 'exhausted'; barColor = '#f87171'; }
+    else if (remaining <= 3) { remainClass = 'warn'; barColor = '#f59e0b'; }
+
+    const bonusBadge = allot > VACATION_DAYS_PER_YEAR
+      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--accent3);margin-left:3px;">+${allot - VACATION_DAYS_PER_YEAR}↩</span>`
+      : '';
+
+    return `<div class="vac-row">
+      <div class="avatar" style="width:30px;height:30px;font-size:0.65rem;background:${color.bg};color:${color.text};">${initials(p.name)}</div>
+      <div class="vac-info">
+        <div class="vac-name">${p.name}</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <div class="vac-dept">${p.dept}</div>
+          <div class="vac-bar-wrap" style="flex:1;max-width:60px;">
+            <div class="vac-bar" style="width:${pct}%;background:${barColor};"></div>
+          </div>
+          <div class="vac-dept">${used}/${allot}d used</div>
+        </div>
+      </div>
+      <div class="vac-right">
+        <div class="vac-counter">
+          <span class="vac-remaining ${remainClass}">${remaining}</span>
+          <span class="vac-of">left${bonusBadge}</span>
+        </div>
+        <button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name}',${year})" title="Reset vacation balance — adds ${VACATION_DAYS_PER_YEAR} more days">↺</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderAway() {
   const today = dateStr(new Date());
   const away = holidaysOnDate(today);
@@ -655,6 +1138,35 @@ function renderPeopleList() {
   }).join('');
 }
 
+/* ── VACATION RESET ── */
+async function resetVacation(personId, personName, year) {
+  const existing = vacResets.find(r => r.personId === personId && r.year === year);
+  const currentBonus = existing ? (existing.resetDays || 0) : 0;
+  const newBonus = currentBonus + VACATION_DAYS_PER_YEAR;
+
+  if (!confirm(`Reset vacation balance for ${personName}?\n\nThis will add ${VACATION_DAYS_PER_YEAR} more days to their ${year} allotment.\n\nCurrent allotment: ${VACATION_DAYS_PER_YEAR + currentBonus} days → New allotment: ${VACATION_DAYS_PER_YEAR + newBonus} days`)) return;
+
+  showSaving(true);
+  try {
+    const docId = `${personId}_${year}`;
+    await vacResetCol.doc(docId).set({
+      personId,
+      year,
+      resetDays: newBonus,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await writeLog('vac_reset',
+      `<strong>${personName}</strong> — vacation balance reset (+${VACATION_DAYS_PER_YEAR} days added for ${year})`,
+      { personId, year, newBonus }
+    );
+    showToast(`+${VACATION_DAYS_PER_YEAR} days added for ${personName} in ${year}`);
+  } catch (e) {
+    showToast('Reset failed: ' + e.message, true);
+  } finally {
+    showSaving(false);
+  }
+}
+
 /* ── ACTIONS ── */
 function changeMonth(dir) {
   viewMonth += dir;
@@ -700,6 +1212,7 @@ function searchByDate() {
   }).join('');
 }
 
+/* ── ADD MODAL with vacation warning ── */
 function openAddModal() {
   const sel = document.getElementById('formPerson');
   sel.innerHTML = '<option value="">— Select person —</option>';
@@ -708,10 +1221,58 @@ function openAddModal() {
   document.getElementById('formEnd').value = '';
   document.getElementById('formNote').value = '';
   document.getElementById('formType').value = 'vacation';
+  document.getElementById('vacWarning').style.display = 'none';
   document.getElementById('addModal').classList.add('open');
+
+  // Live vacation warning
+  ['formPerson','formStart','formEnd','formType'].forEach(id => {
+    document.getElementById(id).addEventListener('change', updateVacWarning);
+  });
 }
 
-function closeModal() { document.getElementById('addModal').classList.remove('open'); }
+function updateVacWarning() {
+  const personId = document.getElementById('formPerson').value;
+  const start = document.getElementById('formStart').value;
+  const end = document.getElementById('formEnd').value;
+  const type = document.getElementById('formType').value;
+  const warn = document.getElementById('vacWarning');
+
+  if (type !== 'vacation' || !personId || !start || !end || end < start) {
+    warn.style.display = 'none';
+    return;
+  }
+
+  const year = parseInt(start.slice(0, 4));
+  const days = countDays(start, end);
+  const remaining = vacRemaining(personId, year);
+  const after = remaining - days;
+  const p = getPerson(personId);
+
+  if (after < 0) {
+    warn.style.display = 'block';
+    warn.style.background = 'rgba(248,113,113,0.1)';
+    warn.style.borderColor = 'rgba(248,113,113,0.25)';
+    warn.style.color = 'var(--red)';
+    warn.textContent = `⚠ ${p.name} only has ${remaining} vacation day${remaining !== 1 ? 's' : ''} left in ${year}. This entry uses ${days} day${days !== 1 ? 's' : ''} (${Math.abs(after)} over limit).`;
+  } else if (after <= 3) {
+    warn.style.display = 'block';
+    warn.style.background = 'rgba(245,158,11,0.1)';
+    warn.style.borderColor = 'rgba(245,158,11,0.25)';
+    warn.style.color = 'var(--accent2)';
+    warn.textContent = `ℹ ${days} vacation day${days !== 1 ? 's' : ''} · ${p.name} will have ${after} day${after !== 1 ? 's' : ''} remaining in ${year}.`;
+  } else {
+    warn.style.display = 'block';
+    warn.style.background = 'rgba(110,231,183,0.08)';
+    warn.style.borderColor = 'rgba(110,231,183,0.2)';
+    warn.style.color = 'var(--accent)';
+    warn.textContent = `✓ ${days} vacation day${days !== 1 ? 's' : ''} · ${p.name} will have ${after} day${after !== 1 ? 's' : ''} remaining in ${year}.`;
+  }
+}
+
+function closeModal() {
+  document.getElementById('addModal').classList.remove('open');
+  document.getElementById('vacWarning').style.display = 'none';
+}
 
 async function saveHoliday() {
   const personId = document.getElementById('formPerson').value;
@@ -733,6 +1294,13 @@ async function saveHoliday() {
       note,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    const savedPerson = getPerson(personId);
+    const savedName = savedPerson ? savedPerson.name : 'Unknown';
+    const icon = LEAVE_TYPE_ICONS[type] || '📌';
+    await writeLog('holiday_add',
+      `<strong>${savedName}</strong> — ${icon} ${type} from ${fmtDate(start)} to ${fmtDate(end)}${note ? ' · ' + note : ''}`,
+      { personId, start, end, type }
+    );
     closeModal();
     showToast('Holiday saved!');
   } catch (e) {
@@ -746,6 +1314,16 @@ async function deleteHoliday(id) {
   if (!confirm('Delete this holiday entry?')) return;
   showSaving(true);
   try {
+    const delH = holidays.find(h => h.id === id);
+    if (delH) {
+      const delP = getPerson(delH.personId);
+      const delName = delP ? delP.name : 'Unknown';
+      const icon = LEAVE_TYPE_ICONS[delH.type] || '📌';
+      await writeLog('holiday_delete',
+        `<strong>${delName}</strong> — ${icon} ${delH.type} (${fmtDate(delH.start)} → ${fmtDate(delH.end)}) deleted`,
+        { personId: delH.personId, start: delH.start, end: delH.end }
+      );
+    }
     await holidaysCol.doc(id).delete();
     showToast('Entry deleted.');
     searchByDate();
@@ -776,6 +1354,10 @@ async function addPerson() {
       dept,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    await writeLog('person_add',
+      `<strong>${name}</strong> added to team (${dept})`,
+      { name, dept }
+    );
     document.getElementById('newPersonName').value = '';
     document.getElementById('newPersonDept').value = '';
     showToast('Person added!');
@@ -790,12 +1372,21 @@ async function removePerson(id) {
   if (!confirm('Remove this person and all their holidays?')) return;
   showSaving(true);
   try {
-    // Delete all holidays for this person
     const snap = await holidaysCol.where('personId', '==', id).get();
     const batch = db.batch();
     snap.docs.forEach(d => batch.delete(d.ref));
     batch.delete(peopleCol.doc(id));
+    // Also clean up vac resets for this person
+    const resetSnap = await vacResetCol.where('personId', '==', id).get();
+    resetSnap.docs.forEach(d => batch.delete(d.ref));
+    const removedPerson = people.find(p => p.id === id);
     await batch.commit();
+    if (removedPerson) {
+      await writeLog('person_remove',
+        `<strong>${removedPerson.name}</strong> removed from team (${removedPerson.dept})`,
+        { name: removedPerson.name, dept: removedPerson.dept }
+      );
+    }
     renderPeopleList();
     showToast('Person removed.');
   } catch (e) {
@@ -820,6 +1411,7 @@ document.addEventListener('keydown', e => {
 
 // Start
 startListeners();
+startLogListener();
 </script>
 </body>
 </html>
