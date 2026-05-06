@@ -946,7 +946,6 @@
           </div>
           <button class="today-btn" onclick="goToday()">Today</button>
         </div>
-        <!-- Removed workdays-only toggle: always weekdays only now -->
         <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.06em;">Mon–Fri only</span>
       </div>
       <div id="calendarView">
@@ -1400,19 +1399,12 @@ let activityLogs = [], logFilter = 'all', logUnreadCount = 0, logOpen = false;
 function startLogListener() {
   activityCol.orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
     activityLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Update count label always
     document.getElementById('logCount').textContent = activityLogs.length + ' entries';
-    
-    // Show unread dot if drawer is closed and there are new additions
     if (!logOpen && snap.docChanges().some(c => c.type === 'added')) {
       logUnreadCount++;
       document.getElementById('logUnreadDot').classList.add('visible');
     }
-    
-    // Re-render immediately if drawer is open
     if (logOpen) renderLogEntries();
-    
   }, () => {});
 }
 
@@ -1421,9 +1413,7 @@ function openLog() {
   document.getElementById('logUnreadDot').classList.remove('visible');
   document.getElementById('logDrawer').classList.add('open');
   document.getElementById('logBackdrop').classList.add('open');
-  renderLogEntries(); // initial render
-
-  // Re-render after a short delay to catch any in-flight writes
+  renderLogEntries();
   setTimeout(renderLogEntries, 800);
 }
 function closeLog() {
@@ -1493,37 +1483,53 @@ let viewYear = new Date().getFullYear(), viewMonth = new Date().getMonth();
 let userProfiles = [];
 
 /* ════════════════════════════════════════════
-   DAY COUNTING — WEEKDAYS ONLY (Mon–Fri)
-   getDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+   DAY COUNTING — WEEKDAYS ONLY (Mon–Fri),
+   EXCLUDING PUBLIC HOLIDAYS
 ════════════════════════════════════════════ */
 function isWeekday(dateObj) {
   const d = dateObj.getDay();
-  return d !== 0 && d !== 6; // exclude Sunday (0) and Saturday (6)
+  return d !== 0 && d !== 6;
 }
 
 /**
- * Count weekdays (Mon–Fri) between two ISO date strings, inclusive.
- * This is ALWAYS weekday-only — weekends never count toward vacation.
+ * Build a Set of public holiday ISO strings for fast lookup.
+ * Always derived fresh from the global `publicHolidays` array.
+ */
+function pubHolSet() {
+  return new Set(publicHolidays.map(ph => ph.date));
+}
+
+/**
+ * Count weekdays (Mon–Fri) between two ISO strings, inclusive,
+ * EXCLUDING any dates that fall on a public holiday.
+ * FIX #2: public holidays no longer consume vacation days.
  */
 function countWeekdays(startIso, endIso) {
   const s = parseDate(startIso), e = parseDate(endIso);
   if (s > e) return 0;
+  const phSet = pubHolSet();
   let count = 0;
   const cur = new Date(s);
   while (cur <= e) {
-    if (isWeekday(cur)) count++;
+    const iso = dateStr(cur);
+    if (isWeekday(cur) && !phSet.has(iso)) count++;
     cur.setDate(cur.getDate() + 1);
   }
   return count;
 }
 
-/** Days for a single holiday entry (weekdays only, 0.5 for half-day) */
+/** Days for a single holiday entry (weekdays excl. public hols, 0.5 for half-day) */
 function entryDays(h) {
-  if (h.halfDay) return 0.5;
+  if (h.halfDay) {
+    // FIX #1: half-day always applies to start date only
+    const phSet = pubHolSet();
+    if (isWeekendIso(h.start) || phSet.has(h.start)) return 0;
+    return 0.5;
+  }
   return countWeekdays(h.start, h.end);
 }
 
-/** Count weekdays in a date range that overlap with a given year */
+/** Count weekdays (excl. public hols) in a date range that overlap with a given year */
 function countWeekdaysInYear(startIso, endIso, year) {
   const yStart = `${year}-01-01`, yEnd = `${year}-12-31`;
   const clampStart = startIso > yStart ? startIso : yStart;
@@ -1546,12 +1552,15 @@ function vacUsedByYear(personId, year) {
     .filter(h => h.personId === personId && h.type === 'vacation')
     .reduce((sum, h) => {
       if (h.halfDay) {
-        // Only count if the single day falls within the year and is a weekday
-        if (h.start >= `${year}-01-01` && h.start <= `${year}-12-31` && !isWeekendIso(h.start)) {
+        // FIX #1: half-day uses start date only; must be weekday and not public hol
+        const phSet = pubHolSet();
+        if (h.start >= `${year}-01-01` && h.start <= `${year}-12-31`
+            && !isWeekendIso(h.start) && !phSet.has(h.start)) {
           return sum + 0.5;
         }
         return sum;
       }
+      // FIX #2: countWeekdaysInYear now excludes public holidays automatically
       return sum + countWeekdaysInYear(h.start, h.end, year);
     }, 0);
 }
@@ -1772,7 +1781,6 @@ function renderVacBalance() {
       ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--accent3);margin-left:3px;">+${allot-VACATION_DAYS_PER_YEAR}↩</span>` : '';
     const resetBtn = isAdmin()
       ? `<button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name}',${year})" title="Reset vacation balance">↺</button>` : '';
-    // Show used as decimal only when there's a half-day
     const usedDisplay = used % 1 !== 0 ? used.toFixed(1) : used;
     return `<div class="vac-row">
       <div class="avatar" style="width:30px;height:30px;font-size:0.65rem;background:${color.bg};color:${color.text};">${initials(p.name)}</div>
@@ -1978,7 +1986,11 @@ function searchByDate() {
 function toggleHalfDay() {
   const checked = document.getElementById('halfDayCheck').checked;
   document.getElementById('halfDaySelect').classList.toggle('visible', checked);
-  if (checked) { const s = document.getElementById('formStart').value; if (s) document.getElementById('formEnd').value = s; }
+  if (checked) {
+    // FIX #1: enforce end = start when half-day is toggled on
+    const s = document.getElementById('formStart').value;
+    if (s) document.getElementById('formEnd').value = s;
+  }
   updateVacWarning(); updateConflictWarn(); updateWeekendWarn();
 }
 
@@ -1988,7 +2000,6 @@ function updateWeekendWarn() {
   const end = document.getElementById('formEnd').value;
   const warn = document.getElementById('weekendWarn');
   if (!start || !end || end < start) { warn.style.display = 'none'; return; }
-  // Check if any weekends are in range
   const s = parseDate(start), e = parseDate(end);
   let hasWeekend = false;
   const cur = new Date(s);
@@ -1998,7 +2009,6 @@ function updateWeekendWarn() {
     cur.setDate(cur.getDate() + 1);
   }
   warn.style.display = hasWeekend ? 'block' : 'none';
-  // Also show the actual weekday count
   if (hasWeekend) {
     const wdays = countWeekdays(start, end);
     warn.textContent = `ℹ Weekends are excluded — this range counts as ${wdays} weekday${wdays !== 1 ? 's' : ''} (Mon–Fri only).`;
@@ -2012,7 +2022,8 @@ function attachModalListeners() {
   ['formPerson','formStart','formEnd','formType'].forEach(id => {
     document.getElementById(id).addEventListener('change', () => {
       updateVacWarning(); updateConflictWarn(); updateWeekendWarn();
-      if (id==='formStart' && document.getElementById('halfDayCheck').checked)
+      // FIX #1: keep end locked to start when half-day is active
+      if (id === 'formStart' && document.getElementById('halfDayCheck').checked)
         document.getElementById('formEnd').value = document.getElementById('formStart').value;
     });
   });
@@ -2049,21 +2060,68 @@ function openAddModal(keepDates) {
   if (keepDates) { updateVacWarning(); updateWeekendWarn(); }
 }
 
+/* ════════════════════════════════════════════
+   FIX #3: Cross-year vacation warning
+   Checks each calendar year covered by the range separately
+   so a Dec 28 – Jan 3 range correctly warns about both years.
+════════════════════════════════════════════ */
 function updateVacWarning() {
   const personId = document.getElementById('formPerson').value;
-  const start = document.getElementById('formStart').value, end = document.getElementById('formEnd').value;
-  const type = document.getElementById('formType').value, halfDay = document.getElementById('halfDayCheck').checked;
-  const warn = document.getElementById('vacWarning');
-  if (type!=='vacation' || !personId || !start || !end || end<start) { warn.style.display='none'; return; }
-  const year = parseInt(start.slice(0,4));
-  // Use weekday count always
-  const days = halfDay ? 0.5 : countWeekdays(start, end);
-  const remaining = vacRemaining(personId, year), after = remaining - days;
+  const start    = document.getElementById('formStart').value;
+  const end      = document.getElementById('formEnd').value;
+  const type     = document.getElementById('formType').value;
+  const halfDay  = document.getElementById('halfDayCheck').checked;
+  const warn     = document.getElementById('vacWarning');
+
+  if (type !== 'vacation' || !personId || !start || !end || end < start) {
+    warn.style.display = 'none'; return;
+  }
+
+  const startYear = parseInt(start.slice(0, 4));
+  const endYear   = parseInt(end.slice(0, 4));
   const p = getPerson(personId);
-  warn.style.display = 'block'; warn.className = '';
-  if (after < 0) { warn.className = 'warn-error'; warn.textContent = `⚠ ${p.name} only has ${remaining} day${remaining!==1?'s':''} left in ${year}. This uses ${days}d (${Math.abs(after).toFixed(1)} over).`; }
-  else if (after <= 3) { warn.className = 'warn-caution'; warn.textContent = `ℹ ${days}d vacation (weekdays) · ${p.name} will have ${after} day${after!==1?'s':''} left in ${year}.`; }
-  else { warn.className = 'warn-ok'; warn.textContent = `✓ ${days}d vacation (weekdays) · ${p.name} will have ${after} day${after!==1?'s':''} remaining in ${year}.`; }
+
+  // Build per-year deduction: half-day only deducts from startYear
+  const yearDeductions = {};
+  if (halfDay) {
+    const phSet = pubHolSet();
+    if (!isWeekendIso(start) && !phSet.has(start)) {
+      yearDeductions[startYear] = 0.5;
+    }
+  } else {
+    for (let yr = startYear; yr <= endYear; yr++) {
+      const d = countWeekdaysInYear(start, end, yr);
+      if (d > 0) yearDeductions[yr] = d;
+    }
+  }
+
+  const years = Object.keys(yearDeductions).map(Number).sort();
+  if (!years.length) { warn.style.display = 'none'; return; }
+
+  // Determine worst outcome across all affected years
+  let worstClass = 'warn-ok';
+  const lines = years.map(yr => {
+    const deduction  = yearDeductions[yr];
+    const remaining  = vacRemaining(personId, yr);
+    const after      = remaining - deduction;
+    const allot      = vacAllotment(personId, yr);
+    const usedAfter  = vacUsedByYear(personId, yr) + deduction;
+    const label      = years.length > 1 ? ` (${yr})` : '';
+
+    if (after < 0) {
+      worstClass = 'warn-error';
+      return `⚠ ${deduction}d from ${yr}${label} — only ${remaining} left, ${Math.abs(after).toFixed(1)} over allotment`;
+    } else if (after <= 3) {
+      if (worstClass !== 'warn-error') worstClass = 'warn-caution';
+      return `ℹ ${deduction}d from ${yr}${label} — ${after} day${after !== 1 ? 's' : ''} remaining`;
+    } else {
+      return `✓ ${deduction}d from ${yr}${label} — ${after} day${after !== 1 ? 's' : ''} remaining`;
+    }
+  });
+
+  warn.style.display = 'block';
+  warn.className = worstClass;
+  warn.textContent = `${p.name}: ` + lines.join(' · ');
 }
 
 function updateConflictWarn() {
@@ -2084,19 +2142,24 @@ function closeModal() {
 
 async function saveHoliday() {
   const personId = document.getElementById('formPerson').value;
-  const start = document.getElementById('formStart').value, end = document.getElementById('formEnd').value;
-  const type = document.getElementById('formType').value, note = document.getElementById('formNote').value.trim();
-  const halfDay = document.getElementById('halfDayCheck').checked;
+  let start      = document.getElementById('formStart').value;
+  let end        = document.getElementById('formEnd').value;
+  const type     = document.getElementById('formType').value;
+  const note     = document.getElementById('formNote').value.trim();
+  const halfDay  = document.getElementById('halfDayCheck').checked;
   const halfDayPart = halfDay ? document.getElementById('halfDayPart').value : null;
 
   if (!personId || !start || !end) { showToast('Please fill in person, start and end date.', true); return; }
   if (end < start) { showToast('End date must be after start date.', true); return; }
   if (!canEdit(personId)) { showToast('You can only add holidays for yourself.', true); return; }
 
-  // Warn if the entire range is weekend days (vacation type)
+  // FIX #1: server-side guard — half-day must be a single day
+  if (halfDay) end = start;
+
+  // Warn if the entire range has no countable days
   if (type === 'vacation' && !halfDay) {
     const wdays = countWeekdays(start, end);
-    if (wdays === 0) { showToast('Selected range has no weekdays. Vacation must be on Mon–Fri.', true); return; }
+    if (wdays === 0) { showToast('Selected range has no weekdays (or all days are public holidays).', true); return; }
   }
 
   showSaving(true);
