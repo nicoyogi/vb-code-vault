@@ -10,7 +10,7 @@
 :root{
   --bg:#02020a;
   --b:91,156,246;--v:167,139,250;--e:52,211,153;--pk:244,114,182;--gold:212,175,100;
-  --amber:251,191,36;
+  --amber:251,191,36;--teal:20,184,166;
   --cinzel:'Cinzel',serif;--syne:'Syne',sans-serif;--mono:'DM Mono',monospace;
 }
 html,body{width:100%;min-height:100vh;background:var(--bg);overflow-x:hidden}
@@ -129,6 +129,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-e .card-top{background:linear-gradient(90deg,transparent,rgba(var(--e),.9),transparent)}
 .card-a .card-top{background:linear-gradient(90deg,transparent,rgba(var(--amber),1),transparent)}
 .card-pk .card-top{background:linear-gradient(90deg,transparent,rgba(var(--pk),1),transparent)}
+.card-tl .card-top{background:linear-gradient(90deg,transparent,rgba(var(--teal),1),transparent)}
 
 .blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:0;transition:opacity .6s;pointer-events:none;z-index:0}
 .card:hover .blob{opacity:1}
@@ -137,6 +138,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-e .blob{width:300px;height:200px;background:rgba(var(--e),.1);bottom:-60px;left:5%}
 .card-a .blob{width:220px;height:200px;background:rgba(var(--amber),.12);top:-60px;left:-60px}
 .card-pk .blob{width:220px;height:200px;background:rgba(var(--pk),.13);top:-60px;right:-60px;left:auto}
+.card-tl .blob{width:220px;height:200px;background:rgba(var(--teal),.13);top:-60px;left:-60px}
 
 .spot{position:absolute;inset:0;border-radius:24px;opacity:0;transition:opacity .3s;pointer-events:none;background:radial-gradient(300px circle at var(--cx,50%) var(--cy,50%),rgba(255,255,255,.04),transparent 55%);z-index:1}
 .card:hover .spot{opacity:1}
@@ -147,6 +149,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-e:hover{border-color:rgba(var(--e),.25);box-shadow:0 28px 80px rgba(var(--e),.13),0 0 0 1px rgba(var(--e),.08),inset 0 1px 0 rgba(var(--e),.08)}
 .card-a:hover{border-color:rgba(var(--amber),.3);box-shadow:0 28px 80px rgba(var(--amber),.15),0 0 0 1px rgba(var(--amber),.1),inset 0 1px 0 rgba(var(--amber),.08)}
 .card-pk:hover{border-color:rgba(var(--pk),.3);box-shadow:0 28px 80px rgba(var(--pk),.18),0 0 0 1px rgba(var(--pk),.1),inset 0 1px 0 rgba(var(--pk),.1)}
+.card-tl:hover{border-color:rgba(var(--teal),.3);box-shadow:0 28px 80px rgba(var(--teal),.15),0 0 0 1px rgba(var(--teal),.1),inset 0 1px 0 rgba(var(--teal),.08)}
 
 .cin{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
 .s2 .cin{flex-direction:row;align-items:flex-start;gap:2rem}
@@ -160,12 +163,14 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-e .icon{background:rgba(var(--e),.08);box-shadow:0 0 0 1px rgba(var(--e),.18),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--e),1)}
 .card-a .icon{background:rgba(var(--amber),.1);box-shadow:0 0 0 1px rgba(var(--amber),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--amber),1)}
 .card-pk .icon{background:rgba(var(--pk),.1);box-shadow:0 0 0 1px rgba(var(--pk),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--pk),1)}
+.card-tl .icon{background:rgba(var(--teal),.1);box-shadow:0 0 0 1px rgba(var(--teal),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(20,184,166,1)}
 .icon::after{content:'';position:absolute;inset:-6px;border-radius:22px;border:1px solid transparent;transition:all .45s}
 .card-b:hover .icon::after{border-color:rgba(var(--b),.22);inset:-10px;border-radius:26px}
 .card-v:hover .icon::after{border-color:rgba(var(--v),.22);inset:-10px;border-radius:26px}
 .card-e:hover .icon::after{border-color:rgba(var(--e),.18);inset:-10px;border-radius:26px}
 .card-a:hover .icon::after{border-color:rgba(var(--amber),.22);inset:-10px;border-radius:26px}
 .card-pk:hover .icon::after{border-color:rgba(var(--pk),.22);inset:-10px;border-radius:26px}
+.card-tl:hover .icon::after{border-color:rgba(var(--teal),.22);inset:-10px;border-radius:26px}
 
 .clabel{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.35em;text-transform:uppercase;margin-bottom:7px;opacity:.7}
 .card-b .clabel{color:rgba(var(--b),1)}
@@ -173,6 +178,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-e .clabel{color:rgba(var(--e),1)}
 .card-a .clabel{color:rgba(var(--amber),1)}
 .card-pk .clabel{color:rgba(var(--pk),1)}
+.card-tl .clabel{color:rgba(20,184,166,1)}
 
 .ctitle{font-family:var(--cinzel);font-size:1.35rem;font-weight:600;letter-spacing:.02em;line-height:1.15;margin-bottom:.8rem;color:rgba(255,255,255,.88)}
 .s2 .ctitle{font-size:1.2rem}
@@ -185,6 +191,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-e .tag{color:rgba(var(--e),.9);border-color:rgba(var(--e),.18);background:rgba(var(--e),.05)}
 .card-a .tag{color:rgba(var(--amber),.9);border-color:rgba(var(--amber),.22);background:rgba(var(--amber),.07)}
 .card-pk .tag{color:rgba(var(--pk),.9);border-color:rgba(var(--pk),.22);background:rgba(var(--pk),.07)}
+.card-tl .tag{color:rgba(20,184,166,.9);border-color:rgba(var(--teal),.22);background:rgba(var(--teal),.07)}
 .arr{width:34px;height:34px;border-radius:50%;border:1px solid rgba(212,175,100,.12);display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(212,175,100,.25);flex-shrink:0;transition:all .35s;font-family:var(--mono)}
 .card:hover .arr{transform:translateX(5px);border-color:rgba(212,175,100,.5);color:rgba(212,175,100,.9);box-shadow:0 0 18px rgba(212,175,100,.2)}
 
@@ -195,6 +202,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .card-e .deco{color:rgba(var(--e),1)}
 .card-a .deco{color:rgba(var(--amber),1)}
 .card-pk .deco{color:rgba(var(--pk),1)}
+.card-tl .deco{color:rgba(20,184,166,1)}
 
 /* ─── FOOTER ─── */
 .sigil-div{display:flex;align-items:center;gap:16px;width:100%;margin:3rem 0 0;animation:rise 1s .5s ease both}
@@ -305,11 +313,36 @@ footer a:hover{color:rgba(212,175,100,.55)}
     </div>
   </div>
 
+  <!-- HOLIDAY TRACKER (standalone – always visible) -->
+  <div class="orn" style="margin-top:0;margin-bottom:1.2rem">
+    <div class="orn-line"></div>
+    <div class="orn-diamond"></div>
+    <div class="orn-text">II — Shared chronicle</div>
+    <div class="orn-diamond"></div>
+    <div class="orn-line"></div>
+  </div>
+  <a href="holiday-tracker.html" class="card card-tl s2" id="c5" style="width:100%;margin-bottom:2.8rem">
+    <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+    <div class="cin" style="flex-direction:row;align-items:flex-start;gap:2rem">
+      <div class="icon" style="margin-bottom:0">🗓️</div>
+      <div class="cbody">
+        <div class="clabel">The Chronicle</div>
+        <div class="ctitle">Holiday Tracker</div>
+        <div class="cdesc">A shared calendar of absences &amp; leave. Add team members, log vacation, sick days or remote work — search any date to see who is away. Synced to the cloud in real time.</div>
+        <div class="cfoot">
+          <div class="tags"><span class="tag">Calendar</span><span class="tag">Leave</span><span class="tag">Team</span><span class="tag">Firebase</span></div>
+          <div class="arr">⟶</div>
+        </div>
+      </div>
+    </div>
+    <div class="deco">chronicle.mark()<br>&nbsp;.absence(day)<br>&nbsp;.sync()<br>// eternal ✦</div>
+  </a>
+
   <!-- DIVIDER -->
   <div class="sec-div" id="sec-div">
     <div class="sdl"></div>
     <div class="sec-div-sym">✦</div>
-    <div class="sec-div-label" id="sec-div-label">II — Select your instrument</div>
+    <div class="sec-div-label" id="sec-div-label">III — Select your instrument</div>
     <div class="sec-div-sym">✦</div>
     <div class="sdl"></div>
   </div>
@@ -420,7 +453,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
   <footer>
     codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
-    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a><span class="fsep">✦</span><a href="todo.html">The Ledger</a><span class="fsep">✦</span><a href="standard-wording.html">Standard Wording</a>
+    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a><span class="fsep">✦</span><a href="todo.html">The Ledger</a><span class="fsep">✦</span><a href="standard-wording.html">Standard Wording</a><span class="fsep">✦</span><a href="holiday-tracker.html">The Chronicle</a>
   </footer>
 
 </div>
@@ -467,7 +500,7 @@ function bindTilt(id){
   });
   el.addEventListener('mouseleave',()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg')});
 }
-['c0','c1','c2','c3','c4'].forEach(bindTilt);
+['c0','c1','c2','c3','c4','c5'].forEach(bindTilt);
 
 document.querySelectorAll('.pcard').forEach(el=>{
   const spot=el.querySelector('.pspot');
