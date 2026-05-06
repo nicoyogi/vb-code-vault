@@ -1283,11 +1283,18 @@ async function doRegister() {
 
   setAuthLoading('registerBtn','registerSpinner',true);
   try {
-    // Double-check no one already has this personId
-    const existing = await userProfCol.where('personId','==',personId).get();
-    if (!existing.empty) { showAuthError('registerError', 'This person already has an account.'); return; }
-
+    // Create the Firebase Auth account first (this signs the user in)
     const cred = await auth.createUserWithEmailAndPassword(email, pw);
+
+    // Now we're signed in — check if personId is already taken
+    const existing = await userProfCol.where('personId','==',personId).get();
+    if (!existing.empty) {
+      // Already taken — delete the auth account we just made and bail
+      await cred.user.delete();
+      showAuthError('registerError', 'This person already has an account.');
+      return;
+    }
+
     const personSnap = await peopleCol.doc(personId).get();
     const displayName = personSnap.exists ? personSnap.data().name : email;
 
@@ -1298,7 +1305,8 @@ async function doRegister() {
       email,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    // Auth state change will handle the rest
+    // Auth state change will handle showing the app
+
   } catch(e) {
     const msg = e.code === 'auth/email-already-in-use' ? 'This email already has an account.' : e.message;
     showAuthError('registerError', msg);
