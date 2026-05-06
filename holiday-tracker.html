@@ -43,6 +43,218 @@
     z-index: 0;
   }
 
+  /* ── AUTH GATE ── */
+  #authGate {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg);
+  }
+  #authGate::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 60% at 30% 20%, rgba(110,231,183,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 75% 75%, rgba(129,140,248,0.07) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 420px;
+    padding: 36px;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  }
+  .auth-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(110,231,183,0.3), transparent);
+  }
+  .auth-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .auth-logo-icon {
+    width: 40px; height: 40px;
+    background: rgba(110,231,183,0.12);
+    border: 1px solid rgba(110,231,183,0.25);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .auth-logo-text {
+    font-family: var(--cinzel);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+  }
+  .auth-logo-text span {
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    margin-top: 1px;
+  }
+  .auth-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .auth-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 28px;
+  }
+  .auth-tabs {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+    margin-bottom: 24px;
+  }
+  .auth-tab {
+    flex: 1;
+    padding: 8px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .auth-tab.active {
+    background: var(--surface3);
+    color: var(--text);
+  }
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .auth-input-group { display: flex; flex-direction: column; gap: 6px; }
+  .auth-input-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .auth-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .auth-input:focus { border-color: var(--accent); }
+  .auth-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  .auth-select:focus { border-color: var(--accent); }
+  .auth-select option { background: var(--surface2); }
+  .auth-btn {
+    padding: 12px;
+    border-radius: 9px;
+    border: none;
+    background: var(--accent);
+    color: #0e0f13;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .auth-btn:hover { background: #4ade80; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(110,231,183,0.25); }
+  .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .auth-error {
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.25);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--red);
+    display: none;
+  }
+  .auth-error.show { display: block; }
+  .auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    margin: 4px 0;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .auth-info-box {
+    background: rgba(129,140,248,0.08);
+    border: 1px solid rgba(129,140,248,0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--accent3);
+    line-height: 1.6;
+  }
+  .auth-spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(14,15,19,0.3);
+    border-top-color: #0e0f13;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   /* ── HEADER ── */
   .grimoire-header {
     background: rgba(14,15,19,0.92);
@@ -114,6 +326,35 @@
   .status-dot.online { background: #34d399; box-shadow: 0 0 8px #34d399; }
   .status-dot.error { background: var(--red); }
 
+  /* User chip in header */
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 10px 4px 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .user-chip:hover { border-color: rgba(248,113,113,0.4); color: var(--red); }
+  .user-chip-avatar {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+    color: #0e0f13;
+    flex-shrink: 0;
+  }
+  .admin-crown {
+    font-size: 10px;
+    margin-left: 2px;
+  }
+
   /* ── APP ── */
   .app {
     position: relative;
@@ -168,6 +409,15 @@
   .btn-export { background: rgba(129,140,248,0.12); color: var(--accent3); border: 1px solid rgba(129,140,248,0.25); }
   .btn-export:hover { background: rgba(129,140,248,0.22); border-color: var(--accent3); }
 
+  /* Admin-only badge on buttons */
+  .admin-only-btn { position: relative; }
+  .admin-only-btn::after {
+    content: '👑';
+    position: absolute;
+    top: -6px; right: -6px;
+    font-size: 10px;
+  }
+
   /* View toggle */
   .view-toggle {
     display: flex;
@@ -221,7 +471,6 @@
   .day-header { text-align: center; font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 0; }
   .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 
-  /* Day cell — drag selection */
   .day-cell {
     aspect-ratio: 1;
     border-radius: 10px;
@@ -245,10 +494,15 @@
   .day-cell.public-holiday { background: rgba(129,140,248,0.07); border-color: rgba(129,140,248,0.25); }
   .day-cell.drag-range { background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.25); }
   .day-cell.drag-start, .day-cell.drag-end { background: rgba(245,158,11,0.14); border-color: var(--accent2); }
+  /* Weekend styling */
+  .day-cell.weekend { background: rgba(255,255,255,0.015); }
+  .day-cell.weekend .day-num { color: var(--text-muted); opacity: 0.6; }
   .day-num { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text-dim); line-height: 1; margin-bottom: 4px; }
   .holiday-dots { display: flex; flex-wrap: wrap; gap: 2px; flex: 1; }
   .holiday-pill { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-weight: 500; }
   .public-holiday-label { font-size: 0.55rem; color: var(--accent3); font-family: 'DM Mono', monospace; margin-top: 2px; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  /* Weekend label */
+  .weekend-label { font-family: 'DM Mono', monospace; font-size: 0.5rem; color: var(--text-muted); opacity: 0.5; margin-top: auto; letter-spacing: 0.06em; }
 
   /* Sidebar */
   .sidebar { display: flex; flex-direction: column; gap: 16px; }
@@ -387,6 +641,19 @@
     border: 1px solid transparent;
   }
 
+  /* Weekend warning in modal */
+  .weekend-warn {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent2);
+    margin-bottom: 12px;
+    display: none;
+  }
+
   /* List rows */
   .list-item-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); margin-bottom: 6px; animation: fadeIn 0.2s ease; }
   .list-item-info { flex: 1; min-width: 0; }
@@ -432,12 +699,13 @@
   .gantt-days-header { display: flex; flex: 1; }
   .gantt-day-label { flex: 1; text-align: center; font-family: 'DM Mono', monospace; font-size: 0.58rem; color: var(--text-muted); }
   .gantt-day-label.today-col { color: var(--accent); font-weight: 600; }
+  .gantt-day-label.weekend-col { color: var(--text-muted); opacity: 0.4; }
   .gantt-person-row { display: flex; align-items: center; margin-bottom: 4px; }
   .gantt-person-name { width: 110px; flex-shrink: 0; font-size: 0.75rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
   .gantt-cells { display: flex; flex: 1; height: 28px; position: relative; background: var(--surface2); border-radius: 6px; overflow: hidden; }
   .gantt-cell { flex: 1; border-right: 1px solid rgba(46,49,69,0.4); position: relative; }
   .gantt-cell.today-col { background: rgba(110,231,183,0.05); }
-  .gantt-cell.weekend { background: rgba(255,255,255,0.01); }
+  .gantt-cell.weekend { background: rgba(255,255,255,0.01); opacity: 0.5; }
   .gantt-bar {
     position: absolute;
     top: 3px; bottom: 3px;
@@ -513,9 +781,110 @@
   .log-btn:hover { background: rgba(129,140,248,0.16); border-color: rgba(129,140,248,0.4); }
   .log-unread-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent3); box-shadow: 0 0 6px var(--accent3); display: none; }
   .log-unread-dot.visible { display: inline-block; }
+
+  /* ── PEOPLE LIST — account status ── */
+  .account-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    padding: 2px 7px;
+    border-radius: 5px;
+    letter-spacing: 0.04em;
+  }
+  .account-badge.linked { background: rgba(110,231,183,0.12); color: var(--accent); border: 1px solid rgba(110,231,183,0.2); }
+  .account-badge.unlinked { background: rgba(100,116,139,0.12); color: var(--text-muted); border: 1px solid var(--border); }
+  .account-badge.admin { background: rgba(245,158,11,0.12); color: var(--accent2); border: 1px solid rgba(245,158,11,0.2); }
+
+  /* Change Password modal */
+  .pw-change-note {
+    background: rgba(110,231,183,0.07);
+    border: 1px solid rgba(110,231,183,0.15);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+    line-height: 1.6;
+  }
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════
+     AUTH GATE
+════════════════════════════════════════════ -->
+<div id="authGate">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🌴</div>
+      <div class="auth-logo-text">
+        Holiday Tracker
+        <span>THE GRIMOIRE · IDSM</span>
+      </div>
+    </div>
+    <div class="auth-title">Welcome back</div>
+    <div class="auth-sub" id="authSubtitle">SIGN IN TO YOUR ACCOUNT</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Register</button>
+    </div>
+
+    <!-- LOGIN PANEL -->
+    <div id="loginPanel">
+      <div class="auth-form">
+        <div class="auth-input-group">
+          <label class="auth-input-label">Your Name</label>
+          <select class="auth-select" id="loginEmail">
+            <option value="">— Loading… —</option>
+          </select>
+        </div>
+        <div class="auth-input-group">
+          <label class="auth-input-label">Password</label>
+          <input class="auth-input" type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div class="auth-error" id="loginError"></div>
+        <button class="auth-btn" id="loginBtn" onclick="doLogin()">
+          <span class="auth-spinner" id="loginSpinner"></span>
+          Sign In
+        </button>
+      </div>
+    </div>
+
+    <!-- REGISTER PANEL -->
+    <div id="registerPanel" style="display:none;">
+      <div class="auth-info-box" style="margin-bottom:18px;">
+        ℹ Register once with your name from the team list. After registering, you can only add or delete <strong>your own</strong> holidays.
+      </div>
+      <div class="auth-form">
+        <div class="auth-input-group">
+          <label class="auth-input-label">Your Name (from team list)</label>
+          <select class="auth-select" id="registerPerson">
+            <option value="">— Loading team… —</option>
+          </select>
+        </div>
+        <div class="auth-input-group">
+          <label class="auth-input-label">Password</label>
+          <input class="auth-input" type="password" id="registerPassword" placeholder="min 6 characters" autocomplete="new-password">
+        </div>
+        <div class="auth-input-group">
+          <label class="auth-input-label">Confirm Password</label>
+          <input class="auth-input" type="password" id="registerConfirm" placeholder="repeat password" autocomplete="new-password">
+        </div>
+        <div class="auth-error" id="registerError"></div>
+        <button class="auth-btn" id="registerBtn" onclick="doRegister()">
+          <span class="auth-spinner" id="registerSpinner"></span>
+          Create Account
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN APP (hidden until authed)
+════════════════════════════════════════════ -->
+<div id="mainApp" style="display:none;">
 
 <!-- GRIMOIRE NAV BAR -->
 <div class="grimoire-header">
@@ -536,6 +905,12 @@
       <span class="log-unread-dot" id="logUnreadDot"></span>
       📋 Log
     </button>
+    <!-- Current user chip -->
+    <div class="user-chip" id="userChip" onclick="openProfileModal()" title="My account / sign out">
+      <div class="user-chip-avatar" id="userChipAvatar"></div>
+      <span id="userChipName">…</span>
+      <span class="admin-crown" id="userChipCrown" style="display:none;">👑</span>
+    </div>
   </div>
 </div>
 
@@ -543,7 +918,7 @@
   <header class="page-header">
     <div class="logo-block">
       <h1>Away<span>Track</span></h1>
-      <p>Team Holiday &amp; Vacation Tracker · IDSM</p>
+      <p>Team Holiday &amp; Vacation Tracker · IDSM · Weekdays only</p>
     </div>
     <div class="header-actions">
       <div class="view-toggle">
@@ -551,8 +926,9 @@
         <button class="view-btn" id="viewGanttBtn" onclick="setView('gantt')">📊 Timeline</button>
       </div>
       <button class="btn btn-export" onclick="exportCSV()">⬇ Export CSV</button>
-      <button class="btn btn-ghost" onclick="openPublicHolidays()">🗓 Public Hols</button>
-      <button class="btn btn-ghost" onclick="openManage()">⚙ Manage People</button>
+      <!-- Admin-only buttons -->
+      <button class="btn btn-ghost admin-only-btn" id="pubHolBtn" onclick="openPublicHolidays()" style="display:none;">🗓 Public Hols</button>
+      <button class="btn btn-ghost admin-only-btn" id="manageBtn" onclick="openManage()" style="display:none;">⚙ Manage People</button>
       <button class="btn btn-primary" id="addHolBtn" onclick="openAddModal()">+ Add Holiday</button>
     </div>
   </header>
@@ -560,7 +936,6 @@
   <div class="stats-row" id="statsRow"></div>
 
   <div class="main-grid">
-    <!-- Calendar / Gantt -->
     <div class="card" id="mainCard">
       <div class="calendar-header">
         <div class="calendar-header-left">
@@ -571,33 +946,25 @@
           </div>
           <button class="today-btn" onclick="goToday()">Today</button>
         </div>
-        <label class="count-toggle" title="Toggle between counting all days or working days only (Mon–Fri)">
-          <input type="checkbox" id="workdaysOnly" onchange="render()"> Workdays only
-        </label>
+        <!-- Removed workdays-only toggle: always weekdays only now -->
+        <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.06em;">Mon–Fri only</span>
       </div>
       <div id="calendarView">
         <div class="calendar-grid">
           <div class="day-headers">
-            <div class="day-header">Mon</div>
-            <div class="day-header">Tue</div>
-            <div class="day-header">Wed</div>
-            <div class="day-header">Thu</div>
-            <div class="day-header">Fri</div>
-            <div class="day-header">Sat</div>
-            <div class="day-header">Sun</div>
+            <div class="day-header">Mon</div><div class="day-header">Tue</div><div class="day-header">Wed</div>
+            <div class="day-header">Thu</div><div class="day-header">Fri</div>
+            <div class="day-header" style="opacity:0.4;">Sat</div><div class="day-header" style="opacity:0.4;">Sun</div>
           </div>
           <div class="days-grid" id="daysGrid"></div>
         </div>
         <div class="legend" id="legend"></div>
       </div>
       <div id="ganttView" style="display:none;">
-        <div class="gantt-wrap">
-          <div class="gantt-grid" id="ganttGrid"></div>
-        </div>
+        <div class="gantt-wrap"><div class="gantt-grid" id="ganttGrid"></div></div>
       </div>
     </div>
 
-    <!-- Sidebar -->
     <div class="sidebar">
       <div class="search-card">
         <div class="search-label">🔍 Search by Date</div>
@@ -607,7 +974,6 @@
         <div id="searchResults"></div>
       </div>
 
-      <!-- Vacation Balance Panel -->
       <div class="panel-card">
         <div class="panel-header">
           <span class="panel-title">🌴 Vacation Balance</span>
@@ -648,21 +1014,16 @@
 <div class="modal-overlay" id="addModal">
   <div class="modal">
     <div class="modal-title">Add Holiday</div>
-    <div class="modal-sub">Record who's out and when · drag calendar cells to pick dates</div>
+    <div class="modal-sub" id="addModalSub">Record who's out and when · weekdays (Mon–Fri) only</div>
     <div class="form-group">
       <label class="form-label">Person</label>
       <select id="formPerson"></select>
     </div>
     <div class="form-group form-row">
-      <div>
-        <label class="form-label">Start Date</label>
-        <input type="date" id="formStart">
-      </div>
-      <div>
-        <label class="form-label">End Date</label>
-        <input type="date" id="formEnd">
-      </div>
+      <div><label class="form-label">Start Date</label><input type="date" id="formStart"></div>
+      <div><label class="form-label">End Date</label><input type="date" id="formEnd"></div>
     </div>
+    <div class="weekend-warn" id="weekendWarn">⚠ Weekends are excluded — only Mon–Fri days count toward vacation balance.</div>
     <div class="form-group">
       <label class="form-label">Type</label>
       <select id="formType">
@@ -674,26 +1035,20 @@
         <option value="other">📌 Other</option>
       </select>
     </div>
-    <!-- Half-day -->
     <label class="half-day-row" id="halfDayRow">
       <input type="checkbox" id="halfDayCheck" onchange="toggleHalfDay()"> Half-day leave
     </label>
     <div class="half-day-select" id="halfDaySelect">
       <div class="form-group">
         <label class="form-label">Which half?</label>
-        <select id="halfDayPart">
-          <option value="AM">Morning (AM)</option>
-          <option value="PM">Afternoon (PM)</option>
-        </select>
+        <select id="halfDayPart"><option value="AM">Morning (AM)</option><option value="PM">Afternoon (PM)</option></select>
       </div>
     </div>
     <div class="form-group">
       <label class="form-label">Note (optional)</label>
       <input type="text" id="formNote" placeholder="e.g. Bali trip, doctor appointment…">
     </div>
-    <!-- Conflict warning -->
     <div class="conflict-warn" id="conflictWarn"></div>
-    <!-- Vacation day count warning -->
     <div id="vacWarning"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -706,7 +1061,7 @@
 <div class="modal-overlay" id="manageModal">
   <div class="modal">
     <div class="modal-title">Manage People</div>
-    <div class="modal-sub">Add or remove team members</div>
+    <div class="modal-sub">Add or remove team members · 👑 Admin only</div>
     <div class="form-group" style="display:flex;gap:8px;">
       <input type="text" id="newPersonName" placeholder="Full name">
       <input type="text" id="newPersonDept" placeholder="Department" style="flex:0.6">
@@ -723,7 +1078,7 @@
 <div class="modal-overlay" id="pubHolModal">
   <div class="modal">
     <div class="modal-title">Public Holidays</div>
-    <div class="modal-sub">National/regional holidays shown on the calendar for everyone</div>
+    <div class="modal-sub">National/regional holidays · 👑 Admin only</div>
     <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;">
       <input type="date" id="newPubDate" style="flex:0 0 150px;">
       <input type="text" id="newPubName" placeholder="Holiday name" style="flex:1;min-width:140px;">
@@ -732,6 +1087,31 @@
     <div class="pub-hol-list" id="pubHolList"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closePubHol()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile / Change Password Modal -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <div class="modal-title" id="profileTitle">My Account</div>
+    <div class="modal-sub" id="profileSub">Manage your login settings</div>
+    <div class="pw-change-note">
+      Changing your password will sign you out of all other sessions.
+    </div>
+    <div class="form-group">
+      <label class="form-label">New Password</label>
+      <input type="password" id="newPw1" placeholder="min 6 characters" autocomplete="new-password" style="font-family:'DM Sans',sans-serif;">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirm New Password</label>
+      <input type="password" id="newPw2" placeholder="repeat password" autocomplete="new-password" style="font-family:'DM Sans',sans-serif;">
+    </div>
+    <div class="auth-error" id="pwChangeError" style="margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.7rem;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="doSignOut()">🚪 Sign Out</button>
+      <button class="btn btn-ghost" onclick="closeProfileModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doChangePassword()">Update Password</button>
     </div>
   </div>
 </div>
@@ -760,11 +1140,15 @@
   </div>
 </div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</div><!-- end #mainApp -->
+
+<!-- Firebase (with Auth) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
 <script>
-/* ── FIREBASE ── */
+/* ════════════════════════════════════════════
+   FIREBASE INIT
+════════════════════════════════════════════ */
 const firebaseConfig = {
   apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
   authDomain: "vb-code-vault.firebaseapp.com",
@@ -774,20 +1158,197 @@ const firebaseConfig = {
   appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db           = firebase.firestore();
 const peopleCol    = db.collection('wmf_holiday_people');
 const holidaysCol  = db.collection('wmf_holidays');
 const vacResetCol  = db.collection('wmf_vac_resets');
 const activityCol  = db.collection('wmf_activity_log');
 const pubHolCol    = db.collection('wmf_public_holidays');
+const userProfCol  = db.collection('wmf_user_profiles');
 
+/* ════════════════════════════════════════════
+   SIMPLE AUTH (name + password, no Firebase Auth)
+════════════════════════════════════════════ */
+let currentUser    = null; // { uid, personId, displayName, isAdmin }
+let appStarted     = false;
+
+function makeUid(name) {
+  return name.toLowerCase().replace(/\s+/g, '_') + '_' + btoa(name).slice(0, 6);
+}
+
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + 'grimoire_salt'));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function saveSession(profile) { localStorage.setItem('ht_session', JSON.stringify(profile)); }
+function loadSession() { try { return JSON.parse(localStorage.getItem('ht_session')); } catch { return null; } }
+function clearSession() { localStorage.removeItem('ht_session'); }
+
+async function initAuth() {
+  const session = loadSession();
+  if (session) {
+    try {
+      const snap = await userProfCol.doc(session.uid).get();
+      if (snap.exists) { currentUser = { uid: session.uid, ...snap.data() }; showApp(); return; }
+    } catch(e) {}
+  }
+  showAuthGate();
+}
+
+function showApp() {
+  document.getElementById('authGate').style.display = 'none';
+  document.getElementById('mainApp').style.display = '';
+  saveSession(currentUser);
+  updateUserChip();
+  updateAdminUI();
+  if (!appStarted) { appStarted = true; startListeners(); startLogListener(); }
+}
+
+function showAuthGate() {
+  currentUser = null;
+  document.getElementById('authGate').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+  loadPeopleForRegister();
+}
+
+initAuth();
+
+function switchAuthTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('loginPanel').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('registerPanel').style.display = tab === 'register' ? '' : 'none';
+  document.getElementById('authSubtitle').textContent = tab === 'login' ? 'SIGN IN TO YOUR ACCOUNT' : 'CREATE YOUR ACCOUNT';
+  clearAuthErrors();
+}
+
+function showAuthError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+function clearAuthErrors() { ['loginError','registerError'].forEach(id => { const el = document.getElementById(id); el.textContent = ''; el.classList.remove('show'); }); }
+function setAuthLoading(btnId, spinnerId, loading) { document.getElementById(btnId).disabled = loading; document.getElementById(spinnerId).style.display = loading ? 'inline-block' : 'none'; }
+
+async function loadPeopleForRegister() {
+  const sel = document.getElementById('registerPerson');
+  sel.innerHTML = '<option value="">— Loading team… —</option>';
+  try {
+    const snap = await peopleCol.orderBy('name').get();
+    sel.innerHTML = '<option value="">— Select your name —</option>';
+    let linkedPersonIds = new Set();
+    try { const profSnap = await userProfCol.get(); linkedPersonIds = new Set(profSnap.docs.map(d => d.data().personId)); } catch(e) {}
+    snap.docs.forEach(d => {
+      if (!linkedPersonIds.has(d.id)) {
+        const opt = document.createElement('option');
+        opt.value = d.id; opt.textContent = `${d.data().name} (${d.data().dept})`; sel.appendChild(opt);
+      }
+    });
+    if (sel.options.length === 1) sel.innerHTML = '<option value="">— All members have accounts —</option>';
+  } catch(e) { sel.innerHTML = '<option value="">— Error loading —</option>'; }
+  const loginSel = document.getElementById('loginEmail');
+  loginSel.innerHTML = '<option value="">— Select your name —</option>';
+  const allSnap = await peopleCol.orderBy('name').get();
+  allSnap.docs.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id; opt.textContent = d.data().name; loginSel.appendChild(opt);
+  });
+}
+
+async function doLogin() {
+  const personId = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  clearAuthErrors();
+  if (!personId || !pw) { showAuthError('loginError', 'Enter your name and password.'); return; }
+  setAuthLoading('loginBtn', 'loginSpinner', true);
+  try {
+    const hash = await hashPassword(pw);
+    const snap = await userProfCol.where('personId', '==', personId).where('passwordHash', '==', hash).get();
+    if (snap.empty) { showAuthError('loginError', 'Incorrect name selection or password.'); return; }
+    const doc = snap.docs[0];
+    currentUser = { uid: doc.id, ...doc.data() };
+    showApp();
+  } catch(e) { showAuthError('loginError', e.message); }
+  finally { setAuthLoading('loginBtn', 'loginSpinner', false); }
+}
+
+async function doRegister() {
+  const personId = document.getElementById('registerPerson').value;
+  const pw = document.getElementById('registerPassword').value;
+  const pw2 = document.getElementById('registerConfirm').value;
+  clearAuthErrors();
+  if (!personId) { showAuthError('registerError', 'Select your name.'); return; }
+  if (pw.length < 6) { showAuthError('registerError', 'Password must be at least 6 characters.'); return; }
+  if (pw !== pw2) { showAuthError('registerError', 'Passwords do not match.'); return; }
+  setAuthLoading('registerBtn', 'registerSpinner', true);
+  try {
+    const existing = await userProfCol.where('personId', '==', personId).get();
+    if (!existing.empty) { showAuthError('registerError', 'This person already has an account.'); return; }
+    const personSnap = await peopleCol.doc(personId).get();
+    if (!personSnap.exists) { showAuthError('registerError', 'Person not found.'); return; }
+    const displayName = personSnap.data().name;
+    const uid = makeUid(displayName);
+    const hash = await hashPassword(pw);
+    await userProfCol.doc(uid).set({ personId, displayName, isAdmin: false, passwordHash: hash, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    currentUser = { uid, personId, displayName, isAdmin: false };
+    showApp();
+  } catch(e) { showAuthError('registerError', e.message); }
+  finally { setAuthLoading('registerBtn', 'registerSpinner', false); }
+}
+
+async function doSignOut() { closeProfileModal(); clearSession(); showAuthGate(); showToast('Signed out.'); }
+
+async function doChangePassword() {
+  const pw1 = document.getElementById('newPw1').value, pw2 = document.getElementById('newPw2').value;
+  const err = document.getElementById('pwChangeError');
+  err.textContent = ''; err.classList.remove('show');
+  if (!pw1) { err.textContent = 'Enter a new password.'; err.classList.add('show'); return; }
+  if (pw1.length < 6) { err.textContent = 'Min 6 characters.'; err.classList.add('show'); return; }
+  if (pw1 !== pw2) { err.textContent = 'Passwords do not match.'; err.classList.add('show'); return; }
+  try {
+    const hash = await hashPassword(pw1);
+    await userProfCol.doc(currentUser.uid).update({ passwordHash: hash });
+    closeProfileModal(); showToast('Password updated!');
+  } catch(e) { err.textContent = e.message; err.classList.add('show'); }
+}
+
+function updateUserChip() {
+  if (!currentUser) return;
+  const color = getColor(currentUser.personId);
+  document.getElementById('userChipAvatar').style.background = color.bg;
+  document.getElementById('userChipAvatar').style.color = color.text;
+  document.getElementById('userChipAvatar').textContent = initials(currentUser.displayName);
+  document.getElementById('userChipName').textContent = currentUser.displayName.split(' ')[0];
+  document.getElementById('userChipCrown').style.display = currentUser.isAdmin ? 'inline' : 'none';
+}
+function updateAdminUI() {
+  const admin = currentUser && currentUser.isAdmin;
+  document.getElementById('pubHolBtn').style.display = admin ? '' : 'none';
+  document.getElementById('manageBtn').style.display = admin ? '' : 'none';
+}
+
+function openProfileModal() {
+  document.getElementById('profileTitle').textContent = currentUser.displayName;
+  document.getElementById('profileSub').textContent = (currentUser.isAdmin ? '👑 Admin' : 'Team member');
+  document.getElementById('newPw1').value = ''; document.getElementById('newPw2').value = '';
+  const err = document.getElementById('pwChangeError'); err.textContent = ''; err.classList.remove('show');
+  document.getElementById('profileModal').classList.add('open');
+}
+function closeProfileModal() { document.getElementById('profileModal').classList.remove('open'); }
+
+/* ════════════════════════════════════════════
+   PERMISSION HELPERS
+════════════════════════════════════════════ */
+function isAdmin() { return currentUser && currentUser.isAdmin; }
+function myPersonId() { return currentUser ? currentUser.personId : null; }
+function canEdit(personId) { return isAdmin() || personId === myPersonId(); }
+function canDelete(holiday) { return isAdmin() || holiday.personId === myPersonId(); }
+
+/* ════════════════════════════════════════════
+   UI HELPERS
+════════════════════════════════════════════ */
 function setStatus(cls, label) {
   document.getElementById('statusDot').className = 'status-dot ' + (cls || '');
   document.getElementById('statusLabel').textContent = label;
 }
-function showSaving(on) {
-  document.getElementById('savingIndicator').style.display = on ? 'inline-flex' : 'none';
-}
+function showSaving(on) { document.getElementById('savingIndicator').style.display = on ? 'inline-flex' : 'none'; }
 function showToast(msg, isError) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -796,23 +1357,20 @@ function showToast(msg, isError) {
   t._t = setTimeout(() => t.className = '', 2500);
 }
 
-/* ── KEYBOARD SHORTCUT ── */
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
-    closeLog();
-    return;
-  }
-  // N = new holiday (only when no modal/input focused)
+  if (e.key === 'Escape') { document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open')); closeLog(); return; }
   if (e.key === 'n' || e.key === 'N') {
     const tag = document.activeElement.tagName.toLowerCase();
     if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
     if (document.querySelector('.modal-overlay.open')) return;
+    if (!currentUser) return;
     openAddModal();
   }
 });
 
-/* ── VIEW (calendar / gantt) ── */
+/* ════════════════════════════════════════════
+   VIEW
+════════════════════════════════════════════ */
 let currentView = 'calendar';
 function setView(v) {
   currentView = v;
@@ -823,42 +1381,50 @@ function setView(v) {
   render();
 }
 
-/* ── ACTIVITY LOG ── */
+/* ════════════════════════════════════════════
+   ACTIVITY LOG
+════════════════════════════════════════════ */
 async function writeLog(action, message, meta) {
   try {
     await activityCol.add({
-      action,
-      message,
-      meta: meta || {},
-      ts: firebase.firestore.FieldValue.serverTimestamp()
+      action, message, meta: meta || {},
+      ts: firebase.firestore.FieldValue.serverTimestamp(),
+      byUid: currentUser ? currentUser.uid : null,
+      byName: currentUser ? currentUser.displayName : null
     });
   } catch(e) {}
 }
 
-let activityLogs = [];
-let logFilter = 'all';
-let logUnreadCount = 0;
-let logOpen = false;
+let activityLogs = [], logFilter = 'all', logUnreadCount = 0, logOpen = false;
 
 function startLogListener() {
   activityCol.orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
     activityLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Update count label always
+    document.getElementById('logCount').textContent = activityLogs.length + ' entries';
+    
+    // Show unread dot if drawer is closed and there are new additions
     if (!logOpen && snap.docChanges().some(c => c.type === 'added')) {
       logUnreadCount++;
       document.getElementById('logUnreadDot').classList.add('visible');
     }
+    
+    // Re-render immediately if drawer is open
     if (logOpen) renderLogEntries();
-    document.getElementById('logCount').textContent = activityLogs.length + ' entries';
+    
   }, () => {});
 }
 
 function openLog() {
-  logUnreadCount = 0;
-  logOpen = true;
+  logUnreadCount = 0; logOpen = true;
   document.getElementById('logUnreadDot').classList.remove('visible');
   document.getElementById('logDrawer').classList.add('open');
   document.getElementById('logBackdrop').classList.add('open');
-  renderLogEntries();
+  renderLogEntries(); // initial render
+
+  // Re-render after a short delay to catch any in-flight writes
+  setTimeout(renderLogEntries, 800);
 }
 function closeLog() {
   logOpen = false;
@@ -883,8 +1449,7 @@ const LOG_META = {
 function fmtLogTime(ts) {
   if (!ts) return 'just now';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
-  const now = new Date();
-  const diff = Math.floor((now - d) / 1000);
+  const now = new Date(), diff = Math.floor((now - d) / 1000);
   if (diff < 60) return 'just now';
   if (diff < 3600) return Math.floor(diff/60) + 'm ago';
   if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
@@ -896,146 +1461,134 @@ function renderLogEntries() {
   const display = logFilter === 'person'
     ? activityLogs.filter(l => l.action === 'person_add' || l.action === 'person_remove')
     : logFilter === 'all' ? activityLogs : activityLogs.filter(l => l.action === logFilter);
-
   document.getElementById('logCount').textContent = display.length + ' of ' + activityLogs.length + ' entries';
-
-  if (!display.length) {
-    body.innerHTML = '<div class="log-loading">No entries for this filter</div>';
-    return;
-  }
+  if (!display.length) { body.innerHTML = '<div class="log-loading">No entries for this filter</div>'; return; }
   body.innerHTML = display.map(log => {
     const m = LOG_META[log.action] || { icon: '📌', cls: 'add', tag: log.action, tagColor: 'rgba(110,231,183,0.1)', tagText: 'var(--accent)' };
+    const byTag = log.byName ? `<span style="color:var(--text-muted);font-size:0.58rem;"> · ${log.byName}</span>` : '';
     return `<div class="log-entry">
       <div class="log-icon ${m.cls}">${m.icon}</div>
       <div class="log-content">
-        <div class="log-msg">${log.message}<span class="log-action-tag" style="background:${m.tagColor};color:${m.tagText};">${m.tag}</span></div>
+        <div class="log-msg">${log.message}<span class="log-action-tag" style="background:${m.tagColor};color:${m.tagText};">${m.tag}</span>${byTag}</div>
         <div class="log-time">${fmtLogTime(log.ts)}</div>
       </div>
     </div>`;
   }).join('');
 }
 
-/* ── CONSTANTS ── */
+/* ════════════════════════════════════════════
+   CONSTANTS & STATE
+════════════════════════════════════════════ */
 const VACATION_DAYS_PER_YEAR = 12;
 const PALETTE = [
-  { bg: '#6ee7b7', text: '#0e0f13' },
-  { bg: '#818cf8', text: '#0e0f13' },
-  { bg: '#f59e0b', text: '#0e0f13' },
-  { bg: '#f87171', text: '#0e0f13' },
-  { bg: '#34d399', text: '#0e0f13' },
-  { bg: '#a78bfa', text: '#0e0f13' },
-  { bg: '#fbbf24', text: '#0e0f13' },
-  { bg: '#60a5fa', text: '#0e0f13' },
+  { bg: '#6ee7b7', text: '#0e0f13' }, { bg: '#818cf8', text: '#0e0f13' },
+  { bg: '#f59e0b', text: '#0e0f13' }, { bg: '#f87171', text: '#0e0f13' },
+  { bg: '#34d399', text: '#0e0f13' }, { bg: '#a78bfa', text: '#0e0f13' },
+  { bg: '#fbbf24', text: '#0e0f13' }, { bg: '#60a5fa', text: '#0e0f13' },
 ];
-const LEAVE_TYPE_ICONS = {
-  vacation: '🌴', sick: '🤒', wfh: '🏠', training: '📚', parental: '👶', other: '📌'
-};
+const LEAVE_TYPE_ICONS = { vacation: '🌴', sick: '🤒', wfh: '🏠', training: '📚', parental: '👶', other: '📌' };
 
-/* ── STATE ── */
-let people = [];
-let holidays = [];
-let vacResets = [];
-let publicHolidays = []; // [{ id, date, name }]
-let viewYear = new Date().getFullYear();
-let viewMonth = new Date().getMonth();
+let people = [], holidays = [], vacResets = [], publicHolidays = [];
+let viewYear = new Date().getFullYear(), viewMonth = new Date().getMonth();
+let userProfiles = [];
 
-/* ── DAY COUNTING ── */
-function isWorkday(dateObj) {
-  const dow = dateObj.getDay();
-  return dow !== 0; // Skip Sunday; Mon–Sat = working (adjust to dow!==0&&dow!==6 for Mon–Fri only)
+/* ════════════════════════════════════════════
+   DAY COUNTING — WEEKDAYS ONLY (Mon–Fri)
+   getDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+════════════════════════════════════════════ */
+function isWeekday(dateObj) {
+  const d = dateObj.getDay();
+  return d !== 0 && d !== 6; // exclude Sunday (0) and Saturday (6)
 }
 
-// Count days inclusive between two ISO strings; respects workdays toggle
-function countDays(startIso, endIso) {
-  const workdaysOnly = document.getElementById('workdaysOnly').checked;
-  const s = parseDate(startIso);
-  const e = parseDate(endIso);
-  if (!workdaysOnly) {
-    return Math.round((e - s) / 86400000) + 1;
-  }
+/**
+ * Count weekdays (Mon–Fri) between two ISO date strings, inclusive.
+ * This is ALWAYS weekday-only — weekends never count toward vacation.
+ */
+function countWeekdays(startIso, endIso) {
+  const s = parseDate(startIso), e = parseDate(endIso);
+  if (s > e) return 0;
   let count = 0;
   const cur = new Date(s);
   while (cur <= e) {
-    if (isWorkday(cur)) count++;
+    if (isWeekday(cur)) count++;
     cur.setDate(cur.getDate() + 1);
   }
   return count;
 }
 
-// Count days for a holiday entry, respecting half-day flag
+/** Days for a single holiday entry (weekdays only, 0.5 for half-day) */
 function entryDays(h) {
   if (h.halfDay) return 0.5;
-  return countDays(h.start, h.end);
+  return countWeekdays(h.start, h.end);
 }
 
-/* ── VACATION UTILS ── */
+/** Count weekdays in a date range that overlap with a given year */
+function countWeekdaysInYear(startIso, endIso, year) {
+  const yStart = `${year}-01-01`, yEnd = `${year}-12-31`;
+  const clampStart = startIso > yStart ? startIso : yStart;
+  const clampEnd   = endIso   < yEnd   ? endIso   : yEnd;
+  if (clampStart > clampEnd) return 0;
+  return countWeekdays(clampStart, clampEnd);
+}
+
+/** Does a date string fall on a weekend? */
+function isWeekendIso(iso) {
+  const d = parseDate(iso).getDay();
+  return d === 0 || d === 6;
+}
+
+/* ════════════════════════════════════════════
+   VACATION UTILS
+════════════════════════════════════════════ */
 function vacUsedByYear(personId, year) {
   return holidays
     .filter(h => h.personId === personId && h.type === 'vacation')
     .reduce((sum, h) => {
-      const yStart = `${year}-01-01`;
-      const yEnd = `${year}-12-31`;
-      const start = h.start > yStart ? h.start : yStart;
-      const end = h.end < yEnd ? h.end : yEnd;
-      if (start > end) return sum;
-      if (h.halfDay) return sum + 0.5;
-      return sum + countDays(start, end);
+      if (h.halfDay) {
+        // Only count if the single day falls within the year and is a weekday
+        if (h.start >= `${year}-01-01` && h.start <= `${year}-12-31` && !isWeekendIso(h.start)) {
+          return sum + 0.5;
+        }
+        return sum;
+      }
+      return sum + countWeekdaysInYear(h.start, h.end, year);
     }, 0);
 }
+
 function vacResetBonus(personId, year) {
   const rec = vacResets.find(r => r.personId === personId && r.year === year);
   return rec ? (rec.resetDays || 0) : 0;
 }
-function vacAllotment(personId, year) {
-  return VACATION_DAYS_PER_YEAR + vacResetBonus(personId, year);
-}
-function vacRemaining(personId, year) {
-  return vacAllotment(personId, year) - vacUsedByYear(personId, year);
-}
-
-/* ── CONFLICT DETECTION ── */
+function vacAllotment(personId, year) { return VACATION_DAYS_PER_YEAR + vacResetBonus(personId, year); }
+function vacRemaining(personId, year) { return vacAllotment(personId, year) - vacUsedByYear(personId, year); }
 function getConflicts(personId, start, end, excludeId) {
-  return holidays.filter(h => {
-    if (h.id === excludeId) return false;
-    if (h.personId !== personId) return false;
-    return h.start <= end && h.end >= start;
-  });
+  return holidays.filter(h => h.id !== excludeId && h.personId === personId && h.start <= end && h.end >= start);
 }
 
-/* ── FIRESTORE LISTENERS ── */
+/* ════════════════════════════════════════════
+   FIRESTORE LISTENERS
+════════════════════════════════════════════ */
 function startListeners() {
   setStatus('', 'Connecting...');
-
   peopleCol.orderBy('name').onSnapshot(snap => {
     people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    render();
-    setStatus('online', 'Online');
-    // Refresh manage modal list if open
+    render(); setStatus('online', 'Online');
     if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
-  }, err => {
-    setStatus('error', 'Error');
-    showToast('Connection error: ' + err.message, true);
-  });
+  }, err => { setStatus('error', 'Error'); showToast('Connection error: ' + err.message, true); });
 
-  holidaysCol.orderBy('start').onSnapshot(snap => {
-    holidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    render();
-  }, err => {
-    showToast('Holidays sync error: ' + err.message, true);
-  });
-
-  vacResetCol.onSnapshot(snap => {
-    vacResets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    render();
-  }, () => {});
-
-  pubHolCol.orderBy('date').onSnapshot(snap => {
-    publicHolidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    render();
+  holidaysCol.orderBy('start').onSnapshot(snap => { holidays = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, err => { showToast('Sync error: ' + err.message, true); });
+  vacResetCol.onSnapshot(snap => { vacResets = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+  pubHolCol.orderBy('date').onSnapshot(snap => { publicHolidays = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+  userProfCol.onSnapshot(snap => {
+    userProfiles = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
   }, () => {});
 }
 
-/* ── UTILS ── */
+/* ════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════ */
 function getColor(personId) {
   const idx = people.findIndex(p => p.id === personId);
   return PALETTE[(idx >= 0 ? idx : 0) % PALETTE.length];
@@ -1050,7 +1603,9 @@ function getPerson(id) { return people.find(p => p.id === id); }
 function getPersonName(id) { const p = getPerson(id); return p ? p.name : 'Unknown'; }
 function publicHolOnDate(iso) { return publicHolidays.find(ph => ph.date === iso); }
 
-/* ── RENDER ── */
+/* ════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════ */
 function render() {
   renderStats();
   if (currentView === 'calendar') renderCalendar();
@@ -1059,6 +1614,7 @@ function render() {
   renderAway();
   renderAllList();
   renderLegend();
+  updateUserChip();
 }
 
 function renderStats() {
@@ -1069,42 +1625,21 @@ function renderStats() {
   document.getElementById('statsRow').innerHTML = `
     <div class="stat-box"><div class="stat-num">${people.length}</div><div class="stat-label">Team Members</div></div>
     <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">${awayToday}</div><div class="stat-label">Away Today</div></div>
-    <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${thisMonth}</div><div class="stat-label">This Month</div></div>
-  `;
+    <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${thisMonth}</div><div class="stat-label">This Month</div></div>`;
 }
 
-/* ── CALENDAR DRAG SELECTION ── */
+/* ── Calendar drag ── */
 let dragStart = null, dragEnd = null, isDragging = false;
-
-function calDragIso(cell) { return cell.dataset.iso; }
-
-function startDrag(iso) {
-  isDragging = true;
-  dragStart = iso;
-  dragEnd = iso;
-  highlightDrag();
-}
-function updateDrag(iso) {
-  if (!isDragging) return;
-  dragEnd = iso;
-  highlightDrag();
-}
+function startDrag(iso) { isDragging = true; dragStart = iso; dragEnd = iso; highlightDrag(); }
+function updateDrag(iso) { if (!isDragging) return; dragEnd = iso; highlightDrag(); }
 function endDrag(iso) {
   if (!isDragging) return;
-  isDragging = false;
-  dragEnd = iso;
-  highlightDrag();
-  // Sort start/end
+  isDragging = false; dragEnd = iso; highlightDrag();
   const [s, e] = dragStart <= dragEnd ? [dragStart, dragEnd] : [dragEnd, dragStart];
-  // Pre-fill modal dates
   document.getElementById('formStart').value = s;
   document.getElementById('formEnd').value = e;
-  if (!document.getElementById('addModal').classList.contains('open')) {
-    openAddModal(true); // pass flag so we don't reset dates
-  } else {
-    updateVacWarning();
-    updateConflictWarn();
-  }
+  if (!document.getElementById('addModal').classList.contains('open')) openAddModal(true);
+  else { updateVacWarning(); updateConflictWarn(); updateWeekendWarn(); }
 }
 function highlightDrag() {
   document.querySelectorAll('.day-cell[data-iso]').forEach(cell => {
@@ -1121,16 +1656,11 @@ function highlightDrag() {
 function renderCalendar() {
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('monthLabel').textContent = `${months[viewMonth]} ${viewYear}`;
-
   const firstDay = new Date(viewYear, viewMonth, 1);
-  let startDow = firstDay.getDay();
-  startDow = startDow === 0 ? 6 : startDow - 1;
-
+  let startDow = firstDay.getDay(); startDow = startDow === 0 ? 6 : startDow - 1;
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
-  const today = dateStr(new Date());
-  const cells = [];
-
+  const today = dateStr(new Date()), cells = [];
   for (let i = startDow - 1; i >= 0; i--) cells.push({ day: daysInPrevMonth - i, month: viewMonth - 1, year: viewYear, other: true });
   for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, month: viewMonth, year: viewYear, other: false });
   const rem = 42 - cells.length;
@@ -1138,28 +1668,29 @@ function renderCalendar() {
 
   const grid = document.getElementById('daysGrid');
   grid.innerHTML = '';
-
   cells.forEach(({ day, month, year, other }) => {
     let mo = month, yr = year;
-    if (mo < 0) { mo = 11; yr--; }
-    if (mo > 11) { mo = 0; yr++; }
+    if (mo < 0) { mo = 11; yr--; } if (mo > 11) { mo = 0; yr++; }
     const iso = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const hs = holidaysOnDate(iso);
-    const isToday = iso === today;
-    const pubHol = publicHolOnDate(iso);
+    const hs = holidaysOnDate(iso), isToday = iso === today, pubHol = publicHolOnDate(iso);
+    const dow = parseDate(iso).getDay();
+    const isWknd = dow === 0 || dow === 6;
 
     const cell = document.createElement('div');
-    cell.className = `day-cell${other ? ' other-month' : ''}${isToday ? ' today' : ''}${hs.length ? ' has-holiday' : ''}${pubHol ? ' public-holiday' : ''}`;
+    cell.className = [
+      'day-cell',
+      other      ? 'other-month'   : '',
+      isToday    ? 'today'         : '',
+      hs.length  ? 'has-holiday'   : '',
+      pubHol     ? 'public-holiday': '',
+      isWknd     ? 'weekend'       : '',
+    ].filter(Boolean).join(' ');
     cell.dataset.iso = iso;
 
-    // Drag events
-    cell.addEventListener('mousedown', (e) => { e.preventDefault(); startDrag(iso); });
+    cell.addEventListener('mousedown', e => { e.preventDefault(); startDrag(iso); });
     cell.addEventListener('mouseover', () => updateDrag(iso));
     cell.addEventListener('mouseup', () => endDrag(iso));
-    cell.addEventListener('click', () => {
-      if (dragStart !== dragEnd) return; // drag handled by mouseup
-      selectDate(iso);
-    });
+    cell.addEventListener('click', () => { if (dragStart !== dragEnd) return; selectDate(iso); });
 
     let pillsHtml = '';
     hs.slice(0, 3).forEach(h => {
@@ -1171,187 +1702,143 @@ function renderCalendar() {
     if (hs.length > 3) pillsHtml += `<div class="holiday-pill" style="background:var(--surface3);color:var(--text-muted);">+${hs.length-3}</div>`;
 
     const pubHolLabel = pubHol ? `<div class="public-holiday-label">${pubHol.name}</div>` : '';
+    const wkndLabel = isWknd && !other ? `<div class="weekend-label">${dow === 6 ? 'SAT' : 'SUN'}</div>` : '';
 
-    cell.innerHTML = `<div class="day-num">${day}</div><div class="holiday-dots">${pillsHtml}</div>${pubHolLabel}`;
+    cell.innerHTML = `<div class="day-num">${day}</div><div class="holiday-dots">${pillsHtml}</div>${pubHolLabel}${wkndLabel}`;
     grid.appendChild(cell);
   });
-
-  // End drag on mouseup anywhere
-  document.addEventListener('mouseup', () => { if (isDragging) { endDrag(dragEnd); } }, { once: true });
+  document.addEventListener('mouseup', () => { if (isDragging) endDrag(dragEnd); }, { once: true });
 }
 
-/* ── GANTT VIEW ── */
 function renderGantt() {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('monthLabel').textContent = `${months[viewMonth]} ${viewYear} — Timeline`;
-
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const today = dateStr(new Date());
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate(), today = dateStr(new Date());
   const grid = document.getElementById('ganttGrid');
-
-  // Header row: day numbers
-  let headerHtml = `<div class="gantt-header-row">
-    <div class="gantt-name-col">Person</div>
-    <div class="gantt-days-header">`;
+  let headerHtml = `<div class="gantt-header-row"><div class="gantt-name-col">Person</div><div class="gantt-days-header">`;
   for (let d = 1; d <= daysInMonth; d++) {
     const iso = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday = iso === today;
-    headerHtml += `<div class="gantt-day-label${isToday ? ' today-col' : ''}">${d}</div>`;
+    const dow = parseDate(iso).getDay(), isWknd = dow === 0 || dow === 6;
+    headerHtml += `<div class="gantt-day-label${iso===today?' today-col':''}${isWknd?' weekend-col':''}">${d}</div>`;
   }
   headerHtml += `</div></div>`;
-
   let rowsHtml = '';
   people.forEach(p => {
-    const personHols = holidays.filter(h => h.personId === p.id);
     let cellsHtml = '';
     for (let d = 1; d <= daysInMonth; d++) {
       const iso = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const isToday = iso === today;
-      const dt = parseDate(iso);
-      const isWknd = dt.getDay() === 0 || dt.getDay() === 6;
-      cellsHtml += `<div class="gantt-cell${isToday ? ' today-col' : ''}${isWknd ? ' weekend' : ''}" data-iso="${iso}"></div>`;
+      const isToday = iso === today, dt = parseDate(iso), isWknd = dt.getDay()===0||dt.getDay()===6;
+      cellsHtml += `<div class="gantt-cell${isToday?' today-col':''}${isWknd?' weekend':''}" data-iso="${iso}"></div>`;
     }
-
-    rowsHtml += `<div class="gantt-person-row">
-      <div class="gantt-person-name">${p.name.split(' ')[0]}</div>
-      <div class="gantt-cells" id="gantt-${p.id}">${cellsHtml}</div>
-    </div>`;
+    rowsHtml += `<div class="gantt-person-row"><div class="gantt-person-name">${p.name.split(' ')[0]}</div><div class="gantt-cells" id="gantt-${p.id}">${cellsHtml}</div></div>`;
   });
-
   grid.innerHTML = headerHtml + rowsHtml;
-
-  // Overlay bars
   people.forEach(p => {
-    const container = document.getElementById('gantt-' + p.id);
+    const container = document.getElementById('gantt-'+p.id);
     if (!container) return;
     const color = getColor(p.id);
-    const personHols = holidays.filter(h => h.personId === p.id);
-    const cells = container.querySelectorAll('.gantt-cell');
-    const totalDays = cells.length;
-
-    personHols.forEach(h => {
-      // Clip to this month
+    const totalDays = container.querySelectorAll('.gantt-cell').length;
+    holidays.filter(h => h.personId === p.id).forEach(h => {
       const mStart = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-01`;
       const mEnd = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(totalDays).padStart(2,'0')}`;
       const clipStart = h.start < mStart ? mStart : h.start;
       const clipEnd = h.end > mEnd ? mEnd : h.end;
       if (clipStart > clipEnd) return;
-
-      const startDay = parseInt(clipStart.split('-')[2]) - 1;
-      const endDay = parseInt(clipEnd.split('-')[2]) - 1;
-      const left = (startDay / totalDays) * 100;
-      const width = ((endDay - startDay + 1) / totalDays) * 100;
-      const icon = LEAVE_TYPE_ICONS[h.type] || '📌';
-
+      const startDay = parseInt(clipStart.split('-')[2]) - 1, endDay = parseInt(clipEnd.split('-')[2]) - 1;
+      const left = (startDay/totalDays)*100, width = ((endDay-startDay+1)/totalDays)*100;
       const bar = document.createElement('div');
       bar.className = 'gantt-bar';
-      bar.style.left = left + '%';
-      bar.style.width = width + '%';
-      bar.style.background = color.bg;
-      bar.title = `${icon} ${h.type} · ${fmtDate(h.start)} → ${fmtDate(h.end)}${h.note ? ' · ' + h.note : ''}`;
-      bar.textContent = width > 8 ? icon : '';
+      bar.style.left = left+'%'; bar.style.width = width+'%'; bar.style.background = color.bg;
+      bar.title = `${LEAVE_TYPE_ICONS[h.type]||'📌'} ${h.type} · ${fmtDate(h.start)} → ${fmtDate(h.end)}${h.note?' · '+h.note:''}`;
+      bar.textContent = width > 8 ? (LEAVE_TYPE_ICONS[h.type]||'📌') : '';
       container.appendChild(bar);
     });
   });
 }
 
 function renderVacBalance() {
-  const year = viewYear; // sync to viewed year/month
+  const year = viewYear;
   document.getElementById('vacYearTag').textContent = year;
-
   const list = document.getElementById('vacBalanceList');
-  if (!people.length) {
-    list.innerHTML = '<div class="empty-state">No team members yet</div>';
-    return;
-  }
-
+  if (!people.length) { list.innerHTML = '<div class="empty-state">No team members yet</div>'; return; }
   list.innerHTML = people.map(p => {
     const color = getColor(p.id);
-    const allot = vacAllotment(p.id, year);
-    const used = vacUsedByYear(p.id, year);
-    const remaining = allot - used;
-    const pct = Math.max(0, Math.min(100, (remaining / allot) * 100));
-
+    const allot = vacAllotment(p.id, year), used = vacUsedByYear(p.id, year), remaining = allot - used;
+    const pct = Math.max(0, Math.min(100, (remaining/allot)*100));
     let remainClass = 'ok', barColor = '#6ee7b7';
     if (remaining <= 0) { remainClass = 'exhausted'; barColor = '#f87171'; }
     else if (remaining <= 3) { remainClass = 'warn'; barColor = '#f59e0b'; }
-
     const bonusBadge = allot > VACATION_DAYS_PER_YEAR
-      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--accent3);margin-left:3px;">+${allot - VACATION_DAYS_PER_YEAR}↩</span>`
-      : '';
-
+      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--accent3);margin-left:3px;">+${allot-VACATION_DAYS_PER_YEAR}↩</span>` : '';
+    const resetBtn = isAdmin()
+      ? `<button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name}',${year})" title="Reset vacation balance">↺</button>` : '';
+    // Show used as decimal only when there's a half-day
+    const usedDisplay = used % 1 !== 0 ? used.toFixed(1) : used;
     return `<div class="vac-row">
       <div class="avatar" style="width:30px;height:30px;font-size:0.65rem;background:${color.bg};color:${color.text};">${initials(p.name)}</div>
       <div class="vac-info">
         <div class="vac-name">${p.name}</div>
         <div style="display:flex;align-items:center;gap:4px;">
           <div class="vac-dept">${p.dept}</div>
-          <div class="vac-bar-wrap" style="flex:1;max-width:60px;">
-            <div class="vac-bar" style="width:${pct}%;background:${barColor};"></div>
-          </div>
-          <div class="vac-dept">${used}/${allot}d used</div>
+          <div class="vac-bar-wrap" style="flex:1;max-width:60px;"><div class="vac-bar" style="width:${pct}%;background:${barColor};"></div></div>
+          <div class="vac-dept">${usedDisplay}/${allot}d used</div>
         </div>
       </div>
       <div class="vac-right">
-        <div class="vac-counter">
-          <span class="vac-remaining ${remainClass}">${remaining}</span>
-          <span class="vac-of">left${bonusBadge}</span>
-        </div>
-        <button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name}',${year})" title="Reset vacation balance — adds ${VACATION_DAYS_PER_YEAR} more days">↺</button>
+        <div class="vac-counter"><span class="vac-remaining ${remainClass}">${remaining % 1 !== 0 ? remaining.toFixed(1) : remaining}</span><span class="vac-of">left${bonusBadge}</span></div>
+        ${resetBtn}
       </div>
     </div>`;
   }).join('');
 }
 
 function renderAway() {
-  const today = dateStr(new Date());
-  const away = holidaysOnDate(today);
+  const today = dateStr(new Date()), away = holidaysOnDate(today);
   document.getElementById('awayCount').textContent = away.length;
   const list = document.getElementById('awayList');
   if (!away.length) { list.innerHTML = '<div class="empty-state">No one is away today ✓</div>'; return; }
   list.innerHTML = away.map(h => {
-    const p = getPerson(h.personId);
-    if (!p) return '';
+    const p = getPerson(h.personId); if (!p) return '';
     const color = getColor(h.personId);
-    const icon = LEAVE_TYPE_ICONS[h.type] || '📌';
     return `<div class="person-row">
       <div class="avatar" style="background:${color.bg};color:${color.text};">${initials(p.name)}</div>
       <div class="person-info"><div class="person-name">${p.name}</div><div class="person-dept">${p.dept}</div></div>
-      <span class="leave-badge chip" style="background:rgba(110,231,183,0.1);color:var(--accent);">${icon}${h.halfDay ? ' ½' : ''}</span>
+      <span class="leave-badge chip" style="background:rgba(110,231,183,0.1);color:var(--accent);">${LEAVE_TYPE_ICONS[h.type]||'📌'}${h.halfDay?' ½':''}</span>
     </div>`;
   }).join('');
 }
 
 function renderAllList() {
-  const sorted = [...holidays].sort((a, b) => a.start.localeCompare(b.start));
+  const sorted = [...holidays].sort((a,b) => a.start.localeCompare(b.start));
   document.getElementById('allCount').textContent = sorted.length;
   const list = document.getElementById('allList');
   if (!sorted.length) { list.innerHTML = '<div class="empty-state">No holidays recorded yet</div>'; return; }
   list.innerHTML = sorted.map(h => {
-    const p = getPerson(h.personId);
-    if (!p) return '';
+    const p = getPerson(h.personId); if (!p) return '';
     const color = getColor(h.personId);
-    const icon = LEAVE_TYPE_ICONS[h.type] || '📌';
     const halfTag = h.halfDay ? ` · ½ ${h.halfDayPart||''}` : '';
+    const days = entryDays(h);
+    const daysTag = `<span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:4px;">${days % 1 !== 0 ? days.toFixed(1) : days}d</span>`;
+    const del = canDelete(h)
+      ? `<button class="delete-btn" onclick="deleteHoliday('${h.id}')" title="Delete">✕</button>` : '';
     return `<div class="list-item-row">
       <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
       <div class="list-item-info">
-        <div class="list-item-name">${p.name} ${icon}</div>
-        <div class="list-item-date">${fmtDate(h.start)} → ${fmtDate(h.end)}${halfTag}${h.note ? ' · ' + h.note : ''}</div>
+        <div class="list-item-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'📌'}${daysTag}</div>
+        <div class="list-item-date">${fmtDate(h.start)} → ${fmtDate(h.end)}${halfTag}${h.note?' · '+h.note:''}</div>
       </div>
-      <button class="delete-btn" onclick="deleteHoliday('${h.id}')" title="Delete">✕</button>
+      ${del}
     </div>`;
   }).join('');
 }
 
 function renderLegend() {
-  const pubHolLegend = publicHolidays.length
-    ? `<div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Public Holiday</div>`
-    : '';
+  const pubHolLegend = publicHolidays.length ? `<div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Public Holiday</div>` : '';
+  const wkndLegend = `<div class="legend-item"><div class="legend-dot" style="background:var(--surface3);border:1px solid var(--border);"></div>Weekend (not counted)</div>`;
   document.getElementById('legend').innerHTML = people.map(p => {
     const color = getColor(p.id);
     return `<div class="legend-item"><div class="legend-dot" style="background:${color.bg}"></div>${p.name.split(' ')[0]}</div>`;
-  }).join('') + pubHolLegend;
+  }).join('') + pubHolLegend + wkndLegend;
 }
 
 function renderPeopleList() {
@@ -1359,28 +1846,36 @@ function renderPeopleList() {
   if (!people.length) { list.innerHTML = '<div class="empty-state">No people added yet</div>'; return; }
   list.innerHTML = people.map(p => {
     const color = getColor(p.id);
-    return `<div class="list-item-row">
+    const prof = userProfiles.find(u => u.personId === p.id);
+    let badge = '';
+    if (prof && prof.isAdmin) badge = `<span class="account-badge admin">👑 admin</span>`;
+    else if (prof) badge = `<span class="account-badge linked">✓ account</span>`;
+    else badge = `<span class="account-badge unlinked">no account</span>`;
+    const toggleAdmin = prof
+      ? `<button class="btn btn-sm btn-ghost" onclick="toggleAdminStatus('${prof.uid}','${p.name}',${!!prof.isAdmin})" title="${prof.isAdmin?'Remove':'Grant'} admin" style="padding:4px 8px;font-size:0.65rem;">${prof.isAdmin?'↓':'↑'}admin</button>`
+      : '';
+    return `<div class="list-item-row" style="flex-wrap:wrap;gap:6px;">
       <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
       <div class="list-item-info"><div class="list-item-name">${p.name}</div><div class="list-item-date">${p.dept}</div></div>
+      ${badge}
+      ${toggleAdmin}
       <button class="delete-btn" onclick="removePerson('${p.id}')" title="Remove">✕</button>
     </div>`;
   }).join('');
 }
 
-/* ── PUBLIC HOLIDAYS ── */
+/* ════════════════════════════════════════════
+   PUBLIC HOLIDAYS (admin only)
+════════════════════════════════════════════ */
 function openPublicHolidays() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
   renderPubHolList();
   document.getElementById('pubHolModal').classList.add('open');
 }
-function closePubHol() {
-  document.getElementById('pubHolModal').classList.remove('open');
-}
+function closePubHol() { document.getElementById('pubHolModal').classList.remove('open'); }
 function renderPubHolList() {
   const list = document.getElementById('pubHolList');
-  if (!publicHolidays.length) {
-    list.innerHTML = '<div class="empty-state">No public holidays added yet</div>';
-    return;
-  }
+  if (!publicHolidays.length) { list.innerHTML = '<div class="empty-state">No public holidays added yet</div>'; return; }
   list.innerHTML = publicHolidays.map(ph => `
     <div class="pub-hol-item">
       <span style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text-dim);flex:0 0 110px;">${fmtDate(ph.date)}</span>
@@ -1389,263 +1884,264 @@ function renderPubHolList() {
     </div>`).join('');
 }
 async function addPublicHoliday() {
-  const date = document.getElementById('newPubDate').value;
-  const name = document.getElementById('newPubName').value.trim();
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const date = document.getElementById('newPubDate').value, name = document.getElementById('newPubName').value.trim();
   if (!date || !name) { showToast('Enter date and name.', true); return; }
   showSaving(true);
   try {
     await pubHolCol.add({ date, name, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    document.getElementById('newPubDate').value = '';
-    document.getElementById('newPubName').value = '';
-    showToast('Public holiday added!');
-  } catch(e) { showToast('Failed: ' + e.message, true); }
+    document.getElementById('newPubDate').value = ''; document.getElementById('newPubName').value = '';
+    renderPubHolList(); showToast('Public holiday added!');
+  } catch(e) { showToast('Failed: '+e.message, true); }
   finally { showSaving(false); }
 }
 async function deletePublicHoliday(id) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
   showSaving(true);
-  try {
-    await pubHolCol.doc(id).delete();
-    showToast('Removed.');
-  } catch(e) { showToast('Failed: ' + e.message, true); }
+  try { await pubHolCol.doc(id).delete(); renderPubHolList(); showToast('Removed.'); }
+  catch(e) { showToast('Failed: '+e.message, true); }
   finally { showSaving(false); }
 }
 
-/* ── VACATION RESET ── */
+/* ════════════════════════════════════════════
+   VACATION RESET (admin only)
+════════════════════════════════════════════ */
 async function resetVacation(personId, personName, year) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
   const existing = vacResets.find(r => r.personId === personId && r.year === year);
-  const currentBonus = existing ? (existing.resetDays || 0) : 0;
+  const currentBonus = existing ? (existing.resetDays||0) : 0;
   const newBonus = currentBonus + VACATION_DAYS_PER_YEAR;
-  if (!confirm(`Reset vacation balance for ${personName}?\n\nThis will add ${VACATION_DAYS_PER_YEAR} more days to their ${year} allotment.\n\nCurrent allotment: ${VACATION_DAYS_PER_YEAR + currentBonus} days → New: ${VACATION_DAYS_PER_YEAR + newBonus} days`)) return;
+  if (!confirm(`Reset vacation for ${personName}?\n\nAdds ${VACATION_DAYS_PER_YEAR} days to ${year} allotment.\n${VACATION_DAYS_PER_YEAR+currentBonus} → ${VACATION_DAYS_PER_YEAR+newBonus} days`)) return;
   showSaving(true);
   try {
-    await vacResetCol.doc(`${personId}_${year}`).set({
-      personId, year, resetDays: newBonus,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await writeLog('vac_reset',
-      `<strong>${personName}</strong> — vacation balance reset (+${VACATION_DAYS_PER_YEAR} days for ${year})`,
-      { personId, year, newBonus }
-    );
+    await vacResetCol.doc(`${personId}_${year}`).set({ personId, year, resetDays: newBonus, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    await writeLog('vac_reset', `<strong>${personName}</strong> — vacation balance reset (+${VACATION_DAYS_PER_YEAR} days for ${year})`, { personId, year, newBonus });
     showToast(`+${VACATION_DAYS_PER_YEAR} days added for ${personName} in ${year}`);
-  } catch(e) { showToast('Reset failed: ' + e.message, true); }
+  } catch(e) { showToast('Reset failed: '+e.message, true); }
   finally { showSaving(false); }
 }
 
-/* ── ACTIONS ── */
+/* ════════════════════════════════════════════
+   ADMIN: TOGGLE ADMIN STATUS
+════════════════════════════════════════════ */
+async function toggleAdminStatus(uid, personName, currentlyAdmin) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  if (currentlyAdmin && uid === currentUser.uid) { showToast("Can't remove your own admin status.", true); return; }
+  if (!confirm(`${currentlyAdmin ? 'Remove' : 'Grant'} admin for ${personName}?`)) return;
+  showSaving(true);
+  try {
+    await userProfCol.doc(uid).update({ isAdmin: !currentlyAdmin });
+    showToast(`${personName} is ${!currentlyAdmin ? 'now an admin' : 'no longer admin'}.`);
+    renderPeopleList();
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+/* ════════════════════════════════════════════
+   ACTIONS
+════════════════════════════════════════════ */
 function changeMonth(dir) {
   viewMonth += dir;
-  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
-  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; } if (viewMonth < 0) { viewMonth = 11; viewYear--; }
   render();
 }
-function goToday() {
-  const t = new Date();
-  viewYear = t.getFullYear();
-  viewMonth = t.getMonth();
-  render();
-}
+function goToday() { const t = new Date(); viewYear = t.getFullYear(); viewMonth = t.getMonth(); render(); }
 function selectDate(iso) {
-  document.getElementById('searchDate').value = iso;
-  searchByDate();
-  const [y, m] = iso.split('-').map(Number);
-  viewYear = y; viewMonth = m - 1;
-  render();
+  document.getElementById('searchDate').value = iso; searchByDate();
+  const [y,m] = iso.split('-').map(Number); viewYear = y; viewMonth = m-1; render();
 }
 function searchByDate() {
-  const val = document.getElementById('searchDate').value;
-  const res = document.getElementById('searchResults');
+  const val = document.getElementById('searchDate').value, res = document.getElementById('searchResults');
   if (!val) { res.innerHTML = ''; return; }
-  const hs = holidaysOnDate(val);
-  const pubHol = publicHolOnDate(val);
+  const hs = holidaysOnDate(val), pubHol = publicHolOnDate(val);
   let html = '';
-  if (pubHol) {
-    html += `<div class="search-result-item" style="border-color:rgba(129,140,248,0.3);">
-      <div class="result-avatar" style="background:rgba(129,140,248,0.2);color:var(--accent3);">🗓</div>
-      <div class="result-info">
-        <div class="result-name">${pubHol.name}</div>
-        <div class="result-dates">Public Holiday</div>
-      </div>
-    </div>`;
-  }
+  if (pubHol) html += `<div class="search-result-item" style="border-color:rgba(129,140,248,0.3);">
+    <div class="result-avatar" style="background:rgba(129,140,248,0.2);color:var(--accent3);">🗓</div>
+    <div class="result-info"><div class="result-name">${pubHol.name}</div><div class="result-dates">Public Holiday</div></div>
+  </div>`;
   if (!hs.length && !pubHol) { res.innerHTML = '<div class="no-results">No one on leave this day</div>'; return; }
   html += hs.map(h => {
-    const p = getPerson(h.personId);
-    if (!p) return '';
+    const p = getPerson(h.personId); if (!p) return '';
     const color = getColor(h.personId);
-    const icon = LEAVE_TYPE_ICONS[h.type] || '📌';
     return `<div class="search-result-item">
       <div class="result-avatar" style="background:${color.bg};color:${color.text};">${initials(p.name)}</div>
       <div class="result-info">
-        <div class="result-name">${p.name} ${icon}${h.halfDay ? ' ½'+h.halfDayPart : ''}</div>
-        <div class="result-dates">${fmtDate(h.start)} → ${fmtDate(h.end)}${h.note ? ' · ' + h.note : ''}</div>
+        <div class="result-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'📌'}${h.halfDay?' ½'+h.halfDayPart:''}</div>
+        <div class="result-dates">${fmtDate(h.start)} → ${fmtDate(h.end)}${h.note?' · '+h.note:''}</div>
       </div>
     </div>`;
   }).join('');
   res.innerHTML = html;
 }
 
-/* ── HALF-DAY TOGGLE ── */
+/* ── Half-day ── */
 function toggleHalfDay() {
   const checked = document.getElementById('halfDayCheck').checked;
   document.getElementById('halfDaySelect').classList.toggle('visible', checked);
-  if (checked) {
-    // For half-day, end = start
-    const start = document.getElementById('formStart').value;
-    if (start) document.getElementById('formEnd').value = start;
-  }
-  updateVacWarning();
-  updateConflictWarn();
+  if (checked) { const s = document.getElementById('formStart').value; if (s) document.getElementById('formEnd').value = s; }
+  updateVacWarning(); updateConflictWarn(); updateWeekendWarn();
 }
 
-/* ── ADD MODAL ── */
-// Attach listeners once (fix: avoid duplicate listeners)
+/* ── Weekend warning in modal ── */
+function updateWeekendWarn() {
+  const start = document.getElementById('formStart').value;
+  const end = document.getElementById('formEnd').value;
+  const warn = document.getElementById('weekendWarn');
+  if (!start || !end || end < start) { warn.style.display = 'none'; return; }
+  // Check if any weekends are in range
+  const s = parseDate(start), e = parseDate(end);
+  let hasWeekend = false;
+  const cur = new Date(s);
+  while (cur <= e) {
+    const d = cur.getDay();
+    if (d === 0 || d === 6) { hasWeekend = true; break; }
+    cur.setDate(cur.getDate() + 1);
+  }
+  warn.style.display = hasWeekend ? 'block' : 'none';
+  // Also show the actual weekday count
+  if (hasWeekend) {
+    const wdays = countWeekdays(start, end);
+    warn.textContent = `ℹ Weekends are excluded — this range counts as ${wdays} weekday${wdays !== 1 ? 's' : ''} (Mon–Fri only).`;
+  }
+}
+
+/* ── Add Modal ── */
 let _modalListenersAttached = false;
 function attachModalListeners() {
-  if (_modalListenersAttached) return;
-  _modalListenersAttached = true;
+  if (_modalListenersAttached) return; _modalListenersAttached = true;
   ['formPerson','formStart','formEnd','formType'].forEach(id => {
     document.getElementById(id).addEventListener('change', () => {
-      updateVacWarning();
-      updateConflictWarn();
-      // Sync end=start for half-day
-      if (id === 'formStart' && document.getElementById('halfDayCheck').checked) {
+      updateVacWarning(); updateConflictWarn(); updateWeekendWarn();
+      if (id==='formStart' && document.getElementById('halfDayCheck').checked)
         document.getElementById('formEnd').value = document.getElementById('formStart').value;
-      }
     });
   });
 }
 
 function openAddModal(keepDates) {
+  if (!currentUser) { showToast('Please sign in first.', true); return; }
   attachModalListeners();
   const sel = document.getElementById('formPerson');
-  sel.innerHTML = '<option value="">— Select person —</option>';
-  people.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.dept})</option>`; });
-  if (!keepDates) {
-    document.getElementById('formStart').value = '';
-    document.getElementById('formEnd').value = '';
+
+  if (isAdmin()) {
+    sel.innerHTML = '<option value="">— Select person —</option>';
+    people.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.dept})</option>`; });
+    sel.disabled = false;
+    document.getElementById('addModalSub').textContent = 'Record who\'s out and when · weekdays (Mon–Fri) only';
+  } else {
+    const myId = myPersonId();
+    const me = getPerson(myId);
+    sel.innerHTML = me ? `<option value="${myId}">${me.name} (${me.dept})</option>` : '<option value="">— Not linked to a person —</option>';
+    sel.disabled = true;
+    document.getElementById('addModalSub').textContent = `Adding holiday for you · ${me ? me.name : ''} · weekdays only`;
   }
+
+  if (!keepDates) { document.getElementById('formStart').value = ''; document.getElementById('formEnd').value = ''; }
   document.getElementById('formNote').value = '';
   document.getElementById('formType').value = 'vacation';
   document.getElementById('halfDayCheck').checked = false;
   document.getElementById('halfDaySelect').classList.remove('visible');
   document.getElementById('vacWarning').style.display = 'none';
   document.getElementById('conflictWarn').style.display = 'none';
+  document.getElementById('weekendWarn').style.display = 'none';
   document.getElementById('addModal').classList.add('open');
-  // Focus person dropdown
-  setTimeout(() => sel.focus(), 100);
+  setTimeout(() => { if (!sel.disabled) sel.focus(); }, 100);
+  if (keepDates) { updateVacWarning(); updateWeekendWarn(); }
 }
 
 function updateVacWarning() {
   const personId = document.getElementById('formPerson').value;
-  const start = document.getElementById('formStart').value;
-  const end = document.getElementById('formEnd').value;
-  const type = document.getElementById('formType').value;
-  const halfDay = document.getElementById('halfDayCheck').checked;
+  const start = document.getElementById('formStart').value, end = document.getElementById('formEnd').value;
+  const type = document.getElementById('formType').value, halfDay = document.getElementById('halfDayCheck').checked;
   const warn = document.getElementById('vacWarning');
-
-  if (type !== 'vacation' || !personId || !start || !end || end < start) {
-    warn.style.display = 'none'; return;
-  }
-
-  const year = parseInt(start.slice(0, 4));
-  const days = halfDay ? 0.5 : countDays(start, end);
-  const remaining = vacRemaining(personId, year);
-  const after = remaining - days;
+  if (type!=='vacation' || !personId || !start || !end || end<start) { warn.style.display='none'; return; }
+  const year = parseInt(start.slice(0,4));
+  // Use weekday count always
+  const days = halfDay ? 0.5 : countWeekdays(start, end);
+  const remaining = vacRemaining(personId, year), after = remaining - days;
   const p = getPerson(personId);
-
-  warn.style.display = 'block';
-  warn.className = '';
-  if (after < 0) {
-    warn.className = 'warn-error';
-    warn.textContent = `⚠ ${p.name} only has ${remaining} day${remaining !== 1 ? 's' : ''} left in ${year}. This uses ${days}d (${Math.abs(after)} over).`;
-  } else if (after <= 3) {
-    warn.className = 'warn-caution';
-    warn.textContent = `ℹ ${days}d vacation · ${p.name} will have ${after} day${after !== 1 ? 's' : ''} left in ${year}.`;
-  } else {
-    warn.className = 'warn-ok';
-    warn.textContent = `✓ ${days}d vacation · ${p.name} will have ${after} day${after !== 1 ? 's' : ''} remaining in ${year}.`;
-  }
+  warn.style.display = 'block'; warn.className = '';
+  if (after < 0) { warn.className = 'warn-error'; warn.textContent = `⚠ ${p.name} only has ${remaining} day${remaining!==1?'s':''} left in ${year}. This uses ${days}d (${Math.abs(after).toFixed(1)} over).`; }
+  else if (after <= 3) { warn.className = 'warn-caution'; warn.textContent = `ℹ ${days}d vacation (weekdays) · ${p.name} will have ${after} day${after!==1?'s':''} left in ${year}.`; }
+  else { warn.className = 'warn-ok'; warn.textContent = `✓ ${days}d vacation (weekdays) · ${p.name} will have ${after} day${after!==1?'s':''} remaining in ${year}.`; }
 }
 
 function updateConflictWarn() {
   const personId = document.getElementById('formPerson').value;
-  const start = document.getElementById('formStart').value;
-  const end = document.getElementById('formEnd').value;
+  const start = document.getElementById('formStart').value, end = document.getElementById('formEnd').value;
   const warn = document.getElementById('conflictWarn');
-
-  if (!personId || !start || !end || end < start) { warn.style.display = 'none'; return; }
+  if (!personId || !start || !end || end<start) { warn.style.display='none'; return; }
   const conflicts = getConflicts(personId, start, end, null);
-  if (!conflicts.length) { warn.style.display = 'none'; return; }
-
+  if (!conflicts.length) { warn.style.display='none'; return; }
   const names = conflicts.map(h => `${LEAVE_TYPE_ICONS[h.type]||'📌'} ${fmtDate(h.start)}→${fmtDate(h.end)}`).join(', ');
-  warn.style.display = 'block';
-  warn.textContent = `⚠ Overlaps existing entry: ${names}`;
+  warn.style.display = 'block'; warn.textContent = `⚠ Overlaps existing entry: ${names}`;
 }
 
 function closeModal() {
   document.getElementById('addModal').classList.remove('open');
-  dragStart = null; dragEnd = null;
-  highlightDrag();
+  dragStart = null; dragEnd = null; highlightDrag();
 }
 
 async function saveHoliday() {
   const personId = document.getElementById('formPerson').value;
-  const start = document.getElementById('formStart').value;
-  const end = document.getElementById('formEnd').value;
-  const type = document.getElementById('formType').value;
-  const note = document.getElementById('formNote').value.trim();
+  const start = document.getElementById('formStart').value, end = document.getElementById('formEnd').value;
+  const type = document.getElementById('formType').value, note = document.getElementById('formNote').value.trim();
   const halfDay = document.getElementById('halfDayCheck').checked;
   const halfDayPart = halfDay ? document.getElementById('halfDayPart').value : null;
 
   if (!personId || !start || !end) { showToast('Please fill in person, start and end date.', true); return; }
   if (end < start) { showToast('End date must be after start date.', true); return; }
+  if (!canEdit(personId)) { showToast('You can only add holidays for yourself.', true); return; }
+
+  // Warn if the entire range is weekend days (vacation type)
+  if (type === 'vacation' && !halfDay) {
+    const wdays = countWeekdays(start, end);
+    if (wdays === 0) { showToast('Selected range has no weekdays. Vacation must be on Mon–Fri.', true); return; }
+  }
 
   showSaving(true);
   try {
-    const entry = { personId, start, end, type, note, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+    const entry = { personId, start, end, type, note, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedByUid: currentUser.uid };
     if (halfDay) { entry.halfDay = true; entry.halfDayPart = halfDayPart; }
     await holidaysCol.add(entry);
     const savedName = getPersonName(personId);
-    const icon = LEAVE_TYPE_ICONS[type] || '📌';
+    const icon = LEAVE_TYPE_ICONS[type]||'📌';
     const halfTag = halfDay ? ` (½ ${halfDayPart})` : '';
-    await writeLog('holiday_add',
-      `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} from ${fmtDate(start)} to ${fmtDate(end)}${note ? ' · ' + note : ''}`,
-      { personId, start, end, type }
-    );
-    closeModal();
-    showToast('Holiday saved!');
-  } catch(e) { showToast('Save failed: ' + e.message, true); }
+    const wdays = halfDay ? 0.5 : countWeekdays(start, end);
+    await writeLog('holiday_add', `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} from ${fmtDate(start)} to ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`, { personId, start, end, type });
+    closeModal(); showToast('Holiday saved!');
+  } catch(e) { showToast('Save failed: '+e.message, true); }
   finally { showSaving(false); }
 }
 
 async function deleteHoliday(id) {
+  const delH = holidays.find(h => h.id === id);
+  if (delH && !canDelete(delH)) { showToast('You can only delete your own entries.', true); return; }
   if (!confirm('Delete this holiday entry?')) return;
   showSaving(true);
   try {
-    const delH = holidays.find(h => h.id === id);
     if (delH) {
-      const delName = getPersonName(delH.personId);
-      const icon = LEAVE_TYPE_ICONS[delH.type] || '📌';
       await writeLog('holiday_delete',
-        `<strong>${delName}</strong> — ${icon} ${delH.type} (${fmtDate(delH.start)} → ${fmtDate(delH.end)}) deleted`,
+        `<strong>${getPersonName(delH.personId)}</strong> — ${LEAVE_TYPE_ICONS[delH.type]||'📌'} ${delH.type} (${fmtDate(delH.start)} → ${fmtDate(delH.end)}) deleted`,
         { personId: delH.personId, start: delH.start, end: delH.end }
       );
     }
     await holidaysCol.doc(id).delete();
-    showToast('Entry deleted.');
-    searchByDate();
-  } catch(e) { showToast('Delete failed: ' + e.message, true); }
+    showToast('Entry deleted.'); searchByDate();
+  } catch(e) { showToast('Delete failed: '+e.message, true); }
   finally { showSaving(false); }
 }
 
-/* ── MANAGE PEOPLE ── */
+/* ── Manage People (admin only) ── */
 function openManage() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
   renderPeopleList();
   document.getElementById('manageModal').classList.add('open');
 }
 function closeManage() { document.getElementById('manageModal').classList.remove('open'); }
 
 async function addPerson() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
   const name = document.getElementById('newPersonName').value.trim();
   const dept = document.getElementById('newPersonDept').value.trim() || 'Team';
   if (!name) { showToast('Enter a name.', true); return; }
@@ -1653,77 +2149,50 @@ async function addPerson() {
   try {
     await peopleCol.add({ name, dept, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
     await writeLog('person_add', `<strong>${name}</strong> added to team (${dept})`, { name, dept });
-    document.getElementById('newPersonName').value = '';
-    document.getElementById('newPersonDept').value = '';
-    showToast('Person added!');
-    renderPeopleList();
-  } catch(e) { showToast('Failed: ' + e.message, true); }
+    document.getElementById('newPersonName').value = ''; document.getElementById('newPersonDept').value = '';
+    showToast('Person added!'); renderPeopleList();
+  } catch(e) { showToast('Failed: '+e.message, true); }
   finally { showSaving(false); }
 }
 
 async function removePerson(id) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
   if (!confirm('Remove this person and all their holidays?')) return;
   showSaving(true);
   try {
-    const snap = await holidaysCol.where('personId', '==', id).get();
+    const snap = await holidaysCol.where('personId','==',id).get();
     const batch = db.batch();
     snap.docs.forEach(d => batch.delete(d.ref));
     batch.delete(peopleCol.doc(id));
-    const resetSnap = await vacResetCol.where('personId', '==', id).get();
+    const resetSnap = await vacResetCol.where('personId','==',id).get();
     resetSnap.docs.forEach(d => batch.delete(d.ref));
     const removedPerson = people.find(p => p.id === id);
     await batch.commit();
-    if (removedPerson) {
-      await writeLog('person_remove',
-        `<strong>${removedPerson.name}</strong> removed from team (${removedPerson.dept})`,
-        { name: removedPerson.name, dept: removedPerson.dept }
-      );
-    }
-    renderPeopleList();
-    showToast('Person removed.');
-  } catch(e) { showToast('Failed: ' + e.message, true); }
+    if (removedPerson) await writeLog('person_remove', `<strong>${removedPerson.name}</strong> removed from team (${removedPerson.dept})`, { name: removedPerson.name });
+    renderPeopleList(); showToast('Person removed.');
+  } catch(e) { showToast('Failed: '+e.message, true); }
   finally { showSaving(false); }
 }
 
-/* ── CSV EXPORT ── */
+/* ── CSV Export ── */
 function exportCSV() {
   if (!holidays.length) { showToast('No entries to export.', true); return; }
-  const headers = ['Name', 'Department', 'Type', 'Start', 'End', 'Days', 'Half Day', 'Note'];
+  const headers = ['Name','Department','Type','Start','End','Weekdays','Half Day','Note'];
   const rows = holidays.map(h => {
     const p = getPerson(h.personId);
-    const days = h.halfDay ? 0.5 : countDays(h.start, h.end);
-    return [
-      p ? p.name : 'Unknown',
-      p ? p.dept : '',
-      h.type,
-      h.start,
-      h.end,
-      days,
-      h.halfDay ? (h.halfDayPart || 'yes') : '',
-      (h.note || '').replace(/,/g, ';')
-    ];
+    const wdays = h.halfDay ? 0.5 : countWeekdays(h.start, h.end);
+    return [p?p.name:'Unknown', p?p.dept:'', h.type, h.start, h.end, wdays, h.halfDay?(h.halfDayPart||'yes'):'', (h.note||'').replace(/,/g,';')];
   });
-  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `holidays_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('CSV exported!');
+  const csv = [headers,...rows].map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'}), url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `holidays_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  URL.revokeObjectURL(url); showToast('CSV exported!');
 }
 
-/* ── MODAL BACKDROP CLOSE ── */
+/* ── Modal backdrop close ── */
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('open');
-  });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
 });
-
-// Start
-startListeners();
-startLogListener();
 </script>
 </body>
 </html>
