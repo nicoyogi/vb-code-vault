@@ -1634,6 +1634,18 @@ function updateWeekendWarn() {
   const end   = document.getElementById('formEnd').value;
   const warn  = document.getElementById('weekendWarn');
   if (!start || !end || end < start) { warn.style.display = 'none'; return; }
+
+  // Check if the entire range is only weekends/public holidays
+  const wdays = countWeekdays(start, end);
+  if (wdays === 0) {
+    warn.style.display = 'block';
+    warn.style.background = 'var(--red-a12)';
+    warn.style.borderColor = 'var(--red-a25)';
+    warn.style.color = 'var(--red)';
+    warn.textContent = '⛔ Selected dates are weekends or public holidays only — no weekdays to book.';
+    return;
+  }
+
   const s = parseDate(start), e = parseDate(end);
   let hasWeekend = false;
   const cur = new Date(s);
@@ -1642,10 +1654,15 @@ function updateWeekendWarn() {
     if (d === 0 || d === 6) { hasWeekend = true; break; }
     cur.setDate(cur.getDate() + 1);
   }
-  warn.style.display = hasWeekend ? 'block' : 'none';
+
   if (hasWeekend) {
-    const wdays = countWeekdays(start, end);
-    warn.textContent = `ℹ Weekends are excluded — this range counts as ${wdays} weekday${wdays !== 1 ? 's' : ''} (Mon–Fri only).`;
+    warn.style.display = 'block';
+    warn.style.background = 'var(--accent2-a08)';
+    warn.style.borderColor = 'rgba(245,158,11,0.25)';
+    warn.style.color = 'var(--accent2)';
+    warn.textContent = `⚠ Weekends are excluded — this range counts as ${wdays} weekday${wdays !== 1 ? 's' : ''} (Mon–Fri only).`;
+  } else {
+    warn.style.display = 'none';
   }
 }
 
