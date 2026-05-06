@@ -1400,12 +1400,19 @@ let activityLogs = [], logFilter = 'all', logUnreadCount = 0, logOpen = false;
 function startLogListener() {
   activityCol.orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
     activityLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Update count label always
+    document.getElementById('logCount').textContent = activityLogs.length + ' entries';
+    
+    // Show unread dot if drawer is closed and there are new additions
     if (!logOpen && snap.docChanges().some(c => c.type === 'added')) {
       logUnreadCount++;
       document.getElementById('logUnreadDot').classList.add('visible');
     }
+    
+    // Re-render immediately if drawer is open
     if (logOpen) renderLogEntries();
-    document.getElementById('logCount').textContent = activityLogs.length + ' entries';
+    
   }, () => {});
 }
 
@@ -1414,7 +1421,10 @@ function openLog() {
   document.getElementById('logUnreadDot').classList.remove('visible');
   document.getElementById('logDrawer').classList.add('open');
   document.getElementById('logBackdrop').classList.add('open');
-  renderLogEntries();
+  renderLogEntries(); // initial render
+
+  // Re-render after a short delay to catch any in-flight writes
+  setTimeout(renderLogEntries, 800);
 }
 function closeLog() {
   logOpen = false;
