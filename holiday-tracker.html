@@ -1126,7 +1126,6 @@
 
 <!-- Firebase (with Auth) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
 <script>
 /* ════════════════════════════════════════════
@@ -1141,55 +1140,77 @@ const firebaseConfig = {
   appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
 };
 firebase.initializeApp(firebaseConfig);
-const db      = firebase.firestore();
-const auth    = firebase.auth();
+const db           = firebase.firestore();
 const peopleCol    = db.collection('wmf_holiday_people');
 const holidaysCol  = db.collection('wmf_holidays');
 const vacResetCol  = db.collection('wmf_vac_resets');
 const activityCol  = db.collection('wmf_activity_log');
 const pubHolCol    = db.collection('wmf_public_holidays');
-const userProfCol  = db.collection('wmf_user_profiles'); // uid → { personId, isAdmin, displayName }
+const userProfCol  = db.collection('wmf_user_profiles');
 
 /* ════════════════════════════════════════════
-   AUTH STATE
+   SIMPLE AUTH (name + password, no Firebase Auth)
 ════════════════════════════════════════════ */
-let currentUser     = null;   // Firebase user
-let currentProfile  = null;   // Firestore profile { personId, isAdmin, displayName }
-let appStarted      = false;
+let currentUser    = null; // { uid, personId, displayName, isAdmin }
+let appStarted     = false;
 
-auth.onAuthStateChanged(async user => {
-  if (user) {
-    currentUser = user;
-    // Load profile
+// Generate a simple uid from name
+function makeUid(name) {
+  return name.toLowerCase().replace(/\s+/g, '_') + '_' + btoa(name).slice(0, 6);
+}
+
+// Simple hash for password (not cryptographic, but fine for internal tool)
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + 'grimoire_salt'));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function saveSession(profile) {
+  localStorage.setItem('ht_session', JSON.stringify(profile));
+}
+function loadSession() {
+  try { return JSON.parse(localStorage.getItem('ht_session')); } catch { return null; }
+}
+function clearSession() {
+  localStorage.removeItem('ht_session');
+}
+
+async function initAuth() {
+  const session = loadSession();
+  if (session) {
+    // Verify session still valid in Firestore
     try {
-      const snap = await userProfCol.doc(user.uid).get();
+      const snap = await userProfCol.doc(session.uid).get();
       if (snap.exists) {
-        currentProfile = snap.data();
-      } else {
-        // Profile not found — show error and sign out
-        showAuthError('loginError', 'Account has no profile. Please register first or contact admin.');
-        await auth.signOut();
+        currentUser = { uid: session.uid, ...snap.data() };
+        showApp();
         return;
       }
-    } catch(e) {
-      showAuthError('loginError', 'Failed to load profile: ' + e.message);
-      return;
-    }
-    // Show app
-    document.getElementById('authGate').style.display = 'none';
-    document.getElementById('mainApp').style.display = '';
-    updateUserChip();
-    updateAdminUI();
-    if (!appStarted) { appStarted = true; startListeners(); startLogListener(); }
-  } else {
-    currentUser = null; currentProfile = null;
-    document.getElementById('authGate').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
-    loadPeopleForRegister();
+    } catch(e) {}
   }
-});
+  showAuthGate();
+}
 
-/* ── Auth helpers ── */
+function showApp() {
+  document.getElementById('authGate').style.display = 'none';
+  document.getElementById('mainApp').style.display = '';
+  saveSession(currentUser);
+  updateUserChip();
+  updateAdminUI();
+  if (!appStarted) { appStarted = true; startListeners(); startLogListener(); }
+}
+
+function showAuthGate() {
+  currentUser = null;
+  document.getElementById('authGate').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+  loadPeopleForRegister();
+}
+
+// Start auth on page load
+initAuth();
+
+/* ── Auth tab switch ── */
 function switchAuthTab(tab) {
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
   document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
@@ -1211,7 +1232,6 @@ function clearAuthErrors() {
     el.classList.remove('show');
   });
 }
-
 function setAuthLoading(btnId, spinnerId, loading) {
   document.getElementById(btnId).disabled = loading;
   document.getElementById(spinnerId).style.display = loading ? 'inline-block' : 'none';
@@ -1223,17 +1243,12 @@ async function loadPeopleForRegister() {
   try {
     const snap = await peopleCol.orderBy('name').get();
     sel.innerHTML = '<option value="">— Select your name —</option>';
-
-    // Try to filter out already-linked people, but don't fail if profiles are auth-gated
+    // Filter out already-registered people
     let linkedPersonIds = new Set();
     try {
       const profSnap = await userProfCol.get();
       linkedPersonIds = new Set(profSnap.docs.map(d => d.data().personId));
-    } catch(e) {
-      // Not signed in — can't read profiles, show all people
-      // doRegister() will catch duplicates server-side anyway
-    }
-
+    } catch(e) {}
     snap.docs.forEach(d => {
       if (!linkedPersonIds.has(d.id)) {
         const opt = document.createElement('option');
@@ -1242,114 +1257,126 @@ async function loadPeopleForRegister() {
         sel.appendChild(opt);
       }
     });
-
-    if (sel.options.length === 1) {
-      sel.innerHTML = '<option value="">— All team members have accounts —</option>';
-    }
+    if (sel.options.length === 1) sel.innerHTML = '<option value="">— All members have accounts —</option>';
   } catch(e) {
     sel.innerHTML = '<option value="">— Error loading —</option>';
-    console.error('loadPeopleForRegister:', e);
   }
+ // Also populate login dropdown
+const loginSel = document.getElementById('loginEmail');
+loginSel.innerHTML = '<option value="">— Select your name —</option>';
+const allSnap = await peopleCol.orderBy('name').get();
+allSnap.docs.forEach(d => {
+  const opt = document.createElement('option');
+  opt.value = d.id;
+  opt.textContent = d.data().name;
+  loginSel.appendChild(opt);
+});
 }
 
+/* ── LOGIN ── */
 async function doLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
+  const personId = document.getElementById('loginEmail').value.trim();
   const pw = document.getElementById('loginPassword').value;
   clearAuthErrors();
-  if (!email || !pw) { showAuthError('loginError', 'Enter email and password.'); return; }
-  setAuthLoading('loginBtn','loginSpinner',true);
+  if (!personId || !pw) { showAuthError('loginError', 'Enter your name and password.'); return; }
+  setAuthLoading('loginBtn', 'loginSpinner', true);
   try {
-    await auth.signInWithEmailAndPassword(email, pw);
+    const hash = await hashPassword(pw);
+    // Find profile by personId or displayName match
+    const snap = await userProfCol.where('personId', '==', personId).where('passwordHash', '==', hash).get();
+    if (snap.empty) { showAuthError('loginError', 'Incorrect name selection or password.'); return; }
+    const doc = snap.docs[0];
+    currentUser = { uid: doc.id, ...doc.data() };
+    showApp();
   } catch(e) {
-    const msg = e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
-      ? 'Invalid email or password.' : e.message;
-    showAuthError('loginError', msg);
+    showAuthError('loginError', e.message);
   } finally {
-    setAuthLoading('loginBtn','loginSpinner',false);
+    setAuthLoading('loginBtn', 'loginSpinner', false);
   }
 }
 
+/* ── REGISTER ── */
 async function doRegister() {
   const personId = document.getElementById('registerPerson').value;
-  const email    = document.getElementById('registerEmail').value.trim();
   const pw       = document.getElementById('registerPassword').value;
   const pw2      = document.getElementById('registerConfirm').value;
   clearAuthErrors();
-
-  if (!personId) { showAuthError('registerError', 'Select your name from the team list.'); return; }
-  if (!email)    { showAuthError('registerError', 'Enter an email address.'); return; }
+  if (!personId) { showAuthError('registerError', 'Select your name.'); return; }
   if (pw.length < 6) { showAuthError('registerError', 'Password must be at least 6 characters.'); return; }
-  if (pw !== pw2)    { showAuthError('registerError', 'Passwords do not match.'); return; }
-
-  setAuthLoading('registerBtn','registerSpinner',true);
+  if (pw !== pw2) { showAuthError('registerError', 'Passwords do not match.'); return; }
+  setAuthLoading('registerBtn', 'registerSpinner', true);
   try {
-    // Create the Firebase Auth account first (this signs the user in)
-    const cred = await auth.createUserWithEmailAndPassword(email, pw);
-
-    // Now we're signed in — check if personId is already taken
-    const existing = await userProfCol.where('personId','==',personId).get();
-    if (!existing.empty) {
-      // Already taken — delete the auth account we just made and bail
-      await cred.user.delete();
-      showAuthError('registerError', 'This person already has an account.');
-      return;
-    }
-
+    // Check not already registered
+    const existing = await userProfCol.where('personId', '==', personId).get();
+    if (!existing.empty) { showAuthError('registerError', 'This person already has an account.'); return; }
     const personSnap = await peopleCol.doc(personId).get();
-    const displayName = personSnap.exists ? personSnap.data().name : email;
-
-    await userProfCol.doc(cred.user.uid).set({
+    if (!personSnap.exists) { showAuthError('registerError', 'Person not found.'); return; }
+    const displayName = personSnap.data().name;
+    const uid = makeUid(displayName);
+    const hash = await hashPassword(pw);
+    await userProfCol.doc(uid).set({
       personId,
       displayName,
       isAdmin: false,
-      email,
+      passwordHash: hash,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    // Auth state change will handle showing the app
-
+    currentUser = { uid, personId, displayName, isAdmin: false };
+    showApp();
   } catch(e) {
-    const msg = e.code === 'auth/email-already-in-use' ? 'This email already has an account.' : e.message;
-    showAuthError('registerError', msg);
+    showAuthError('registerError', e.message);
   } finally {
-    setAuthLoading('registerBtn','registerSpinner',false);
+    setAuthLoading('registerBtn', 'registerSpinner', false);
   }
 }
 
-// Handle Enter key in auth forms
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  if (document.getElementById('loginPanel').style.display !== 'none' &&
-      document.getElementById('authGate').style.display !== 'none') {
-    doLogin();
+/* ── SIGN OUT ── */
+async function doSignOut() {
+  closeProfileModal();
+  clearSession();
+  showAuthGate();
+  showToast('Signed out.');
+}
+
+/* ── CHANGE PASSWORD ── */
+async function doChangePassword() {
+  const pw1 = document.getElementById('newPw1').value;
+  const pw2 = document.getElementById('newPw2').value;
+  const err = document.getElementById('pwChangeError');
+  err.textContent = ''; err.classList.remove('show');
+  if (!pw1) { err.textContent = 'Enter a new password.'; err.classList.add('show'); return; }
+  if (pw1.length < 6) { err.textContent = 'Min 6 characters.'; err.classList.add('show'); return; }
+  if (pw1 !== pw2) { err.textContent = 'Passwords do not match.'; err.classList.add('show'); return; }
+  try {
+    const hash = await hashPassword(pw1);
+    await userProfCol.doc(currentUser.uid).update({ passwordHash: hash });
+    closeProfileModal();
+    showToast('Password updated!');
+  } catch(e) {
+    err.textContent = e.message; err.classList.add('show');
   }
-  if (document.getElementById('registerPanel').style.display !== 'none' &&
-      document.getElementById('authGate').style.display !== 'none') {
-    doRegister();
-  }
-});
+}
 
 /* ── User chip + admin UI ── */
 function updateUserChip() {
-  if (!currentProfile) return;
-  const chip = document.getElementById('userChip');
-  const color = getColor(currentProfile.personId);
+  if (!currentUser) return;
+  const color = getColor(currentUser.personId);
   document.getElementById('userChipAvatar').style.background = color.bg;
   document.getElementById('userChipAvatar').style.color = color.text;
-  document.getElementById('userChipAvatar').textContent = initials(currentProfile.displayName);
-  document.getElementById('userChipName').textContent = currentProfile.displayName.split(' ')[0];
-  document.getElementById('userChipCrown').style.display = currentProfile.isAdmin ? 'inline' : 'none';
+  document.getElementById('userChipAvatar').textContent = initials(currentUser.displayName);
+  document.getElementById('userChipName').textContent = currentUser.displayName.split(' ')[0];
+  document.getElementById('userChipCrown').style.display = currentUser.isAdmin ? 'inline' : 'none';
 }
-
 function updateAdminUI() {
-  const isAdmin = currentProfile && currentProfile.isAdmin;
-  document.getElementById('pubHolBtn').style.display = isAdmin ? '' : 'none';
-  document.getElementById('manageBtn').style.display = isAdmin ? '' : 'none';
+  const admin = currentUser && currentUser.isAdmin;
+  document.getElementById('pubHolBtn').style.display = admin ? '' : 'none';
+  document.getElementById('manageBtn').style.display = admin ? '' : 'none';
 }
 
 /* ── Profile modal ── */
 function openProfileModal() {
-  document.getElementById('profileTitle').textContent = currentProfile.displayName;
-  document.getElementById('profileSub').textContent = (currentProfile.isAdmin ? '👑 Admin · ' : '') + (currentUser ? currentUser.email : '');
+  document.getElementById('profileTitle').textContent = currentUser.displayName;
+  document.getElementById('profileSub').textContent = (currentUser.isAdmin ? '👑 Admin' : 'Team member');
   document.getElementById('newPw1').value = '';
   document.getElementById('newPw2').value = '';
   const err = document.getElementById('pwChangeError');
@@ -1358,37 +1385,11 @@ function openProfileModal() {
 }
 function closeProfileModal() { document.getElementById('profileModal').classList.remove('open'); }
 
-async function doChangePassword() {
-  const pw1 = document.getElementById('newPw1').value;
-  const pw2 = document.getElementById('newPw2').value;
-  const err = document.getElementById('pwChangeError');
-  err.textContent = ''; err.classList.remove('show');
-  if (!pw1) { err.textContent = 'Enter a new password.'; err.classList.add('show'); return; }
-  if (pw1.length < 6) { err.textContent = 'Password must be at least 6 characters.'; err.classList.add('show'); return; }
-  if (pw1 !== pw2) { err.textContent = 'Passwords do not match.'; err.classList.add('show'); return; }
-  try {
-    await currentUser.updatePassword(pw1);
-    closeProfileModal();
-    showToast('Password updated!');
-  } catch(e) {
-    const msg = e.code === 'auth/requires-recent-login'
-      ? 'Re-login required. Sign out and sign back in first.'
-      : e.message;
-    err.textContent = msg; err.classList.add('show');
-  }
-}
-
-async function doSignOut() {
-  closeProfileModal();
-  await auth.signOut();
-  showToast('Signed out.');
-}
-
 /* ════════════════════════════════════════════
    PERMISSION HELPERS
 ════════════════════════════════════════════ */
-function isAdmin() { return currentProfile && currentProfile.isAdmin; }
-function myPersonId() { return currentProfile ? currentProfile.personId : null; }
+function isAdmin() { return currentUser && currentUser.isAdmin; }
+function myPersonId() { return currentUser ? currentUser.personId : null; }
 function canEdit(personId) { return isAdmin() || personId === myPersonId(); }
 function canDelete(holiday) { return isAdmin() || holiday.personId === myPersonId(); }
 
