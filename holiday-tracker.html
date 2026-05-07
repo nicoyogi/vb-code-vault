@@ -1879,7 +1879,46 @@ function exportCSV() {
   URL.revokeObjectURL(url);
   showToast('CSV exported!');
 }
+// --- Auto-Logout on Inactivity ---
+  (function() {
+    let inactivityTimeout;
+    const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
 
+    function resetInactivityTimer() {
+      // Clear the previous timer
+      clearTimeout(inactivityTimeout);
+      
+      // Start a new timer
+      inactivityTimeout = setTimeout(() => {
+        console.log("User inactive for 15 minutes. Executing auto-logout.");
+        
+        // Check if the user is actually logged in before trying to sign out
+        // (Assuming you hide the login container when logged in)
+        const loginContainer = document.getElementById('loginContainer');
+        if (loginContainer && loginContainer.style.display === 'none') {
+             doSignOut();
+             alert("You have been automatically logged out due to inactivity.");
+        }
+      }, INACTIVITY_LIMIT);
+    }
+
+    // List of DOM events that signify the user is active
+    const activityEvents = [
+      'mousemove', 
+      'mousedown', 
+      'keydown', 
+      'touchstart', 
+      'scroll'
+    ];
+
+    // Attach the reset function to all activity events
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer, { passive: true });
+    });
+
+    // Start the timer when the script first loads
+    resetInactivityTimer();
+  })();
 /* ════════════════════════════════════════════
    MODAL BACKDROP
 ════════════════════════════════════════════ */
