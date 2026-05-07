@@ -1885,7 +1885,7 @@ function exportCSV() {
     
     // Set to 15 minutes. 
     // Tip: Change "15" to "0.1" (6 seconds) if you want to test if it works quickly!
-    const INACTIVITY_LIMIT = 5000; 
+    const INACTIVITY_LIMIT = 10 * 60 * 1000; 
 
     function resetInactivityTimer() {
       // Clear the previous timer
