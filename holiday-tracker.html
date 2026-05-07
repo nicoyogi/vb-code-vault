@@ -347,7 +347,7 @@
 </head>
 <body>
 
-<!-- MARKUP: Auth Gate, Main App, Modals -->
+<!-- AUTH GATE -->
 <div id="authGate">
   <div class="auth-card">
     <div class="auth-logo">
@@ -357,8 +357,8 @@
     <div class="auth-title">Welcome back</div>
     <div class="auth-sub" id="authSubtitle">SIGN IN TO YOUR ACCOUNT</div>
     <div class="auth-tabs">
-      <button class="auth-tab active" id="tabLogin" onclick="window.AuthModule.switchTab('login')">Sign In</button>
-      <button class="auth-tab" id="tabRegister" onclick="window.AuthModule.switchTab('register')">Register</button>
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Register</button>
     </div>
     <div id="loginPanel">
       <div class="auth-form">
@@ -371,7 +371,7 @@
           <input class="auth-input" type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
         </div>
         <div class="auth-error" id="loginError"></div>
-        <button class="auth-btn" id="loginBtn" onclick="window.AuthModule.login()">
+        <button class="auth-btn" id="loginBtn" onclick="doLogin()">
           <span class="auth-spinner" id="loginSpinner"></span>Sign In
         </button>
       </div>
@@ -394,7 +394,7 @@
           <input class="auth-input" type="password" id="registerConfirm" placeholder="repeat password" autocomplete="new-password">
         </div>
         <div class="auth-error" id="registerError"></div>
-        <button class="auth-btn" id="registerBtn" onclick="window.AuthModule.register()">
+        <button class="auth-btn" id="registerBtn" onclick="doRegister()">
           <span class="auth-spinner" id="registerSpinner"></span>Create Account
         </button>
       </div>
@@ -415,10 +415,10 @@
     <span id="savingIndicator" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);display:none;">
       <span class="saving-dot"></span>Saving...
     </span>
-    <button class="log-btn" onclick="window.LogModule.open()">
+    <button class="log-btn" onclick="openLog()">
       <span class="log-unread-dot" id="logUnreadDot"></span>📋 Log
     </button>
-    <div class="user-chip" id="userChip" onclick="window.ProfileModule.openModal()" title="My account / sign out">
+    <div class="user-chip" id="userChip" onclick="openProfileModal()" title="My account / sign out">
       <div class="user-chip-avatar" id="userChipAvatar"></div>
       <span id="userChipName">…</span>
       <span class="admin-crown" id="userChipCrown" style="display:none;">👑</span>
@@ -434,13 +434,13 @@
     </div>
     <div class="header-actions">
       <div class="view-toggle">
-        <button class="view-btn active" id="viewCalBtn" onclick="window.ViewModule.setView('calendar')">📅 Calendar</button>
-        <button class="view-btn" id="viewGanttBtn" onclick="window.ViewModule.setView('gantt')">📊 Timeline</button>
+        <button class="view-btn active" id="viewCalBtn" onclick="setView('calendar')">📅 Calendar</button>
+        <button class="view-btn" id="viewGanttBtn" onclick="setView('gantt')">📊 Timeline</button>
       </div>
-      <button class="btn btn-export" onclick="window.ExportModule.exportCSV()">⬇ Export CSV</button>
-      <button class="btn btn-ghost admin-only-btn" id="pubHolBtn" onclick="window.AdminModule.openPublicHolidays()" style="display:none;">🗓 Public Hols</button>
-      <button class="btn btn-ghost admin-only-btn" id="manageBtn" onclick="window.AdminModule.openManage()" style="display:none;">⚙ Manage People</button>
-      <button class="btn btn-primary" id="addHolBtn" onclick="window.HolidayModule.openAddModal()">+ Add Holiday</button>
+      <button class="btn btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn btn-ghost admin-only-btn" id="pubHolBtn" onclick="openPublicHolidays()" style="display:none;">🗓 Public Hols</button>
+      <button class="btn btn-ghost admin-only-btn" id="manageBtn" onclick="openManage()" style="display:none;">⚙ Manage People</button>
+      <button class="btn btn-primary" id="addHolBtn" onclick="openAddModal()">+ Add Holiday</button>
     </div>
   </header>
 
@@ -451,11 +451,11 @@
       <div class="calendar-header">
         <div class="calendar-header-left">
           <div class="month-nav">
-            <button class="nav-btn" onclick="window.CalendarModule.changeMonth(-1)">‹</button>
+            <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
             <span class="month-label" id="monthLabel"></span>
-            <button class="nav-btn" onclick="window.CalendarModule.changeMonth(1)">›</button>
+            <button class="nav-btn" onclick="changeMonth(1)">›</button>
           </div>
-          <button class="today-btn" onclick="window.CalendarModule.goToday()">Today</button>
+          <button class="today-btn" onclick="goToday()">Today</button>
         </div>
         <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.06em;">Mon–Fri only</span>
       </div>
@@ -478,7 +478,7 @@
     <div class="sidebar">
       <div class="search-card">
         <div class="search-label">🔍 Search by Date</div>
-        <div class="search-row"><input type="date" id="searchDate" onchange="window.SearchModule.searchByDate()"></div>
+        <div class="search-row"><input type="date" id="searchDate" onchange="searchByDate()"></div>
         <div id="searchResults"></div>
       </div>
       <div class="panel-card">
@@ -525,7 +525,7 @@
       </select>
     </div>
     <label class="half-day-row" id="halfDayRow">
-      <input type="checkbox" id="halfDayCheck" onchange="window.HolidayModule.toggleHalfDay()"> Half-day leave
+      <input type="checkbox" id="halfDayCheck" onchange="toggleHalfDay()"> Half-day leave
     </label>
     <div class="half-day-select" id="halfDaySelect">
       <div class="form-group"><label class="form-label">Which half?</label>
@@ -536,8 +536,8 @@
     <div class="conflict-warn" id="conflictWarn"></div>
     <div id="vacWarning"></div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="window.HolidayModule.closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="window.HolidayModule.save()">Save Holiday</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveHoliday()">Save Holiday</button>
     </div>
   </div>
 </div>
@@ -550,10 +550,10 @@
     <div class="form-group" style="display:flex;gap:8px;">
       <input type="text" id="newPersonName" placeholder="Full name">
       <input type="text" id="newPersonDept" placeholder="Department" style="flex:0.6">
-      <button class="btn btn-primary" onclick="window.AdminModule.addPerson()" style="flex-shrink:0;padding:9px 14px;">+</button>
+      <button class="btn btn-primary" onclick="addPerson()" style="flex-shrink:0;padding:9px 14px;">+</button>
     </div>
     <div class="scrollable" id="peopleList" style="max-height:300px;"></div>
-    <div class="modal-footer"><button class="btn btn-ghost" onclick="window.AdminModule.closeManage()">Close</button></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeManage()">Close</button></div>
   </div>
 </div>
 
@@ -565,10 +565,10 @@
     <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;">
       <input type="date" id="newPubDate" style="flex:0 0 150px;">
       <input type="text" id="newPubName" placeholder="Holiday name" style="flex:1;min-width:140px;">
-      <button class="btn btn-primary" onclick="window.AdminModule.addPublicHoliday()" style="flex-shrink:0;padding:9px 14px;">+</button>
+      <button class="btn btn-primary" onclick="addPublicHoliday()" style="flex-shrink:0;padding:9px 14px;">+</button>
     </div>
     <div class="pub-hol-list" id="pubHolList"></div>
-    <div class="modal-footer"><button class="btn btn-ghost" onclick="window.AdminModule.closePubHol()">Close</button></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closePubHol()">Close</button></div>
   </div>
 </div>
 
@@ -582,982 +582,1307 @@
     <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" id="newPw2" placeholder="repeat password" autocomplete="new-password" style="font-family:'DM Sans',sans-serif;"></div>
     <div class="auth-error" id="pwChangeError" style="margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.7rem;"></div>
     <div class="modal-footer">
-      <button class="btn btn-danger" onclick="window.ProfileModule.signOut()">🚪 Sign Out</button>
-      <button class="btn btn-ghost" onclick="window.ProfileModule.closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="window.ProfileModule.changePassword()">Update Password</button>
+      <button class="btn btn-danger" onclick="doSignOut()">🚪 Sign Out</button>
+      <button class="btn btn-ghost" onclick="closeProfileModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doChangePassword()">Update Password</button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<div class="log-drawer-backdrop" id="logBackdrop" onclick="window.LogModule.close()"></div>
+<div class="log-drawer-backdrop" id="logBackdrop" onclick="closeLog()"></div>
 <div class="log-drawer" id="logDrawer">
   <div class="log-drawer-header">
     <div><div class="log-drawer-title">Activity Log</div><div class="log-drawer-sub" id="logCount">Loading…</div></div>
-    <button class="log-close-btn" onclick="window.LogModule.close()">✕</button>
+    <button class="log-close-btn" onclick="closeLog()">✕</button>
   </div>
   <div class="log-filter-row">
-    <button class="log-filter-btn active" data-filter="all" onclick="window.LogModule.setFilter('all',this)">All</button>
-    <button class="log-filter-btn" data-filter="holiday_add" onclick="window.LogModule.setFilter('holiday_add',this)">🌴 Added</button>
-    <button class="log-filter-btn" data-filter="holiday_delete" onclick="window.LogModule.setFilter('holiday_delete',this)">🗑 Deleted</button>
-    <button class="log-filter-btn" data-filter="vac_reset" onclick="window.LogModule.setFilter('vac_reset',this)">↺ Reset</button>
-    <button class="log-filter-btn" data-filter="person" onclick="window.LogModule.setFilter('person',this)">👤 People</button>
+    <button class="log-filter-btn active" data-filter="all" onclick="setLogFilter('all',this)">All</button>
+    <button class="log-filter-btn" data-filter="holiday_add" onclick="setLogFilter('holiday_add',this)">🌴 Added</button>
+    <button class="log-filter-btn" data-filter="holiday_delete" onclick="setLogFilter('holiday_delete',this)">🗑 Deleted</button>
+    <button class="log-filter-btn" data-filter="vac_reset" onclick="setLogFilter('vac_reset',this)">↺ Reset</button>
+    <button class="log-filter-btn" data-filter="person" onclick="setLogFilter('person',this)">👤 People</button>
   </div>
   <div class="log-body" id="logBody"><div class="log-loading">Loading activity…</div></div>
 </div>
 </div><!-- end #mainApp -->
 
-<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
-
-<!-- MODULES -->
 <script>
-// ════════════════════════════════════════════════════════════════════════════
-// CORE MODULE: Global state + Firebase setup
-// ════════════════════════════════════════════════════════════════════════════
-window.CoreModule = (() => {
-  const firebaseConfig = {
-    apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
-    authDomain: "vb-code-vault.firebaseapp.com",
-    projectId: "vb-code-vault",
-    storageBucket: "vb-code-vault.firebasestorage.app",
-    messagingSenderId: "773245175115",
-    appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
-  };
-  firebase.initializeApp(firebaseConfig);
-  
-  const db = firebase.firestore();
-  const collections = {
-    people: db.collection('wmf_holiday_people'),
-    holidays: db.collection('wmf_holidays'),
-    vacResets: db.collection('wmf_vac_resets'),
-    activity: db.collection('wmf_activity_log'),
-    pubHols: db.collection('wmf_public_holidays'),
-    userProfs: db.collection('wmf_user_profiles')
-  };
+/* ════════════════════════════════════════════
+   FIREBASE INIT
+════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
+  authDomain: "vb-code-vault.firebaseapp.com",
+  projectId: "vb-code-vault",
+  storageBucket: "vb-code-vault.firebasestorage.app",
+  messagingSenderId: "773245175115",
+  appId: "1:773245175115:web:0b6a4f27388f58f026d4ce"
+};
+firebase.initializeApp(firebaseConfig);
+const db          = firebase.firestore();
+const peopleCol   = db.collection('wmf_holiday_people');
+const holidaysCol = db.collection('wmf_holidays');
+const vacResetCol = db.collection('wmf_vac_resets');
+const activityCol = db.collection('wmf_activity_log');
+const pubHolCol   = db.collection('wmf_public_holidays');
+const userProfCol = db.collection('wmf_user_profiles');
 
-  const state = {
-    currentUser: null,
-    appStarted: false,
-    people: [],
-    holidays: [],
-    vacResets: [],
-    publicHolidays: [],
-    userProfiles: [],
-    viewYear: new Date().getFullYear(),
-    viewMonth: new Date().getMonth(),
-    currentView: 'calendar'
-  };
+/* ════════════════════════════════════════════
+   CONSTANTS
+════════════════════════════════════════════ */
+const VACATION_DAYS_PER_YEAR = 12;
+const PALETTE = [
+  { bg: '#6ee7b7', text: '#0e0f13' }, { bg: '#818cf8', text: '#0e0f13' },
+  { bg: '#f59e0b', text: '#0e0f13' }, { bg: '#f87171', text: '#0e0f13' },
+  { bg: '#34d399', text: '#0e0f13' }, { bg: '#a78bfa', text: '#0e0f13' },
+  { bg: '#fbbf24', text: '#0e0f13' }, { bg: '#60a5fa', text: '#0e0f13' },
+];
+const LEAVE_TYPE_ICONS = { vacation: '🌴', sick: '🤒', wfh: '🏠', training: '📚', parental: '👶', other: '📌' };
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  const caches = {
-    pubHolSet: null,
-    vacUsed: {},
-    renderScheduled: false
-  };
+const LOG_META = {
+  holiday_add:    { icon: '🌴', cls: 'add',    tag: 'ADDED',   tagColor: 'rgba(110,231,183,0.15)', tagText: 'var(--accent)' },
+  holiday_delete: { icon: '🗑', cls: 'delete', tag: 'DELETED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
+  vac_reset:      { icon: '↺',  cls: 'reset',  tag: 'RESET',   tagColor: 'rgba(245,158,11,0.15)',  tagText: 'var(--accent2)' },
+  person_add:     { icon: '➕', cls: 'person', tag: 'NEW',     tagColor: 'rgba(129,140,248,0.15)', tagText: 'var(--accent3)' },
+  person_remove:  { icon: '➖', cls: 'person', tag: 'REMOVED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
+};
 
-  const CONSTANTS = {
-    VACATION_DAYS_PER_YEAR: 12,
-    PALETTE: [
-      { bg: '#6ee7b7', text: '#0e0f13' }, { bg: '#818cf8', text: '#0e0f13' },
-      { bg: '#f59e0b', text: '#0e0f13' }, { bg: '#f87171', text: '#0e0f13' },
-      { bg: '#34d399', text: '#0e0f13' }, { bg: '#a78bfa', text: '#0e0f13' },
-      { bg: '#fbbf24', text: '#0e0f13' }, { bg: '#60a5fa', text: '#0e0f13' },
-    ],
-    LEAVE_TYPE_ICONS: { vacation: '🌴', sick: '🤒', wfh: '🏠', training: '📚', parental: '👶', other: '📌' },
-    MONTHS: ['January','February','March','April','May','June','July','August','September','October','November','December'],
-    MONTHS_SHORT: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-    LOG_META: {
-      holiday_add:    { icon: '🌴', cls: 'add',    tag: 'ADDED',   tagColor: 'rgba(110,231,183,0.15)', tagText: 'var(--accent)' },
-      holiday_delete: { icon: '🗑', cls: 'delete', tag: 'DELETED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
-      vac_reset:      { icon: '↺',  cls: 'reset',  tag: 'RESET',   tagColor: 'rgba(245,158,11,0.15)',  tagText: 'var(--accent2)' },
-      person_add:     { icon: '➕', cls: 'person', tag: 'NEW',     tagColor: 'rgba(129,140,248,0.15)', tagText: 'var(--accent3)' },
-      person_remove:  { icon: '➖', cls: 'person', tag: 'REMOVED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
-    }
-  };
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let currentUser    = null;
+let appStarted     = false;
+let people         = [];
+let holidays       = [];
+let vacResets      = [];
+let publicHolidays = [];
+let userProfiles   = [];
+let viewYear       = new Date().getFullYear();
+let viewMonth      = new Date().getMonth();
+let currentView    = 'calendar';
 
-  const bustCaches = () => {
-    caches.pubHolSet = null;
-    caches.vacUsed = {};
-  };
+// Derived caches — busted on data change
+let _pubHolSetCache = null;   // Set of public holiday ISO strings
+let _vacUsedCache   = {};     // Map<"personId:year", number>
+let _renderScheduled = false; // Debounce flag
 
-  const scheduleRender = () => {
-    if (caches.renderScheduled) return;
-    caches.renderScheduled = true;
-    requestAnimationFrame(() => { caches.renderScheduled = false; window.RenderModule.render(); });
-  };
+// ─── REMOVED: _holidayIndexCache (the per-day explosion map) ───
+// holidaysOnDate() now uses a simple .filter() — O(n entries) but
+// avoids building a large Map on every snapshot. The calendar render
+// builds its own month-scoped byDay bucket in one pass instead.
 
-  return {
-    db, collections, state, caches, CONSTANTS,
-    bustCaches, scheduleRender,
-    isAdmin: () => !!(state.currentUser && state.currentUser.isAdmin),
-    myPersonId: () => state.currentUser ? state.currentUser.personId : null,
-    canEdit: personId => state.currentUser && (state.currentUser.isAdmin || personId === state.currentUser.personId),
-    canDelete: holiday => state.currentUser && (state.currentUser.isAdmin || holiday.personId === state.currentUser.personId)
-  };
-})();
+function bustCaches() {
+  _pubHolSetCache = null;
+  _vacUsedCache   = {};
+  // No holiday index to bust — nothing to do here for that path.
+}
 
-// ════════════════════════════════════════════════════════════════════════════
-// UTILS MODULE: Date, color, and formatting utilities
-// ════════════════════════════════════════════════════════════════════════════
-window.UtilsModule = (() => {
-  const dateStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  const parseDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
-  const fmtDate = s => parseDate(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  const initials = name => name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  const fmtDays = n => n % 1 !== 0 ? n.toFixed(1) : String(n);
-  const isWeekday = dateObj => { const d = dateObj.getDay(); return d !== 0 && d !== 6; };
-  const isWeekendIso = iso => { const d = parseDate(iso).getDay(); return d === 0 || d === 6; };
+/* ════════════════════════════════════════════
+   SIMPLE AUTH
+════════════════════════════════════════════ */
+function makeUid(name) {
+  return name.toLowerCase().replace(/\s+/g, '_') + '_' + btoa(name).slice(0, 6);
+}
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + 'grimoire_salt'));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function saveSession(profile) { localStorage.setItem('ht_session', JSON.stringify(profile)); }
+function loadSession() { try { return JSON.parse(localStorage.getItem('ht_session')); } catch { return null; } }
+function clearSession() { localStorage.removeItem('ht_session'); }
 
-  const getColor = personId => {
-    const { people, PALETTE } = window.CoreModule;
-    const idx = people.findIndex(p => p.id === personId);
-    return PALETTE[(idx >= 0 ? idx : 0) % PALETTE.length];
-  };
-
-  const getPerson = id => window.CoreModule.state.people.find(p => p.id === id);
-  const getPersonName = id => { const p = getPerson(id); return p ? p.name : 'Unknown'; };
-
-  const countWeekdays = (startIso, endIso) => {
-    const s = parseDate(startIso), e = parseDate(endIso);
-    if (s > e) return 0;
-    const phSet = window.VacationModule.pubHolSet();
-    let count = 0;
-    const cur = new Date(s);
-    while (cur <= e) {
-      if (isWeekday(cur) && !phSet.has(dateStr(cur))) count++;
-      cur.setDate(cur.getDate() + 1);
-    }
-    return count;
-  };
-
-  const countWeekdaysInYear = (startIso, endIso, year) => {
-    const yStart = `${year}-01-01`, yEnd = `${year}-12-31`;
-    const clampStart = startIso > yStart ? startIso : yStart;
-    const clampEnd   = endIso   < yEnd   ? endIso   : yEnd;
-    if (clampStart > clampEnd) return 0;
-    return countWeekdays(clampStart, clampEnd);
-  };
-
-  return {
-    dateStr, parseDate, fmtDate, initials, fmtDays,
-    isWeekday, isWeekendIso,
-    getColor, getPerson, getPersonName,
-    countWeekdays, countWeekdaysInYear
-  };
-})();
-
-// ════════════════════════════════════════════════════════════════════════════
-// VACATION MODULE: Vacation balance calculations
-// ════════════════════════════════════════════════════════════════════════════
-window.VacationModule = (() => {
-  const { state, caches, CONSTANTS } = window.CoreModule;
-
-  const pubHolSet = () => {
-    if (!caches.pubHolSet) caches.pubHolSet = new Set(state.publicHolidays.map(ph => ph.date));
-    return caches.pubHolSet;
-  };
-
-  const holidaysOnDate = iso => state.holidays.filter(h => h.start <= iso && h.end >= iso);
-
-  const publicHolOnDate = iso => state.publicHolidays.find(ph => ph.date === iso);
-
-  const entryDays = h => {
-    const { isWeekendIso } = window.UtilsModule;
-    if (h.halfDay) {
-      if (isWeekendIso(h.start) || pubHolSet().has(h.start)) return 0;
-      return 0.5;
-    }
-    return window.UtilsModule.countWeekdays(h.start, h.end);
-  };
-
-  const vacUsedByYear = (personId, year) => {
-    const key = `${personId}:${year}`;
-    if (caches.vacUsed[key] !== undefined) return caches.vacUsed[key];
-
-    const phSet = pubHolSet();
-    const { isWeekendIso } = window.UtilsModule;
-    let total = 0;
-    for (const h of state.holidays) {
-      if (h.personId !== personId || h.type !== 'vacation') continue;
-      if (h.halfDay) {
-        if (h.start >= `${year}-01-01` && h.start <= `${year}-12-31`
-            && !isWeekendIso(h.start) && !phSet.has(h.start)) total += 0.5;
-      } else {
-        total += window.UtilsModule.countWeekdaysInYear(h.start, h.end, year);
-      }
-    }
-    caches.vacUsed[key] = total;
-    return total;
-  };
-
-  const vacResetBonus = (personId, year) => {
-    const rec = state.vacResets.find(r => r.personId === personId && r.year === year);
-    return rec ? (rec.resetDays || 0) : 0;
-  };
-
-  const vacAllotment = (personId, year) => CONSTANTS.VACATION_DAYS_PER_YEAR + vacResetBonus(personId, year);
-  const vacRemaining = (personId, year) => vacAllotment(personId, year) - vacUsedByYear(personId, year);
-
-  const getConflicts = (personId, start, end, excludeId) => {
-    return state.holidays.filter(h => h.id !== excludeId && h.personId === personId && h.start <= end && h.end >= start);
-  };
-
-  return {
-    pubHolSet, holidaysOnDate, publicHolOnDate, entryDays,
-    vacUsedByYear, vacResetBonus, vacAllotment, vacRemaining,
-    getConflicts
-  };
-})();
-
-// ════════════════════════════════════════════════════════════════════════════
-// UI MODULE: Toast, status, saving indicators
-// ════════════════════════════════════════════════════════════════════════════
-window.UIModule = (() => {
-  const setStatus = (cls, label) => {
-    document.getElementById('statusDot').className = 'status-dot ' + (cls || '');
-    document.getElementById('statusLabel').textContent = label;
-  };
-
-  const showSaving = on => document.getElementById('savingIndicator').style.display = on ? 'inline-flex' : 'none';
-
-  const showToast = (msg, isError) => {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = isError ? 'error-toast show' : 'show';
-    clearTimeout(t._t);
-    t._t = setTimeout(() => { t.className = ''; }, 2500);
-  };
-
-  return { setStatus, showSaving, showToast };
-})();
-
-// ════════════════════════════════════════════════════════════════════════════
-// AUTH MODULE: Login, register, session management
-// ════════════════════════════════════════════════════════════════════════════
-window.AuthModule = (() => {
-  const { state, collections } = window.CoreModule;
-  const { showToast } = window.UIModule;
-
-  const makeUid = name => name.toLowerCase().replace(/\s+/g, '_') + '_' + btoa(name).slice(0, 6);
-
-  const hashPassword = async pw => {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + 'grimoire_salt'));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-  };
-
-  const saveSession = profile => localStorage.setItem('ht_session', JSON.stringify(profile));
-  const loadSession = () => { try { return JSON.parse(localStorage.getItem('ht_session')); } catch { return null; } };
-  const clearSession = () => localStorage.removeItem('ht_session');
-
-  const switchTab = tab => {
-    document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
-    document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
-    document.getElementById('loginPanel').style.display    = tab === 'login' ? '' : 'none';
-    document.getElementById('registerPanel').style.display = tab === 'register' ? '' : 'none';
-    document.getElementById('authSubtitle').textContent    = tab === 'login' ? 'SIGN IN TO YOUR ACCOUNT' : 'CREATE YOUR ACCOUNT';
-    clearErrors();
-  };
-
-  const showError = (id, msg) => {
-    const el = document.getElementById(id); el.textContent = msg; el.classList.add('show');
-  };
-
-  const clearErrors = () => {
-    ['loginError','registerError'].forEach(id => {
-      const el = document.getElementById(id); el.textContent = ''; el.classList.remove('show');
-    });
-  };
-
-  const setLoading = (btnId, spinnerId, loading) => {
-    document.getElementById(btnId).disabled = loading;
-    document.getElementById(spinnerId).style.display = loading ? 'inline-block' : 'none';
-  };
-
-  const loadPeopleForAuth = async () => {
-    const [loginSel, regSel] = ['loginEmail', 'registerPerson'].map(id => document.getElementById(id));
-    loginSel.innerHTML = regSel.innerHTML = '<option value="">— Loading… —</option>';
+async function initAuth() {
+  const session = loadSession();
+  if (session) {
     try {
-      const [peopleSnap, profSnap] = await Promise.all([
-        collections.people.orderBy('name').get(),
-        collections.userProfs.get()
-      ]);
-      const linkedIds = new Set(profSnap.docs.map(d => d.data().personId));
-
-      loginSel.innerHTML = '<option value="">— Select your name —</option>';
-      regSel.innerHTML   = '<option value="">— Select your name —</option>';
-
-      peopleSnap.docs.forEach(d => {
-        const opt = `<option value="${d.id}">${d.data().name} (${d.data().dept})</option>`;
-        loginSel.insertAdjacentHTML('beforeend', opt);
-        if (!linkedIds.has(d.id)) regSel.insertAdjacentHTML('beforeend', opt);
-      });
-      if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— All members have accounts —</option>';
-    } catch(e) {
-      loginSel.innerHTML = regSel.innerHTML = '<option value="">— Error loading —</option>';
-    }
-  };
-
-  const login = async () => {
-    const personId = document.getElementById('loginEmail').value.trim();
-    const pw = document.getElementById('loginPassword').value;
-    clearErrors();
-    if (!personId || !pw) { showError('loginError', 'Enter your name and password.'); return; }
-    setLoading('loginBtn', 'loginSpinner', true);
-    try {
-      const hash = await hashPassword(pw);
-      const snap = await collections.userProfs.where('personId','==',personId).where('passwordHash','==',hash).get();
-      if (snap.empty) { showError('loginError', 'Incorrect name selection or password.'); return; }
-      const doc = snap.docs[0];
-      state.currentUser = { uid: doc.id, ...doc.data() };
-      showApp();
-    } catch(e) { showError('loginError', e.message); }
-    finally { setLoading('loginBtn', 'loginSpinner', false); }
-  };
-
-  const register = async () => {
-    const personId = document.getElementById('registerPerson').value;
-    const pw       = document.getElementById('registerPassword').value;
-    const pw2      = document.getElementById('registerConfirm').value;
-    clearErrors();
-    if (!personId)   { showError('registerError', 'Select your name.'); return; }
-    if (pw.length < 6) { showError('registerError', 'Password must be at least 6 characters.'); return; }
-    if (pw !== pw2)  { showError('registerError', 'Passwords do not match.'); return; }
-    setLoading('registerBtn', 'registerSpinner', true);
-    try {
-      const [existing, personSnap] = await Promise.all([
-        collections.userProfs.where('personId','==',personId).get(),
-        collections.people.doc(personId).get()
-      ]);
-      if (!existing.empty)  { showError('registerError', 'This person already has an account.'); return; }
-      if (!personSnap.exists) { showError('registerError', 'Person not found.'); return; }
-      const displayName = personSnap.data().name;
-      const uid  = makeUid(displayName);
-      const hash = await hashPassword(pw);
-      await collections.userProfs.doc(uid).set({
-        personId, displayName, isAdmin: false, passwordHash: hash,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      state.currentUser = { uid, personId, displayName, isAdmin: false };
-      showApp();
-    } catch(e) { showError('registerError', e.message); }
-    finally { setLoading('registerBtn', 'registerSpinner', false); }
-  };
-
-  const initAuth = async () => {
-    const session = loadSession();
-    if (session) {
-      try {
-        const snap = await collections.userProfs.doc(session.uid).get();
-        if (snap.exists) { state.currentUser = { uid: session.uid, ...snap.data() }; showApp(); return; }
-      } catch(e) {}
-    }
-    loadPeopleForAuth();
-  };
-
-  return { switchTab, login, register, initAuth, loadPeopleForAuth, clearSession, saveSession };
-})();
-
-// [Rest of modules follow...]
-// Due to length constraints, I'll create a comprehensive second file
-console.log('Core modules loaded. Loading additional modules...');
-</script>
-
-<!-- MODULE CONTINUATION FILE (must be included) -->
-<script>
-// ════════════════════════════════════════════════════════════════════════════
-// ACTIVITY LOG MODULE
-// ════════════════════════════════════════════════════════════════════════════
-window.LogModule = (() => {
-  const { state, collections, CONSTANTS } = window.CoreModule;
-
-  let logs = [], filter = 'all', unreadCount = 0, isOpen = false;
-
-  const writeLog = async (action, message, meta) => {
-    try {
-      await collections.activity.add({
-        action, message, meta: meta || {},
-        ts: firebase.firestore.FieldValue.serverTimestamp(),
-        byUid:  state.currentUser ? state.currentUser.uid : null,
-        byName: state.currentUser ? state.currentUser.displayName : null
-      });
+      const snap = await userProfCol.doc(session.uid).get();
+      if (snap.exists) { currentUser = { uid: session.uid, ...snap.data() }; showApp(); return; }
     } catch(e) {}
-  };
-
-  const startListener = () => {
-    collections.activity.orderBy('ts','desc').limit(100).onSnapshot(snap => {
-      logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      document.getElementById('logCount').textContent = logs.length + ' entries';
-      if (!isOpen && snap.docChanges().some(c => c.type === 'added')) {
-        unreadCount++;
-        document.getElementById('logUnreadDot').classList.add('visible');
-      }
-      if (isOpen) renderEntries();
-    }, () => {});
-  };
-
-  const fmtTime = ts => {
-    if (!ts) return 'just now';
-    const d = typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
-    const diff = Math.floor((Date.now() - d) / 1000);
-    if (diff < 60)    return 'just now';
-    if (diff < 3600)  return Math.floor(diff / 60)   + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600)  + 'h ago';
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-         + ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const renderEntries = () => {
-    const body = document.getElementById('logBody');
-    const display = filter === 'person'
-      ? logs.filter(l => l.action === 'person_add' || l.action === 'person_remove')
-      : filter === 'all' ? logs : logs.filter(l => l.action === filter);
-    document.getElementById('logCount').textContent = display.length + ' of ' + logs.length + ' entries';
-    if (!display.length) { body.innerHTML = '<div class="log-loading">No entries for this filter</div>'; return; }
-
-    body.innerHTML = display.map(log => {
-      const m = CONSTANTS.LOG_META[log.action] || { icon: '📌', cls: 'add', tag: log.action, tagColor: 'rgba(110,231,183,0.1)', tagText: 'var(--accent)' };
-      const byTag = log.byName ? `<span style="color:var(--text-muted);font-size:0.58rem;"> · ${log.byName}</span>` : '';
-      return `<div class="log-entry">
-        <div class="log-icon ${m.cls}">${m.icon}</div>
-        <div class="log-content">
-          <div class="log-msg">${log.message}<span class="log-action-tag" style="background:${m.tagColor};color:${m.tagText};">${m.tag}</span>${byTag}</div>
-          <div class="log-time">${fmtTime(log.ts)}</div>
-        </div>
-      </div>`;
-    }).join('');
-  };
-
-  const open = () => {
-    unreadCount = 0; isOpen = true;
-    document.getElementById('logUnreadDot').classList.remove('visible');
-    document.getElementById('logDrawer').classList.add('open');
-    document.getElementById('logBackdrop').classList.add('open');
-    renderEntries();
-  };
-
-  const close = () => {
-    isOpen = false;
-    document.getElementById('logDrawer').classList.remove('open');
-    document.getElementById('logBackdrop').classList.remove('open');
-  };
-
-  const setFilter = (f, btn) => {
-    filter = f;
-    document.querySelectorAll('.log-filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderEntries();
-  };
-
-  return { writeLog, startListener, open, close, setFilter };
-})();
-
-// ════════════════════════════════════════════════════════════════════════════
-// CALENDAR MODULE
-// ════════════════════════════════════════════════════════════════════════════
-window.CalendarModule = (() => {
-  const { state, CONSTANTS } = window.CoreModule;
-  const { dateStr, parseDate, fmtDate } = window.UtilsModule;
-
-  let dragStart = null, dragEnd = null, isDragging = false;
-
-  const changeMonth = dir => {
-    state.viewMonth += dir;
-    if (state.viewMonth > 11) { state.viewMonth = 0; state.viewYear++; }
-    if (state.viewMonth < 0)  { state.viewMonth = 11; state.viewYear--; }
-    window.RenderModule.render();
-  };
-
-  const goToday = () => {
-    const t = new Date();
-    state.viewYear = t.getFullYear();
-    state.viewMonth = t.getMonth();
-    window.RenderModule.render();
-  };
-
-  const selectDate = iso => {
-    document.getElementById('searchDate').value = iso;
-    window.SearchModule.searchByDate();
-    const [y, m] = iso.split('-').map(Number);
-    state.viewYear = y;
-    state.viewMonth = m - 1;
-    window.RenderModule.render();
-  };
-
-  const startDrag = iso => { isDragging = true; dragStart = iso; dragEnd = iso; highlightDrag(); };
-  const updateDrag = iso => { if (!isDragging) return; dragEnd = iso; highlightDrag(); };
-  const endDrag = iso => {
-    if (!isDragging) return;
-    isDragging = false; dragEnd = iso; highlightDrag();
-    const [s, e] = dragStart <= dragEnd ? [dragStart, dragEnd] : [dragEnd, dragStart];
-    document.getElementById('formStart').value = s;
-    document.getElementById('formEnd').value   = e;
-    if (!document.getElementById('addModal').classList.contains('open')) window.HolidayModule.openAddModal(true);
-    else { window.HolidayModule.updateVacWarning(); window.HolidayModule.updateConflictWarn(); window.HolidayModule.updateWeekendWarn(); }
-  };
-
-  const highlightDrag = () => {
-    if (!dragStart || !dragEnd) return;
-    const [s, e] = dragStart <= dragEnd ? [dragStart, dragEnd] : [dragEnd, dragStart];
-    document.querySelectorAll('.day-cell[data-iso]').forEach(cell => {
-      const iso = cell.dataset.iso;
-      cell.classList.remove('drag-range','drag-start','drag-end');
-      if (iso === s)             cell.classList.add('drag-start');
-      else if (iso === e)        cell.classList.add('drag-end');
-      else if (iso > s && iso < e) cell.classList.add('drag-range');
-    });
-  };
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
-      window.LogModule.close(); return;
-    }
-    const tag = document.activeElement.tagName.toLowerCase();
-    if ((e.key === 'n' || e.key === 'N') && tag !== 'input' && tag !== 'select' && tag !== 'textarea') {
-      if (document.querySelector('.modal-overlay.open') || !state.currentUser) return;
-      window.HolidayModule.openAddModal();
-    }
-  });
-
-  return { changeMonth, goToday, selectDate, startDrag, updateDrag, endDrag };
-})();
-
-// ════════════════════════════════════════════════════════════════════════════
-// VIEW MODULE
-// ════════════════════════════════════════════════════════════════════════════
-window.ViewModule = (() => {
-  const { state } = window.CoreModule;
-
-  const setView = v => {
-    state.currentView = v;
-    document.getElementById('viewCalBtn').classList.toggle('active', v === 'calendar');
-    document.getElementById('viewGanttBtn').classList.toggle('active', v === 'gantt');
-    document.getElementById('calendarView').style.display = v === 'calendar' ? '' : 'none';
-    document.getElementById('ganttView').style.display    = v === 'gantt' ? '' : 'none';
-    window.RenderModule.render();
-  };
-
-  return { setView };
-})();
-
-// [Continuing with remaining modules in next script block...]
-</script>
-
-<script>
-// ════════════════════════════════════════════════════════════════════════════
-// RENDER MODULE (MAIN ORCHESTRATOR)
-// ════════════════════════════════════════════════════════════════════════════
-window.RenderModule = (() => {
-  const render = () => {
-    window.StatsModule.render();
-    if (window.CoreModule.state.currentView === 'calendar') window.CalendarRenderModule.render();
-    else window.GanttRenderModule.render();
-    window.VacBalanceModule.render();
-    window.AwayModule.render();
-    window.AllListModule.render();
-    window.LegendModule.render();
-    window.ProfileModule.updateChip();
-  };
-
-  return { render };
-})();
-
-// ════════════════════════════════════════════════════════════════════════════
-// STATS MODULE
-// ════════════════════════════════════════════════════════════════════════════
-window.StatsModule = (() => {
-  const { state } = window.CoreModule;
-  const { dateStr } = window.UtilsModule;
-  const { holidaysOnDate } = window.VacationModule;
-
-  const render = () => {
-    const today = dateStr(new Date());
-    const awayToday = new Set(holidaysOnDate(today).map(h => h.personId)).size;
-    const monthKey = `${state.viewYear}-${String(state.viewMonth+1).padStart(2,'0')}`;
-    const thisMonth = state.holidays.filter(h => h.start.slice(0,7) === monthKey || h.end.slice(0,7) === monthKey).length;
-    document.getElementById('statsRow').innerHTML =
-      `<div class="stat-box"><div class="stat-num">${state.people.length}</div><div class="stat-label">Team Members</div></div>
-       <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">${awayToday}</div><div class="stat-label">Away Today</div></div>
-       <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${thisMonth}</div><div class="stat-label">This Month</div></div>`;
-  };
-
-  return { render };
-})();
-
-// ════════════════════════════════════════════════════════════════════════════
-// CALENDAR RENDER MODULE
-// ════════════════════════════════════════════════════════════════════════════
-window.CalendarRenderModule = (() => {
-  const { state, CONSTANTS, bustCaches } = window.CoreModule;
-  const { dateStr, parseDate, fmtDate } = window.UtilsModule;
-  const { pubHolSet } = window.VacationModule;
-  const { getColor, getPersonName } = window.UtilsModule;
-
-  const render = () => {
-    document.getElementById('monthLabel').textContent = `${CONSTANTS.MONTHS[state.viewMonth]} ${state.viewYear}`;
-
-    const firstDay = new Date(state.viewYear, state.viewMonth, 1);
-    let startDow = firstDay.getDay(); startDow = startDow === 0 ? 6 : startDow - 1;
-    const daysInMonth = new Date(state.viewYear, state.viewMonth + 1, 0).getDate();
-    const daysInPrevMonth = new Date(state.viewYear, state.viewMonth, 0).getDate();
-    const today = dateStr(new Date());
-    const phSet = pubHolSet();
-    const mPad = String(state.viewMonth + 1).padStart(2, '0');
-    const monthStart = `${state.viewYear}-${mPad}-01`;
-    const monthEnd = `${state.viewYear}-${mPad}-${String(daysInMonth).padStart(2, '0')}`;
-
-    // Build month-scoped bucket
-    const byDay = {};
-    for (const h of state.holidays) {
-      if (h.end < monthStart || h.start > monthEnd) continue;
-      const clampStart = h.start < monthStart ? monthStart : h.start;
-      const clampEnd = h.end > monthEnd ? monthEnd : h.end;
-      const cur = new Date(parseDate(clampStart));
-      const end = parseDate(clampEnd);
-      while (cur <= end) {
-        const iso = dateStr(cur);
-        (byDay[iso] ??= []).push(h);
-        cur.setDate(cur.getDate() + 1);
-      }
-    }
-
-    const cells = [];
-    for (let i = startDow - 1; i >= 0; i--)
-      cells.push({ day: daysInPrevMonth - i, month: state.viewMonth - 1, year: state.viewYear, other: true });
-    for (let d = 1; d <= daysInMonth; d++)
-      cells.push({ day: d, month: state.viewMonth, year: state.viewYear, other: false });
-    const rem = 42 - cells.length;
-    for (let d = 1; d <= rem; d++)
-      cells.push({ day: d, month: state.viewMonth + 1, year: state.viewYear, other: true });
-
-    const grid = document.getElementById('daysGrid');
-    const frag = document.createDocumentFragment();
-
-    cells.forEach(({ day, month, year, other }) => {
-      let mo = month, yr = year;
-      if (mo < 0)  { mo = 11; yr--; }
-      if (mo > 11) { mo = 0; yr++; }
-      const iso = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      const hs = byDay[iso] || [];
-      const isToday = iso === today;
-      const pubHol = phSet.has(iso) ? state.publicHolidays.find(ph => ph.date === iso) : null;
-      const dow = parseDate(iso).getDay();
-      const isWknd = dow === 0 || dow === 6;
-
-      const cell = document.createElement('div');
-      cell.className = ['day-cell', other?'other-month':'', isToday?'today':'', hs.length?'has-holiday':'', pubHol?'public-holiday':'', isWknd?'weekend':''].filter(Boolean).join(' ');
-      cell.dataset.iso = iso;
-
-      cell.addEventListener('mousedown', e => { e.preventDefault(); window.CalendarModule.startDrag(iso); });
-      cell.addEventListener('mouseover', () => window.CalendarModule.updateDrag(iso));
-      cell.addEventListener('mouseup', () => window.CalendarModule.endDrag(iso));
-      cell.addEventListener('click', () => window.CalendarModule.selectDate(iso));
-
-      let pillsHtml = '';
-      hs.slice(0, 3).forEach(h => {
-        const color = getColor(h.personId);
-        const name = getPersonName(h.personId).split(' ')[0];
-        const halfTag = h.halfDay ? `<span style="opacity:0.6;">${h.halfDayPart||''}</span>` : '';
-        pillsHtml += `<div class="holiday-pill" style="background:${color.bg};color:${color.text};">${name}${halfTag}</div>`;
-      });
-      if (hs.length > 3) pillsHtml += `<div class="holiday-pill" style="background:var(--surface3);color:var(--text-muted);">+${hs.length-3}</div>`;
-
-      const pubHolLabel = pubHol ? `<div class="public-holiday-label">${pubHol.name}</div>` : '';
-      const wkndLabel = isWknd && !other ? `<div class="weekend-label">${dow===6?'SAT':'SUN'}</div>` : '';
-      cell.innerHTML = `<div class="day-num">${day}</div><div class="holiday-dots">${pillsHtml}</div>${pubHolLabel}${wkndLabel}`;
-
-      frag.appendChild(cell);
-    });
-
-    grid.innerHTML = '';
-    grid.appendChild(frag);
-  };
-
-  return { render };
-})();
-
-// [Remaining modules continue...]
-// Due to response length, I'll provide the key remaining modules structure
-</script>
-
-<script>
-// ════════════════════════════════════════════════════════════════════════════
-// HOLIDAY MODULE
-// ════════════════════════════════════════════════════════════════════════════
-window.HolidayModule = (() => {
-  const { state, collections } = window.CoreModule;
-  const { UIModule } = window;
-  const { LogModule } = window;
-  const { canDelete, canEdit } = window.CoreModule;
-  const { showToast } = window.UIModule;
-  const { dateStr, countWeekdays, isWeekendIso, parseDate } = window.UtilsModule;
-  const { pubHolSet, getConflicts, vacRemaining, vacAllotment, vacUsedByYear } = window.VacationModule;
-  const { VACATION_DAYS_PER_YEAR, MONTHS, LEAVE_TYPE_ICONS } = window.CoreModule.CONSTANTS;
-
-  let modalListenersAttached = false;
-
-  const toggleHalfDay = () => {
-    const checked = document.getElementById('halfDayCheck').checked;
-    document.getElementById('halfDaySelect').classList.toggle('visible', checked);
-    if (checked) {
-      const s = document.getElementById('formStart').value;
-      if (s) document.getElementById('formEnd').value = s;
-    }
-    updateModalWarnings();
-  };
-
-  let warnTimer = null;
-  const scheduleWarnings = () => {
-    clearTimeout(warnTimer);
-    warnTimer = setTimeout(updateModalWarnings, 16);
-  };
-
-  const updateModalWarnings = () => {
-    updateWeekendWarn(); updateConflictWarn(); updateVacWarning();
-  };
-
-  const attachModalListeners = () => {
-    ['formPerson','formStart','formEnd','formType'].forEach(id => {
-      document.getElementById(id).addEventListener('change', () => {
-        if (id === 'formStart' && document.getElementById('halfDayCheck').checked)
-          document.getElementById('formEnd').value = document.getElementById('formStart').value;
-        scheduleWarnings();
-      });
-    });
-  };
-
-  const openAddModal = (keepDates) => {
-    if (!state.currentUser) { showToast('Please sign in first.', true); return; }
-    if (!modalListenersAttached) { modalListenersAttached = true; attachModalListeners(); }
-
-    const sel = document.getElementById('formPerson');
-    const isAdmin = window.CoreModule.isAdmin();
-    if (isAdmin) {
-      sel.innerHTML = '<option value="">— Select person —</option>';
-      state.people.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.dept})</option>`; });
-      sel.disabled = false;
-      document.getElementById('addModalSub').textContent = 'Record who\'s out and when · weekdays (Mon–Fri) only';
-    } else {
-      const myId = window.CoreModule.myPersonId();
-      const me = window.UtilsModule.getPerson(myId);
-      sel.innerHTML = me ? `<option value="${myId}">${me.name} (${me.dept})</option>` : '<option value="">— Not linked to a person —</option>';
-      sel.disabled = true;
-      document.getElementById('addModalSub').textContent = `Adding holiday for you · ${me ? me.name : ''} · weekdays only`;
-    }
-
-    if (!keepDates) {
-      document.getElementById('formStart').value = '';
-      document.getElementById('formEnd').value = '';
-    }
-    document.getElementById('formNote').value = '';
-    document.getElementById('formType').value = 'vacation';
-    document.getElementById('halfDayCheck').checked = false;
-    document.getElementById('halfDaySelect').classList.remove('visible');
-    document.getElementById('vacWarning').style.display = 'none';
-    document.getElementById('conflictWarn').style.display = 'none';
-    document.getElementById('weekendWarn').style.display = 'none';
-    document.getElementById('addModal').classList.add('open');
-    setTimeout(() => { if (!sel.disabled) sel.focus(); }, 100);
-    if (keepDates) updateModalWarnings();
-  };
-
-  const closeModal = () => {
-    document.getElementById('addModal').classList.remove('open');
-    window.CalendarModule.dragStart = null;
-    window.CalendarModule.dragEnd = null;
-    document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-range','drag-start','drag-end'));
-  };
-
-  const updateWeekendWarn = () => {
-    const start = document.getElementById('formStart').value;
-    const end = document.getElementById('formEnd').value;
-    const warn = document.getElementById('weekendWarn');
-    if (!start || !end || end < start) { warn.style.display = 'none'; return; }
-
-    const wdays = window.UtilsModule.countWeekdays(start, end);
-    if (wdays === 0) {
-      warn.style.display = 'block';
-      warn.style.background = 'var(--red-a12)';
-      warn.style.borderColor = 'var(--red-a25)';
-      warn.style.color = 'var(--red)';
-      warn.textContent = '⛔ Selected dates are weekends or public holidays only — no weekdays to book.';
-      return;
-    }
-
-    const s = parseDate(start), e = parseDate(end);
-    let hasWeekend = false;
-    const cur = new Date(s);
-    while (cur <= e) {
-      const d = cur.getDay();
-      if (d === 0 || d === 6) { hasWeekend = true; break; }
-      cur.setDate(cur.getDate() + 1);
-    }
-
-    if (hasWeekend) {
-      warn.style.display = 'block';
-      warn.style.background = 'var(--accent2-a08)';
-      warn.style.borderColor = 'rgba(245,158,11,0.25)';
-      warn.style.color = 'var(--accent2)';
-      warn.textContent = `⚠ Weekends are excluded — this range counts as ${wdays} weekday${wdays !== 1 ? 's' : ''} (Mon–Fri only).`;
-    } else {
-      warn.style.display = 'none';
-    }
-  };
-
-  const updateConflictWarn = () => {
-    const personId = document.getElementById('formPerson').value;
-    const start = document.getElementById('formStart').value;
-    const end = document.getElementById('formEnd').value;
-    const warn = document.getElementById('conflictWarn');
-    if (!personId || !start || !end || end < start) { warn.style.display = 'none'; return; }
-    const conflicts = getConflicts(personId, start, end, null);
-    warn.style.display = conflicts.length ? 'block' : 'none';
-    if (conflicts.length) {
-      const names = conflicts.map(h => `${LEAVE_TYPE_ICONS[h.type]||'📌'} ${dateStr(h.start)}→${dateStr(h.end)}`).join(', ');
-      warn.textContent = `⚠ Overlaps existing entry: ${names}`;
-    }
-  };
-
-  const updateVacWarning = () => {
-    const personId = document.getElementById('formPerson').value;
-    const start = document.getElementById('formStart').value;
-    const end = document.getElementById('formEnd').value;
-    const type = document.getElementById('formType').value;
-    const halfDay = document.getElementById('halfDayCheck').checked;
-    const warn = document.getElementById('vacWarning');
-
-    if (type !== 'vacation' || !personId || !start || !end || end < start) {
-      warn.style.display = 'none'; return;
-    }
-
-    const startYear = parseInt(start.slice(0, 4));
-    const endYear = parseInt(end.slice(0, 4));
-    const p = window.UtilsModule.getPerson(personId);
-
-    const yearDeductions = {};
-    if (halfDay) {
-      if (!isWeekendIso(start) && !pubHolSet().has(start))
-        yearDeductions[startYear] = 0.5;
-    } else {
-      for (let yr = startYear; yr <= endYear; yr++) {
-        const d = window.UtilsModule.countWeekdaysInYear(start, end, yr);
-        if (d > 0) yearDeductions[yr] = d;
-      }
-    }
-
-    const years = Object.keys(yearDeductions).map(Number).sort();
-    if (!years.length) { warn.style.display = 'none'; return; }
-
-    let worstClass = 'warn-ok';
-    const lines = years.map(yr => {
-      const deduction = yearDeductions[yr];
-      const remaining = vacRemaining(personId, yr);
-      const after = remaining - deduction;
-      const label = years.length > 1 ? ` (${yr})` : '';
-      if (after < 0) {
-        worstClass = 'warn-error';
-        return `⚠ ${deduction}d from ${yr}${label} — only ${remaining} left, ${Math.abs(after).toFixed(1)} over allotment`;
-      } else if (after <= 3) {
-        if (worstClass !== 'warn-error') worstClass = 'warn-caution';
-        return `ℹ ${window.UtilsModule.fmtDays(deduction)}d from ${yr}${label} — ${window.UtilsModule.fmtDays(after)} day${after !== 1 ? 's' : ''} remaining`;
-      } else {
-        return `✓ ${window.UtilsModule.fmtDays(deduction)}d from ${yr}${label} — ${window.UtilsModule.fmtDays(after)} day${after !== 1 ? 's' : ''} remaining`;
-      }
-    });
-
-    warn.style.display = 'block';
-    warn.className = worstClass;
-    warn.textContent = `${p.name}: ` + lines.join(' · ');
-  };
-
-  const save = async () => {
-    const personId = document.getElementById('formPerson').value;
-    let start = document.getElementById('formStart').value;
-    let end = document.getElementById('formEnd').value;
-    const type = document.getElementById('formType').value;
-    const note = document.getElementById('formNote').value.trim();
-    const halfDay = document.getElementById('halfDayCheck').checked;
-    const halfDayPart = halfDay ? document.getElementById('halfDayPart').value : null;
-
-    if (!personId || !start || !end) { showToast('Please fill in person, start and end date.', true); return; }
-    if (end < start) { showToast('End date must be after start date.', true); return; }
-    if (!canEdit(personId)) { showToast('You can only add holidays for yourself.', true); return; }
-    if (halfDay) end = start;
-    if (type === 'vacation' && !halfDay && window.UtilsModule.countWeekdays(start, end) === 0) {
-      showToast('Selected range has no weekdays (or all days are public holidays).', true); return;
-    }
-
-    window.UIModule.showSaving(true);
-    try {
-      const entry = { personId, start, end, type, note, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedByUid: state.currentUser.uid };
-      if (halfDay) { entry.halfDay = true; entry.halfDayPart = halfDayPart; }
-      await collections.holidays.add(entry);
-      const savedName = window.UtilsModule.getPersonName(personId);
-      const icon = LEAVE_TYPE_ICONS[type] || '📌';
-      const halfTag = halfDay ? ` (½ ${halfDayPart})` : '';
-      const wdays = halfDay ? 0.5 : window.UtilsModule.countWeekdays(start, end);
-      await LogModule.writeLog('holiday_add',
-        `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} from ${dateStr(start)} to ${dateStr(end)} (${wdays}d)${note?' · '+note:''}`,
-        { personId, start, end, type }
-      );
-      closeModal(); showToast('Holiday saved!');
-    } catch(e) { showToast('Save failed: '+e.message, true); }
-    finally { window.UIModule.showSaving(false); }
-  };
-
-  const delete_ = async id => {
-    const delH = state.holidays.find(h => h.id === id);
-    if (delH && !canDelete(delH)) { showToast('You can only delete your own entries.', true); return; }
-    if (!confirm('Delete this holiday entry?')) return;
-    window.UIModule.showSaving(true);
-    try {
-      if (delH) {
-        await LogModule.writeLog('holiday_delete',
-          `<strong>${window.UtilsModule.getPersonName(delH.personId)}</strong> — ${LEAVE_TYPE_ICONS[delH.type]||'📌'} ${delH.type} (${dateStr(delH.start)} → ${dateStr(delH.end)}) deleted`,
-          { personId: delH.personId, start: delH.start, end: delH.end }
-        );
-      }
-      await collections.holidays.doc(id).delete();
-      showToast('Entry deleted.');
-      window.SearchModule.searchByDate();
-    } catch(e) { showToast('Delete failed: '+e.message, true); }
-    finally { window.UIModule.showSaving(false); }
-  };
-
-  return { toggleHalfDay, openAddModal, closeModal, updateWeekendWarn, updateConflictWarn, updateVacWarning, save, delete: delete_ };
-})();
-
-// Initialize everything
-window.addEventListener('DOMContentLoaded', async () => {
-  await window.AuthModule.initAuth();
-});
+  }
+  showAuthGate();
+}
 
 function showApp() {
-  const { state } = window.CoreModule;
   document.getElementById('authGate').style.display = 'none';
-  document.getElementById('mainApp').style.display = '';
-  window.AuthModule.saveSession(state.currentUser);
-  window.ProfileModule.updateChip();
-  window.ProfileModule.updateAdminUI();
-  if (!state.appStarted) {
-    state.appStarted = true;
-    window.FirebaseListenersModule.startAll();
-    window.LogModule.startListener();
+  document.getElementById('mainApp').style.display  = '';
+  saveSession(currentUser);
+  updateUserChip();
+  updateAdminUI();
+  if (!appStarted) { appStarted = true; startListeners(); startLogListener(); }
+}
+function showAuthGate() {
+  currentUser = null;
+  document.getElementById('authGate').style.display = 'flex';
+  document.getElementById('mainApp').style.display  = 'none';
+  loadPeopleForAuth();
+}
+
+initAuth();
+
+function switchAuthTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('loginPanel').style.display    = tab === 'login' ? '' : 'none';
+  document.getElementById('registerPanel').style.display = tab === 'register' ? '' : 'none';
+  document.getElementById('authSubtitle').textContent    = tab === 'login' ? 'SIGN IN TO YOUR ACCOUNT' : 'CREATE YOUR ACCOUNT';
+  clearAuthErrors();
+}
+
+function showAuthError(id, msg) {
+  const el = document.getElementById(id); el.textContent = msg; el.classList.add('show');
+}
+function clearAuthErrors() {
+  ['loginError','registerError'].forEach(id => {
+    const el = document.getElementById(id); el.textContent = ''; el.classList.remove('show');
+  });
+}
+function setAuthLoading(btnId, spinnerId, loading) {
+  document.getElementById(btnId).disabled = loading;
+  document.getElementById(spinnerId).style.display = loading ? 'inline-block' : 'none';
+}
+
+async function loadPeopleForAuth() {
+  const [loginSel, regSel] = ['loginEmail', 'registerPerson'].map(id => document.getElementById(id));
+  loginSel.innerHTML = regSel.innerHTML = '<option value="">— Loading… —</option>';
+  try {
+    const [peopleSnap, profSnap] = await Promise.all([
+      peopleCol.orderBy('name').get(),
+      userProfCol.get()
+    ]);
+    const linkedIds = new Set(profSnap.docs.map(d => d.data().personId));
+
+    loginSel.innerHTML = '<option value="">— Select your name —</option>';
+    regSel.innerHTML   = '<option value="">— Select your name —</option>';
+
+    peopleSnap.docs.forEach(d => {
+      const opt = `<option value="${d.id}">${d.data().name} (${d.data().dept})</option>`;
+      loginSel.insertAdjacentHTML('beforeend', opt);
+      if (!linkedIds.has(d.id)) regSel.insertAdjacentHTML('beforeend', opt);
+    });
+    if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— All members have accounts —</option>';
+  } catch(e) {
+    loginSel.innerHTML = regSel.innerHTML = '<option value="">— Error loading —</option>';
   }
 }
 
-function showAuthGate() {
-  window.CoreModule.state.currentUser = null;
-  document.getElementById('authGate').style.display = 'flex';
-  document.getElementById('mainApp').style.display = 'none';
-  window.AuthModule.loadPeopleForAuth();
+async function doLogin() {
+  const personId = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  clearAuthErrors();
+  if (!personId || !pw) { showAuthError('loginError', 'Enter your name and password.'); return; }
+  setAuthLoading('loginBtn', 'loginSpinner', true);
+  try {
+    const hash = await hashPassword(pw);
+    const snap = await userProfCol.where('personId','==',personId).where('passwordHash','==',hash).get();
+    if (snap.empty) { showAuthError('loginError', 'Incorrect name selection or password.'); return; }
+    const doc = snap.docs[0];
+    currentUser = { uid: doc.id, ...doc.data() };
+    showApp();
+  } catch(e) { showAuthError('loginError', e.message); }
+  finally { setAuthLoading('loginBtn', 'loginSpinner', false); }
 }
 
-console.log('✓ Module architecture loaded successfully');
-</script>
+async function doRegister() {
+  const personId = document.getElementById('registerPerson').value;
+  const pw       = document.getElementById('registerPassword').value;
+  const pw2      = document.getElementById('registerConfirm').value;
+  clearAuthErrors();
+  if (!personId)   { showAuthError('registerError', 'Select your name.'); return; }
+  if (pw.length < 6) { showAuthError('registerError', 'Password must be at least 6 characters.'); return; }
+  if (pw !== pw2)  { showAuthError('registerError', 'Passwords do not match.'); return; }
+  setAuthLoading('registerBtn', 'registerSpinner', true);
+  try {
+    const [existing, personSnap] = await Promise.all([
+      userProfCol.where('personId','==',personId).get(),
+      peopleCol.doc(personId).get()
+    ]);
+    if (!existing.empty)  { showAuthError('registerError', 'This person already has an account.'); return; }
+    if (!personSnap.exists) { showAuthError('registerError', 'Person not found.'); return; }
+    const displayName = personSnap.data().name;
+    const uid  = makeUid(displayName);
+    const hash = await hashPassword(pw);
+    await userProfCol.doc(uid).set({
+      personId, displayName, isAdmin: false, passwordHash: hash,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    currentUser = { uid, personId, displayName, isAdmin: false };
+    showApp();
+  } catch(e) { showAuthError('registerError', e.message); }
+  finally { setAuthLoading('registerBtn', 'registerSpinner', false); }
+}
 
-<script src="/holiday-tracker-modules-part2.js"></script>
+async function doSignOut()       { closeProfileModal(); clearSession(); showAuthGate(); showToast('Signed out.'); }
+async function doChangePassword() {
+  const pw1 = document.getElementById('newPw1').value;
+  const pw2 = document.getElementById('newPw2').value;
+  const err = document.getElementById('pwChangeError');
+  err.textContent = ''; err.classList.remove('show');
+  if (!pw1)        { err.textContent = 'Enter a new password.'; err.classList.add('show'); return; }
+  if (pw1.length < 6) { err.textContent = 'Min 6 characters.'; err.classList.add('show'); return; }
+  if (pw1 !== pw2) { err.textContent = 'Passwords do not match.'; err.classList.add('show'); return; }
+  try {
+    const hash = await hashPassword(pw1);
+    await userProfCol.doc(currentUser.uid).update({ passwordHash: hash });
+    closeProfileModal(); showToast('Password updated!');
+  } catch(e) { err.textContent = e.message; err.classList.add('show'); }
+}
+
+/* ════════════════════════════════════════════
+   PERMISSION HELPERS
+════════════════════════════════════════════ */
+const isAdmin    = ()           => !!(currentUser && currentUser.isAdmin);
+const myPersonId = ()           => currentUser ? currentUser.personId : null;
+const canEdit    = personId     => isAdmin() || personId === myPersonId();
+const canDelete  = holiday      => isAdmin() || holiday.personId === myPersonId();
+
+/* ════════════════════════════════════════════
+   UI HELPERS
+════════════════════════════════════════════ */
+function setStatus(cls, label) {
+  document.getElementById('statusDot').className = 'status-dot ' + (cls || '');
+  document.getElementById('statusLabel').textContent = label;
+}
+function showSaving(on) { document.getElementById('savingIndicator').style.display = on ? 'inline-flex' : 'none'; }
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = isError ? 'error-toast show' : 'show';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = ''; }, 2500);
+}
+
+function scheduleRender() {
+  if (_renderScheduled) return;
+  _renderScheduled = true;
+  requestAnimationFrame(() => { _renderScheduled = false; render(); });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+    closeLog(); return;
+  }
+  const tag = document.activeElement.tagName.toLowerCase();
+  if ((e.key === 'n' || e.key === 'N') && tag !== 'input' && tag !== 'select' && tag !== 'textarea') {
+    if (document.querySelector('.modal-overlay.open') || !currentUser) return;
+    openAddModal();
+  }
+});
+
+/* ════════════════════════════════════════════
+   VIEW
+════════════════════════════════════════════ */
+function setView(v) {
+  currentView = v;
+  document.getElementById('viewCalBtn').classList.toggle('active', v === 'calendar');
+  document.getElementById('viewGanttBtn').classList.toggle('active', v === 'gantt');
+  document.getElementById('calendarView').style.display = v === 'calendar' ? '' : 'none';
+  document.getElementById('ganttView').style.display    = v === 'gantt' ? '' : 'none';
+  render();
+}
+
+/* ════════════════════════════════════════════
+   ACTIVITY LOG
+════════════════════════════════════════════ */
+async function writeLog(action, message, meta) {
+  try {
+    await activityCol.add({
+      action, message, meta: meta || {},
+      ts: firebase.firestore.FieldValue.serverTimestamp(),
+      byUid:  currentUser ? currentUser.uid : null,
+      byName: currentUser ? currentUser.displayName : null
+    });
+  } catch(e) {}
+}
+
+let activityLogs = [], logFilter = 'all', logUnreadCount = 0, logOpen = false;
+
+function startLogListener() {
+  activityCol.orderBy('ts','desc').limit(100).onSnapshot(snap => {
+    activityLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    document.getElementById('logCount').textContent = activityLogs.length + ' entries';
+    if (!logOpen && snap.docChanges().some(c => c.type === 'added')) {
+      logUnreadCount++;
+      document.getElementById('logUnreadDot').classList.add('visible');
+    }
+    if (logOpen) renderLogEntries();
+  }, () => {});
+}
+
+function openLog() {
+  logUnreadCount = 0; logOpen = true;
+  document.getElementById('logUnreadDot').classList.remove('visible');
+  document.getElementById('logDrawer').classList.add('open');
+  document.getElementById('logBackdrop').classList.add('open');
+  renderLogEntries();
+}
+function closeLog() {
+  logOpen = false;
+  document.getElementById('logDrawer').classList.remove('open');
+  document.getElementById('logBackdrop').classList.remove('open');
+}
+function setLogFilter(filter, btn) {
+  logFilter = filter;
+  document.querySelectorAll('.log-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLogEntries();
+}
+
+function fmtLogTime(ts) {
+  if (!ts) return 'just now';
+  const d    = typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
+  const diff = Math.floor((Date.now() - d) / 1000);
+  if (diff < 60)    return 'just now';
+  if (diff < 3600)  return Math.floor(diff / 60)   + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600)  + 'h ago';
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+       + ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderLogEntries() {
+  const body = document.getElementById('logBody');
+  const display = logFilter === 'person'
+    ? activityLogs.filter(l => l.action === 'person_add' || l.action === 'person_remove')
+    : logFilter === 'all' ? activityLogs : activityLogs.filter(l => l.action === logFilter);
+  document.getElementById('logCount').textContent = display.length + ' of ' + activityLogs.length + ' entries';
+  if (!display.length) { body.innerHTML = '<div class="log-loading">No entries for this filter</div>'; return; }
+
+  const parts = display.map(log => {
+    const m = LOG_META[log.action] || { icon: '📌', cls: 'add', tag: log.action, tagColor: 'rgba(110,231,183,0.1)', tagText: 'var(--accent)' };
+    const byTag = log.byName ? `<span style="color:var(--text-muted);font-size:0.58rem;"> · ${log.byName}</span>` : '';
+    return `<div class="log-entry">
+      <div class="log-icon ${m.cls}">${m.icon}</div>
+      <div class="log-content">
+        <div class="log-msg">${log.message}<span class="log-action-tag" style="background:${m.tagColor};color:${m.tagText};">${m.tag}</span>${byTag}</div>
+        <div class="log-time">${fmtLogTime(log.ts)}</div>
+      </div>
+    </div>`;
+  });
+  body.innerHTML = parts.join('');
+}
+
+/* ════════════════════════════════════════════
+   FIRESTORE LISTENERS
+════════════════════════════════════════════ */
+function startListeners() {
+  setStatus('', 'Connecting...');
+
+  peopleCol.orderBy('name').onSnapshot(snap => {
+    people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    bustCaches(); scheduleRender();
+    setStatus('online', 'Online');
+    if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
+  }, err => { setStatus('error', 'Error'); showToast('Connection error: ' + err.message, true); });
+
+  holidaysCol.orderBy('start').onSnapshot(snap => {
+    holidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    bustCaches(); scheduleRender();
+  }, err => { showToast('Sync error: ' + err.message, true); });
+
+  vacResetCol.onSnapshot(snap => {
+    vacResets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    bustCaches(); scheduleRender();
+  }, () => {});
+
+  pubHolCol.orderBy('date').onSnapshot(snap => {
+    publicHolidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    bustCaches(); scheduleRender();
+  }, () => {});
+
+  userProfCol.onSnapshot(snap => {
+    userProfiles = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
+  }, () => {});
+}
+
+/* ════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════ */
+/** Memoized public holiday Set — computed once per data change. */
+function pubHolSet() {
+  if (!_pubHolSetCache) _pubHolSetCache = new Set(publicHolidays.map(ph => ph.date));
+  return _pubHolSetCache;
+}
+
+/**
+ * PERF FIX 1: holidaysOnDate — O(n entries) filter instead of O(days) map lookup.
+ * No index to build or bust. For typical team sizes (<200 entries) this is faster
+ * overall because we avoid the expensive map-build on every snapshot.
+ * Used by: searchByDate, renderAway, renderStats (via holidaysOnDate).
+ */
+function holidaysOnDate(iso) {
+  return holidays.filter(h => h.start <= iso && h.end >= iso);
+}
+
+function getColor(personId) {
+  const idx = people.findIndex(p => p.id === personId);
+  return PALETTE[(idx >= 0 ? idx : 0) % PALETTE.length];
+}
+function initials(name) { return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2); }
+function dateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function fmtDate(s) { return parseDate(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
+function getPerson(id) { return people.find(p => p.id === id); }
+function getPersonName(id) { const p = getPerson(id); return p ? p.name : 'Unknown'; }
+function publicHolOnDate(iso) { return publicHolidays.find(ph => ph.date === iso); }
+function isWeekday(dateObj) { const d = dateObj.getDay(); return d !== 0 && d !== 6; }
+function isWeekendIso(iso) { const d = parseDate(iso).getDay(); return d === 0 || d === 6; }
+
+function countWeekdays(startIso, endIso) {
+  const s = parseDate(startIso), e = parseDate(endIso);
+  if (s > e) return 0;
+  const phSet = pubHolSet();
+  let count = 0;
+  const cur = new Date(s);
+  while (cur <= e) {
+    if (isWeekday(cur) && !phSet.has(dateStr(cur))) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+function countWeekdaysInYear(startIso, endIso, year) {
+  const yStart = `${year}-01-01`, yEnd = `${year}-12-31`;
+  const clampStart = startIso > yStart ? startIso : yStart;
+  const clampEnd   = endIso   < yEnd   ? endIso   : yEnd;
+  if (clampStart > clampEnd) return 0;
+  return countWeekdays(clampStart, clampEnd);
+}
+
+function entryDays(h) {
+  if (h.halfDay) {
+    if (isWeekendIso(h.start) || pubHolSet().has(h.start)) return 0;
+    return 0.5;
+  }
+  return countWeekdays(h.start, h.end);
+}
+
+/* ════════════════════════════════════════════
+   VACATION UTILS — memoized per person+year
+════════════════════════════════════════════ */
+function vacUsedByYear(personId, year) {
+  const key = `${personId}:${year}`;
+  if (_vacUsedCache[key] !== undefined) return _vacUsedCache[key];
+
+  const phSet = pubHolSet();
+  let total = 0;
+  for (const h of holidays) {
+    if (h.personId !== personId || h.type !== 'vacation') continue;
+    if (h.halfDay) {
+      if (h.start >= `${year}-01-01` && h.start <= `${year}-12-31`
+          && !isWeekendIso(h.start) && !phSet.has(h.start)) total += 0.5;
+    } else {
+      total += countWeekdaysInYear(h.start, h.end, year);
+    }
+  }
+  _vacUsedCache[key] = total;
+  return total;
+}
+
+function vacResetBonus(personId, year) {
+  const rec = vacResets.find(r => r.personId === personId && r.year === year);
+  return rec ? (rec.resetDays || 0) : 0;
+}
+function vacAllotment(personId, year) { return VACATION_DAYS_PER_YEAR + vacResetBonus(personId, year); }
+function vacRemaining(personId, year) { return vacAllotment(personId, year) - vacUsedByYear(personId, year); }
+
+function getConflicts(personId, start, end, excludeId) {
+  return holidays.filter(h => h.id !== excludeId && h.personId === personId && h.start <= end && h.end >= start);
+}
+
+function fmtDays(n) { return n % 1 !== 0 ? n.toFixed(1) : String(n); }
+
+/* ════════════════════════════════════════════
+   RENDER ORCHESTRATOR
+════════════════════════════════════════════ */
+function render() {
+  renderStats();
+  if (currentView === 'calendar') renderCalendar();
+  else renderGantt();
+  renderVacBalance();
+  renderAway();
+  renderAllList();
+  renderLegend();
+  updateUserChip();
+}
+
+function updateUserChip() {
+  if (!currentUser) return;
+  const color = getColor(currentUser.personId);
+  const av = document.getElementById('userChipAvatar');
+  av.style.background = color.bg;
+  av.style.color = color.text;
+  av.textContent = initials(currentUser.displayName);
+  document.getElementById('userChipName').textContent = currentUser.displayName.split(' ')[0];
+  document.getElementById('userChipCrown').style.display = currentUser.isAdmin ? 'inline' : 'none';
+}
+function updateAdminUI() {
+  const admin = isAdmin();
+  document.getElementById('pubHolBtn').style.display = admin ? '' : 'none';
+  document.getElementById('manageBtn').style.display  = admin ? '' : 'none';
+}
+
+/* ════════════════════════════════════════════
+   STATS
+════════════════════════════════════════════ */
+function renderStats() {
+  const today = dateStr(new Date());
+  const awayToday = new Set(holidaysOnDate(today).map(h => h.personId)).size;
+  const monthKey = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}`;
+  const thisMonth = holidays.filter(h => h.start.slice(0,7) === monthKey || h.end.slice(0,7) === monthKey).length;
+  document.getElementById('statsRow').innerHTML =
+    `<div class="stat-box"><div class="stat-num">${people.length}</div><div class="stat-label">Team Members</div></div>
+     <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">${awayToday}</div><div class="stat-label">Away Today</div></div>
+     <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${thisMonth}</div><div class="stat-label">This Month</div></div>`;
+}
+
+/* ════════════════════════════════════════════
+   CALENDAR DRAG
+════════════════════════════════════════════ */
+let dragStart = null, dragEnd = null, isDragging = false;
+
+function startDrag(iso) { isDragging = true; dragStart = iso; dragEnd = iso; highlightDrag(); }
+function updateDrag(iso) { if (!isDragging) return; dragEnd = iso; highlightDrag(); }
+function endDrag(iso) {
+  if (!isDragging) return;
+  isDragging = false; dragEnd = iso; highlightDrag();
+  const [s, e] = dragStart <= dragEnd ? [dragStart, dragEnd] : [dragEnd, dragStart];
+  document.getElementById('formStart').value = s;
+  document.getElementById('formEnd').value   = e;
+  if (!document.getElementById('addModal').classList.contains('open')) openAddModal(true);
+  else { updateVacWarning(); updateConflictWarn(); updateWeekendWarn(); }
+}
+function highlightDrag() {
+  if (!dragStart || !dragEnd) return;
+  const [s, e] = dragStart <= dragEnd ? [dragStart, dragEnd] : [dragEnd, dragStart];
+  document.querySelectorAll('.day-cell[data-iso]').forEach(cell => {
+    const iso = cell.dataset.iso;
+    cell.classList.remove('drag-range','drag-start','drag-end');
+    if (iso === s)             cell.classList.add('drag-start');
+    else if (iso === e)        cell.classList.add('drag-end');
+    else if (iso > s && iso < e) cell.classList.add('drag-range');
+  });
+}
+
+/* ════════════════════════════════════════════
+   CALENDAR RENDER
+   PERF FIX 2: Build a month-scoped byDay bucket in ONE pass over holidays
+   instead of using the global day-explosion index. This clamps the work to
+   only the ~30 days visible rather than walking every day of every entry.
+   DocumentFragment for single DOM append preserved.
+════════════════════════════════════════════ */
+function renderCalendar() {
+  document.getElementById('monthLabel').textContent = `${MONTHS[viewMonth]} ${viewYear}`;
+
+  const firstDay   = new Date(viewYear, viewMonth, 1);
+  let startDow = firstDay.getDay(); startDow = startDow === 0 ? 6 : startDow - 1;
+  const daysInMonth     = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+  const today  = dateStr(new Date());
+  const phSet  = pubHolSet();
+  const mPad   = String(viewMonth + 1).padStart(2, '0');
+
+  // ── PERF FIX 2a: month boundaries for fast pre-filter ──
+  const monthStart = `${viewYear}-${mPad}-01`;
+  const monthEnd   = `${viewYear}-${mPad}-${String(daysInMonth).padStart(2, '0')}`;
+
+  // ── PERF FIX 2b: one pass over holidays, bucket into visible days only ──
+  const byDay = {};
+  for (const h of holidays) {
+    // Skip entries that don't touch this month at all
+    if (h.end < monthStart || h.start > monthEnd) continue;
+    // Clamp to the visible month window
+    const clampStart = h.start < monthStart ? monthStart : h.start;
+    const clampEnd   = h.end   > monthEnd   ? monthEnd   : h.end;
+    const cur = new Date(parseDate(clampStart));
+    const end = parseDate(clampEnd);
+    while (cur <= end) {
+      const iso = dateStr(cur);
+      (byDay[iso] ??= []).push(h);
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+
+  const cells = [];
+  for (let i = startDow - 1; i >= 0; i--)
+    cells.push({ day: daysInPrevMonth - i, month: viewMonth - 1, year: viewYear, other: true });
+  for (let d = 1; d <= daysInMonth; d++)
+    cells.push({ day: d, month: viewMonth, year: viewYear, other: false });
+  const rem = 42 - cells.length;
+  for (let d = 1; d <= rem; d++)
+    cells.push({ day: d, month: viewMonth + 1, year: viewYear, other: true });
+
+  const grid = document.getElementById('daysGrid');
+  const frag = document.createDocumentFragment();
+
+  cells.forEach(({ day, month, year, other }) => {
+    let mo = month, yr = year;
+    if (mo < 0)  { mo = 11; yr--; }
+    if (mo > 11) { mo = 0;  yr++; }
+    const iso    = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const hs     = byDay[iso] || [];  // O(1) lookup into our pre-built bucket
+    const isToday = iso === today;
+    const pubHol  = phSet.has(iso) ? publicHolidays.find(ph => ph.date === iso) : null;
+    const dow     = parseDate(iso).getDay();
+    const isWknd  = dow === 0 || dow === 6;
+
+    const cell = document.createElement('div');
+    cell.className = ['day-cell', other?'other-month':'', isToday?'today':'', hs.length?'has-holiday':'', pubHol?'public-holiday':'', isWknd?'weekend':''].filter(Boolean).join(' ');
+    cell.dataset.iso = iso;
+
+    cell.addEventListener('mousedown', e => { e.preventDefault(); startDrag(iso); });
+    cell.addEventListener('mouseover', () => updateDrag(iso));
+    cell.addEventListener('mouseup',   () => endDrag(iso));
+    cell.addEventListener('click',     () => { if (dragStart !== dragEnd) return; selectDate(iso); });
+
+    let pillsHtml = '';
+    hs.slice(0, 3).forEach(h => {
+      const color = getColor(h.personId);
+      const name  = getPersonName(h.personId).split(' ')[0];
+      const halfTag = h.halfDay ? `<span style="opacity:0.6;">${h.halfDayPart||''}</span>` : '';
+      pillsHtml += `<div class="holiday-pill" style="background:${color.bg};color:${color.text};">${name}${halfTag}</div>`;
+    });
+    if (hs.length > 3) pillsHtml += `<div class="holiday-pill" style="background:var(--surface3);color:var(--text-muted);">+${hs.length-3}</div>`;
+
+    const pubHolLabel = pubHol  ? `<div class="public-holiday-label">${pubHol.name}</div>` : '';
+    const wkndLabel   = isWknd && !other ? `<div class="weekend-label">${dow===6?'SAT':'SUN'}</div>` : '';
+    cell.innerHTML = `<div class="day-num">${day}</div><div class="holiday-dots">${pillsHtml}</div>${pubHolLabel}${wkndLabel}`;
+
+    frag.appendChild(cell);
+  });
+
+  grid.innerHTML = '';
+  grid.appendChild(frag);
+
+  document.addEventListener('mouseup', () => { if (isDragging) endDrag(dragEnd); }, { once: true });
+}
+
+/* ════════════════════════════════════════════
+   GANTT RENDER
+════════════════════════════════════════════ */
+function renderGantt() {
+  document.getElementById('monthLabel').textContent = `${MONTHS_SHORT[viewMonth]} ${viewYear} — Timeline`;
+
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const today = dateStr(new Date());
+  const mPad  = String(viewMonth+1).padStart(2,'0');
+
+  let html = `<div class="gantt-header-row"><div class="gantt-name-col">Person</div><div class="gantt-days-header">`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = `${viewYear}-${mPad}-${String(d).padStart(2,'0')}`;
+    const dow = parseDate(iso).getDay();
+    html += `<div class="gantt-day-label${iso===today?' today-col':''}${dow===0||dow===6?' weekend-col':''}">${d}</div>`;
+  }
+  html += `</div></div>`;
+
+  people.forEach(p => {
+    const color = getColor(p.id);
+    let cells = '';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = `${viewYear}-${mPad}-${String(d).padStart(2,'0')}`;
+      const dow = parseDate(iso).getDay();
+      cells += `<div class="gantt-cell${iso===today?' today-col':''}${dow===0||dow===6?' weekend':''}"></div>`;
+    }
+    const mStart = `${viewYear}-${mPad}-01`;
+    const mEnd   = `${viewYear}-${mPad}-${String(daysInMonth).padStart(2,'0')}`;
+    let bars = '';
+    holidays.filter(h => h.personId === p.id).forEach(h => {
+      const clipStart = h.start < mStart ? mStart : h.start;
+      const clipEnd   = h.end   > mEnd   ? mEnd   : h.end;
+      if (clipStart > clipEnd) return;
+      const startDay = parseInt(clipStart.split('-')[2]) - 1;
+      const endDay   = parseInt(clipEnd.split('-')[2]) - 1;
+      const left  = (startDay / daysInMonth) * 100;
+      const width = ((endDay - startDay + 1) / daysInMonth) * 100;
+      const icon  = LEAVE_TYPE_ICONS[h.type] || '📌';
+      bars += `<div class="gantt-bar" style="left:${left}%;width:${width}%;background:${color.bg};" title="${icon} ${h.type} · ${fmtDate(h.start)} → ${fmtDate(h.end)}${h.note?' · '+h.note:''}">${width > 8 ? icon : ''}</div>`;
+    });
+    html += `<div class="gantt-person-row"><div class="gantt-person-name">${p.name.split(' ')[0]}</div><div class="gantt-cells" style="position:relative;">${cells}${bars}</div></div>`;
+  });
+
+  document.getElementById('ganttGrid').innerHTML = html;
+}
+
+/* ════════════════════════════════════════════
+   VACATION BALANCE RENDER
+════════════════════════════════════════════ */
+function renderVacBalance() {
+  const year = viewYear;
+  document.getElementById('vacYearTag').textContent = year;
+  const list = document.getElementById('vacBalanceList');
+  if (!people.length) { list.innerHTML = '<div class="empty-state">No team members yet</div>'; return; }
+
+  list.innerHTML = people.map(p => {
+    const color    = getColor(p.id);
+    const allot    = vacAllotment(p.id, year);
+    const used     = vacUsedByYear(p.id, year);
+    const remaining = allot - used;
+    const pct      = Math.max(0, Math.min(100, (remaining / allot) * 100));
+    let remainClass = 'ok', barColor = '#6ee7b7';
+    if (remaining <= 0)  { remainClass = 'exhausted'; barColor = '#f87171'; }
+    else if (remaining <= 3) { remainClass = 'warn';  barColor = '#f59e0b'; }
+    const bonusBadge = allot > VACATION_DAYS_PER_YEAR
+      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--accent3);margin-left:3px;">+${allot-VACATION_DAYS_PER_YEAR}↩</span>` : '';
+    const resetBtn = isAdmin()
+      ? `<button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name}',${year})" title="Reset vacation balance">↺</button>` : '';
+    return `<div class="vac-row">
+      <div class="avatar" style="width:30px;height:30px;font-size:0.65rem;background:${color.bg};color:${color.text};">${initials(p.name)}</div>
+      <div class="vac-info">
+        <div class="vac-name">${p.name}</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <div class="vac-dept">${p.dept}</div>
+          <div class="vac-bar-wrap" style="flex:1;max-width:60px;"><div class="vac-bar" style="width:${pct}%;background:${barColor};"></div></div>
+          <div class="vac-dept">${fmtDays(used)}/${allot}d used</div>
+        </div>
+      </div>
+      <div class="vac-right">
+        <div class="vac-counter"><span class="vac-remaining ${remainClass}">${fmtDays(remaining)}</span><span class="vac-of">left${bonusBadge}</span></div>
+        ${resetBtn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════
+   AWAY + ALL LIST
+════════════════════════════════════════════ */
+function renderAway() {
+  const today = dateStr(new Date());
+  const away  = holidaysOnDate(today);  // simple filter — no index needed
+  document.getElementById('awayCount').textContent = away.length;
+  const list = document.getElementById('awayList');
+  if (!away.length) { list.innerHTML = '<div class="empty-state">No one is away today ✓</div>'; return; }
+  list.innerHTML = away.map(h => {
+    const p = getPerson(h.personId); if (!p) return '';
+    const color = getColor(h.personId);
+    return `<div class="person-row">
+      <div class="avatar" style="background:${color.bg};color:${color.text};">${initials(p.name)}</div>
+      <div class="person-info"><div class="person-name">${p.name}</div><div class="person-dept">${p.dept}</div></div>
+      <span class="leave-badge chip" style="background:var(--accent-a08);color:var(--accent);">${LEAVE_TYPE_ICONS[h.type]||'📌'}${h.halfDay?' ½':''}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderAllList() {
+  const sorted = [...holidays].sort((a, b) => a.start.localeCompare(b.start));
+  document.getElementById('allCount').textContent = sorted.length;
+  const list = document.getElementById('allList');
+  if (!sorted.length) { list.innerHTML = '<div class="empty-state">No holidays recorded yet</div>'; return; }
+  list.innerHTML = sorted.map(h => {
+    const p = getPerson(h.personId); if (!p) return '';
+    const color   = getColor(h.personId);
+    const halfTag = h.halfDay ? ` · ½ ${h.halfDayPart||''}` : '';
+    const days    = entryDays(h);
+    const del     = canDelete(h)
+      ? `<button class="delete-btn" onclick="deleteHoliday('${h.id}')" title="Delete">✕</button>` : '';
+    return `<div class="list-item-row">
+      <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
+      <div class="list-item-info">
+        <div class="list-item-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'📌'}<span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:4px;">${fmtDays(days)}d</span></div>
+        <div class="list-item-date">${fmtDate(h.start)} → ${fmtDate(h.end)}${halfTag}${h.note?' · '+h.note:''}</div>
+      </div>
+      ${del}
+    </div>`;
+  }).join('');
+}
+
+function renderLegend() {
+  const pubHolLegend = publicHolidays.length ? `<div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Public Holiday</div>` : '';
+  document.getElementById('legend').innerHTML =
+    people.map(p => {
+      const color = getColor(p.id);
+      return `<div class="legend-item"><div class="legend-dot" style="background:${color.bg}"></div>${p.name.split(' ')[0]}</div>`;
+    }).join('') +
+    pubHolLegend +
+    `<div class="legend-item"><div class="legend-dot" style="background:var(--surface3);border:1px solid var(--border);"></div>Weekend (not counted)</div>`;
+}
+
+/* ════════════════════════════════════════════
+   PEOPLE LIST (admin modal)
+════════════════════════════════════════════ */
+function renderPeopleList() {
+  const list = document.getElementById('peopleList');
+  if (!people.length) { list.innerHTML = '<div class="empty-state">No people added yet</div>'; return; }
+  list.innerHTML = people.map(p => {
+    const color = getColor(p.id);
+    const prof  = userProfiles.find(u => u.personId === p.id);
+    let badge = '';
+    if (prof && prof.isAdmin) badge = `<span class="account-badge admin">👑 admin</span>`;
+    else if (prof)            badge = `<span class="account-badge linked">✓ account</span>`;
+    else                      badge = `<span class="account-badge unlinked">no account</span>`;
+    const toggleAdmin = prof
+      ? `<button class="btn btn-sm btn-ghost" onclick="toggleAdminStatus('${prof.uid}','${p.name}',${!!prof.isAdmin})" style="padding:4px 8px;font-size:0.65rem;">${prof.isAdmin?'↓':'↑'}admin</button>`
+      : '';
+    return `<div class="list-item-row" style="flex-wrap:wrap;gap:6px;">
+      <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
+      <div class="list-item-info"><div class="list-item-name">${p.name}</div><div class="list-item-date">${p.dept}</div></div>
+      ${badge}${toggleAdmin}
+      <button class="delete-btn" onclick="removePerson('${p.id}')" title="Remove">✕</button>
+    </div>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════
+   PUBLIC HOLIDAYS (admin)
+════════════════════════════════════════════ */
+function openPublicHolidays() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  renderPubHolList();
+  document.getElementById('pubHolModal').classList.add('open');
+}
+function closePubHol() { document.getElementById('pubHolModal').classList.remove('open'); }
+
+function renderPubHolList() {
+  const list = document.getElementById('pubHolList');
+  if (!publicHolidays.length) { list.innerHTML = '<div class="empty-state">No public holidays added yet</div>'; return; }
+  list.innerHTML = publicHolidays.map(ph =>
+    `<div class="pub-hol-item">
+      <span style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text-dim);flex:0 0 110px;">${fmtDate(ph.date)}</span>
+      <span style="font-size:0.82rem;flex:1;">${ph.name}</span>
+      <button class="delete-btn" onclick="deletePublicHoliday('${ph.id}')" title="Remove">✕</button>
+    </div>`
+  ).join('');
+}
+
+async function addPublicHoliday() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const date = document.getElementById('newPubDate').value;
+  const name = document.getElementById('newPubName').value.trim();
+  if (!date || !name) { showToast('Enter date and name.', true); return; }
+  showSaving(true);
+  try {
+    await pubHolCol.add({ date, name, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    document.getElementById('newPubDate').value = '';
+    document.getElementById('newPubName').value = '';
+    renderPubHolList(); showToast('Public holiday added!');
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+async function deletePublicHoliday(id) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  showSaving(true);
+  try { await pubHolCol.doc(id).delete(); renderPubHolList(); showToast('Removed.'); }
+  catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+/* ════════════════════════════════════════════
+   VACATION RESET (admin)
+════════════════════════════════════════════ */
+async function resetVacation(personId, personName, year) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const existing    = vacResets.find(r => r.personId === personId && r.year === year);
+  const currentBonus = existing ? (existing.resetDays || 0) : 0;
+  const newBonus    = currentBonus + VACATION_DAYS_PER_YEAR;
+  if (!confirm(`Reset vacation for ${personName}?\n\nAdds ${VACATION_DAYS_PER_YEAR} days to ${year} allotment.\n${VACATION_DAYS_PER_YEAR+currentBonus} → ${VACATION_DAYS_PER_YEAR+newBonus} days`)) return;
+  showSaving(true);
+  try {
+    await vacResetCol.doc(`${personId}_${year}`).set({ personId, year, resetDays: newBonus, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    await writeLog('vac_reset', `<strong>${personName}</strong> — vacation balance reset (+${VACATION_DAYS_PER_YEAR} days for ${year})`, { personId, year, newBonus });
+    showToast(`+${VACATION_DAYS_PER_YEAR} days added for ${personName} in ${year}`);
+  } catch(e) { showToast('Reset failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+async function toggleAdminStatus(uid, personName, currentlyAdmin) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  if (currentlyAdmin && uid === currentUser.uid) { showToast("Can't remove your own admin status.", true); return; }
+  if (!confirm(`${currentlyAdmin ? 'Remove' : 'Grant'} admin for ${personName}?`)) return;
+  showSaving(true);
+  try {
+    await userProfCol.doc(uid).update({ isAdmin: !currentlyAdmin });
+    showToast(`${personName} is ${!currentlyAdmin ? 'now an admin' : 'no longer admin'}.`);
+    renderPeopleList();
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+/* ════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════ */
+function changeMonth(dir) {
+  viewMonth += dir;
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
+  render();
+}
+function goToday() { const t = new Date(); viewYear = t.getFullYear(); viewMonth = t.getMonth(); render(); }
+function selectDate(iso) {
+  document.getElementById('searchDate').value = iso;
+  searchByDate();
+  const [y, m] = iso.split('-').map(Number);
+  viewYear = y; viewMonth = m - 1;
+  render();
+}
+
+/* ════════════════════════════════════════════
+   SEARCH
+════════════════════════════════════════════ */
+function searchByDate() {
+  const val = document.getElementById('searchDate').value;
+  const res = document.getElementById('searchResults');
+  if (!val) { res.innerHTML = ''; return; }
+  const hs     = holidaysOnDate(val);  // simple filter
+  const pubHol = publicHolOnDate(val);
+  let html = '';
+  if (pubHol) html += `<div class="search-result-item" style="border-color:var(--accent3-a25);">
+    <div class="result-avatar" style="background:var(--accent3-a12);color:var(--accent3);">🗓</div>
+    <div class="result-info"><div class="result-name">${pubHol.name}</div><div class="result-dates">Public Holiday</div></div>
+  </div>`;
+  if (!hs.length && !pubHol) { res.innerHTML = '<div class="no-results">No one on leave this day</div>'; return; }
+  html += hs.map(h => {
+    const p = getPerson(h.personId); if (!p) return '';
+    const color = getColor(h.personId);
+    return `<div class="search-result-item">
+      <div class="result-avatar" style="background:${color.bg};color:${color.text};">${initials(p.name)}</div>
+      <div class="result-info">
+        <div class="result-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'📌'}${h.halfDay?' ½'+h.halfDayPart:''}</div>
+        <div class="result-dates">${fmtDate(h.start)} → ${fmtDate(h.end)}${h.note?' · '+h.note:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  res.innerHTML = html;
+}
+
+/* ════════════════════════════════════════════
+   ADD MODAL
+════════════════════════════════════════════ */
+function toggleHalfDay() {
+  const checked = document.getElementById('halfDayCheck').checked;
+  document.getElementById('halfDaySelect').classList.toggle('visible', checked);
+  if (checked) {
+    const s = document.getElementById('formStart').value;
+    if (s) document.getElementById('formEnd').value = s;
+  }
+  updateModalWarnings();
+}
+
+let _warnTimer = null;
+function scheduleModalWarnings() {
+  clearTimeout(_warnTimer);
+  _warnTimer = setTimeout(updateModalWarnings, 16);
+}
+function updateModalWarnings() {
+  updateWeekendWarn(); updateConflictWarn(); updateVacWarning();
+}
+
+function attachModalListeners() {
+  ['formPerson','formStart','formEnd','formType'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      if (id === 'formStart' && document.getElementById('halfDayCheck').checked)
+        document.getElementById('formEnd').value = document.getElementById('formStart').value;
+      scheduleModalWarnings();
+    });
+  });
+}
+
+let _modalListenersAttached = false;
+function openAddModal(keepDates) {
+  if (!currentUser) { showToast('Please sign in first.', true); return; }
+  if (!_modalListenersAttached) { _modalListenersAttached = true; attachModalListeners(); }
+
+  const sel = document.getElementById('formPerson');
+  if (isAdmin()) {
+    sel.innerHTML = '<option value="">— Select person —</option>';
+    people.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.dept})</option>`; });
+    sel.disabled = false;
+    document.getElementById('addModalSub').textContent = 'Record who\'s out and when · weekdays (Mon–Fri) only';
+  } else {
+    const myId = myPersonId();
+    const me   = getPerson(myId);
+    sel.innerHTML = me ? `<option value="${myId}">${me.name} (${me.dept})</option>` : '<option value="">— Not linked to a person —</option>';
+    sel.disabled  = true;
+    document.getElementById('addModalSub').textContent = `Adding holiday for you · ${me ? me.name : ''} · weekdays only`;
+  }
+
+  if (!keepDates) {
+    document.getElementById('formStart').value = '';
+    document.getElementById('formEnd').value   = '';
+  }
+  document.getElementById('formNote').value   = '';
+  document.getElementById('formType').value   = 'vacation';
+  document.getElementById('halfDayCheck').checked = false;
+  document.getElementById('halfDaySelect').classList.remove('visible');
+  document.getElementById('vacWarning').style.display    = 'none';
+  document.getElementById('conflictWarn').style.display  = 'none';
+  document.getElementById('weekendWarn').style.display   = 'none';
+  document.getElementById('addModal').classList.add('open');
+  setTimeout(() => { if (!sel.disabled) sel.focus(); }, 100);
+  if (keepDates) updateModalWarnings();
+}
+
+function closeModal() {
+  document.getElementById('addModal').classList.remove('open');
+  dragStart = null; dragEnd = null;
+  document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-range','drag-start','drag-end'));
+}
+
+/* ════════════════════════════════════════════
+   WARNINGS
+════════════════════════════════════════════ */
+function updateWeekendWarn() {
+  const start = document.getElementById('formStart').value;
+  const end   = document.getElementById('formEnd').value;
+  const warn  = document.getElementById('weekendWarn');
+  if (!start || !end || end < start) { warn.style.display = 'none'; return; }
+
+  // Check if the entire range is only weekends/public holidays
+  const wdays = countWeekdays(start, end);
+  if (wdays === 0) {
+    warn.style.display = 'block';
+    warn.style.background = 'var(--red-a12)';
+    warn.style.borderColor = 'var(--red-a25)';
+    warn.style.color = 'var(--red)';
+    warn.textContent = '⛔ Selected dates are weekends or public holidays only — no weekdays to book.';
+    return;
+  }
+
+  const s = parseDate(start), e = parseDate(end);
+  let hasWeekend = false;
+  const cur = new Date(s);
+  while (cur <= e) {
+    const d = cur.getDay();
+    if (d === 0 || d === 6) { hasWeekend = true; break; }
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  if (hasWeekend) {
+    warn.style.display = 'block';
+    warn.style.background = 'var(--accent2-a08)';
+    warn.style.borderColor = 'rgba(245,158,11,0.25)';
+    warn.style.color = 'var(--accent2)';
+    warn.textContent = `⚠ Weekends are excluded — this range counts as ${wdays} weekday${wdays !== 1 ? 's' : ''} (Mon–Fri only).`;
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+function updateConflictWarn() {
+  const personId = document.getElementById('formPerson').value;
+  const start    = document.getElementById('formStart').value;
+  const end      = document.getElementById('formEnd').value;
+  const warn     = document.getElementById('conflictWarn');
+  if (!personId || !start || !end || end < start) { warn.style.display = 'none'; return; }
+  const conflicts = getConflicts(personId, start, end, null);
+  warn.style.display = conflicts.length ? 'block' : 'none';
+  if (conflicts.length) {
+    const names = conflicts.map(h => `${LEAVE_TYPE_ICONS[h.type]||'📌'} ${fmtDate(h.start)}→${fmtDate(h.end)}`).join(', ');
+    warn.textContent = `⚠ Overlaps existing entry: ${names}`;
+  }
+}
+
+function updateVacWarning() {
+  const personId = document.getElementById('formPerson').value;
+  const start    = document.getElementById('formStart').value;
+  const end      = document.getElementById('formEnd').value;
+  const type     = document.getElementById('formType').value;
+  const halfDay  = document.getElementById('halfDayCheck').checked;
+  const warn     = document.getElementById('vacWarning');
+
+  if (type !== 'vacation' || !personId || !start || !end || end < start) {
+    warn.style.display = 'none'; return;
+  }
+
+  const startYear = parseInt(start.slice(0, 4));
+  const endYear   = parseInt(end.slice(0, 4));
+  const p = getPerson(personId);
+
+  const yearDeductions = {};
+  if (halfDay) {
+    if (!isWeekendIso(start) && !pubHolSet().has(start))
+      yearDeductions[startYear] = 0.5;
+  } else {
+    for (let yr = startYear; yr <= endYear; yr++) {
+      const d = countWeekdaysInYear(start, end, yr);
+      if (d > 0) yearDeductions[yr] = d;
+    }
+  }
+
+  const years = Object.keys(yearDeductions).map(Number).sort();
+  if (!years.length) { warn.style.display = 'none'; return; }
+
+  let worstClass = 'warn-ok';
+  const lines = years.map(yr => {
+    const deduction = yearDeductions[yr];
+    const remaining = vacRemaining(personId, yr);
+    const after     = remaining - deduction;
+    const label     = years.length > 1 ? ` (${yr})` : '';
+    if (after < 0) {
+      worstClass = 'warn-error';
+      return `⚠ ${deduction}d from ${yr}${label} — only ${remaining} left, ${Math.abs(after).toFixed(1)} over allotment`;
+    } else if (after <= 3) {
+      if (worstClass !== 'warn-error') worstClass = 'warn-caution';
+      return `ℹ ${fmtDays(deduction)}d from ${yr}${label} — ${fmtDays(after)} day${after !== 1 ? 's' : ''} remaining`;
+    } else {
+      return `✓ ${fmtDays(deduction)}d from ${yr}${label} — ${fmtDays(after)} day${after !== 1 ? 's' : ''} remaining`;
+    }
+  });
+
+  warn.style.display = 'block';
+  warn.className     = worstClass;
+  warn.textContent   = `${p.name}: ` + lines.join(' · ');
+}
+
+/* ════════════════════════════════════════════
+   SAVE / DELETE HOLIDAY
+════════════════════════════════════════════ */
+async function saveHoliday() {
+  const personId    = document.getElementById('formPerson').value;
+  let   start       = document.getElementById('formStart').value;
+  let   end         = document.getElementById('formEnd').value;
+  const type        = document.getElementById('formType').value;
+  const note        = document.getElementById('formNote').value.trim();
+  const halfDay     = document.getElementById('halfDayCheck').checked;
+  const halfDayPart = halfDay ? document.getElementById('halfDayPart').value : null;
+
+  if (!personId || !start || !end) { showToast('Please fill in person, start and end date.', true); return; }
+  if (end < start) { showToast('End date must be after start date.', true); return; }
+  if (!canEdit(personId)) { showToast('You can only add holidays for yourself.', true); return; }
+  if (halfDay) end = start;
+  if (type === 'vacation' && !halfDay && countWeekdays(start, end) === 0) {
+    showToast('Selected range has no weekdays (or all days are public holidays).', true); return;
+  }
+
+  showSaving(true);
+  try {
+    const entry = { personId, start, end, type, note, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedByUid: currentUser.uid };
+    if (halfDay) { entry.halfDay = true; entry.halfDayPart = halfDayPart; }
+    await holidaysCol.add(entry);
+    const savedName = getPersonName(personId);
+    const icon      = LEAVE_TYPE_ICONS[type] || '📌';
+    const halfTag   = halfDay ? ` (½ ${halfDayPart})` : '';
+    const wdays     = halfDay ? 0.5 : countWeekdays(start, end);
+    await writeLog('holiday_add',
+      `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} from ${fmtDate(start)} to ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`,
+      { personId, start, end, type }
+    );
+    closeModal(); showToast('Holiday saved!');
+  } catch(e) { showToast('Save failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+async function deleteHoliday(id) {
+  const delH = holidays.find(h => h.id === id);
+  if (delH && !canDelete(delH)) { showToast('You can only delete your own entries.', true); return; }
+  if (!confirm('Delete this holiday entry?')) return;
+  showSaving(true);
+  try {
+    if (delH) {
+      await writeLog('holiday_delete',
+        `<strong>${getPersonName(delH.personId)}</strong> — ${LEAVE_TYPE_ICONS[delH.type]||'📌'} ${delH.type} (${fmtDate(delH.start)} → ${fmtDate(delH.end)}) deleted`,
+        { personId: delH.personId, start: delH.start, end: delH.end }
+      );
+    }
+    await holidaysCol.doc(id).delete();
+    showToast('Entry deleted.'); searchByDate();
+  } catch(e) { showToast('Delete failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+/* ════════════════════════════════════════════
+   MANAGE PEOPLE (admin)
+════════════════════════════════════════════ */
+function openManage() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  renderPeopleList();
+  document.getElementById('manageModal').classList.add('open');
+}
+function closeManage() { document.getElementById('manageModal').classList.remove('open'); }
+
+async function addPerson() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const name = document.getElementById('newPersonName').value.trim();
+  const dept = document.getElementById('newPersonDept').value.trim() || 'Team';
+  if (!name) { showToast('Enter a name.', true); return; }
+  showSaving(true);
+  try {
+    await peopleCol.add({ name, dept, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    await writeLog('person_add', `<strong>${name}</strong> added to team (${dept})`, { name, dept });
+    document.getElementById('newPersonName').value = '';
+    document.getElementById('newPersonDept').value = '';
+    showToast('Person added!'); renderPeopleList();
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+async function removePerson(id) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  if (!confirm('Remove this person and all their holidays?')) return;
+  showSaving(true);
+  try {
+    const [snap, resetSnap] = await Promise.all([
+      holidaysCol.where('personId','==',id).get(),
+      vacResetCol.where('personId','==',id).get()
+    ]);
+    const batch = db.batch();
+    snap.docs.forEach(d => batch.delete(d.ref));
+    resetSnap.docs.forEach(d => batch.delete(d.ref));
+    batch.delete(peopleCol.doc(id));
+    const removedPerson = people.find(p => p.id === id);
+    await batch.commit();
+    if (removedPerson) await writeLog('person_remove', `<strong>${removedPerson.name}</strong> removed from team (${removedPerson.dept})`, { name: removedPerson.name });
+    renderPeopleList(); showToast('Person removed.');
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+/* ════════════════════════════════════════════
+   PROFILE MODAL
+════════════════════════════════════════════ */
+function openProfileModal() {
+  document.getElementById('profileTitle').textContent = currentUser.displayName;
+  document.getElementById('profileSub').textContent   = currentUser.isAdmin ? '👑 Admin' : 'Team member';
+  document.getElementById('newPw1').value = '';
+  document.getElementById('newPw2').value = '';
+  const err = document.getElementById('pwChangeError');
+  err.textContent = ''; err.classList.remove('show');
+  document.getElementById('profileModal').classList.add('open');
+}
+function closeProfileModal() { document.getElementById('profileModal').classList.remove('open'); }
+
+/* ════════════════════════════════════════════
+   CSV EXPORT
+════════════════════════════════════════════ */
+function exportCSV() {
+  if (!holidays.length) { showToast('No entries to export.', true); return; }
+  const headers = ['Name','Department','Type','Start','End','Weekdays','Half Day','Note'];
+  const rows = holidays.map(h => {
+    const p = getPerson(h.personId);
+    return [
+      p ? p.name : 'Unknown',
+      p ? p.dept : '',
+      h.type,
+      h.start,
+      h.end,
+      fmtDays(entryDays(h)),
+      h.halfDay ? (h.halfDayPart || 'yes') : '',
+      (h.note || '').replace(/,/g, ';')
+    ];
+  });
+  const csv  = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `holidays_${dateStr(new Date())}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV exported!');
+}
+
+/* ════════════════════════════════════════════
+   MODAL BACKDROP
+════════════════════════════════════════════ */
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+});
+</script>
 </body>
 </html>
