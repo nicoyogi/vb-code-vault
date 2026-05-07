@@ -41,7 +41,7 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .orn{display:flex;align-items:center;gap:12px;width:100%;max-width:500px;margin-bottom:1.6rem;animation:rise 1s .32s ease both}
 .orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.25),transparent)}
 .orn-diamond{width:6px;height:6px;background:rgba(212,175,100,.5);transform:rotate(45deg);flex-shrink:0}
-.orn-text{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(212,175,100,.35);white-space:nowrap}
+.orn-text{font-family:var(--cinzel);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:rgba(212,175,100,.35);white-space:nowrap}
 
 /* ─── PROJECT GRID ─── */
 .project-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;margin-bottom:2.8rem;animation:rise 1s .36s ease both}
@@ -52,6 +52,8 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
   backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
   transition:transform .35s cubic-bezier(.16,.84,.24,1.05),box-shadow .35s,border-color .35s,background .35s;
   user-select:none}
+
+.pcard:focus-visible{outline:2px solid rgba(212,175,100,0.8);outline-offset:4px;}
 
 .pcard::before,.pcard::after{content:'';position:absolute;width:14px;height:14px;pointer-events:none;transition:opacity .4s;opacity:.2}
 .pcard::before{top:12px;left:12px;border-top:1px solid rgba(212,175,100,.7);border-left:1px solid rgba(212,175,100,.7)}
@@ -69,15 +71,17 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .pcard:hover:not(.locked){transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-8px);border-color:rgba(212,175,100,.28);box-shadow:0 24px 70px rgba(212,175,100,.14),0 0 0 1px rgba(212,175,100,.08)}
 .pcard:hover::before,.pcard:hover::after{opacity:1}
 
-.pcard.selected{border-color:rgba(212,175,100,.45);background:rgba(20,16,5,.92);box-shadow:0 24px 70px rgba(212,175,100,.2),0 0 0 1px rgba(212,175,100,.12)}
+.pcard.selected{border-color:rgba(212,175,100,.7);background:rgba(20,16,5,.95);box-shadow:0 24px 70px rgba(212,175,100,.2),0 0 0 1px rgba(212,175,100,.12)}
 .pcard.selected::before,.pcard.selected::after{opacity:1}
+.pcard.selected .pcard-top{opacity:1;background:linear-gradient(90deg,transparent,#d4af64,transparent);height:2px;}
+
 
 .pcin{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
 
 .pseal{width:50px;height:50px;margin-bottom:1.1rem;flex-shrink:0}
 
 .pname{font-family:var(--cinzel);font-size:1.1rem;font-weight:600;letter-spacing:.04em;color:rgba(255,255,255,.88);margin-bottom:.45rem}
-.pdesc{font-family:var(--mono);font-size:10px;color:rgba(212,175,100,.28);line-height:1.95;flex:1;letter-spacing:.02em}
+.pdesc{font-family:var(--mono);font-size:11.5px;color:rgba(212,175,100,.45);line-height:1.6;flex:1;letter-spacing:.02em}
 
 .pfoot{margin-top:1.2rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
 
@@ -90,7 +94,9 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .pstatus.lck{color:rgba(212,175,100,.2)}
 
 .parr{width:30px;height:30px;border-radius:50%;border:1px solid rgba(212,175,100,.12);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(212,175,100,.2);flex-shrink:0;transition:all .3s;font-family:var(--mono)}
-.pcard:hover:not(.locked) .parr,.pcard.selected .parr{transform:translateX(4px);border-color:rgba(212,175,100,.55);color:rgba(212,175,100,.9);box-shadow:0 0 14px rgba(212,175,100,.18)}
+.pcard:hover:not(.locked) .parr{transform:translateX(4px);border-color:rgba(212,175,100,.55);color:rgba(212,175,100,.9);box-shadow:0 0 14px rgba(212,175,100,.18)}
+.pcard.selected .parr{transform:translateX(4px);background:rgba(212,175,100,.15);color:#d4af64;border-color:rgba(212,175,100,.55);box-shadow:0 0 14px rgba(212,175,100,.18)}
+
 
 /* ─── REVEAL DIVIDER ─── */
 .sec-div{width:100%;display:flex;align-items:center;gap:14px;margin-bottom:1.6rem;
@@ -98,11 +104,11 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 .sec-div.show{opacity:1;transform:translateY(0);pointer-events:auto}
 .sdl{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.18),transparent)}
 .sec-div-sym{font-family:var(--cinzel);font-size:13px;color:rgba(212,175,100,.2)}
-.sec-div-label{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.32em;text-transform:uppercase;color:rgba(212,175,100,.25);white-space:nowrap}
+.sec-div-label{font-family:var(--cinzel);font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:rgba(212,175,100,.25);white-space:nowrap}
 
 /* ─── TOMES SECTION ─── */
 #tomes-section{width:100%;opacity:0;transform:translateY(22px);transition:opacity .5s .08s,transform .5s .08s;pointer-events:none}
-#tomes-section.show{opacity:1;transform:translateY(0);pointer-events:auto}
+#tomes-section.show{opacity:1;transform:translateY(0);pointer-events:auto;margin-bottom:2.8rem;}
 
 .project-banner{display:flex;align-items:center;gap:10px;background:rgba(212,175,100,.04);border:1px solid rgba(212,175,100,.1);border-radius:14px;padding:.75rem 1.2rem;margin-bottom:1.6rem;font-family:var(--mono);font-size:11px;color:rgba(212,175,100,.4);letter-spacing:.06em}
 .pb-name{color:rgba(212,175,100,.9);font-family:var(--cinzel);font-size:12px;font-weight:600;letter-spacing:.1em}
@@ -182,10 +188,10 @@ h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;
 
 .ctitle{font-family:var(--cinzel);font-size:1.35rem;font-weight:600;letter-spacing:.02em;line-height:1.15;margin-bottom:.8rem;color:rgba(255,255,255,.88)}
 .s2 .ctitle{font-size:1.2rem}
-.cdesc{font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.28);line-height:1.9;flex:1}
+.cdesc{font-family:var(--mono);font-size:11.5px;color:rgba(255,255,255,.45);line-height:1.6;flex:1}
 .cfoot{margin-top:1.6rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .tags{display:flex;gap:5px;flex-wrap:wrap}
-.tag{font-family:var(--mono);font-size:8px;letter-spacing:.06em;padding:3px 9px;border-radius:20px;border:1px solid}
+.tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;padding:3px 9px;border-radius:20px;border:1px solid}
 .card-b .tag{color:rgba(var(--b),.9);border-color:rgba(var(--b),.22);background:rgba(var(--b),.07)}
 .card-v .tag{color:rgba(var(--v),.9);border-color:rgba(var(--v),.22);background:rgba(var(--v),.07)}
 .card-e .tag{color:rgba(var(--e),.9);border-color:rgba(var(--e),.18);background:rgba(var(--e),.05)}
@@ -228,7 +234,6 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
 <canvas id="bg"></canvas>
 
-<!-- RUNE RING -->
 <div class="rune-ring">
 <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
   <g class="ring-spin">
@@ -272,9 +277,8 @@ footer a:hover{color:rgba(212,175,100,.55)}
     <div class="orn-line"></div>
   </div>
 
-  <!-- PROJECT CARDS -->
   <div class="project-grid">
-    <div class="pcard" id="proj-wmf" onclick="selectProject('wmf',this)">
+    <div class="pcard" id="proj-wmf" role="button" tabindex="0" onclick="selectProject('wmf',this)" onkeydown="if(event.key === 'Enter') selectProject('wmf',this)">
       <div class="pcard-top"></div>
       <div class="pblob"></div>
       <div class="pspot"></div>
@@ -293,7 +297,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
       </div>
     </div>
 
-    <div class="pcard" id="proj-siemens" onclick="selectProject('siemens',this)">
+    <div class="pcard" id="proj-siemens" role="button" tabindex="0" onclick="selectProject('siemens',this)" onkeydown="if(event.key === 'Enter') selectProject('siemens',this)">
       <div class="pcard-top"></div>
       <div class="pblob" style="background:rgba(59,130,246,0.12)"></div>
       <div class="pspot"></div>
@@ -313,11 +317,109 @@ footer a:hover{color:rgba(212,175,100,.55)}
     </div>
   </div>
 
-  <!-- HOLIDAY TRACKER (standalone – always visible) -->
+  <div class="sec-div" id="sec-div">
+    <div class="sdl"></div>
+    <div class="sec-div-sym">✦</div>
+    <div class="sec-div-label" id="sec-div-label">II — Select your instrument</div>
+    <div class="sec-div-sym">✦</div>
+    <div class="sdl"></div>
+  </div>
+
+  <div id="tomes-section">
+    <div class="project-banner">
+      <span style="color:rgba(212,175,100,.3);font-size:10px;font-family:var(--mono)">Project</span>
+      <span class="pb-sep">·</span>
+      <span class="pb-name" id="banner-name"></span>
+      <span class="pb-sep">·</span>
+      <span id="banner-sub" style="font-family:var(--mono);font-size:11px"></span>
+    </div>
+
+    <div class="grid">
+
+      <a href="#" class="card card-b" id="c0">
+        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+        <div class="cin">
+          <div class="icon">💾</div>
+          <div class="clabel">Tome I · The Vault</div>
+          <div class="ctitle">VB Code Vault</div>
+          <div class="cdesc">Store, search &amp; conjure VB/VBA spells. Syntax-illuminated, synced to the cloud via Firebase.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">VB</span><span class="tag">VBA</span><span class="tag">Excel</span></div>
+            <div class="arr">⟶</div>
+          </div>
+        </div>
+        <div class="deco">Sub Inscribe()<br>&nbsp;spell.bind()<br>&nbsp;illuminate()<br>End Sub</div>
+      </a>
+
+      <a href="#" class="card card-v" id="c1">
+        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+        <div class="cin">
+          <div class="icon">📝</div>
+          <div class="clabel">Tome II · The Oracle</div>
+          <div class="ctitle">Notes</div>
+          <div class="cdesc">Question, answers &amp; scrolls. Your personal oracle — answers preserved for eternity.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">Q&amp;A</span><span class="tag">Notes</span><span class="tag">Lore</span></div>
+            <div class="arr">⟶</div>
+          </div>
+        </div>
+        <div class="deco">ask("Riddle")<br>&nbsp;.divine(ans)<br>&nbsp;.seal()<br>// eternal ✦</div>
+      </a>
+
+      <a href="#" class="card card-e s2" id="c2">
+        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+        <div class="cin">
+          <div class="icon">📊</div>
+          <div class="cbody">
+            <div class="clabel">Tome III · The Alchemist · Featured Ritual</div>
+            <div class="ctitle">Anmerkung Processor</div>
+            <div class="cdesc">Upload an Excel invoice scroll, select your forwarder (Dachser, K+N, DHL Express, Wackler), and the Grimoire auto-fills the Anmerkung column via your inscribed VB ritual — no installation, no server, pure browser alchemy.</div>
+            <div class="cfoot">
+              <div class="tags"><span class="tag">Dachser</span><span class="tag">K+N</span><span class="tag">DHL</span><span class="tag">Wackler</span><span class="tag">xlsx</span></div>
+              <div class="arr">⟶</div>
+            </div>
+          </div>
+        </div>
+        <div class="deco">transmute(scroll)<br>&nbsp;.forwarder()<br>&nbsp;.alchemize()<br>seal() ✦</div>
+      </a>
+
+      <a href="todo.html" class="card card-pk" id="c4">
+        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+        <div class="cin">
+          <div class="icon">🗂️</div>
+          <div class="clabel">Tome IV · The Ledger</div>
+          <div class="ctitle">Forwarder Task Ledger</div>
+          <div class="cdesc">Track open tasks across Dachser, K+N, DHL Express, Wackler, Honold &amp; ERKA. Log forwarder, data totals, notes &amp; status — mark done when the ritual is complete.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">Tasks</span><span class="tag">Tracking</span><span class="tag">Forwarder</span></div>
+            <div class="arr">⟶</div>
+          </div>
+        </div>
+        <div class="deco">ledger.open()<br>&nbsp;.track(fwd)<br>&nbsp;.seal(done)<br>// bound ✦</div>
+      </a>
+
+      <a href="#" class="card card-a" id="c3">
+        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+        <div class="cin">
+          <div class="icon">✍️</div>
+          <div class="clabel">Tome III · The Scribe</div>
+          <div class="ctitle">Standard Wording</div>
+          <div class="cdesc">A searchable library of pre-written phrases &amp; standard text. Click any entry to copy instantly — add, edit, or organize by category.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">Phrases</span><span class="tag">Templates</span><span class="tag">Copy</span></div>
+            <div class="arr">⟶</div>
+          </div>
+        </div>
+        <div class="deco">scribe.find()<br>&nbsp;.copy(phrase)<br>&nbsp;.paste()<br>// instant ✦</div>
+      </a>
+
+    </div>
+  </div>
+
   <div class="orn" style="margin-top:0;margin-bottom:1.2rem">
     <div class="orn-line"></div>
     <div class="orn-diamond"></div>
-    <div class="orn-text">II — Shared chronicle</div>
+    <div class="orn-text">III — Shared chronicle</div>
     <div class="orn-diamond"></div>
     <div class="orn-line"></div>
   </div>
@@ -338,113 +440,6 @@ footer a:hover{color:rgba(212,175,100,.55)}
     <div class="deco">chronicle.mark()<br>&nbsp;.absence(day)<br>&nbsp;.sync()<br>// eternal ✦</div>
   </a>
 
-  <!-- DIVIDER -->
-  <div class="sec-div" id="sec-div">
-    <div class="sdl"></div>
-    <div class="sec-div-sym">✦</div>
-    <div class="sec-div-label" id="sec-div-label">III — Select your instrument</div>
-    <div class="sec-div-sym">✦</div>
-    <div class="sdl"></div>
-  </div>
-
-  <!-- TOMES -->
-  <div id="tomes-section">
-    <div class="project-banner">
-      <span style="color:rgba(212,175,100,.3);font-size:10px;font-family:var(--mono)">Project</span>
-      <span class="pb-sep">·</span>
-      <span class="pb-name" id="banner-name"></span>
-      <span class="pb-sep">·</span>
-      <span id="banner-sub" style="font-family:var(--mono);font-size:11px"></span>
-    </div>
-
-    <div class="grid">
-
-      <!-- c0: Code Vault (WMF only) -->
-      <a href="#" class="card card-b" id="c0">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">💾</div>
-          <div class="clabel">Tome I · The Vault</div>
-          <div class="ctitle">VB Code Vault</div>
-          <div class="cdesc">Store, search &amp; conjure VB/VBA spells. Syntax-illuminated, synced to the cloud via Firebase.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">VB</span><span class="tag">VBA</span><span class="tag">Excel</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </div>
-        <div class="deco">Sub Inscribe()<br>&nbsp;spell.bind()<br>&nbsp;illuminate()<br>End Sub</div>
-      </a>
-
-      <!-- c1: Knowledge Base -->
-      <a href="#" class="card card-v" id="c1">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">📝</div>
-          <div class="clabel">Tome II · The Oracle</div>
-          <div class="ctitle">Notes</div>
-          <div class="cdesc">Question, answers &amp; scrolls. Your personal oracle — answers preserved for eternity.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">Q&amp;A</span><span class="tag">Notes</span><span class="tag">Lore</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </div>
-        <div class="deco">ask("Riddle")<br>&nbsp;.divine(ans)<br>&nbsp;.seal()<br>// eternal ✦</div>
-      </a>
-
-      <!-- c2: Anmerkung (WMF only) -->
-      <a href="#" class="card card-e s2" id="c2">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">📊</div>
-          <div class="cbody">
-            <div class="clabel">Tome III · The Alchemist · Featured Ritual</div>
-            <div class="ctitle">Anmerkung Processor</div>
-            <div class="cdesc">Upload an Excel invoice scroll, select your forwarder (Dachser, K+N, DHL Express, Wackler), and the Grimoire auto-fills the Anmerkung column via your inscribed VB ritual — no installation, no server, pure browser alchemy.</div>
-            <div class="cfoot">
-              <div class="tags"><span class="tag">Dachser</span><span class="tag">K+N</span><span class="tag">DHL</span><span class="tag">Wackler</span><span class="tag">xlsx</span></div>
-              <div class="arr">⟶</div>
-            </div>
-          </div>
-        </div>
-        <div class="deco">transmute(scroll)<br>&nbsp;.forwarder()<br>&nbsp;.alchemize()<br>seal() ✦</div>
-      </a>
-
-      <!-- c4: Forwarder To-Do Tracker (WMF only) -->
-      <a href="todo.html" class="card card-pk" id="c4">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">🗂️</div>
-          <div class="clabel">Tome IV · The Ledger</div>
-          <div class="ctitle">Forwarder Task Ledger</div>
-          <div class="cdesc">Track open tasks across Dachser, K+N, DHL Express, Wackler, Honold &amp; ERKA. Log forwarder, data totals, notes &amp; status — mark done when the ritual is complete.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">Tasks</span><span class="tag">Tracking</span><span class="tag">Forwarder</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </div>
-        <div class="deco">ledger.open()<br>&nbsp;.track(fwd)<br>&nbsp;.seal(done)<br>// bound ✦</div>
-      </a>
-
-      <!-- c3: Standard Wording (Siemens only) -->
-      <a href="#" class="card card-a" id="c3">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">✍️</div>
-          <div class="clabel">Tome III · The Scribe</div>
-          <div class="ctitle">Standard Wording</div>
-          <div class="cdesc">A searchable library of pre-written phrases &amp; standard text. Click any entry to copy instantly — add, edit, or organize by category.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">Phrases</span><span class="tag">Templates</span><span class="tag">Copy</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </div>
-        <div class="deco">scribe.find()<br>&nbsp;.copy(phrase)<br>&nbsp;.paste()<br>// instant ✦</div>
-      </a>
-
-    </div>
-  </div>
-
-  <!-- SIGIL DIVIDER -->
   <div class="sigil-div">
     <div class="sdl2"></div>
     <div class="sigil-sym">✦ ᛟ ✦</div>
@@ -566,9 +561,12 @@ function selectProject(key,el){
   document.getElementById('sec-div').classList.add('show');
   document.getElementById('tomes-section').classList.add('show');
 
+  // Smoother scroll transition
   setTimeout(()=>{
-    document.getElementById('sec-div').scrollIntoView({behavior:'smooth',block:'start'});
-  },100);
+    const target = document.getElementById('sec-div');
+    const y = target.getBoundingClientRect().top + window.scrollY - 40; 
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }, 250);
 }
 </script>
 </body>
