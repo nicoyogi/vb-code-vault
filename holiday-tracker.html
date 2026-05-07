@@ -1882,7 +1882,10 @@ function exportCSV() {
 // --- Auto-Logout on Inactivity ---
   (function() {
     let inactivityTimeout;
-    const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutes in milliseconds
+    
+    // Set to 15 minutes. 
+    // Tip: Change "15" to "0.1" (6 seconds) if you want to test if it works quickly!
+    const INACTIVITY_LIMIT = 5000; 
 
     function resetInactivityTimer() {
       // Clear the previous timer
@@ -1890,19 +1893,19 @@ function exportCSV() {
       
       // Start a new timer
       inactivityTimeout = setTimeout(() => {
-        console.log("User inactive for 15 minutes. Executing auto-logout.");
         
-        // Check if the user is actually logged in before trying to sign out
-        // (Assuming you hide the login container when logged in)
-        const loginContainer = document.getElementById('loginContainer');
-        if (loginContainer && loginContainer.style.display === 'none') {
-             doSignOut();
-             alert("You have been automatically logged out due to inactivity.");
+        // Check if the user is actively logged in by checking if mainApp is visible
+        const mainApp = document.getElementById('mainApp');
+        
+        if (mainApp && mainApp.style.display !== 'none') {
+             console.log("Inactivity limit reached. Executing auto-logout.");
+             doSignOut(); // Your existing logout function
+             alert("You have been automatically logged out due to 15 minutes of inactivity.");
         }
       }, INACTIVITY_LIMIT);
     }
 
-    // List of DOM events that signify the user is active
+    // List of events that prove the user is still at their computer/phone
     const activityEvents = [
       'mousemove', 
       'mousedown', 
@@ -1911,14 +1914,15 @@ function exportCSV() {
       'scroll'
     ];
 
-    // Attach the reset function to all activity events
+    // Attach the reset function to the window
     activityEvents.forEach(event => {
       window.addEventListener(event, resetInactivityTimer, { passive: true });
     });
 
-    // Start the timer when the script first loads
+    // Start the initial timer
     resetInactivityTimer();
   })();
+ 
 /* ════════════════════════════════════════════
    MODAL BACKDROP
 ════════════════════════════════════════════ */
