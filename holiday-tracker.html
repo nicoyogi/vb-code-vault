@@ -721,13 +721,18 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db          = firebase.firestore();
 
-/* Perf: auto-detect long-polling (faster on restrictive networks / file://,
-   avoids a 30s wait for WebChannel to fail before falling back) + enable
-   IndexedDB offline cache so subsequent loads render from disk instantly. */
+/* Perf: auto-detect long-polling — faster on restrictive networks / file://,
+   avoids a 30s wait for WebChannel to fail before falling back.
+
+   NOTE: We intentionally do NOT call db.enablePersistence() here. IndexedDB
+   persistence can hang the initial connection indefinitely when the DB is
+   locked by another tab, corrupted, or unavailable (private browsing / quota
+   exceeded). The .catch() only swallows the rejection but does not unblock
+   queued queries, which leaves the header stuck on "Connecting...". If you
+   want offline cache back, re-enable it behind a feature flag + watchdog. */
 try {
-  db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+  db.settings({ experimentalAutoDetectLongPolling: true });
 } catch (e) { /* settings already applied */ }
-db.enablePersistence({ synchronizeTabs: true }).catch(() => { /* multi-tab or unsupported browser */ });
 
 const peopleCol   = db.collection('wmf_holiday_people');
 const holidaysCol = db.collection('wmf_holidays');
@@ -879,7 +884,7 @@ function attachAuthPrefetch() {
     people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     _authPrefetchedPeople = true;
     bustCaches();
-    if (appStarted) { scheduleRender(); setStatus('online', 'Online'); }
+    if (appStarted) { scheduleRender(); setStatus('online', 'Online'); clearConnectWatchdog(); }
     if (!appStarted) {
       renderAuthSelectors(
         document.getElementById('loginEmail'),
@@ -1005,6 +1010,52 @@ function setStatus(cls, label) {
 }
 function showSaving(on) { document.getElementById('savingIndicator').style.display = on ? 'inline-flex' : 'none'; }
 
+/* ── CONNECT WATCHDOG ──
+   If the first Firestore snapshot hasn't landed after 8s, show a banner with
+   a Retry button that reloads the page. Firestore's WebChannel can silently
+   hang on restrictive networks / stale IndexedDB — without this the header
+   stays on "Connecting..." forever with no user recourse. */
+let _connectWatchdogTimer = null;
+function armConnectWatchdog() {
+  clearConnectWatchdog();
+  _connectWatchdogTimer = setTimeout(() => {
+    showConnectFailBanner('Still connecting to Firestore after 8s. Your network may be blocking WebChannel/long-polling.');
+  }, 8000);
+}
+function clearConnectWatchdog() {
+  if (_connectWatchdogTimer) { clearTimeout(_connectWatchdogTimer); _connectWatchdogTimer = null; }
+  const b = document.getElementById('connectFailBanner');
+  if (b) b.remove();
+}
+function showConnectFailBanner(msg) {
+  if (document.getElementById('connectFailBanner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'connectFailBanner';
+  banner.style.cssText = 'position:fixed;top:58px;left:0;right:0;z-index:50;background:var(--red-a12);border-bottom:1px solid var(--red-a25);color:var(--red);font-family:DM Mono,monospace;font-size:0.74rem;padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;backdrop-filter:blur(6px);';
+  banner.innerHTML = `
+    <span>⚠ ${msg}</span>
+    <button onclick="retryConnection()" style="background:var(--red);color:#0e0f13;border:none;border-radius:6px;padding:5px 12px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:600;cursor:pointer;">Retry</button>
+    <button onclick="document.getElementById('connectFailBanner').remove()" style="background:transparent;color:var(--red);border:1px solid var(--red-a25);border-radius:6px;padding:5px 12px;font-family:DM Mono,monospace;font-size:0.72rem;cursor:pointer;">Dismiss</button>
+  `;
+  document.body.appendChild(banner);
+}
+async function retryConnection() {
+  // Clear any Firestore IndexedDB databases so a stale/locked cache can't
+  // keep blocking the initial connect, then hard-reload.
+  try {
+    if (window.indexedDB && indexedDB.databases) {
+      const dbs = await indexedDB.databases();
+      await Promise.all(dbs
+        .filter(d => d.name && d.name.startsWith('firestore'))
+        .map(d => new Promise(res => {
+          const req = indexedDB.deleteDatabase(d.name);
+          req.onsuccess = req.onerror = req.onblocked = () => res();
+        })));
+    }
+  } catch(e) {}
+  location.reload();
+}
+
 function showToast(msg, isError) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -1128,19 +1179,25 @@ function renderLogEntries() {
 ════════════════════════════════════════════ */
 function startListeners() {
   setStatus('', 'Connecting...');
+  armConnectWatchdog();
 
   // Perf: people + userProfiles listeners were already attached by
   // attachAuthPrefetch() at page load — no need to re-subscribe here. If we
   // already have a people snapshot, mark the app online immediately.
   attachAuthPrefetch();
-  if (_authPrefetchedPeople) setStatus('online', 'Online');
+  if (_authPrefetchedPeople) { setStatus('online', 'Online'); clearConnectWatchdog(); }
 
   // Critical for first paint: holidays (drives the calendar/gantt).
   holidaysCol.orderBy('start').onSnapshot(snap => {
     holidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     bustCaches(); scheduleRender();
     setStatus('online', 'Online');
-  }, err => { showToast('Sync error: ' + err.message, true); });
+    clearConnectWatchdog();
+  }, err => {
+    setStatus('error', 'Error');
+    showToast('Sync error: ' + err.message, true);
+    showConnectFailBanner(err.message);
+  });
 
   // Perf: defer non-critical listeners until after the first render lands,
   // so the initial "Connecting..." flip happens as soon as possible.
