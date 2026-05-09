@@ -352,6 +352,22 @@
 
   .pw-change-note { background: rgba(110,231,183,0.07); border: 1px solid rgba(110,231,183,0.15); border-radius: 8px; padding: 10px 14px; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 18px; line-height: 1.6; }
 
+  /* ── DEPT FILTER ── */
+  .dept-filter-wrap { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 3px 3px 3px 10px; }
+  .dept-filter-wrap.active { border-color: var(--accent3); background: var(--accent3-a08); }
+  .dept-filter-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .dept-filter-wrap.active .dept-filter-label { color: var(--accent3); }
+  .dept-filter-select { background: transparent; border: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.72rem; padding: 5px 24px 5px 6px; outline: none; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; }
+  .dept-filter-select option { background: var(--surface2); }
+
+  /* ── DEPT MANAGER ── */
+  .dept-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .dept-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-dim); }
+  .dept-chip .dept-count { font-size: 0.58rem; color: var(--text-muted); padding: 1px 5px; background: var(--surface3); border-radius: 8px; }
+  .dept-chip-btn { width: 18px; height: 18px; border-radius: 50%; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; padding: 0; transition: all 0.15s; }
+  .dept-chip-btn:hover { color: var(--accent3); background: var(--accent3-a12); }
+  .dept-chip-btn.del:hover { color: var(--red); background: var(--red-a10); }
+
   /* ── MOBILE POLISH ── */
   @media (max-width: 640px) {
     .app { padding: 18px 14px 60px; }
@@ -463,6 +479,12 @@
         <button class="view-btn active" id="viewCalBtn" onclick="setView('calendar')">📅 Calendar</button>
         <button class="view-btn" id="viewGanttBtn" onclick="setView('gantt')">📊 Timeline</button>
       </div>
+      <div class="dept-filter-wrap" id="deptFilterWrap">
+        <span class="dept-filter-label">Dept</span>
+        <select class="dept-filter-select" id="deptFilter" onchange="setDeptFilter(this.value)">
+          <option value="">All</option>
+        </select>
+      </div>
       <button class="btn btn-export" onclick="exportCSV()">⬇ Export CSV</button>
       <button class="btn btn-ghost admin-only-btn" id="pubHolBtn" onclick="openPublicHolidays()" style="display:none;">🗓 Public Hols</button>
       <button class="btn btn-ghost admin-only-btn" id="manageBtn" onclick="openManage()" style="display:none;">⚙ Manage People</button>
@@ -570,17 +592,53 @@
   </div>
 </div>
 
+<!-- Edit Person Modal -->
+<div class="modal-overlay" id="editPersonModal">
+  <div class="modal">
+    <div class="modal-title">Edit Person</div>
+    <div class="modal-sub" id="editPersonSub">Update name and department · 👑 Admin only</div>
+    <div class="form-group">
+      <label class="form-label">Full Name</label>
+      <input type="text" id="editPersonName" placeholder="Full name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Department</label>
+      <input type="text" id="editPersonDept" list="editPersonDeptOptions" placeholder="Department">
+      <datalist id="editPersonDeptOptions"></datalist>
+    </div>
+    <div class="auth-error" id="editPersonError" style="font-family:'DM Mono',monospace;font-size:0.7rem;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeEditPerson()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditPerson()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Manage People Modal -->
 <div class="modal-overlay" id="manageModal">
-  <div class="modal">
+  <div class="modal" style="max-width:520px;">
     <div class="modal-title">Manage People</div>
-    <div class="modal-sub">Add or remove team members · 👑 Admin only</div>
+    <div class="modal-sub">Add, edit, or remove team members · 👑 Admin only</div>
     <div class="form-group" style="display:flex;gap:8px;">
       <input type="text" id="newPersonName" placeholder="Full name">
-      <input type="text" id="newPersonDept" placeholder="Department" style="flex:0.6">
+      <input type="text" id="newPersonDept" list="newPersonDeptOptions" placeholder="Department" style="flex:0.6">
+      <datalist id="newPersonDeptOptions"></datalist>
       <button class="btn btn-primary" onclick="addPerson()" style="flex-shrink:0;padding:9px 14px;">+</button>
     </div>
     <div class="scrollable" id="peopleList" style="max-height:240px;"></div>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="form-label" style="margin-bottom:8px;">🏷 Departments</div>
+      <div class="dept-list" id="deptManagerList"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="newDeptName" placeholder="New department name" style="flex:1;">
+        <button class="btn btn-primary btn-sm" onclick="addDepartment()" style="flex-shrink:0;">+ Add</button>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-muted);margin-top:6px;line-height:1.5;">
+        Managed departments show in the filter and autocomplete. Free-text depts on existing people still work.
+      </div>
+    </div>
+
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
       <div class="form-label" style="margin-bottom:8px;">⚠ Team Capacity Threshold</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -755,10 +813,11 @@ let holidays       = [];
 let vacResets      = [];
 let publicHolidays = [];
 let userProfiles   = [];
-let teamSettings   = { capacityThreshold: 0 };
+let teamSettings   = { capacityThreshold: 0, departments: [] };
 let viewYear       = new Date().getFullYear();
 let viewMonth      = new Date().getMonth();
 let currentView    = 'calendar';
+let deptFilter     = localStorage.getItem('ht_dept_filter') || '';
 
 // Derived caches — busted on data change
 let _pubHolSetCache = null;   // Set of public holiday ISO strings
@@ -807,6 +866,9 @@ function showApp() {
   saveSession(currentUser);
   updateUserChip();
   updateAdminUI();
+  // Restore dept filter UI state from localStorage (dropdown is populated later via snapshots)
+  const wrap = document.getElementById('deptFilterWrap');
+  if (wrap) wrap.classList.toggle('active', !!deptFilter);
   if (!appStarted) { appStarted = true; startListeners(); startLogListener(); }
 }
 function showAuthGate() {
@@ -1071,7 +1133,12 @@ function startListeners() {
     people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     bustCaches(); scheduleRender();
     setStatus('online', 'Online');
-    if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
+    updateDeptFilterOptions();
+    updateDeptDatalists();
+    if (document.getElementById('manageModal').classList.contains('open')) {
+      renderPeopleList();
+      renderDeptManager();
+    }
   }, err => { setStatus('error', 'Error'); showToast('Connection error: ' + err.message, true); });
 
   holidaysCol.orderBy('start').onSnapshot(snap => {
@@ -1095,9 +1162,16 @@ function startListeners() {
   }, () => {});
 
   settingsCol.doc('team').onSnapshot(snap => {
-    teamSettings = snap.exists ? { capacityThreshold: 0, ...snap.data() } : { capacityThreshold: 0 };
+    teamSettings = snap.exists
+      ? { capacityThreshold: 0, departments: [], ...snap.data() }
+      : { capacityThreshold: 0, departments: [] };
+    if (!Array.isArray(teamSettings.departments)) teamSettings.departments = [];
     const thrInput = document.getElementById('capacityThreshold');
     if (thrInput && document.activeElement !== thrInput) thrInput.value = teamSettings.capacityThreshold || '';
+    updateDeptFilterOptions();
+    updateDeptDatalists();
+    if (document.getElementById('manageModal').classList.contains('open')) renderDeptManager();
+    scheduleRender();
   }, () => {});
 }
 
@@ -1201,6 +1275,57 @@ function getConflicts(personId, start, end, excludeId) {
 function fmtDays(n) { return n % 1 !== 0 ? n.toFixed(1) : String(n); }
 
 /* ════════════════════════════════════════════
+   DEPARTMENTS + FILTER
+════════════════════════════════════════════ */
+/** Union of admin-managed departments and any free-text depts on existing people. */
+function effectiveDepartments() {
+  const set = new Set();
+  (teamSettings.departments || []).forEach(d => { if (d) set.add(d); });
+  people.forEach(p => { if (p.dept) set.add(p.dept); });
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+/** True if a person passes the current dept filter. */
+function passDeptFilter(personId) {
+  if (!deptFilter) return true;
+  const p = getPerson(personId);
+  return p ? p.dept === deptFilter : false;
+}
+
+function setDeptFilter(val) {
+  deptFilter = val || '';
+  if (deptFilter) localStorage.setItem('ht_dept_filter', deptFilter);
+  else            localStorage.removeItem('ht_dept_filter');
+  document.getElementById('deptFilterWrap').classList.toggle('active', !!deptFilter);
+  scheduleRender();
+}
+
+function updateDeptFilterOptions() {
+  const sel = document.getElementById('deptFilter');
+  if (!sel) return;
+  const depts = effectiveDepartments();
+  const current = deptFilter;
+  // If the filtered dept no longer exists, clear the filter
+  if (current && !depts.includes(current)) {
+    deptFilter = '';
+    localStorage.removeItem('ht_dept_filter');
+  }
+  sel.innerHTML = '<option value="">All</option>' +
+    depts.map(d => `<option value="${d}"${d === deptFilter ? ' selected' : ''}>${d}</option>`).join('');
+  sel.value = deptFilter;
+  document.getElementById('deptFilterWrap').classList.toggle('active', !!deptFilter);
+}
+
+function updateDeptDatalists() {
+  const depts = effectiveDepartments();
+  const opts = depts.map(d => `<option value="${d}">`).join('');
+  ['newPersonDeptOptions', 'editPersonDeptOptions'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+/* ════════════════════════════════════════════
    RENDER ORCHESTRATOR
 ════════════════════════════════════════════ */
 function render() {
@@ -1235,11 +1360,18 @@ function updateAdminUI() {
 ════════════════════════════════════════════ */
 function renderStats() {
   const today = dateStr(new Date());
-  const awayToday = new Set(holidaysOnDate(today).map(h => h.personId)).size;
+  const visiblePeople = deptFilter ? people.filter(p => p.dept === deptFilter) : people;
+  const awayToday = new Set(
+    holidaysOnDate(today).filter(h => passDeptFilter(h.personId)).map(h => h.personId)
+  ).size;
   const monthKey = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}`;
-  const thisMonth = holidays.filter(h => h.start.slice(0,7) === monthKey || h.end.slice(0,7) === monthKey).length;
+  const thisMonth = holidays.filter(h =>
+    passDeptFilter(h.personId) &&
+    (h.start.slice(0,7) === monthKey || h.end.slice(0,7) === monthKey)
+  ).length;
+  const teamLabel = deptFilter ? `${deptFilter}` : 'Team Members';
   document.getElementById('statsRow').innerHTML =
-    `<div class="stat-box"><div class="stat-num">${people.length}</div><div class="stat-label">Team Members</div></div>
+    `<div class="stat-box"><div class="stat-num">${visiblePeople.length}</div><div class="stat-label">${teamLabel}</div></div>
      <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">${awayToday}</div><div class="stat-label">Away Today</div></div>
      <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${thisMonth}</div><div class="stat-label">This Month</div></div>`;
 }
@@ -1299,6 +1431,8 @@ function renderCalendar() {
   for (const h of holidays) {
     // Skip entries that don't touch this month at all
     if (h.end < monthStart || h.start > monthEnd) continue;
+    // Apply dept filter
+    if (!passDeptFilter(h.personId)) continue;
     // Clamp to the visible month window
     const clampStart = h.start < monthStart ? monthStart : h.start;
     const clampEnd   = h.end   > monthEnd   ? monthEnd   : h.end;
@@ -1389,6 +1523,7 @@ function renderGantt() {
   html += `</div></div>`;
 
   people.forEach(p => {
+    if (!passDeptFilter(p.id)) return;
     const color = getColor(p.id);
     let cells = '';
     for (let d = 1; d <= daysInMonth; d++) {
@@ -1423,9 +1558,13 @@ function renderVacBalance() {
   const year = viewYear;
   document.getElementById('vacYearTag').textContent = year;
   const list = document.getElementById('vacBalanceList');
-  if (!people.length) { list.innerHTML = '<div class="empty-state">No team members yet</div>'; return; }
+  const filtered = deptFilter ? people.filter(p => p.dept === deptFilter) : people;
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state">${deptFilter ? `No one in ${deptFilter}` : 'No team members yet'}</div>`;
+    return;
+  }
 
-  list.innerHTML = people.map(p => {
+  list.innerHTML = filtered.map(p => {
     const color    = getColor(p.id);
     const allot    = vacAllotment(p.id, year);
     const used     = vacUsedByYear(p.id, year);
@@ -1462,10 +1601,10 @@ function renderVacBalance() {
 ════════════════════════════════════════════ */
 function renderAway() {
   const today = dateStr(new Date());
-  const away  = holidaysOnDate(today);  // simple filter — no index needed
+  const away  = holidaysOnDate(today).filter(h => passDeptFilter(h.personId));
   document.getElementById('awayCount').textContent = away.length;
   const list = document.getElementById('awayList');
-  if (!away.length) { list.innerHTML = '<div class="empty-state">No one is away today ✓</div>'; return; }
+  if (!away.length) { list.innerHTML = `<div class="empty-state">${deptFilter ? `No one in ${deptFilter} is away today ✓` : 'No one is away today ✓'}</div>`; return; }
   list.innerHTML = away.map(h => {
     const p = getPerson(h.personId); if (!p) return '';
     const color = getColor(h.personId);
@@ -1478,10 +1617,11 @@ function renderAway() {
 }
 
 function renderAllList() {
-  const sorted = [...holidays].sort((a, b) => a.start.localeCompare(b.start));
+  const sorted = [...holidays].filter(h => passDeptFilter(h.personId))
+    .sort((a, b) => a.start.localeCompare(b.start));
   document.getElementById('allCount').textContent = sorted.length;
   const list = document.getElementById('allList');
-  if (!sorted.length) { list.innerHTML = '<div class="empty-state">No holidays recorded yet</div>'; return; }
+  if (!sorted.length) { list.innerHTML = `<div class="empty-state">${deptFilter ? `No entries for ${deptFilter}` : 'No holidays recorded yet'}</div>`; return; }
   list.innerHTML = sorted.map(h => {
     const p = getPerson(h.personId); if (!p) return '';
     const color   = getColor(h.personId);
@@ -1506,8 +1646,9 @@ function renderAllList() {
 
 function renderLegend() {
   const pubHolLegend = publicHolidays.length ? `<div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Public Holiday</div>` : '';
+  const legendPeople = deptFilter ? people.filter(p => p.dept === deptFilter) : people;
   document.getElementById('legend').innerHTML =
-    people.map(p => {
+    legendPeople.map(p => {
       const color = getColor(p.id);
       return `<div class="legend-item"><div class="legend-dot" style="background:${color.bg}"></div>${p.name.split(' ')[0]}</div>`;
     }).join('') +
@@ -1535,6 +1676,7 @@ function renderPeopleList() {
       <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
       <div class="list-item-info"><div class="list-item-name">${p.name}</div><div class="list-item-date">${p.dept}</div></div>
       ${badge}${toggleAdmin}
+      <button class="delete-btn" onclick="openEditPerson('${p.id}')" title="Edit name &amp; department" style="color:var(--accent3);">✎</button>
       <button class="delete-btn" onclick="removePerson('${p.id}')" title="Remove">✕</button>
     </div>`;
   }).join('');
@@ -1740,7 +1882,7 @@ function searchByDate() {
   const val = document.getElementById('searchDate').value;
   const res = document.getElementById('searchResults');
   if (!val) { res.innerHTML = ''; return; }
-  const hs     = holidaysOnDate(val);  // simple filter
+  const hs     = holidaysOnDate(val).filter(h => passDeptFilter(h.personId));
   const pubHol = publicHolOnDate(val);
   let html = '';
   if (pubHol) html += `<div class="search-result-item" style="border-color:var(--accent3-a25);">
@@ -2049,6 +2191,124 @@ async function saveCapacityThreshold() {
 }
 
 /* ════════════════════════════════════════════
+   DEPARTMENT MANAGER (admin)
+════════════════════════════════════════════ */
+function renderDeptManager() {
+  const list = document.getElementById('deptManagerList');
+  if (!list) return;
+  const depts = effectiveDepartments();
+  if (!depts.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:8px 0;">No departments yet — add one below or they appear automatically when you set a dept on a person.</div>';
+    return;
+  }
+  list.innerHTML = depts.map(d => {
+    const count = people.filter(p => p.dept === d).length;
+    return `<div class="dept-chip">
+      <span>${d}</span>
+      <span class="dept-count" title="${count} ${count === 1 ? 'person' : 'people'}">${count}</span>
+      <button class="dept-chip-btn" onclick="renameDepartment(${JSON.stringify(d).replace(/"/g,'&quot;')})" title="Rename">✎</button>
+      <button class="dept-chip-btn del" onclick="removeDepartment(${JSON.stringify(d).replace(/"/g,'&quot;')})" title="Remove">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function addDepartment() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const input = document.getElementById('newDeptName');
+  const name = input.value.trim();
+  if (!name) { showToast('Enter a department name.', true); return; }
+  const existing = effectiveDepartments();
+  if (existing.some(d => d.toLowerCase() === name.toLowerCase())) {
+    showToast('Department already exists.', true); return;
+  }
+  showSaving(true);
+  try {
+    const next = [...(teamSettings.departments || []), name];
+    await settingsCol.doc('team').set({
+      departments: next,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    input.value = '';
+    showToast(`Added "${name}".`);
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+async function renameDepartment(oldName) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const raw = prompt(`Rename department "${oldName}" to:`, oldName);
+  if (raw === null) return;
+  const newName = raw.trim();
+  if (!newName || newName === oldName) return;
+  const existing = effectiveDepartments().filter(d => d !== oldName);
+  if (existing.some(d => d.toLowerCase() === newName.toLowerCase())) {
+    showToast('A department with that name already exists.', true); return;
+  }
+  const affected = people.filter(p => p.dept === oldName);
+  if (affected.length &&
+      !confirm(`Rename "${oldName}" to "${newName}"?\nThis will update ${affected.length} ${affected.length === 1 ? 'person' : 'people'}.`)) return;
+
+  showSaving(true);
+  try {
+    const batch = db.batch();
+    // Update settings list
+    const managed = teamSettings.departments || [];
+    const idx = managed.indexOf(oldName);
+    const nextManaged = idx >= 0
+      ? managed.map(d => d === oldName ? newName : d)
+      : [...managed, newName];
+    batch.set(settingsCol.doc('team'),
+      { departments: nextManaged, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true });
+    // Cascade to people
+    affected.forEach(p => batch.update(peopleCol.doc(p.id), { dept: newName }));
+    await batch.commit();
+
+    // If the currently-filtered dept was renamed, follow the rename
+    if (deptFilter === oldName) {
+      deptFilter = newName;
+      localStorage.setItem('ht_dept_filter', newName);
+    }
+    await writeLog('person_add',
+      `Department renamed: <strong>${oldName}</strong> → <strong>${newName}</strong> (${affected.length} updated)`,
+      { oldName, newName, affected: affected.length });
+    showToast(`Renamed to "${newName}".`);
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+async function removeDepartment(name) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const affected = people.filter(p => p.dept === name);
+  const msg = affected.length
+    ? `Remove department "${name}"?\n${affected.length} ${affected.length === 1 ? 'person will be' : 'people will be'} moved to "Team".`
+    : `Remove department "${name}" from the managed list?`;
+  if (!confirm(msg)) return;
+
+  showSaving(true);
+  try {
+    const managed = teamSettings.departments || [];
+    const nextManaged = managed.filter(d => d !== name);
+    const batch = db.batch();
+    batch.set(settingsCol.doc('team'),
+      { departments: nextManaged, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true });
+    affected.forEach(p => batch.update(peopleCol.doc(p.id), { dept: 'Team' }));
+    await batch.commit();
+
+    if (deptFilter === name) {
+      deptFilter = '';
+      localStorage.removeItem('ht_dept_filter');
+    }
+    await writeLog('person_remove',
+      `Department <strong>${name}</strong> removed${affected.length ? ` (${affected.length} moved to Team)` : ''}`,
+      { name, affected: affected.length });
+    showToast('Department removed.');
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+/* ════════════════════════════════════════════
    SAVE / DELETE HOLIDAY
 ════════════════════════════════════════════ */
 async function saveHoliday() {
@@ -2123,6 +2383,8 @@ async function deleteHoliday(id) {
 function openManage() {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   renderPeopleList();
+  renderDeptManager();
+  updateDeptDatalists();
   const thrInput = document.getElementById('capacityThreshold');
   if (thrInput) thrInput.value = teamSettings.capacityThreshold || '';
   document.getElementById('manageModal').classList.add('open');
@@ -2172,6 +2434,83 @@ async function removePerson(id) {
     renderPeopleList(); showToast('Person removed.');
   } catch(e) { showToast('Failed: '+e.message, true); }
   finally { showSaving(false); }
+}
+
+let _editingPersonId = null;
+
+function openEditPerson(id) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const person = people.find(p => p.id === id);
+  if (!person) { showToast('Person not found.', true); return; }
+  _editingPersonId = id;
+  document.getElementById('editPersonName').value = person.name || '';
+  document.getElementById('editPersonDept').value = person.dept || '';
+  document.getElementById('editPersonSub').textContent = `Editing ${person.name}`;
+  const err = document.getElementById('editPersonError');
+  err.textContent = ''; err.classList.remove('show');
+  updateDeptDatalists();
+  document.getElementById('editPersonModal').classList.add('open');
+  setTimeout(() => document.getElementById('editPersonName').focus(), 100);
+}
+
+function closeEditPerson() {
+  document.getElementById('editPersonModal').classList.remove('open');
+  _editingPersonId = null;
+}
+
+async function saveEditPerson() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  if (!_editingPersonId) return;
+  const person = people.find(p => p.id === _editingPersonId);
+  if (!person) { showToast('Person not found.', true); closeEditPerson(); return; }
+
+  const newName = document.getElementById('editPersonName').value.trim();
+  const newDept = document.getElementById('editPersonDept').value.trim() || 'Team';
+  const err = document.getElementById('editPersonError');
+  err.textContent = ''; err.classList.remove('show');
+
+  if (!newName) { err.textContent = 'Name cannot be empty.'; err.classList.add('show'); return; }
+
+  // Duplicate name check (case-insensitive, excluding self)
+  const normalized = newName.toLowerCase();
+  if (newName.toLowerCase() !== (person.name || '').toLowerCase()) {
+    const dupe = people.find(p => p.id !== _editingPersonId && (p.name || '').toLowerCase() === normalized);
+    if (dupe && !confirm(`⚠ "${dupe.name}" already exists in ${dupe.dept}.\n\nUse the same name anyway?`)) return;
+  }
+
+  const nameChanged = newName !== person.name;
+  const deptChanged = newDept !== person.dept;
+  if (!nameChanged && !deptChanged) { showToast('No change.'); closeEditPerson(); return; }
+
+  showSaving(true);
+  try {
+    const update = {};
+    if (nameChanged) update.name = newName;
+    if (deptChanged) update.dept = newDept;
+    await peopleCol.doc(_editingPersonId).update(update);
+
+    // Also update the linked user profile displayName so login shows the new name
+    if (nameChanged) {
+      const prof = userProfiles.find(u => u.personId === _editingPersonId);
+      if (prof) {
+        try { await userProfCol.doc(prof.uid).update({ displayName: newName }); } catch (e) {}
+      }
+    }
+
+    const parts = [];
+    if (nameChanged) parts.push(`name: ${person.name} → ${newName}`);
+    if (deptChanged) parts.push(`dept: ${person.dept} → ${newDept}`);
+    await writeLog('person_add',
+      `<strong>${newName}</strong> updated (${parts.join(' · ')})`,
+      { personId: _editingPersonId, oldName: person.name, newName, oldDept: person.dept, newDept });
+
+    showToast('Person updated.');
+    closeEditPerson();
+    renderPeopleList();
+  } catch (e) {
+    err.textContent = 'Failed: ' + e.message;
+    err.classList.add('show');
+  } finally { showSaving(false); }
 }
 
 /* ════════════════════════════════════════════
