@@ -704,6 +704,53 @@
 </div>
 </div><!-- end #mainApp -->
 
+<!-- EARLY WATCHDOG: runs BEFORE Firebase scripts load, so it fires even if
+     the gstatic CDN is blocked, firebase.initializeApp() throws, or any
+     later script bails. Pure DOM, no Firebase dependency. -->
+<script>
+(function() {
+  var LIMIT_MS = 12000; // give the full stack a fair shot first
+  setTimeout(function() {
+    try {
+      var gate = document.getElementById('authGate');
+      if (!gate || gate.style.display === 'none') return; // user is in the app
+      var sel = document.getElementById('loginEmail');
+      if (sel && sel.options && sel.options.length > 1) return; // populated
+      if (document.getElementById('authGateErrBanner')) return; // already shown
+      var card = document.querySelector('#authGate .auth-card');
+      if (!card) return;
+      var banner = document.createElement('div');
+      banner.id = 'authGateErrBanner';
+      banner.style.cssText = 'margin-top:14px;background:rgba(248,113,113,0.10);border:1px solid rgba(248,113,113,0.25);border-radius:8px;padding:10px 14px;font-family:DM Mono,monospace;font-size:0.68rem;color:#f87171;display:flex;flex-direction:column;gap:8px;line-height:1.5;';
+      banner.innerHTML =
+        '<span>\u26A0 Still loading after ' + Math.round(LIMIT_MS / 1000) + 's. Firebase, your network, or a stale browser cache may be blocking sign-in.</span>' +
+        '<button id="authGateHardRetry" style="align-self:flex-start;background:#f87171;color:#0e0f13;border:none;border-radius:6px;padding:6px 14px;font-family:DM Mono,monospace;font-size:0.7rem;font-weight:600;cursor:pointer;">Clear cache & reload</button>';
+      card.appendChild(banner);
+      document.getElementById('authGateHardRetry').addEventListener('click', function() {
+        try { localStorage.removeItem('ht_session'); } catch(e) {}
+        if (window.retryConnection) { window.retryConnection(); }
+        else {
+          // Firebase never loaded — just do a cache-busting reload.
+          try {
+            if (window.indexedDB && indexedDB.databases) {
+              indexedDB.databases().then(function(dbs) {
+                dbs.forEach(function(d) {
+                  if (d.name && d.name.indexOf('firestore') === 0) {
+                    indexedDB.deleteDatabase(d.name);
+                  }
+                });
+              }).catch(function() {}).finally(function() { location.reload(); });
+              return;
+            }
+          } catch(e) {}
+          location.reload();
+        }
+      });
+    } catch(e) { /* last resort: stay silent */ }
+  }, LIMIT_MS);
+})();
+</script>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
 <script>
@@ -813,9 +860,17 @@ async function initAuth() {
   const session = loadSession();
   if (session) {
     try {
-      const snap = await userProfCol.doc(session.uid).get();
-      if (snap.exists) { currentUser = { uid: session.uid, ...snap.data() }; showApp(); return; }
-    } catch(e) {}
+      // Race the session-restore `.get()` against a 5s timeout. Firestore's
+      // WebChannel can hang indefinitely on restrictive networks / stale
+      // IndexedDB locks, which would otherwise trap the user on the gate
+      // without ever reaching showAuthGate() — so the watchdog never arms
+      // and the selectors stay on the raw "— Loading… —" HTML forever.
+      const snap = await Promise.race([
+        userProfCol.doc(session.uid).get(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('session restore timeout')), 5000))
+      ]);
+      if (snap && snap.exists) { currentUser = { uid: session.uid, ...snap.data() }; showApp(); return; }
+    } catch(e) { /* fall through to the gate, which has its own watchdog */ }
   }
   showAuthGate();
 }
@@ -836,6 +891,22 @@ function showAuthGate() {
 }
 
 initAuth();
+
+// ── TOP-LEVEL SAFETY NET ──
+// Regardless of which code path initAuth takes, if the login dropdown is
+// still showing the raw "Loading…" placeholder after 10s, the page is
+// effectively dead. Show a recovery banner with a Retry button so the user
+// always has an escape hatch. Belt-and-braces with the per-path watchdogs.
+setTimeout(() => {
+  const loginSel = document.getElementById('loginEmail');
+  const gateVisible = document.getElementById('authGate').style.display !== 'none';
+  if (!gateVisible) return; // user is in the app already, nothing to do
+  if (!loginSel || loginSel.options.length > 1) return; // dropdown populated
+  if (document.getElementById('authGateErrBanner')) return; // already shown
+  if (typeof showAuthGateError === 'function') {
+    showAuthGateError('Sign-in is taking too long. Your browser may have a stale cache or the network is blocking Firestore.');
+  }
+}, 10000);
 
 function switchAuthTab(tab) {
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
