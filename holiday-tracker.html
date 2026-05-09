@@ -1535,6 +1535,7 @@ function renderPeopleList() {
       <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
       <div class="list-item-info"><div class="list-item-name">${p.name}</div><div class="list-item-date">${p.dept}</div></div>
       ${badge}${toggleAdmin}
+      <button class="delete-btn" onclick="editPersonDept('${p.id}')" title="Edit department" style="font-size:0.8rem;">✎</button>
       <button class="delete-btn" onclick="removePerson('${p.id}')" title="Remove">✕</button>
     </div>`;
   }).join('');
@@ -2170,6 +2171,27 @@ async function removePerson(id) {
     await batch.commit();
     if (removedPerson) await writeLog('person_remove', `<strong>${removedPerson.name}</strong> removed from team (${removedPerson.dept})`, { name: removedPerson.name });
     renderPeopleList(); showToast('Person removed.');
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+async function editPersonDept(id) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const person = people.find(p => p.id === id);
+  if (!person) { showToast('Person not found.', true); return; }
+  const raw = prompt(`Edit department for ${person.name}:`, person.dept || '');
+  if (raw === null) return;
+  const newDept = raw.trim() || 'Team';
+  if (newDept === person.dept) { showToast('No change.'); return; }
+  const oldDept = person.dept;
+  showSaving(true);
+  try {
+    await peopleCol.doc(id).update({ dept: newDept });
+    await writeLog('person_add',
+      `<strong>${person.name}</strong> department changed: ${oldDept} → ${newDept}`,
+      { name: person.name, oldDept, newDept });
+    showToast('Department updated.');
+    renderPeopleList();
   } catch(e) { showToast('Failed: '+e.message, true); }
   finally { showSaving(false); }
 }
