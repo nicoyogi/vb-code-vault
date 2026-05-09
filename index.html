@@ -262,6 +262,86 @@ footer a:hover{color:rgba(212,175,100,.55)}
 #tomes-section.swap .grid{opacity:.25;transform:translateY(6px);transition:opacity .18s ease,transform .18s ease}
 #tomes-section.swap .project-banner{opacity:.5;transition:opacity .18s ease}
 
+/* ─── CHRONICLE PILL (always-visible, sits above project grid) ─── */
+.chronicle-pill{
+  position:relative;display:flex;align-items:center;gap:14px;
+  width:100%;padding:.85rem 1.1rem;margin-bottom:2.4rem;
+  border-radius:18px;text-decoration:none;color:inherit;overflow:hidden;
+  background:linear-gradient(135deg,rgba(20,184,166,.05) 0%,rgba(10,8,24,.7) 45%,rgba(167,139,250,.04) 100%);
+  border:1px solid rgba(20,184,166,.18);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  transition:transform .35s cubic-bezier(.16,.84,.24,1.05),border-color .35s,box-shadow .35s,background .35s;
+  animation:rise 1s .34s ease both;
+}
+.chronicle-pill::before,.chronicle-pill::after{
+  content:'';position:absolute;width:12px;height:12px;pointer-events:none;transition:opacity .4s;opacity:.25;
+}
+.chronicle-pill::before{top:10px;left:10px;border-top:1px solid rgba(20,184,166,.7);border-left:1px solid rgba(20,184,166,.7)}
+.chronicle-pill::after{bottom:10px;right:10px;border-bottom:1px solid rgba(20,184,166,.7);border-right:1px solid rgba(20,184,166,.7)}
+.chronicle-pill:hover::before,.chronicle-pill:hover::after{opacity:1}
+.chronicle-pill:hover{
+  transform:translateY(-2px);
+  border-color:rgba(20,184,166,.42);
+  box-shadow:0 18px 50px rgba(20,184,166,.14),0 0 0 1px rgba(20,184,166,.1),inset 0 1px 0 rgba(20,184,166,.08);
+  background:linear-gradient(135deg,rgba(20,184,166,.09) 0%,rgba(10,8,24,.75) 45%,rgba(167,139,250,.07) 100%);
+}
+.chronicle-pill:focus-visible{outline:2px solid rgba(20,184,166,.8);outline-offset:4px}
+
+/* Moving shimmer top-edge on hover */
+.chronicle-pill .ch-top{
+  position:absolute;top:0;left:8%;right:8%;height:1px;border-radius:50%;
+  background:linear-gradient(90deg,transparent,rgba(20,184,166,1),transparent);
+  opacity:0;transition:opacity .4s;
+}
+.chronicle-pill:hover .ch-top{opacity:1}
+
+.ch-icon{
+  width:42px;height:42px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;
+  background:rgba(20,184,166,.1);color:rgba(20,184,166,1);
+  box-shadow:0 0 0 1px rgba(20,184,166,.22),inset 0 1px 0 rgba(255,255,255,.06);
+  transition:transform .4s cubic-bezier(.16,.84,.24,1.05);
+}
+.chronicle-pill:hover .ch-icon{transform:scale(1.08) rotate(-6deg)}
+
+.ch-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ch-label{
+  font-family:var(--cinzel);font-size:8.5px;letter-spacing:.32em;text-transform:uppercase;
+  color:rgba(20,184,166,.75);
+}
+.ch-title{
+  font-family:var(--cinzel);font-size:14px;font-weight:600;letter-spacing:.04em;
+  color:rgba(255,255,255,.92);display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.ch-title-sub{
+  font-family:var(--mono);font-size:10.5px;font-weight:400;letter-spacing:.04em;
+  color:rgba(255,255,255,.4);text-transform:none;
+}
+.ch-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.ch-tag{
+  font-family:var(--mono);font-size:9px;letter-spacing:.06em;padding:2px 8px;border-radius:14px;
+  color:rgba(20,184,166,.85);border:1px solid rgba(20,184,166,.22);background:rgba(20,184,166,.06);
+}
+.ch-badge{
+  font-family:var(--cinzel);font-size:8px;letter-spacing:.26em;text-transform:uppercase;
+  color:rgba(212,175,100,.7);padding:3px 8px;border-radius:14px;
+  border:1px solid rgba(212,175,100,.25);background:rgba(212,175,100,.05);
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.ch-badge::before{
+  content:'';width:5px;height:5px;border-radius:50%;background:rgba(212,175,100,.7);
+}
+.ch-arr{
+  width:30px;height:30px;border-radius:50%;border:1px solid rgba(20,184,166,.18);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-family:var(--mono);
+  color:rgba(20,184,166,.45);flex-shrink:0;transition:all .3s;
+}
+.chronicle-pill:hover .ch-arr{
+  transform:translateX(4px);
+  border-color:rgba(20,184,166,.65);
+  color:rgba(20,184,166,1);
+  box-shadow:0 0 14px rgba(20,184,166,.22);
+}
+
 @media(max-width:580px){
   .project-grid{grid-template-columns:1fr}
   .grid{grid-template-columns:1fr}.s2{grid-column:auto}
@@ -270,6 +350,11 @@ footer a:hover{color:rgba(212,175,100,.55)}
   .rune-ring{width:90px;height:90px}
   .project-banner{flex-wrap:wrap}
   .pb-change{margin-left:0;margin-top:4px}
+  .chronicle-pill{flex-wrap:wrap;gap:10px;padding:.9rem 1rem}
+  .ch-body{flex-basis:calc(100% - 56px);order:2}
+  .ch-icon{order:1}
+  .ch-arr{order:3;margin-left:auto}
+  .ch-title{font-size:13px}
 }
 </style>
 </head>
@@ -315,6 +400,20 @@ footer a:hover{color:rgba(212,175,100,.55)}
   <div class="tagline">Codex of tools · Bound in fire · Forever current</div>
 
   <main id="main" role="main">
+
+  <a href="holiday-tracker.html" class="chronicle-pill" id="c5" aria-label="Holiday Tracker — shared chronicle of absences and leave">
+    <div class="ch-top"></div>
+    <div class="ch-icon">🗓️</div>
+    <div class="ch-body">
+      <div class="ch-label">The Chronicle · Shared</div>
+      <div class="ch-title">
+        Holiday Tracker
+        <span class="ch-title-sub">team absences &amp; leave · synced in real time</span>
+      </div>
+    </div>
+    <div class="ch-badge">All projects</div>
+    <div class="ch-arr">⟶</div>
+  </a>
 
   <div class="orn">
     <div class="orn-line"></div>
@@ -482,30 +581,6 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
     </div>
   </div>
-
-  <div class="orn" style="margin-top:0;margin-bottom:1.2rem">
-    <div class="orn-line"></div>
-    <div class="orn-diamond"></div>
-    <div class="orn-text">III — Shared chronicle</div>
-    <div class="orn-diamond"></div>
-    <div class="orn-line"></div>
-  </div>
-  <a href="holiday-tracker.html" class="card card-tl s2" id="c5" style="width:100%;margin-bottom:2.8rem">
-    <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-    <div class="cin" style="flex-direction:row;align-items:flex-start;gap:2rem">
-      <div class="icon" style="margin-bottom:0">🗓️</div>
-      <div class="cbody">
-        <div class="clabel">The Chronicle</div>
-        <div class="ctitle">Holiday Tracker</div>
-        <div class="cdesc">A shared calendar of absences &amp; leave. Add team members, log vacation, sick days or remote work — search any date to see who is away. Synced to the cloud in real time.</div>
-        <div class="cfoot">
-          <div class="tags"><span class="tag">Calendar</span><span class="tag">Leave</span><span class="tag">Team</span><span class="tag">Firebase</span></div>
-          <div class="arr">⟶</div>
-        </div>
-      </div>
-    </div>
-    <div class="deco">chronicle.mark()<br>&nbsp;.absence(day)<br>&nbsp;.sync()<br>// eternal ✦</div>
-  </a>
 
   <div class="sigil-div">
     <div class="sdl2"></div>
