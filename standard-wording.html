@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/grimoire-core.css">
-  <script src="assets/grimoire-core.js" defer></script>
+  <script src="assets/grimoire-core.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -426,7 +426,7 @@
     <div class="status"><div class="status-dot" id="status-dot"></div><span id="status-label" style="font-family:var(--mono);font-size:11px;">Connecting…</span></div>
     <span class="count-badge" id="total-badge">— entries</span>
     <!-- ── THEME TOGGLE ── -->
-    <button class="btn-theme" onclick="toggleTheme()" id="theme-btn" title="Toggle dark/light mode">
+    <button class="btn-theme" onclick="Grimoire.Theme.toggle()" id="theme-btn" title="Toggle dark/light mode">
       <span class="theme-icon" id="theme-icon">🌙</span>
       <span id="theme-label">Dark</span>
     </button>
@@ -542,33 +542,14 @@ const col = db.collection('sgp_wording');
 const authDoc = db.collection('_config').doc('auth_sgp');
 let entries=[], editId=null, detailId=null, saving=false;
 
-/* ── THEME TOGGLE ── */
-const THEME_KEY = 'sgp_wording_theme';
+/* ── THEME TOGGLE (shared) ── */
 function initTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
-  // Default = dark (this page was originally dark)
-  if (saved === 'light') applyTheme('light');
-  else applyTheme('dark');
-}
-function applyTheme(mode) {
-  const html = document.documentElement;
-  const icon = document.getElementById('theme-icon');
-  const label = document.getElementById('theme-label');
-  if (mode === 'light') {
-    html.classList.add('light');
-    icon.textContent = '☀️';
-    label.textContent = 'Light';
-    localStorage.setItem(THEME_KEY, 'light');
-  } else {
-    html.classList.remove('light');
-    icon.textContent = '🌙';
-    label.textContent = 'Dark';
-    localStorage.setItem(THEME_KEY, 'dark');
-  }
-}
-function toggleTheme() {
-  const isLight = document.documentElement.classList.contains('light');
-  applyTheme(isLight ? 'dark' : 'light');
+  Grimoire.Theme.init({
+    defaultMode:'dark', mode:'light', className:'light',
+    iconEl:'#theme-icon', labelEl:'#theme-label',
+    icons:{light:'☀️', dark:'🌙'},
+    labels:{light:'Light', dark:'Dark'}
+  });
 }
 
 function setStatus(s,l){

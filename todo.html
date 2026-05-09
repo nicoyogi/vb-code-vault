@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/grimoire-core.css">
-<script src="assets/grimoire-core.js" defer></script>
+<script src="assets/grimoire-core.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -413,7 +413,7 @@ footer a:hover{color:rgba(212,175,100,.82)}
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
 <canvas id="bg" aria-hidden="true"></canvas>
-<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+<button class="theme-toggle" onclick="Grimoire.Theme.toggle()" title="Toggle light/dark mode">
   <span class="theme-icon" id="theme-icon">&#9789;</span>
   <span class="theme-label" id="theme-label">Dark</span>
 </button>
@@ -576,10 +576,13 @@ if (window.Grimoire && window.Grimoire.reducedMotion) { frame(0); }
 else { requestAnimationFrame(frame); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) requestAnimationFrame(frame); }); }
 })();
 
-(function(){const s=localStorage.getItem('grimoire-theme');if(s==='light')applyLight();})();
-function applyLight(){document.documentElement.classList.add('light');document.body.style.color='rgba(20,12,36,.9)';const i=document.getElementById('theme-icon'),l=document.getElementById('theme-label');if(i)i.textContent='\u2600';if(l)l.textContent='Light';}
-function applyDark(){document.documentElement.classList.remove('light');document.body.style.color='#ede8ff';const i=document.getElementById('theme-icon'),l=document.getElementById('theme-label');if(i)i.textContent='\u263D';if(l)l.textContent='Dark';}
-function toggleTheme(){const isLight=document.documentElement.classList.contains('light');if(isLight){applyDark();localStorage.setItem('grimoire-theme','dark');}else{applyLight();localStorage.setItem('grimoire-theme','light');}}
+Grimoire.Theme.init({
+  defaultMode:'dark', mode:'light', className:'light',
+  iconEl:'#theme-icon', labelEl:'#theme-label',
+  icons:{light:'\u2600',dark:'\u263D'},
+  labels:{light:'Light',dark:'Dark'},
+  onChange:function(m){document.body.style.color=m==='light'?'rgba(20,12,36,.9)':'#ede8ff';}
+});
 
 const firebaseConfig={apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",authDomain:"vb-code-vault.firebaseapp.com",projectId:"vb-code-vault",storageBucket:"vb-code-vault.firebasestorage.app",messagingSenderId:"773245175115",appId:"1:773245175115:web:0b6a4f27388f58f026d4ce"};
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
