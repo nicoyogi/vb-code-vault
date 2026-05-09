@@ -7,11 +7,6 @@
 <title>Holiday Tracker · The Grimoire</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Perf: warm up Firebase / Firestore connections before the scripts run at body-end -->
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="preload" as="script" crossorigin href="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js">
-<link rel="preload" as="script" crossorigin href="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=Cinzel:wght@400;600;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/grimoire-core.css">
 <script src="assets/grimoire-core.js" defer></script>
@@ -704,53 +699,6 @@
 </div>
 </div><!-- end #mainApp -->
 
-<!-- EARLY WATCHDOG: runs BEFORE Firebase scripts load, so it fires even if
-     the gstatic CDN is blocked, firebase.initializeApp() throws, or any
-     later script bails. Pure DOM, no Firebase dependency. -->
-<script>
-(function() {
-  var LIMIT_MS = 12000; // give the full stack a fair shot first
-  setTimeout(function() {
-    try {
-      var gate = document.getElementById('authGate');
-      if (!gate || gate.style.display === 'none') return; // user is in the app
-      var sel = document.getElementById('loginEmail');
-      if (sel && sel.options && sel.options.length > 1) return; // populated
-      if (document.getElementById('authGateErrBanner')) return; // already shown
-      var card = document.querySelector('#authGate .auth-card');
-      if (!card) return;
-      var banner = document.createElement('div');
-      banner.id = 'authGateErrBanner';
-      banner.style.cssText = 'margin-top:14px;background:rgba(248,113,113,0.10);border:1px solid rgba(248,113,113,0.25);border-radius:8px;padding:10px 14px;font-family:DM Mono,monospace;font-size:0.68rem;color:#f87171;display:flex;flex-direction:column;gap:8px;line-height:1.5;';
-      banner.innerHTML =
-        '<span>\u26A0 Still loading after ' + Math.round(LIMIT_MS / 1000) + 's. Firebase, your network, or a stale browser cache may be blocking sign-in.</span>' +
-        '<button id="authGateHardRetry" style="align-self:flex-start;background:#f87171;color:#0e0f13;border:none;border-radius:6px;padding:6px 14px;font-family:DM Mono,monospace;font-size:0.7rem;font-weight:600;cursor:pointer;">Clear cache & reload</button>';
-      card.appendChild(banner);
-      document.getElementById('authGateHardRetry').addEventListener('click', function() {
-        try { localStorage.removeItem('ht_session'); } catch(e) {}
-        if (window.retryConnection) { window.retryConnection(); }
-        else {
-          // Firebase never loaded — just do a cache-busting reload.
-          try {
-            if (window.indexedDB && indexedDB.databases) {
-              indexedDB.databases().then(function(dbs) {
-                dbs.forEach(function(d) {
-                  if (d.name && d.name.indexOf('firestore') === 0) {
-                    indexedDB.deleteDatabase(d.name);
-                  }
-                });
-              }).catch(function() {}).finally(function() { location.reload(); });
-              return;
-            }
-          } catch(e) {}
-          location.reload();
-        }
-      });
-    } catch(e) { /* last resort: stay silent */ }
-  }, LIMIT_MS);
-})();
-</script>
-
 <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js"></script>
 <script>
@@ -767,20 +715,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db          = firebase.firestore();
-
-/* Perf: auto-detect long-polling — faster on restrictive networks / file://,
-   avoids a 30s wait for WebChannel to fail before falling back.
-
-   NOTE: We intentionally do NOT call db.enablePersistence() here. IndexedDB
-   persistence can hang the initial connection indefinitely when the DB is
-   locked by another tab, corrupted, or unavailable (private browsing / quota
-   exceeded). The .catch() only swallows the rejection but does not unblock
-   queued queries, which leaves the header stuck on "Connecting...". If you
-   want offline cache back, re-enable it behind a feature flag + watchdog. */
-try {
-  db.settings({ experimentalAutoDetectLongPolling: true });
-} catch (e) { /* settings already applied */ }
-
 const peopleCol   = db.collection('wmf_holiday_people');
 const holidaysCol = db.collection('wmf_holidays');
 const vacResetCol = db.collection('wmf_vac_resets');
@@ -860,17 +794,9 @@ async function initAuth() {
   const session = loadSession();
   if (session) {
     try {
-      // Race the session-restore `.get()` against a 5s timeout. Firestore's
-      // WebChannel can hang indefinitely on restrictive networks / stale
-      // IndexedDB locks, which would otherwise trap the user on the gate
-      // without ever reaching showAuthGate() — so the watchdog never arms
-      // and the selectors stay on the raw "— Loading… —" HTML forever.
-      const snap = await Promise.race([
-        userProfCol.doc(session.uid).get(),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('session restore timeout')), 5000))
-      ]);
-      if (snap && snap.exists) { currentUser = { uid: session.uid, ...snap.data() }; showApp(); return; }
-    } catch(e) { /* fall through to the gate, which has its own watchdog */ }
+      const snap = await userProfCol.doc(session.uid).get();
+      if (snap.exists) { currentUser = { uid: session.uid, ...snap.data() }; showApp(); return; }
+    } catch(e) {}
   }
   showAuthGate();
 }
@@ -891,22 +817,6 @@ function showAuthGate() {
 }
 
 initAuth();
-
-// ── TOP-LEVEL SAFETY NET ──
-// Regardless of which code path initAuth takes, if the login dropdown is
-// still showing the raw "Loading…" placeholder after 10s, the page is
-// effectively dead. Show a recovery banner with a Retry button so the user
-// always has an escape hatch. Belt-and-braces with the per-path watchdogs.
-setTimeout(() => {
-  const loginSel = document.getElementById('loginEmail');
-  const gateVisible = document.getElementById('authGate').style.display !== 'none';
-  if (!gateVisible) return; // user is in the app already, nothing to do
-  if (!loginSel || loginSel.options.length > 1) return; // dropdown populated
-  if (document.getElementById('authGateErrBanner')) return; // already shown
-  if (typeof showAuthGateError === 'function') {
-    showAuthGateError('Sign-in is taking too long. Your browser may have a stale cache or the network is blocking Firestore.');
-  }
-}, 10000);
 
 function switchAuthTab(tab) {
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
@@ -933,124 +843,24 @@ function setAuthLoading(btnId, spinnerId, loading) {
 async function loadPeopleForAuth() {
   const [loginSel, regSel] = ['loginEmail', 'registerPerson'].map(id => document.getElementById(id));
   loginSel.innerHTML = regSel.innerHTML = '<option value="">— Loading… —</option>';
+  try {
+    const [peopleSnap, profSnap] = await Promise.all([
+      peopleCol.orderBy('name').get(),
+      userProfCol.get()
+    ]);
+    const linkedIds = new Set(profSnap.docs.map(d => d.data().personId));
 
-  // Perf: attach a single snapshot listener that feeds both the auth gate and
-  // (once logged in) the main app. This replaces two sequential Firestore
-  // `.get()` round-trips on every page load and avoids re-fetching people
-  // after sign-in. The listener is started lazily and only once.
-  attachAuthPrefetch();
-  renderAuthSelectors(loginSel, regSel);
-  armAuthGateWatchdog();
-}
+    loginSel.innerHTML = '<option value="">— Select your name —</option>';
+    regSel.innerHTML   = '<option value="">— Select your name —</option>';
 
-// Prefetch listeners — started from loadPeopleForAuth(), reused by startListeners().
-let _authPrefetchStarted = false;
-let _authPrefetchedPeople = false;
-let _authPrefetchedProfiles = false;
-
-function attachAuthPrefetch() {
-  if (_authPrefetchStarted) return;
-  _authPrefetchStarted = true;
-
-  peopleCol.orderBy('name').onSnapshot(snap => {
-    people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    _authPrefetchedPeople = true;
-    bustCaches();
-    if (appStarted) { scheduleRender(); setStatus('online', 'Online'); clearConnectWatchdog(); }
-    if (!appStarted) {
-      renderAuthSelectors(
-        document.getElementById('loginEmail'),
-        document.getElementById('registerPerson')
-      );
-      clearAuthGateWatchdogIfReady();
-    }
-    if (document.getElementById('manageModal')?.classList.contains('open')) renderPeopleList();
-  }, err => {
-    if (appStarted) { setStatus('error', 'Error'); showToast('Connection error: ' + err.message, true); }
-    else {
-      showAuthGateError('Could not load team list: ' + (err && err.message ? err.message : 'connection error'));
-    }
-  });
-
-  userProfCol.onSnapshot(snap => {
-    userProfiles = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-    _authPrefetchedProfiles = true;
-    if (!appStarted) {
-      renderAuthSelectors(
-        document.getElementById('loginEmail'),
-        document.getElementById('registerPerson')
-      );
-      clearAuthGateWatchdogIfReady();
-    }
-    if (document.getElementById('manageModal')?.classList.contains('open')) renderPeopleList();
-  }, err => {
-    if (!appStarted) {
-      showAuthGateError('Could not load accounts: ' + (err && err.message ? err.message : 'connection error'));
-    }
-  });
-}
-
-/* ── AUTH GATE WATCHDOG ──
-   If the auth-gate selectors haven't populated after 8s (e.g. Firestore
-   WebChannel silently hangs, a stale IndexedDB lock, or the profiles
-   listener never fires), show an error banner with a Retry button so the
-   user isn't stuck on "— Loading… —" forever. */
-let _authGateWatchdogTimer = null;
-function armAuthGateWatchdog() {
-  clearTimeout(_authGateWatchdogTimer);
-  _authGateWatchdogTimer = setTimeout(() => {
-    if (!_authPrefetchedPeople || !_authPrefetchedProfiles) {
-      showAuthGateError('Still loading after 8s. Your network may be blocking Firestore. Check your connection and retry.');
-    }
-  }, 8000);
-}
-function clearAuthGateWatchdogIfReady() {
-  if (_authPrefetchedPeople && _authPrefetchedProfiles) {
-    clearTimeout(_authGateWatchdogTimer);
-    const b = document.getElementById('authGateErrBanner');
-    if (b) b.remove();
-  }
-}
-function showAuthGateError(msg) {
-  // Show the selectors in an error state and add a retry banner inside the card.
-  const loginSel = document.getElementById('loginEmail');
-  const regSel   = document.getElementById('registerPerson');
-  if (loginSel && !_authPrefetchedPeople) loginSel.innerHTML = '<option value="">— Error loading —</option>';
-  if (regSel   && !_authPrefetchedPeople) regSel.innerHTML   = '<option value="">— Error loading —</option>';
-
-  if (document.getElementById('authGateErrBanner')) return;
-  const card = document.querySelector('#authGate .auth-card');
-  if (!card) return;
-  const banner = document.createElement('div');
-  banner.id = 'authGateErrBanner';
-  banner.style.cssText = 'margin-top:14px;background:var(--red-a10);border:1px solid var(--red-a25);border-radius:8px;padding:10px 14px;font-family:DM Mono,monospace;font-size:0.68rem;color:var(--red);display:flex;flex-direction:column;gap:8px;line-height:1.5;';
-  banner.innerHTML =
-    '<span>\u26A0 ' + msg + '</span>' +
-    '<button onclick="retryConnection()" style="align-self:flex-start;background:var(--red);color:#0e0f13;border:none;border-radius:6px;padding:6px 14px;font-family:DM Mono,monospace;font-size:0.7rem;font-weight:600;cursor:pointer;">Retry</button>';
-  card.appendChild(banner);
-}
-
-function renderAuthSelectors(loginSel, regSel) {
-  if (!loginSel || !regSel) return;
-  if (!_authPrefetchedPeople) return;
-
-  // Populate the Sign-In selector as soon as we have the team list — it does
-  // NOT depend on userProfiles. The Register tab filters out people who
-  // already have an account, so it waits for the profiles snapshot (but
-  // shows a clear loading hint in the meantime instead of hanging silently).
-  const linkedIds = new Set((_authPrefetchedProfiles ? userProfiles : []).map(p => p.personId));
-  loginSel.innerHTML = '<option value="">— Select your name —</option>';
-  regSel.innerHTML   = _authPrefetchedProfiles
-    ? '<option value="">— Select your name —</option>'
-    : '<option value="">— Loading accounts… —</option>';
-
-  people.forEach(p => {
-    const opt = `<option value="${p.id}">${p.name} (${p.dept})</option>`;
-    loginSel.insertAdjacentHTML('beforeend', opt);
-    if (_authPrefetchedProfiles && !linkedIds.has(p.id)) regSel.insertAdjacentHTML('beforeend', opt);
-  });
-  if (_authPrefetchedProfiles && regSel.options.length === 1) {
-    regSel.innerHTML = '<option value="">— All members have accounts —</option>';
+    peopleSnap.docs.forEach(d => {
+      const opt = `<option value="${d.id}">${d.data().name} (${d.data().dept})</option>`;
+      loginSel.insertAdjacentHTML('beforeend', opt);
+      if (!linkedIds.has(d.id)) regSel.insertAdjacentHTML('beforeend', opt);
+    });
+    if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— All members have accounts —</option>';
+  } catch(e) {
+    loginSel.innerHTML = regSel.innerHTML = '<option value="">— Error loading —</option>';
   }
 }
 
@@ -1132,52 +942,6 @@ function setStatus(cls, label) {
   document.getElementById('statusLabel').textContent = label;
 }
 function showSaving(on) { document.getElementById('savingIndicator').style.display = on ? 'inline-flex' : 'none'; }
-
-/* ── CONNECT WATCHDOG ──
-   If the first Firestore snapshot hasn't landed after 8s, show a banner with
-   a Retry button that reloads the page. Firestore's WebChannel can silently
-   hang on restrictive networks / stale IndexedDB — without this the header
-   stays on "Connecting..." forever with no user recourse. */
-let _connectWatchdogTimer = null;
-function armConnectWatchdog() {
-  clearConnectWatchdog();
-  _connectWatchdogTimer = setTimeout(() => {
-    showConnectFailBanner('Still connecting to Firestore after 8s. Your network may be blocking WebChannel/long-polling.');
-  }, 8000);
-}
-function clearConnectWatchdog() {
-  if (_connectWatchdogTimer) { clearTimeout(_connectWatchdogTimer); _connectWatchdogTimer = null; }
-  const b = document.getElementById('connectFailBanner');
-  if (b) b.remove();
-}
-function showConnectFailBanner(msg) {
-  if (document.getElementById('connectFailBanner')) return;
-  const banner = document.createElement('div');
-  banner.id = 'connectFailBanner';
-  banner.style.cssText = 'position:fixed;top:58px;left:0;right:0;z-index:50;background:var(--red-a12);border-bottom:1px solid var(--red-a25);color:var(--red);font-family:DM Mono,monospace;font-size:0.74rem;padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;backdrop-filter:blur(6px);';
-  banner.innerHTML = `
-    <span>⚠ ${msg}</span>
-    <button onclick="retryConnection()" style="background:var(--red);color:#0e0f13;border:none;border-radius:6px;padding:5px 12px;font-family:DM Mono,monospace;font-size:0.72rem;font-weight:600;cursor:pointer;">Retry</button>
-    <button onclick="document.getElementById('connectFailBanner').remove()" style="background:transparent;color:var(--red);border:1px solid var(--red-a25);border-radius:6px;padding:5px 12px;font-family:DM Mono,monospace;font-size:0.72rem;cursor:pointer;">Dismiss</button>
-  `;
-  document.body.appendChild(banner);
-}
-async function retryConnection() {
-  // Clear any Firestore IndexedDB databases so a stale/locked cache can't
-  // keep blocking the initial connect, then hard-reload.
-  try {
-    if (window.indexedDB && indexedDB.databases) {
-      const dbs = await indexedDB.databases();
-      await Promise.all(dbs
-        .filter(d => d.name && d.name.startsWith('firestore'))
-        .map(d => new Promise(res => {
-          const req = indexedDB.deleteDatabase(d.name);
-          req.onsuccess = req.onerror = req.onblocked = () => res();
-        })));
-    }
-  } catch(e) {}
-  location.reload();
-}
 
 function showToast(msg, isError) {
   const t = document.getElementById('toast');
@@ -1302,51 +1066,39 @@ function renderLogEntries() {
 ════════════════════════════════════════════ */
 function startListeners() {
   setStatus('', 'Connecting...');
-  armConnectWatchdog();
 
-  // Perf: people + userProfiles listeners were already attached by
-  // attachAuthPrefetch() at page load — no need to re-subscribe here. If we
-  // already have a people snapshot, mark the app online immediately.
-  attachAuthPrefetch();
-  if (_authPrefetchedPeople) { setStatus('online', 'Online'); clearConnectWatchdog(); }
+  peopleCol.orderBy('name').onSnapshot(snap => {
+    people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    bustCaches(); scheduleRender();
+    setStatus('online', 'Online');
+    if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
+  }, err => { setStatus('error', 'Error'); showToast('Connection error: ' + err.message, true); });
 
-  // Critical for first paint: holidays (drives the calendar/gantt).
   holidaysCol.orderBy('start').onSnapshot(snap => {
     holidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     bustCaches(); scheduleRender();
-    setStatus('online', 'Online');
-    clearConnectWatchdog();
-  }, err => {
-    setStatus('error', 'Error');
-    showToast('Sync error: ' + err.message, true);
-    showConnectFailBanner(err.message);
-  });
+  }, err => { showToast('Sync error: ' + err.message, true); });
 
-  // Perf: defer non-critical listeners until after the first render lands,
-  // so the initial "Connecting..." flip happens as soon as possible.
-  const attachSecondary = () => {
-    vacResetCol.onSnapshot(snap => {
-      vacResets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      bustCaches(); scheduleRender();
-    }, () => {});
+  vacResetCol.onSnapshot(snap => {
+    vacResets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    bustCaches(); scheduleRender();
+  }, () => {});
 
-    pubHolCol.orderBy('date').onSnapshot(snap => {
-      publicHolidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      bustCaches(); scheduleRender();
-    }, () => {});
+  pubHolCol.orderBy('date').onSnapshot(snap => {
+    publicHolidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    bustCaches(); scheduleRender();
+  }, () => {});
 
-    settingsCol.doc('team').onSnapshot(snap => {
-      teamSettings = snap.exists ? { capacityThreshold: 0, ...snap.data() } : { capacityThreshold: 0 };
-      const thrInput = document.getElementById('capacityThreshold');
-      if (thrInput && document.activeElement !== thrInput) thrInput.value = teamSettings.capacityThreshold || '';
-    }, () => {});
-  };
+  userProfCol.onSnapshot(snap => {
+    userProfiles = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
+  }, () => {});
 
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(attachSecondary, { timeout: 1500 });
-  } else {
-    setTimeout(attachSecondary, 250);
-  }
+  settingsCol.doc('team').onSnapshot(snap => {
+    teamSettings = snap.exists ? { capacityThreshold: 0, ...snap.data() } : { capacityThreshold: 0 };
+    const thrInput = document.getElementById('capacityThreshold');
+    if (thrInput && document.activeElement !== thrInput) thrInput.value = teamSettings.capacityThreshold || '';
+  }, () => {});
 }
 
 /* ════════════════════════════════════════════
