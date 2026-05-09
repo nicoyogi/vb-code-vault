@@ -227,12 +227,134 @@ footer a:hover{color:rgba(212,175,100,.55)}
 .fsep{margin:0 10px;opacity:.4}
 @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
 
+/* ─── KEYBOARD HINTS ON PROJECT CARDS ─── */
+.pkbd{position:absolute;top:14px;right:14px;z-index:3;display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(212,175,100,.35);opacity:.45;transition:opacity .35s,color .35s}
+.pcard:hover .pkbd,.pcard.selected .pkbd,.pcard:focus-visible .pkbd{opacity:1;color:rgba(212,175,100,.85)}
+.pkbd kbd{display:inline-block;min-width:18px;padding:2px 6px;border:1px solid rgba(212,175,100,.28);border-radius:5px;background:rgba(212,175,100,.06);font-family:var(--mono);font-size:9px;color:rgba(212,175,100,.75);line-height:1;box-shadow:inset 0 -1px 0 rgba(212,175,100,.12)}
+@media (pointer:coarse){.pkbd{display:none}}
+
+/* ─── TOME PREVIEW CHIPS ON PROJECT CARDS ─── */
+.ptomes{display:flex;flex-wrap:wrap;gap:5px;margin-top:1rem;padding-top:.9rem;border-top:1px dashed rgba(212,175,100,.09)}
+.ptome{font-family:var(--mono);font-size:9px;letter-spacing:.08em;padding:3px 9px;border-radius:14px;border:1px solid rgba(212,175,100,.14);color:rgba(212,175,100,.55);background:rgba(212,175,100,.035);display:inline-flex;align-items:center;gap:5px;transition:all .3s}
+.pcard:hover .ptome,.pcard.selected .ptome{border-color:rgba(212,175,100,.35);color:rgba(212,175,100,.85);background:rgba(212,175,100,.07)}
+.ptome-ic{font-size:10px;opacity:.9;filter:grayscale(.2)}
+
+/* Tome count in the status area */
+.ptcount{font-family:var(--mono);font-size:9.5px;color:rgba(212,175,100,.35);letter-spacing:.04em;margin-left:auto;padding-right:8px}
+.pcard:hover .ptcount,.pcard.selected .ptcount{color:rgba(212,175,100,.75)}
+
+/* ─── CHANGE-PROJECT PILL (in banner) ─── */
+.pb-change{margin-left:auto;display:inline-flex;align-items:center;gap:7px;padding:6px 12px 6px 10px;border-radius:20px;border:1px solid rgba(212,175,100,.22);background:rgba(212,175,100,.04);color:rgba(212,175,100,.72);font-family:var(--cinzel);font-size:9px;font-weight:600;letter-spacing:.25em;text-transform:uppercase;cursor:pointer;transition:border-color .25s,background .25s,color .25s,transform .25s}
+.pb-change:hover,.pb-change:focus-visible{border-color:rgba(212,175,100,.55);background:rgba(212,175,100,.1);color:#d4af64;transform:translateY(-1px)}
+.pb-change-ic{font-size:12px;line-height:1;display:inline-block;transition:transform .4s}
+.pb-change:hover .pb-change-ic{transform:rotate(-90deg)}
+
+/* ─── STAGGERED TOME REVEAL ─── */
+#tomes-section.show .grid .card{animation:tome-rise .55s cubic-bezier(.16,.84,.24,1) both}
+#tomes-section.show .grid .card:nth-child(1){animation-delay:.08s}
+#tomes-section.show .grid .card:nth-child(2){animation-delay:.15s}
+#tomes-section.show .grid .card:nth-child(3){animation-delay:.22s}
+#tomes-section.show .grid .card:nth-child(4){animation-delay:.29s}
+#tomes-section.show .grid .card:nth-child(5){animation-delay:.36s}
+@keyframes tome-rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* Cross-fade when swapping projects */
+#tomes-section.swap .grid{opacity:.25;transform:translateY(6px);transition:opacity .18s ease,transform .18s ease}
+#tomes-section.swap .project-banner{opacity:.5;transition:opacity .18s ease}
+
+/* ─── CHRONICLE PILL (always-visible, sits above project grid) ─── */
+.chronicle-pill{
+  position:relative;display:flex;align-items:center;gap:14px;
+  width:100%;padding:.85rem 1.1rem;margin-bottom:2.4rem;
+  border-radius:18px;text-decoration:none;color:inherit;overflow:hidden;
+  background:linear-gradient(135deg,rgba(20,184,166,.05) 0%,rgba(10,8,24,.7) 45%,rgba(167,139,250,.04) 100%);
+  border:1px solid rgba(20,184,166,.18);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  transition:transform .35s cubic-bezier(.16,.84,.24,1.05),border-color .35s,box-shadow .35s,background .35s;
+  animation:rise 1s .34s ease both;
+}
+.chronicle-pill::before,.chronicle-pill::after{
+  content:'';position:absolute;width:12px;height:12px;pointer-events:none;transition:opacity .4s;opacity:.25;
+}
+.chronicle-pill::before{top:10px;left:10px;border-top:1px solid rgba(20,184,166,.7);border-left:1px solid rgba(20,184,166,.7)}
+.chronicle-pill::after{bottom:10px;right:10px;border-bottom:1px solid rgba(20,184,166,.7);border-right:1px solid rgba(20,184,166,.7)}
+.chronicle-pill:hover::before,.chronicle-pill:hover::after{opacity:1}
+.chronicle-pill:hover{
+  transform:translateY(-2px);
+  border-color:rgba(20,184,166,.42);
+  box-shadow:0 18px 50px rgba(20,184,166,.14),0 0 0 1px rgba(20,184,166,.1),inset 0 1px 0 rgba(20,184,166,.08);
+  background:linear-gradient(135deg,rgba(20,184,166,.09) 0%,rgba(10,8,24,.75) 45%,rgba(167,139,250,.07) 100%);
+}
+.chronicle-pill:focus-visible{outline:2px solid rgba(20,184,166,.8);outline-offset:4px}
+
+/* Moving shimmer top-edge on hover */
+.chronicle-pill .ch-top{
+  position:absolute;top:0;left:8%;right:8%;height:1px;border-radius:50%;
+  background:linear-gradient(90deg,transparent,rgba(20,184,166,1),transparent);
+  opacity:0;transition:opacity .4s;
+}
+.chronicle-pill:hover .ch-top{opacity:1}
+
+.ch-icon{
+  width:42px;height:42px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;
+  background:rgba(20,184,166,.1);color:rgba(20,184,166,1);
+  box-shadow:0 0 0 1px rgba(20,184,166,.22),inset 0 1px 0 rgba(255,255,255,.06);
+  transition:transform .4s cubic-bezier(.16,.84,.24,1.05);
+}
+.chronicle-pill:hover .ch-icon{transform:scale(1.08) rotate(-6deg)}
+
+.ch-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ch-label{
+  font-family:var(--cinzel);font-size:8.5px;letter-spacing:.32em;text-transform:uppercase;
+  color:rgba(20,184,166,.75);
+}
+.ch-title{
+  font-family:var(--cinzel);font-size:14px;font-weight:600;letter-spacing:.04em;
+  color:rgba(255,255,255,.92);display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.ch-title-sub{
+  font-family:var(--mono);font-size:10.5px;font-weight:400;letter-spacing:.04em;
+  color:rgba(255,255,255,.4);text-transform:none;
+}
+.ch-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.ch-tag{
+  font-family:var(--mono);font-size:9px;letter-spacing:.06em;padding:2px 8px;border-radius:14px;
+  color:rgba(20,184,166,.85);border:1px solid rgba(20,184,166,.22);background:rgba(20,184,166,.06);
+}
+.ch-badge{
+  font-family:var(--cinzel);font-size:8px;letter-spacing:.26em;text-transform:uppercase;
+  color:rgba(212,175,100,.7);padding:3px 8px;border-radius:14px;
+  border:1px solid rgba(212,175,100,.25);background:rgba(212,175,100,.05);
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.ch-badge::before{
+  content:'';width:5px;height:5px;border-radius:50%;background:rgba(212,175,100,.7);
+}
+.ch-arr{
+  width:30px;height:30px;border-radius:50%;border:1px solid rgba(20,184,166,.18);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-family:var(--mono);
+  color:rgba(20,184,166,.45);flex-shrink:0;transition:all .3s;
+}
+.chronicle-pill:hover .ch-arr{
+  transform:translateX(4px);
+  border-color:rgba(20,184,166,.65);
+  color:rgba(20,184,166,1);
+  box-shadow:0 0 14px rgba(20,184,166,.22);
+}
+
 @media(max-width:580px){
   .project-grid{grid-template-columns:1fr}
   .grid{grid-template-columns:1fr}.s2{grid-column:auto}
   .s2 .cin{flex-direction:column;gap:1.2rem}
   h1{font-size:3rem}.card{padding:1.6rem}
   .rune-ring{width:90px;height:90px}
+  .project-banner{flex-wrap:wrap}
+  .pb-change{margin-left:0;margin-top:4px}
+  .chronicle-pill{flex-wrap:wrap;gap:10px;padding:.9rem 1rem}
+  .ch-body{flex-basis:calc(100% - 56px);order:2}
+  .ch-icon{order:1}
+  .ch-arr{order:3;margin-left:auto}
+  .ch-title{font-size:13px}
 }
 </style>
 </head>
@@ -279,6 +401,20 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
   <main id="main" role="main">
 
+  <a href="holiday-tracker.html" class="chronicle-pill" id="c5" aria-label="Holiday Tracker — shared chronicle of absences and leave">
+    <div class="ch-top"></div>
+    <div class="ch-icon">🗓️</div>
+    <div class="ch-body">
+      <div class="ch-label">The Chronicle · Shared</div>
+      <div class="ch-title">
+        Holiday Tracker
+        <span class="ch-title-sub">team absences &amp; leave · synced in real time</span>
+      </div>
+    </div>
+    <div class="ch-badge">All projects</div>
+    <div class="ch-arr">⟶</div>
+  </a>
+
   <div class="orn">
     <div class="orn-line"></div>
     <div class="orn-diamond"></div>
@@ -288,10 +424,11 @@ footer a:hover{color:rgba(212,175,100,.55)}
   </div>
 
   <div class="project-grid">
-    <div class="pcard" id="proj-wmf" role="button" tabindex="0" onclick="selectProject('wmf',this)" onkeydown="if(event.key === 'Enter') selectProject('wmf',this)">
+    <div class="pcard" id="proj-wmf" role="button" tabindex="0" aria-pressed="false" aria-label="WMF project — 4 tomes, keyboard shortcut 1" onclick="selectProject('wmf',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('wmf',this)}">
       <div class="pcard-top"></div>
       <div class="pblob"></div>
       <div class="pspot"></div>
+      <div class="pkbd" aria-hidden="true"><kbd>1</kbd></div>
       <div class="pcin">
         <svg class="pseal" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
           <polygon points="25,2 46,13 46,37 25,48 4,37 4,13" stroke="rgba(212,175,100,0.5)" stroke-width="1" fill="rgba(212,175,100,0.05)"/>
@@ -300,17 +437,25 @@ footer a:hover{color:rgba(212,175,100,.55)}
         </svg>
         <div class="pname">WMF</div>
         <div class="pdesc">Württembergische Metallwarenfabrik<br>Forwarder codex · Surcharge mapping<br>Invoice transmutation rituals</div>
+        <div class="ptomes" aria-hidden="true">
+          <span class="ptome"><span class="ptome-ic">💾</span>Vault</span>
+          <span class="ptome"><span class="ptome-ic">📝</span>Oracle</span>
+          <span class="ptome"><span class="ptome-ic">📊</span>Alchemist</span>
+          <span class="ptome"><span class="ptome-ic">🗂️</span>Ledger</span>
+        </div>
         <div class="pfoot">
           <div class="pstatus act"><div class="pdot"></div>Active</div>
+          <div class="ptcount">4 tomes</div>
           <div class="parr">⟶</div>
         </div>
       </div>
     </div>
 
-    <div class="pcard" id="proj-siemens" role="button" tabindex="0" onclick="selectProject('siemens',this)" onkeydown="if(event.key === 'Enter') selectProject('siemens',this)">
+    <div class="pcard" id="proj-siemens" role="button" tabindex="0" aria-pressed="false" aria-label="Siemens GP project — 2 tomes, keyboard shortcut 2" onclick="selectProject('siemens',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('siemens',this)}">
       <div class="pcard-top"></div>
       <div class="pblob" style="background:rgba(59,130,246,0.12)"></div>
       <div class="pspot"></div>
+      <div class="pkbd" aria-hidden="true"><kbd>2</kbd></div>
       <div class="pcin">
         <svg class="pseal" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
           <polygon points="25,2 46,13 46,37 25,48 4,37 4,13" stroke="rgba(59,130,246,0.5)" stroke-width="1" fill="rgba(59,130,246,0.05)"/>
@@ -319,8 +464,13 @@ footer a:hover{color:rgba(212,175,100,.55)}
         </svg>
         <div class="pname">Siemens GP</div>
         <div class="pdesc">General Procurement<br>Process knowledge base<br>Procurement rites &amp; guidelines</div>
+        <div class="ptomes" aria-hidden="true">
+          <span class="ptome" style="color:rgba(147,197,253,.75);border-color:rgba(59,130,246,.22);background:rgba(59,130,246,.06)"><span class="ptome-ic">📝</span>Oracle</span>
+          <span class="ptome" style="color:rgba(147,197,253,.75);border-color:rgba(59,130,246,.22);background:rgba(59,130,246,.06)"><span class="ptome-ic">✍️</span>Scribe</span>
+        </div>
         <div class="pfoot">
           <div class="pstatus act" style="color:rgba(59,130,246,.65)"><div class="pdot" style="background:#3b82f6;box-shadow:0 0 7px #3b82f6;animation:dpulse 2.5s ease-in-out infinite"></div>Active</div>
+          <div class="ptcount" style="color:rgba(59,130,246,.4)">2 tomes</div>
           <div class="parr">⟶</div>
         </div>
       </div>
@@ -342,7 +492,13 @@ footer a:hover{color:rgba(212,175,100,.55)}
       <span class="pb-name" id="banner-name"></span>
       <span class="pb-sep">·</span>
       <span id="banner-sub" style="font-family:var(--mono);font-size:11px"></span>
+      <button type="button" class="pb-change" id="btn-change-project" aria-label="Change project">
+        <span class="pb-change-ic" aria-hidden="true">⟲</span>
+        <span>Change</span>
+      </button>
     </div>
+
+    <div id="aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
     <div class="grid">
 
@@ -425,30 +581,6 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
     </div>
   </div>
-
-  <div class="orn" style="margin-top:0;margin-bottom:1.2rem">
-    <div class="orn-line"></div>
-    <div class="orn-diamond"></div>
-    <div class="orn-text">III — Shared chronicle</div>
-    <div class="orn-diamond"></div>
-    <div class="orn-line"></div>
-  </div>
-  <a href="holiday-tracker.html" class="card card-tl s2" id="c5" style="width:100%;margin-bottom:2.8rem">
-    <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-    <div class="cin" style="flex-direction:row;align-items:flex-start;gap:2rem">
-      <div class="icon" style="margin-bottom:0">🗓️</div>
-      <div class="cbody">
-        <div class="clabel">The Chronicle</div>
-        <div class="ctitle">Holiday Tracker</div>
-        <div class="cdesc">A shared calendar of absences &amp; leave. Add team members, log vacation, sick days or remote work — search any date to see who is away. Synced to the cloud in real time.</div>
-        <div class="cfoot">
-          <div class="tags"><span class="tag">Calendar</span><span class="tag">Leave</span><span class="tag">Team</span><span class="tag">Firebase</span></div>
-          <div class="arr">⟶</div>
-        </div>
-      </div>
-    </div>
-    <div class="deco">chronicle.mark()<br>&nbsp;.absence(day)<br>&nbsp;.sync()<br>// eternal ✦</div>
-  </a>
 
   <div class="sigil-div">
     <div class="sdl2"></div>
@@ -554,60 +686,150 @@ const PROJECTS={
   }
 };
 
-function selectProject(key,el){
+function selectProject(key,el,opts){
   const proj=PROJECTS[key];
   if(!proj)return;
+  opts = opts || {};
 
+  // If the same project is already active, bail early (no jank)
+  const alreadySelected = el && el.classList.contains('selected');
+
+  const tomes = document.getElementById('tomes-section');
+  const sec   = document.getElementById('sec-div');
+  const wasShown = tomes.classList.contains('show');
+
+  const applySelection = () => {
+    document.querySelectorAll('.pcard').forEach(c=>{
+      const isMe=c===el;
+      c.classList.toggle('selected',isMe);
+      c.setAttribute('aria-pressed',isMe?'true':'false');
+    });
+
+    document.getElementById('banner-name').textContent=proj.name;
+    document.getElementById('banner-sub').textContent=proj.sub;
+
+    const isSiemens = key==='siemens';
+
+    // Wire links + a11y state
+    function wire(id, href){
+      const a=document.getElementById(id);
+      if(!a) return;
+      if(href){
+        a.href=href;
+        a.removeAttribute('aria-disabled');
+        a.setAttribute('tabindex','0');
+      }else{
+        a.href='#';
+        a.setAttribute('aria-disabled','true');
+        a.setAttribute('tabindex','-1');
+      }
+    }
+    wire('c0', proj.code);
+    wire('c1', proj.qa);
+    wire('c2', proj.anmerkung);
+    wire('c3', proj.wording);
+    wire('c4', proj.todo);
+
+    // c0: Code Vault — WMF only
+    document.getElementById('c0').style.display=isSiemens?'none':'';
+    // c2: Anmerkung — WMF only
+    document.getElementById('c2').style.display=isSiemens?'none':'';
+    // c4: Task Ledger — WMF only
+    document.getElementById('c4').style.display=isSiemens?'none':'';
+    // c3: Standard Wording — Siemens only
+    document.getElementById('c3').style.display=isSiemens?'':'none';
+
+    // Re-trigger stagger animation on swap (remove+add show)
+    tomes.classList.remove('show');
+    sec.classList.add('show');
+    // Force reflow so the animation restarts cleanly
+    void tomes.offsetWidth;
+    tomes.classList.add('show');
+    tomes.classList.remove('swap');
+
+    // Persist
+    try { localStorage.setItem('grimoire.project', key); } catch(e){}
+
+    // Announce
+    const live = document.getElementById('aria-live');
+    if(live){
+      const tomeCount = [proj.code,proj.qa,proj.anmerkung,proj.todo,proj.wording].filter(Boolean).length;
+      live.textContent = `${proj.name} selected. ${tomeCount} tome${tomeCount===1?'':'s'} available.`;
+    }
+  };
+
+  // Smooth cross-fade when switching between already-visible projects
+  if(wasShown && !alreadySelected){
+    tomes.classList.add('swap');
+    setTimeout(applySelection, 170);
+  } else {
+    applySelection();
+  }
+
+  // Scroll behaviour — skip when restoring from storage
+  if(!opts.silent){
+    setTimeout(()=>{
+      const target = document.getElementById('sec-div');
+      const y = target.getBoundingClientRect().top + window.scrollY - 40;
+      window.scrollTo({ top: y, behavior: (window.Grimoire && window.Grimoire.reducedMotion) ? 'auto' : 'smooth' });
+    }, wasShown && !alreadySelected ? 220 : 260);
+  }
+}
+
+/* ─── CHANGE PROJECT BUTTON ─── */
+function clearProject(){
   document.querySelectorAll('.pcard').forEach(c=>{
-    const isMe=c===el;
-    c.classList.toggle('selected',isMe);
-    c.setAttribute('aria-pressed',isMe?'true':'false');
+    c.classList.remove('selected');
+    c.setAttribute('aria-pressed','false');
   });
+  document.getElementById('sec-div').classList.remove('show');
+  document.getElementById('tomes-section').classList.remove('show','swap');
+  try { localStorage.removeItem('grimoire.project'); } catch(e){}
+  const live = document.getElementById('aria-live');
+  if(live) live.textContent = 'Selection cleared. Choose a project.';
+  // Return focus to the project grid for keyboard users
+  const firstCard = document.querySelector('.pcard');
+  if(firstCard){
+    const y = firstCard.getBoundingClientRect().top + window.scrollY - 80;
+    window.scrollTo({ top: Math.max(0,y), behavior: (window.Grimoire && window.Grimoire.reducedMotion) ? 'auto' : 'smooth' });
+    setTimeout(()=>firstCard.focus(), 300);
+  }
+}
 
-  document.getElementById('banner-name').textContent=proj.name;
-  document.getElementById('banner-sub').textContent=proj.sub;
+document.getElementById('btn-change-project').addEventListener('click', clearProject);
 
-  const isSiemens = key==='siemens';
+/* ─── KEYBOARD SHORTCUTS ─── */
+document.addEventListener('keydown', e=>{
+  // Ignore when typing in inputs / with modifiers
+  const tag = (e.target && e.target.tagName || '').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select'||e.target?.isContentEditable) return;
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
 
-  // Wire links + a11y state
-  function wire(id, href){
-    const a=document.getElementById(id);
-    if(!a) return;
-    if(href){
-      a.href=href;
-      a.removeAttribute('aria-disabled');
-      a.setAttribute('tabindex','0');
-    }else{
-      a.href='#';
-      a.setAttribute('aria-disabled','true');
-      a.setAttribute('tabindex','-1');
+  if(e.key==='1'){
+    e.preventDefault();
+    const card = document.getElementById('proj-wmf');
+    selectProject('wmf', card);
+  } else if(e.key==='2'){
+    e.preventDefault();
+    const card = document.getElementById('proj-siemens');
+    selectProject('siemens', card);
+  } else if(e.key==='Escape'){
+    if(document.getElementById('tomes-section').classList.contains('show')){
+      e.preventDefault();
+      clearProject();
     }
   }
-  wire('c0', proj.code);
-  wire('c1', proj.qa);
-  wire('c2', proj.anmerkung);
-  wire('c3', proj.wording);
-  wire('c4', proj.todo);
+});
 
-  // c0: Code Vault — WMF only
-  document.getElementById('c0').style.display=isSiemens?'none':'';
-  // c2: Anmerkung — WMF only
-  document.getElementById('c2').style.display=isSiemens?'none':'';
-  // c4: Task Ledger — WMF only
-  document.getElementById('c4').style.display=isSiemens?'none':'';
-  // c3: Standard Wording — Siemens only
-  document.getElementById('c3').style.display=isSiemens?'':'none';
-
-  document.getElementById('sec-div').classList.add('show');
-  document.getElementById('tomes-section').classList.add('show');
-
-  // Smoother scroll transition
-  setTimeout(()=>{
-    const target = document.getElementById('sec-div');
-    const y = target.getBoundingClientRect().top + window.scrollY - 40;
-    window.scrollTo({ top: y, behavior: (window.Grimoire && window.Grimoire.reducedMotion) ? 'auto' : 'smooth' });
-  }, 250);
-}
+/* ─── RESTORE LAST PROJECT ─── */
+(function restore(){
+  let saved = null;
+  try { saved = localStorage.getItem('grimoire.project'); } catch(e){}
+  if(saved && PROJECTS[saved]){
+    const card = document.getElementById(saved==='wmf'?'proj-wmf':'proj-siemens');
+    if(card) selectProject(saved, card, {silent:true});
+  }
+})();
 
 // Block activation of disabled tome cards (keyboard + click)
 document.querySelectorAll('.card[aria-disabled]').forEach(card=>{
