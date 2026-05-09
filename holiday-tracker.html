@@ -74,12 +74,13 @@
   .auth-input-group { display: flex; flex-direction: column; gap: 6px; }
   .auth-input-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
   .auth-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; transition: border-color 0.15s; width: 100%; }
-  .auth-input:focus { border-color: var(--accent); }
+  .auth-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-a25); }
   .auth-select { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; outline: none; transition: border-color 0.15s; width: 100%; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; cursor: pointer; }
-  .auth-select:focus { border-color: var(--accent); }
+  .auth-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-a25); }
   .auth-select option { background: var(--surface2); }
   .auth-btn { padding: 12px; border-radius: 9px; border: none; background: var(--accent); color: #0e0f13; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.18s; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .auth-btn:hover { background: #4ade80; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(110,231,183,0.25); }
+  .auth-btn:active { transform: scale(0.97); }
   .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   .auth-error { background: var(--red-a10); border: 1px solid var(--red-a25); border-radius: 8px; padding: 10px 14px; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--red); display: none; }
   .auth-error.show { display: block; }
@@ -113,6 +114,7 @@
   .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.18s ease; border: none; }
+  .btn:active { transform: scale(0.96); }
   .btn-primary { background: var(--accent); color: #0e0f13; }
   .btn-primary:hover { background: #4ade80; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(110,231,183,0.25); }
   .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
@@ -133,7 +135,8 @@
   .main-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
   @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
 
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
   .calendar-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
   .calendar-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .month-nav { display: flex; align-items: center; gap: 16px; }
@@ -221,7 +224,7 @@
   .warn-error  { background: var(--red-a10) !important; border-color: var(--red-a25) !important; color: var(--red) !important; }
 
   /* Modals */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
   .modal-overlay.open { opacity: 1; pointer-events: all; }
   .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 480px; padding: 28px; transform: translateY(20px); transition: transform 0.25s ease; box-shadow: 0 25px 80px rgba(0,0,0,0.5); }
   .modal-overlay.open .modal { transform: translateY(0); }
@@ -1876,7 +1879,50 @@ function exportCSV() {
   URL.revokeObjectURL(url);
   showToast('CSV exported!');
 }
+// --- Auto-Logout on Inactivity ---
+  (function() {
+    let inactivityTimeout;
+    
+    // Set to 15 minutes. 
+    // Tip: Change "15" to "0.1" (6 seconds) if you want to test if it works quickly!
+    const INACTIVITY_LIMIT = 10 * 60 * 1000; 
 
+    function resetInactivityTimer() {
+      // Clear the previous timer
+      clearTimeout(inactivityTimeout);
+      
+      // Start a new timer
+      inactivityTimeout = setTimeout(() => {
+        
+        // Check if the user is actively logged in by checking if mainApp is visible
+        const mainApp = document.getElementById('mainApp');
+        
+        if (mainApp && mainApp.style.display !== 'none') {
+             console.log("Inactivity limit reached. Executing auto-logout.");
+             doSignOut(); // Your existing logout function
+             alert("You have been automatically logged out due to 15 minutes of inactivity.");
+        }
+      }, INACTIVITY_LIMIT);
+    }
+
+    // List of events that prove the user is still at their computer/phone
+    const activityEvents = [
+      'mousemove', 
+      'mousedown', 
+      'keydown', 
+      'touchstart', 
+      'scroll'
+    ];
+
+    // Attach the reset function to the window
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer, { passive: true });
+    });
+
+    // Start the initial timer
+    resetInactivityTimer();
+  })();
+ 
 /* ════════════════════════════════════════════
    MODAL BACKDROP
 ════════════════════════════════════════════ */
