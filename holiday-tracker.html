@@ -869,6 +869,7 @@ async function loadPeopleForAuth() {
   // after sign-in. The listener is started lazily and only once.
   attachAuthPrefetch();
   renderAuthSelectors(loginSel, regSel);
+  armAuthGateWatchdog();
 }
 
 // Prefetch listeners — started from loadPeopleForAuth(), reused by startListeners().
@@ -890,15 +891,13 @@ function attachAuthPrefetch() {
         document.getElementById('loginEmail'),
         document.getElementById('registerPerson')
       );
+      clearAuthGateWatchdogIfReady();
     }
     if (document.getElementById('manageModal')?.classList.contains('open')) renderPeopleList();
   }, err => {
     if (appStarted) { setStatus('error', 'Error'); showToast('Connection error: ' + err.message, true); }
     else {
-      const loginSel = document.getElementById('loginEmail');
-      const regSel   = document.getElementById('registerPerson');
-      if (loginSel) loginSel.innerHTML = '<option value="">— Error loading —</option>';
-      if (regSel)   regSel.innerHTML   = '<option value="">— Error loading —</option>';
+      showAuthGateError('Could not load team list: ' + (err && err.message ? err.message : 'connection error'));
     }
   });
 
@@ -910,25 +909,78 @@ function attachAuthPrefetch() {
         document.getElementById('loginEmail'),
         document.getElementById('registerPerson')
       );
+      clearAuthGateWatchdogIfReady();
     }
     if (document.getElementById('manageModal')?.classList.contains('open')) renderPeopleList();
-  }, () => {});
+  }, err => {
+    if (!appStarted) {
+      showAuthGateError('Could not load accounts: ' + (err && err.message ? err.message : 'connection error'));
+    }
+  });
+}
+
+/* ── AUTH GATE WATCHDOG ──
+   If the auth-gate selectors haven't populated after 8s (e.g. Firestore
+   WebChannel silently hangs, a stale IndexedDB lock, or the profiles
+   listener never fires), show an error banner with a Retry button so the
+   user isn't stuck on "— Loading… —" forever. */
+let _authGateWatchdogTimer = null;
+function armAuthGateWatchdog() {
+  clearTimeout(_authGateWatchdogTimer);
+  _authGateWatchdogTimer = setTimeout(() => {
+    if (!_authPrefetchedPeople || !_authPrefetchedProfiles) {
+      showAuthGateError('Still loading after 8s. Your network may be blocking Firestore. Check your connection and retry.');
+    }
+  }, 8000);
+}
+function clearAuthGateWatchdogIfReady() {
+  if (_authPrefetchedPeople && _authPrefetchedProfiles) {
+    clearTimeout(_authGateWatchdogTimer);
+    const b = document.getElementById('authGateErrBanner');
+    if (b) b.remove();
+  }
+}
+function showAuthGateError(msg) {
+  // Show the selectors in an error state and add a retry banner inside the card.
+  const loginSel = document.getElementById('loginEmail');
+  const regSel   = document.getElementById('registerPerson');
+  if (loginSel && !_authPrefetchedPeople) loginSel.innerHTML = '<option value="">— Error loading —</option>';
+  if (regSel   && !_authPrefetchedPeople) regSel.innerHTML   = '<option value="">— Error loading —</option>';
+
+  if (document.getElementById('authGateErrBanner')) return;
+  const card = document.querySelector('#authGate .auth-card');
+  if (!card) return;
+  const banner = document.createElement('div');
+  banner.id = 'authGateErrBanner';
+  banner.style.cssText = 'margin-top:14px;background:var(--red-a10);border:1px solid var(--red-a25);border-radius:8px;padding:10px 14px;font-family:DM Mono,monospace;font-size:0.68rem;color:var(--red);display:flex;flex-direction:column;gap:8px;line-height:1.5;';
+  banner.innerHTML =
+    '<span>\u26A0 ' + msg + '</span>' +
+    '<button onclick="retryConnection()" style="align-self:flex-start;background:var(--red);color:#0e0f13;border:none;border-radius:6px;padding:6px 14px;font-family:DM Mono,monospace;font-size:0.7rem;font-weight:600;cursor:pointer;">Retry</button>';
+  card.appendChild(banner);
 }
 
 function renderAuthSelectors(loginSel, regSel) {
   if (!loginSel || !regSel) return;
-  if (!_authPrefetchedPeople || !_authPrefetchedProfiles) return;
+  if (!_authPrefetchedPeople) return;
 
-  const linkedIds = new Set(userProfiles.map(p => p.personId));
+  // Populate the Sign-In selector as soon as we have the team list — it does
+  // NOT depend on userProfiles. The Register tab filters out people who
+  // already have an account, so it waits for the profiles snapshot (but
+  // shows a clear loading hint in the meantime instead of hanging silently).
+  const linkedIds = new Set((_authPrefetchedProfiles ? userProfiles : []).map(p => p.personId));
   loginSel.innerHTML = '<option value="">— Select your name —</option>';
-  regSel.innerHTML   = '<option value="">— Select your name —</option>';
+  regSel.innerHTML   = _authPrefetchedProfiles
+    ? '<option value="">— Select your name —</option>'
+    : '<option value="">— Loading accounts… —</option>';
 
   people.forEach(p => {
     const opt = `<option value="${p.id}">${p.name} (${p.dept})</option>`;
     loginSel.insertAdjacentHTML('beforeend', opt);
-    if (!linkedIds.has(p.id)) regSel.insertAdjacentHTML('beforeend', opt);
+    if (_authPrefetchedProfiles && !linkedIds.has(p.id)) regSel.insertAdjacentHTML('beforeend', opt);
   });
-  if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— All members have accounts —</option>';
+  if (_authPrefetchedProfiles && regSel.options.length === 1) {
+    regSel.innerHTML = '<option value="">— All members have accounts —</option>';
+  }
 }
 
 async function doLogin() {
