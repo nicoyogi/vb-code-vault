@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/grimoire-core.css">
-  <script src="assets/grimoire-core.js" defer></script>
+  <script src="assets/grimoire-core.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -333,7 +333,7 @@
     </div>
     <span id="total-badge">— entries</span>
     <!-- ── THEME TOGGLE ── -->
-    <button class="btn-theme" onclick="toggleTheme()" id="theme-btn" title="Toggle dark/light mode">
+    <button class="btn-theme" onclick="Grimoire.Theme.toggle()" id="theme-btn" title="Toggle dark/light mode">
       <span class="theme-icon" id="theme-icon">☀️</span>
       <span id="theme-label">Light</span>
     </button>
@@ -562,33 +562,17 @@ const col = db.collection('sgp_entries');
 const authDoc = db.collection('_config').doc('auth_sgp');
 let entries=[], editId=null, detailId=null, saving=false, pendingImages=[];
 
-/* ── THEME TOGGLE ── */
-const THEME_KEY = 'sgp_kb_theme';
+/* ── THEME TOGGLE (shared) ── */
+// This page defaults to LIGHT and opts in to DARK via `html.dark`,
+// which is the opposite convention from the other pages. The shared
+// Grimoire.Theme module handles both via `mode` + `className`.
 function initTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
-  // Default = light (this page was originally light)
-  if (saved === 'dark') applyTheme('dark');
-  else applyTheme('light');
-}
-function applyTheme(mode) {
-  const html = document.documentElement;
-  const icon = document.getElementById('theme-icon');
-  const label = document.getElementById('theme-label');
-  if (mode === 'dark') {
-    html.classList.add('dark');
-    icon.textContent = '🌙';
-    label.textContent = 'Dark';
-    localStorage.setItem(THEME_KEY, 'dark');
-  } else {
-    html.classList.remove('dark');
-    icon.textContent = '☀️';
-    label.textContent = 'Light';
-    localStorage.setItem(THEME_KEY, 'light');
-  }
-}
-function toggleTheme() {
-  const isDark = document.documentElement.classList.contains('dark');
-  applyTheme(isDark ? 'light' : 'dark');
+  Grimoire.Theme.init({
+    defaultMode:'light', mode:'dark', className:'dark',
+    iconEl:'#theme-icon', labelEl:'#theme-label',
+    icons:{light:'☀️', dark:'🌙'},
+    labels:{light:'Light', dark:'Dark'}
+  });
 }
 
 function setStatus(s,l){document.getElementById('status-dot').className='status-dot '+(s||'');document.getElementById('status-label').textContent=l;}
