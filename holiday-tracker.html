@@ -529,10 +529,10 @@
   </div>
 </div>
 
-<!-- Add Holiday Modal -->
+<!-- Add / Edit Holiday Modal -->
 <div class="modal-overlay" id="addModal">
   <div class="modal">
-    <div class="modal-title">Add Holiday</div>
+    <div class="modal-title" id="addModalTitle">Add Holiday</div>
     <div class="modal-sub" id="addModalSub">Record who's out and when · weekdays (Mon–Fri) only</div>
     <div class="form-group"><label class="form-label">Person</label><select id="formPerson"></select></div>
     <div class="form-group form-row">
@@ -560,10 +560,12 @@
     </div>
     <div class="form-group"><label class="form-label">Note (optional)</label><input type="text" id="formNote" placeholder="e.g. Bali trip, doctor appointment…"></div>
     <div class="conflict-warn" id="conflictWarn"></div>
+    <div id="capacityWarn" style="border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;margin-bottom:4px;display:none;border:1px solid transparent;"></div>
     <div id="vacWarning"></div>
     <div class="modal-footer">
+      <button class="btn btn-danger" id="editDeleteBtn" onclick="deleteFromEdit()" style="display:none;margin-right:auto;">🗑 Delete</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveHoliday()">Save Holiday</button>
+      <button class="btn btn-primary" id="saveHolBtn" onclick="saveHoliday()">Save Holiday</button>
     </div>
   </div>
 </div>
@@ -578,14 +580,24 @@
       <input type="text" id="newPersonDept" placeholder="Department" style="flex:0.6">
       <button class="btn btn-primary" onclick="addPerson()" style="flex-shrink:0;padding:9px 14px;">+</button>
     </div>
-    <div class="scrollable" id="peopleList" style="max-height:300px;"></div>
+    <div class="scrollable" id="peopleList" style="max-height:240px;"></div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="form-label" style="margin-bottom:8px;">⚠ Team Capacity Threshold</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="number" id="capacityThreshold" min="0" max="20" step="1" style="flex:0 0 80px;" placeholder="3">
+        <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--text-muted);flex:1;min-width:120px;">
+          Warn if this many people (or more) are off on the same day. 0 = disabled.
+        </span>
+        <button class="btn btn-primary btn-sm" onclick="saveCapacityThreshold()" style="flex-shrink:0;">Save</button>
+      </div>
+    </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeManage()">Close</button></div>
   </div>
 </div>
 
 <!-- Public Holidays Modal -->
 <div class="modal-overlay" id="pubHolModal">
-  <div class="modal">
+  <div class="modal" style="max-width:520px;">
     <div class="modal-title">Public Holidays</div>
     <div class="modal-sub">National/regional holidays · 👑 Admin only</div>
     <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -593,6 +605,43 @@
       <input type="text" id="newPubName" placeholder="Holiday name" style="flex:1;min-width:140px;">
       <button class="btn btn-primary" onclick="addPublicHoliday()" style="flex-shrink:0;padding:9px 14px;">+</button>
     </div>
+    <details style="margin-bottom:14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;">
+      <summary style="cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:0.06em;color:var(--accent3);">
+        🌍 Import from country (date.nager.at)
+      </summary>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select id="pubHolCountry" style="flex:1;min-width:140px;">
+          <option value="">— Select country —</option>
+          <option value="DE">🇩🇪 Germany</option>
+          <option value="AT">🇦🇹 Austria</option>
+          <option value="CH">🇨🇭 Switzerland</option>
+          <option value="FR">🇫🇷 France</option>
+          <option value="GB">🇬🇧 United Kingdom</option>
+          <option value="US">🇺🇸 United States</option>
+          <option value="ES">🇪🇸 Spain</option>
+          <option value="IT">🇮🇹 Italy</option>
+          <option value="NL">🇳🇱 Netherlands</option>
+          <option value="BE">🇧🇪 Belgium</option>
+          <option value="PL">🇵🇱 Poland</option>
+          <option value="IE">🇮🇪 Ireland</option>
+          <option value="PT">🇵🇹 Portugal</option>
+          <option value="SE">🇸🇪 Sweden</option>
+          <option value="NO">🇳🇴 Norway</option>
+          <option value="DK">🇩🇰 Denmark</option>
+          <option value="FI">🇫🇮 Finland</option>
+          <option value="CA">🇨🇦 Canada</option>
+          <option value="AU">🇦🇺 Australia</option>
+          <option value="NZ">🇳🇿 New Zealand</option>
+          <option value="JP">🇯🇵 Japan</option>
+          <option value="IN">🇮🇳 India</option>
+          <option value="BR">🇧🇷 Brazil</option>
+          <option value="MX">🇲🇽 Mexico</option>
+        </select>
+        <input type="number" id="pubHolYear" min="2020" max="2099" step="1" style="flex:0 0 90px;" placeholder="2026">
+        <button class="btn btn-export btn-sm" id="pubHolFetchBtn" onclick="fetchCountryHolidays()" style="flex-shrink:0;">Fetch</button>
+      </div>
+      <div id="pubHolFetchStatus" style="margin-top:8px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-muted);"></div>
+    </details>
     <div class="pub-hol-list" id="pubHolList"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closePubHol()">Close</button></div>
   </div>
@@ -611,6 +660,22 @@
       <button class="btn btn-danger" onclick="doSignOut()">🚪 Sign Out</button>
       <button class="btn btn-ghost" onclick="closeProfileModal()">Cancel</button>
       <button class="btn btn-primary" onclick="doChangePassword()">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Inactivity Warning Modal -->
+<div class="modal-overlay" id="inactivityModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">Still there?</div>
+    <div class="modal-sub">You'll be signed out automatically due to inactivity.</div>
+    <div style="text-align:center;margin:18px 0;">
+      <div style="font-family:'DM Serif Display',serif;font-size:3rem;color:var(--accent2);line-height:1;" id="inactivitySeconds">60</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;margin-top:4px;">SECONDS REMAINING</div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-danger" onclick="doSignOut()">Sign out now</button>
+      <button class="btn btn-primary" onclick="dismissInactivityWarning()">Stay signed in</button>
     </div>
   </div>
 </div>
@@ -656,6 +721,7 @@ const vacResetCol = db.collection('wmf_vac_resets');
 const activityCol = db.collection('wmf_activity_log');
 const pubHolCol   = db.collection('wmf_public_holidays');
 const userProfCol = db.collection('wmf_user_profiles');
+const settingsCol = db.collection('wmf_settings');
 
 /* ════════════════════════════════════════════
    CONSTANTS
@@ -689,6 +755,7 @@ let holidays       = [];
 let vacResets      = [];
 let publicHolidays = [];
 let userProfiles   = [];
+let teamSettings   = { capacityThreshold: 0 };
 let viewYear       = new Date().getFullYear();
 let viewMonth      = new Date().getMonth();
 let currentView    = 'calendar';
@@ -1026,6 +1093,12 @@ function startListeners() {
     userProfiles = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
     if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
   }, () => {});
+
+  settingsCol.doc('team').onSnapshot(snap => {
+    teamSettings = snap.exists ? { capacityThreshold: 0, ...snap.data() } : { capacityThreshold: 0 };
+    const thrInput = document.getElementById('capacityThreshold');
+    if (thrInput && document.activeElement !== thrInput) thrInput.value = teamSettings.capacityThreshold || '';
+  }, () => {});
 }
 
 /* ════════════════════════════════════════════
@@ -1301,12 +1374,17 @@ function renderGantt() {
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const today = dateStr(new Date());
   const mPad  = String(viewMonth+1).padStart(2,'0');
+  const DOW_LETTERS = ['S','M','T','W','T','F','S']; // Sun=0 .. Sat=6
 
   let html = `<div class="gantt-header-row"><div class="gantt-name-col">Person</div><div class="gantt-days-header">`;
   for (let d = 1; d <= daysInMonth; d++) {
     const iso = `${viewYear}-${mPad}-${String(d).padStart(2,'0')}`;
     const dow = parseDate(iso).getDay();
-    html += `<div class="gantt-day-label${iso===today?' today-col':''}${dow===0||dow===6?' weekend-col':''}">${d}</div>`;
+    const isWknd = dow === 0 || dow === 6;
+    html += `<div class="gantt-day-label${iso===today?' today-col':''}${isWknd?' weekend-col':''}" style="line-height:1.25;">
+      <div style="font-size:0.52rem;opacity:0.75;">${DOW_LETTERS[dow]}</div>
+      <div>${d}</div>
+    </div>`;
   }
   html += `</div></div>`;
 
@@ -1356,10 +1434,11 @@ function renderVacBalance() {
     let remainClass = 'ok', barColor = '#6ee7b7';
     if (remaining <= 0)  { remainClass = 'exhausted'; barColor = '#f87171'; }
     else if (remaining <= 3) { remainClass = 'warn';  barColor = '#f59e0b'; }
-    const bonusBadge = allot > VACATION_DAYS_PER_YEAR
-      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--accent3);margin-left:3px;">+${allot-VACATION_DAYS_PER_YEAR}↩</span>` : '';
+    const bonus      = allot - VACATION_DAYS_PER_YEAR;
+    const bonusBadge = bonus !== 0
+      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:${bonus > 0 ? 'var(--accent3)' : 'var(--red)'};margin-left:3px;">${bonus > 0 ? '+' : ''}${bonus}↩</span>` : '';
     const resetBtn = isAdmin()
-      ? `<button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name}',${year})" title="Reset vacation balance">↺</button>` : '';
+      ? `<button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name.replace(/'/g,"\\'")}',${year})" title="Adjust vacation bonus">↺</button>` : '';
     return `<div class="vac-row">
       <div class="avatar" style="width:30px;height:30px;font-size:0.65rem;background:${color.bg};color:${color.text};">${initials(p.name)}</div>
       <div class="vac-info">
@@ -1408,6 +1487,9 @@ function renderAllList() {
     const color   = getColor(h.personId);
     const halfTag = h.halfDay ? ` · ½ ${h.halfDayPart||''}` : '';
     const days    = entryDays(h);
+    const canEd   = canEdit(h.personId);
+    const edit    = canEd
+      ? `<button class="delete-btn" onclick="editHoliday('${h.id}')" title="Edit" style="color:var(--accent3);">✎</button>` : '';
     const del     = canDelete(h)
       ? `<button class="delete-btn" onclick="deleteHoliday('${h.id}')" title="Delete">✕</button>` : '';
     return `<div class="list-item-row">
@@ -1416,6 +1498,7 @@ function renderAllList() {
         <div class="list-item-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'📌'}<span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:4px;">${fmtDays(days)}d</span></div>
         <div class="list-item-date">${fmtDate(h.start)} → ${fmtDate(h.end)}${halfTag}${h.note?' · '+h.note:''}</div>
       </div>
+      ${edit}
       ${del}
     </div>`;
   }).join('');
@@ -1463,6 +1546,10 @@ function renderPeopleList() {
 function openPublicHolidays() {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   renderPubHolList();
+  const yr = document.getElementById('pubHolYear');
+  if (yr && !yr.value) yr.value = new Date().getFullYear();
+  const status = document.getElementById('pubHolFetchStatus');
+  if (status) status.textContent = '';
   document.getElementById('pubHolModal').classList.add('open');
 }
 function closePubHol() { document.getElementById('pubHolModal').classList.remove('open'); }
@@ -1501,6 +1588,77 @@ async function deletePublicHoliday(id) {
   finally { showSaving(false); }
 }
 
+/**
+ * Fetch a country's public holidays for a year from date.nager.at
+ * and bulk-insert ones that aren't already in the collection.
+ * API docs: https://date.nager.at/Api
+ */
+async function fetchCountryHolidays() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const country = document.getElementById('pubHolCountry').value;
+  const yearRaw = document.getElementById('pubHolYear').value.trim();
+  const year    = Number(yearRaw);
+  const status  = document.getElementById('pubHolFetchStatus');
+  const btn     = document.getElementById('pubHolFetchBtn');
+
+  if (!country) { status.textContent = '⚠ Select a country first.'; status.style.color = 'var(--red)'; return; }
+  if (!Number.isInteger(year) || year < 2020 || year > 2099) {
+    status.textContent = '⚠ Enter a valid year (2020–2099).'; status.style.color = 'var(--red)'; return;
+  }
+
+  btn.disabled = true;
+  status.style.color = 'var(--text-muted)';
+  status.textContent = `Fetching ${country} ${year}…`;
+
+  try {
+    const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${country}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+    const entries = await resp.json();
+    if (!Array.isArray(entries) || !entries.length) {
+      status.style.color = 'var(--accent2)';
+      status.textContent = `No holidays returned for ${country} ${year}.`;
+      return;
+    }
+
+    // Skip duplicates: same date + same name already in our collection
+    const existingKeys = new Set(publicHolidays.map(ph => `${ph.date}|${(ph.name||'').toLowerCase()}`));
+    const toAdd = entries
+      .map(e => ({ date: e.date, name: e.localName || e.name || 'Holiday' }))
+      .filter(e => e.date && !existingKeys.has(`${e.date}|${e.name.toLowerCase()}`));
+
+    if (!toAdd.length) {
+      status.style.color = 'var(--accent2)';
+      status.textContent = `All ${entries.length} ${country} ${year} holidays already imported.`;
+      return;
+    }
+
+    showSaving(true);
+    // Firestore batches are limited to 500 ops — comfortably above any country's annual count
+    const batch = db.batch();
+    const stamp = firebase.firestore.FieldValue.serverTimestamp();
+    toAdd.forEach(e => {
+      batch.set(pubHolCol.doc(), { date: e.date, name: e.name, country, createdAt: stamp });
+    });
+    await batch.commit();
+
+    await writeLog('vac_reset',
+      `<strong>Public holidays</strong> — imported ${toAdd.length} ${country} ${year} holiday${toAdd.length === 1 ? '' : 's'}`,
+      { country, year, added: toAdd.length });
+
+    status.style.color = 'var(--accent)';
+    status.textContent = `✓ Imported ${toAdd.length} holiday${toAdd.length === 1 ? '' : 's'} (${entries.length - toAdd.length} already existed).`;
+    showToast(`Imported ${toAdd.length} ${country} ${year} holidays!`);
+    renderPubHolList();
+  } catch(e) {
+    status.style.color = 'var(--red)';
+    status.textContent = `⚠ Fetch failed: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    showSaving(false);
+  }
+}
+
 /* ════════════════════════════════════════════
    VACATION RESET (admin)
 ════════════════════════════════════════════ */
@@ -1508,13 +1666,38 @@ async function resetVacation(personId, personName, year) {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   const existing    = vacResets.find(r => r.personId === personId && r.year === year);
   const currentBonus = existing ? (existing.resetDays || 0) : 0;
-  const newBonus    = currentBonus + VACATION_DAYS_PER_YEAR;
-  if (!confirm(`Reset vacation for ${personName}?\n\nAdds ${VACATION_DAYS_PER_YEAR} days to ${year} allotment.\n${VACATION_DAYS_PER_YEAR+currentBonus} → ${VACATION_DAYS_PER_YEAR+newBonus} days`)) return;
+  const currentAllot = VACATION_DAYS_PER_YEAR + currentBonus;
+
+  const msg =
+    `Adjust ${personName}'s vacation bonus for ${year}.\n\n` +
+    `Base allotment: ${VACATION_DAYS_PER_YEAR} days\n` +
+    `Current bonus:  ${currentBonus >= 0 ? '+' : ''}${currentBonus} days\n` +
+    `Current total:  ${currentAllot} days\n\n` +
+    `Enter the NEW bonus (positive = add, negative = reduce, 0 = remove bonus).\n` +
+    `Example: "3" for carry-over, "-6" for half-year proration, "12" for a fresh year reset.`;
+
+  const raw = prompt(msg, String(currentBonus));
+  if (raw === null) return;
+  const newBonus = Number(raw.trim());
+  if (!Number.isFinite(newBonus)) { showToast('Invalid number.', true); return; }
+  if (newBonus === currentBonus)  { showToast('No change.'); return; }
+
+  const newAllot = VACATION_DAYS_PER_YEAR + newBonus;
+  if (newAllot < 0) { showToast('Total allotment cannot be negative.', true); return; }
+  if (!confirm(`Set ${personName}'s ${year} allotment to ${newAllot} days (bonus ${newBonus >= 0 ? '+' : ''}${newBonus})?`)) return;
+
   showSaving(true);
   try {
-    await vacResetCol.doc(`${personId}_${year}`).set({ personId, year, resetDays: newBonus, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    await writeLog('vac_reset', `<strong>${personName}</strong> — vacation balance reset (+${VACATION_DAYS_PER_YEAR} days for ${year})`, { personId, year, newBonus });
-    showToast(`+${VACATION_DAYS_PER_YEAR} days added for ${personName} in ${year}`);
+    await vacResetCol.doc(`${personId}_${year}`).set({
+      personId, year, resetDays: newBonus,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const delta = newBonus - currentBonus;
+    const sign  = delta >= 0 ? '+' : '';
+    await writeLog('vac_reset',
+      `<strong>${personName}</strong> — ${year} bonus set to ${newBonus >= 0 ? '+' : ''}${newBonus} days (${sign}${delta} change · total ${newAllot}d)`,
+      { personId, year, newBonus, previousBonus: currentBonus });
+    showToast(`${personName}: ${year} allotment now ${newAllot} days`);
   } catch(e) { showToast('Reset failed: '+e.message, true); }
   finally { showSaving(false); }
 }
@@ -1598,7 +1781,7 @@ function scheduleModalWarnings() {
   _warnTimer = setTimeout(updateModalWarnings, 16);
 }
 function updateModalWarnings() {
-  updateWeekendWarn(); updateConflictWarn(); updateVacWarning();
+  updateWeekendWarn(); updateConflictWarn(); updateVacWarning(); updateCapacityWarn();
 }
 
 function attachModalListeners() {
@@ -1612,44 +1795,83 @@ function attachModalListeners() {
 }
 
 let _modalListenersAttached = false;
-function openAddModal(keepDates) {
+let editingHolidayId = null;
+function openAddModal(keepDates, editH) {
   if (!currentUser) { showToast('Please sign in first.', true); return; }
   if (!_modalListenersAttached) { _modalListenersAttached = true; attachModalListeners(); }
+
+  editingHolidayId = editH ? editH.id : null;
+  const titleEl  = document.getElementById('addModalTitle');
+  const subEl    = document.getElementById('addModalSub');
+  const saveBtn  = document.getElementById('saveHolBtn');
+  const delBtn   = document.getElementById('editDeleteBtn');
+  titleEl.textContent = editH ? 'Edit Holiday' : 'Add Holiday';
+  saveBtn.textContent = editH ? 'Update Holiday' : 'Save Holiday';
+  delBtn.style.display = editH ? '' : 'none';
 
   const sel = document.getElementById('formPerson');
   if (isAdmin()) {
     sel.innerHTML = '<option value="">— Select person —</option>';
     people.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.dept})</option>`; });
     sel.disabled = false;
-    document.getElementById('addModalSub').textContent = 'Record who\'s out and when · weekdays (Mon–Fri) only';
+    if (!editH) subEl.textContent = 'Record who\'s out and when · weekdays (Mon–Fri) only';
   } else {
     const myId = myPersonId();
     const me   = getPerson(myId);
     sel.innerHTML = me ? `<option value="${myId}">${me.name} (${me.dept})</option>` : '<option value="">— Not linked to a person —</option>';
     sel.disabled  = true;
-    document.getElementById('addModalSub').textContent = `Adding holiday for you · ${me ? me.name : ''} · weekdays only`;
+    if (!editH) subEl.textContent = `Adding holiday for you · ${me ? me.name : ''} · weekdays only`;
   }
 
-  if (!keepDates) {
-    document.getElementById('formStart').value = '';
-    document.getElementById('formEnd').value   = '';
+  if (editH) {
+    sel.value = editH.personId;
+    document.getElementById('formStart').value = editH.start;
+    document.getElementById('formEnd').value   = editH.end;
+    document.getElementById('formType').value  = editH.type || 'vacation';
+    document.getElementById('formNote').value  = editH.note || '';
+    document.getElementById('halfDayCheck').checked = !!editH.halfDay;
+    document.getElementById('halfDaySelect').classList.toggle('visible', !!editH.halfDay);
+    if (editH.halfDay && editH.halfDayPart) document.getElementById('halfDayPart').value = editH.halfDayPart;
+    subEl.textContent = `Editing entry for ${getPersonName(editH.personId)}`;
+  } else {
+    if (!keepDates) {
+      document.getElementById('formStart').value = '';
+      document.getElementById('formEnd').value   = '';
+    }
+    document.getElementById('formNote').value   = '';
+    document.getElementById('formType').value   = 'vacation';
+    document.getElementById('halfDayCheck').checked = false;
+    document.getElementById('halfDaySelect').classList.remove('visible');
   }
-  document.getElementById('formNote').value   = '';
-  document.getElementById('formType').value   = 'vacation';
-  document.getElementById('halfDayCheck').checked = false;
-  document.getElementById('halfDaySelect').classList.remove('visible');
+
   document.getElementById('vacWarning').style.display    = 'none';
   document.getElementById('conflictWarn').style.display  = 'none';
   document.getElementById('weekendWarn').style.display   = 'none';
+  document.getElementById('capacityWarn').style.display  = 'none';
   document.getElementById('addModal').classList.add('open');
-  setTimeout(() => { if (!sel.disabled) sel.focus(); }, 100);
-  if (keepDates) updateModalWarnings();
+  setTimeout(() => { if (!sel.disabled && !editH) sel.focus(); }, 100);
+  if (keepDates || editH) updateModalWarnings();
 }
 
 function closeModal() {
   document.getElementById('addModal').classList.remove('open');
+  editingHolidayId = null;
   dragStart = null; dragEnd = null;
   document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-range','drag-start','drag-end'));
+}
+
+function editHoliday(id) {
+  const h = holidays.find(x => x.id === id);
+  if (!h) { showToast('Entry not found.', true); return; }
+  if (!canEdit(h.personId)) { showToast('You can only edit your own entries.', true); return; }
+  openAddModal(false, h);
+}
+
+async function deleteFromEdit() {
+  if (!editingHolidayId) return;
+  const id = editingHolidayId;
+  closeModal();
+  await deleteHoliday(id);
 }
 
 /* ════════════════════════════════════════════
@@ -1698,7 +1920,7 @@ function updateConflictWarn() {
   const end      = document.getElementById('formEnd').value;
   const warn     = document.getElementById('conflictWarn');
   if (!personId || !start || !end || end < start) { warn.style.display = 'none'; return; }
-  const conflicts = getConflicts(personId, start, end, null);
+  const conflicts = getConflicts(personId, start, end, editingHolidayId);
   warn.style.display = conflicts.length ? 'block' : 'none';
   if (conflicts.length) {
     const names = conflicts.map(h => `${LEAVE_TYPE_ICONS[h.type]||'📌'} ${fmtDate(h.start)}→${fmtDate(h.end)}`).join(', ');
@@ -1758,6 +1980,74 @@ function updateVacWarning() {
   warn.textContent   = `${p.name}: ` + lines.join(' · ');
 }
 
+/**
+ * Capacity warning — flags days in the proposed range where the number
+ * of DISTINCT people already off (excluding the person being booked and
+ * the entry being edited) meets or exceeds the admin-configured threshold.
+ */
+function updateCapacityWarn() {
+  const warn     = document.getElementById('capacityWarn');
+  const threshold = Number(teamSettings.capacityThreshold) || 0;
+  if (!warn) return;
+  if (threshold <= 0) { warn.style.display = 'none'; return; }
+
+  const personId = document.getElementById('formPerson').value;
+  const start    = document.getElementById('formStart').value;
+  const end      = document.getElementById('formEnd').value;
+  const halfDay  = document.getElementById('halfDayCheck').checked;
+  if (!personId || !start || !end || end < start) { warn.style.display = 'none'; return; }
+
+  const phSet  = pubHolSet();
+  const hotDays = []; // array of { iso, names[] }
+  const rangeEnd = halfDay ? start : end;
+  const cur = parseDate(start);
+  const last = parseDate(rangeEnd);
+  while (cur <= last) {
+    const iso = dateStr(cur);
+    cur.setDate(cur.getDate() + 1);
+    if (!isWeekday(parseDate(iso)) || phSet.has(iso)) continue;
+    // People already off that day, excluding self & the entry we're editing
+    const offIds = new Set();
+    for (const h of holidays) {
+      if (h.id === editingHolidayId) continue;
+      if (h.personId === personId)   continue;
+      if (h.start <= iso && h.end >= iso) offIds.add(h.personId);
+    }
+    // Adding this person would push the count up by 1
+    const totalIfBooked = offIds.size + 1;
+    if (totalIfBooked >= threshold) {
+      const names = [...offIds].map(getPersonName).join(', ');
+      hotDays.push({ iso, totalIfBooked, names });
+    }
+  }
+
+  if (!hotDays.length) { warn.style.display = 'none'; return; }
+
+  const preview = hotDays.slice(0, 3)
+    .map(d => `${fmtDate(d.iso)} (${d.totalIfBooked} people${d.names ? ': ' + d.names : ''})`)
+    .join(' · ');
+  const moreTag = hotDays.length > 3 ? ` · +${hotDays.length - 3} more day${hotDays.length - 3 === 1 ? '' : 's'}` : '';
+  warn.style.display = 'block';
+  warn.className     = 'warn-caution';
+  warn.textContent   = `⚠ Team capacity: ${hotDays.length} day${hotDays.length === 1 ? '' : 's'} would hit ≥${threshold} people off — ${preview}${moreTag}`;
+}
+
+async function saveCapacityThreshold() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const raw = document.getElementById('capacityThreshold').value.trim();
+  const val = raw === '' ? 0 : Number(raw);
+  if (!Number.isFinite(val) || val < 0 || val > 20) { showToast('Enter a number 0–20.', true); return; }
+  showSaving(true);
+  try {
+    await settingsCol.doc('team').set({
+      capacityThreshold: val,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    showToast(val === 0 ? 'Capacity warnings disabled.' : `Threshold set to ${val} people.`);
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
 /* ════════════════════════════════════════════
    SAVE / DELETE HOLIDAY
 ════════════════════════════════════════════ */
@@ -1780,18 +2070,31 @@ async function saveHoliday() {
 
   showSaving(true);
   try {
-    const entry = { personId, start, end, type, note, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedByUid: currentUser.uid };
-    if (halfDay) { entry.halfDay = true; entry.halfDayPart = halfDayPart; }
-    await holidaysCol.add(entry);
     const savedName = getPersonName(personId);
     const icon      = LEAVE_TYPE_ICONS[type] || '📌';
     const halfTag   = halfDay ? ` (½ ${halfDayPart})` : '';
     const wdays     = halfDay ? 0.5 : countWeekdays(start, end);
-    await writeLog('holiday_add',
-      `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} from ${fmtDate(start)} to ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`,
-      { personId, start, end, type }
-    );
-    closeModal(); showToast('Holiday saved!');
+
+    if (editingHolidayId) {
+      const update = { personId, start, end, type, note, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedByUid: currentUser.uid };
+      if (halfDay) { update.halfDay = true; update.halfDayPart = halfDayPart; }
+      else         { update.halfDay = firebase.firestore.FieldValue.delete(); update.halfDayPart = firebase.firestore.FieldValue.delete(); }
+      await holidaysCol.doc(editingHolidayId).update(update);
+      await writeLog('holiday_add',
+        `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} updated: ${fmtDate(start)} → ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`,
+        { personId, start, end, type, edited: true }
+      );
+      closeModal(); showToast('Holiday updated!');
+    } else {
+      const entry = { personId, start, end, type, note, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedByUid: currentUser.uid };
+      if (halfDay) { entry.halfDay = true; entry.halfDayPart = halfDayPart; }
+      await holidaysCol.add(entry);
+      await writeLog('holiday_add',
+        `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} from ${fmtDate(start)} to ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`,
+        { personId, start, end, type }
+      );
+      closeModal(); showToast('Holiday saved!');
+    }
   } catch(e) { showToast('Save failed: '+e.message, true); }
   finally { showSaving(false); }
 }
@@ -1820,6 +2123,8 @@ async function deleteHoliday(id) {
 function openManage() {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   renderPeopleList();
+  const thrInput = document.getElementById('capacityThreshold');
+  if (thrInput) thrInput.value = teamSettings.capacityThreshold || '';
   document.getElementById('manageModal').classList.add('open');
 }
 function closeManage() { document.getElementById('manageModal').classList.remove('open'); }
@@ -1829,6 +2134,14 @@ async function addPerson() {
   const name = document.getElementById('newPersonName').value.trim();
   const dept = document.getElementById('newPersonDept').value.trim() || 'Team';
   if (!name) { showToast('Enter a name.', true); return; }
+
+  // Duplicate detection — case-insensitive exact match on name
+  const normalized = name.toLowerCase();
+  const dupe = people.find(p => p.name.toLowerCase() === normalized);
+  if (dupe) {
+    if (!confirm(`⚠ "${dupe.name}" already exists in ${dupe.dept}.\n\nAdd a second person with the same name anyway?`)) return;
+  }
+
   showSaving(true);
   try {
     await peopleCol.add({ name, dept, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -1904,45 +2217,79 @@ function exportCSV() {
 }
 // --- Auto-Logout on Inactivity ---
   (function() {
-    let inactivityTimeout;
-    
-    // Set to 15 minutes. 
-    // Tip: Change "15" to "0.1" (6 seconds) if you want to test if it works quickly!
-    const INACTIVITY_LIMIT = 10 * 60 * 1000; 
+    const INACTIVITY_LIMIT   = 15 * 60 * 1000;  // 15 minutes
+    const WARNING_LEAD_TIME  = 60 * 1000;       // warn 60 seconds before logout
+
+    let idleTimer     = null;
+    let warningTimer  = null;
+    let countdownInt  = null;
+    let warningShown  = false;
+
+    function isAppActive() {
+      const mainApp = document.getElementById('mainApp');
+      return mainApp && mainApp.style.display !== 'none';
+    }
+
+    function hideWarning() {
+      warningShown = false;
+      const modal = document.getElementById('inactivityModal');
+      if (modal) modal.classList.remove('open');
+      clearInterval(countdownInt); countdownInt = null;
+    }
+
+    function showWarning() {
+      if (!isAppActive()) return;
+      warningShown = true;
+      const modal = document.getElementById('inactivityModal');
+      const secEl = document.getElementById('inactivitySeconds');
+      let remaining = Math.floor(WARNING_LEAD_TIME / 1000);
+      if (secEl) secEl.textContent = remaining;
+      if (modal) modal.classList.add('open');
+
+      clearInterval(countdownInt);
+      countdownInt = setInterval(() => {
+        remaining--;
+        if (secEl) secEl.textContent = Math.max(0, remaining);
+        if (remaining <= 0) {
+          clearInterval(countdownInt); countdownInt = null;
+          hideWarning();
+          if (isAppActive()) {
+            showToast('Signed out due to inactivity.', true);
+            doSignOut();
+          }
+        }
+      }, 1000);
+    }
 
     function resetInactivityTimer() {
-      // Clear the previous timer
-      clearTimeout(inactivityTimeout);
-      
-      // Start a new timer
-      inactivityTimeout = setTimeout(() => {
-        
-        // Check if the user is actively logged in by checking if mainApp is visible
-        const mainApp = document.getElementById('mainApp');
-        
-        if (mainApp && mainApp.style.display !== 'none') {
-             console.log("Inactivity limit reached. Executing auto-logout.");
-             doSignOut(); // Your existing logout function
-             alert("You have been automatically logged out due to 15 minutes of inactivity.");
+      // If the warning modal is showing, activity alone doesn't dismiss it —
+      // user must click "Stay signed in". This prevents background events
+      // (e.g. scroll from touch hover) from silently resetting the countdown.
+      if (warningShown) return;
+
+      clearTimeout(idleTimer);
+      clearTimeout(warningTimer);
+
+      warningTimer = setTimeout(showWarning, INACTIVITY_LIMIT - WARNING_LEAD_TIME);
+      idleTimer    = setTimeout(() => {
+        if (isAppActive()) {
+          hideWarning();
+          showToast('Signed out due to inactivity.', true);
+          doSignOut();
         }
       }, INACTIVITY_LIMIT);
     }
 
-    // List of events that prove the user is still at their computer/phone
-    const activityEvents = [
-      'mousemove', 
-      'mousedown', 
-      'keydown', 
-      'touchstart', 
-      'scroll'
-    ];
+    // Exposed so the "Stay signed in" button can reset everything cleanly.
+    window.dismissInactivityWarning = function() {
+      hideWarning();
+      resetInactivityTimer();
+    };
 
-    // Attach the reset function to the window
-    activityEvents.forEach(event => {
+    ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(event => {
       window.addEventListener(event, resetInactivityTimer, { passive: true });
     });
 
-    // Start the initial timer
     resetInactivityTimer();
   })();
  
