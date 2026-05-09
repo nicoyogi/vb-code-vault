@@ -722,12 +722,14 @@ firebase.initializeApp(firebaseConfig);
 const db          = firebase.firestore();
 
 /* Perf: auto-detect long-polling (faster on restrictive networks / file://,
-   avoids a 30s wait for WebChannel to fail before falling back) + enable
-   IndexedDB offline cache so subsequent loads render from disk instantly. */
+   avoids a 30s wait for WebChannel to fail before falling back).
+   NOTE: persistence was dropped — enablePersistence() can hang indefinitely
+   on Safari / private mode / second tabs, which stalls the whole app at
+   "Loading..." instead of rejecting. Perf gains 1/2/4/5 from the PR are
+   already sufficient without it. */
 try {
-  db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
-} catch (e) { /* settings already applied */ }
-db.enablePersistence({ synchronizeTabs: true }).catch(() => { /* multi-tab or unsupported browser */ });
+  db.settings({ experimentalAutoDetectLongPolling: true });
+} catch (e) { /* settings already applied — safe to ignore */ }
 
 const peopleCol   = db.collection('wmf_holiday_people');
 const holidaysCol = db.collection('wmf_holidays');
