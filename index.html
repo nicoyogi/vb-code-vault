@@ -227,6 +227,36 @@ footer a:hover{color:rgba(212,175,100,.55)}
 .fsep{margin:0 10px;opacity:.4}
 @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
 
+/* ─── CHRONICLE PILL (Holiday Tracker — cross-project) ─── */
+.chronicle-pill{position:relative;display:flex;align-items:center;gap:1.1rem;width:100%;padding:1rem 1.2rem;margin-bottom:2rem;text-decoration:none;color:inherit;border-radius:18px;
+  background:rgba(10,8,24,.7);
+  border:1px solid rgba(212,175,100,.12);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  overflow:hidden;
+  transition:transform .35s cubic-bezier(.16,.84,.24,1.05),border-color .35s,box-shadow .35s,background .35s;
+  animation:rise 1s .3s ease both}
+.chronicle-pill::before,.chronicle-pill::after{content:'';position:absolute;width:12px;height:12px;pointer-events:none;transition:opacity .4s;opacity:.22}
+.chronicle-pill::before{top:10px;left:10px;border-top:1px solid rgba(212,175,100,.7);border-left:1px solid rgba(212,175,100,.7)}
+.chronicle-pill::after{bottom:10px;right:10px;border-bottom:1px solid rgba(212,175,100,.7);border-right:1px solid rgba(212,175,100,.7)}
+.chronicle-pill:hover::before,.chronicle-pill:hover::after,
+.chronicle-pill:focus-visible::before,.chronicle-pill:focus-visible::after{opacity:1}
+.chronicle-pill .ch-top{position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.8),transparent);opacity:0;transition:opacity .4s}
+.chronicle-pill:hover .ch-top,.chronicle-pill:focus-visible .ch-top{opacity:1}
+.chronicle-pill:hover,.chronicle-pill:focus-visible{transform:translateY(-3px);border-color:rgba(212,175,100,.32);background:rgba(18,14,32,.85);box-shadow:0 18px 50px rgba(212,175,100,.12),0 0 0 1px rgba(212,175,100,.08)}
+.ch-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+  background:rgba(212,175,100,.08);
+  box-shadow:0 0 0 1px rgba(212,175,100,.22),inset 0 1px 0 rgba(255,255,255,.05);
+  transition:transform .4s cubic-bezier(.16,.84,.24,1.05)}
+.chronicle-pill:hover .ch-icon,.chronicle-pill:focus-visible .ch-icon{transform:scale(1.08) rotate(-6deg)}
+.ch-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.ch-label{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.32em;text-transform:uppercase;color:rgba(212,175,100,.7)}
+.ch-title{font-family:var(--cinzel);font-size:1rem;font-weight:600;letter-spacing:.04em;color:rgba(255,255,255,.92);display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;line-height:1.2}
+.ch-title-sub{font-family:var(--mono);font-size:10.5px;font-weight:400;letter-spacing:.04em;color:rgba(255,255,255,.42);text-transform:none}
+.ch-badge{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;padding:5px 10px;border-radius:14px;
+  color:rgba(212,175,100,.85);border:1px solid rgba(212,175,100,.28);background:rgba(212,175,100,.06);flex-shrink:0}
+.ch-arr{width:30px;height:30px;border-radius:50%;border:1px solid rgba(212,175,100,.15);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(212,175,100,.28);flex-shrink:0;transition:all .3s;font-family:var(--mono)}
+.chronicle-pill:hover .ch-arr,.chronicle-pill:focus-visible .ch-arr{transform:translateX(4px);border-color:rgba(212,175,100,.55);color:rgba(212,175,100,.9);box-shadow:0 0 14px rgba(212,175,100,.18)}
+
 /* ─── KEYBOARD HINTS ON PROJECT CARDS ─── */
 .pkbd{position:absolute;top:14px;right:14px;z-index:3;display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(212,175,100,.35);opacity:.45;transition:opacity .35s,color .35s}
 .pcard:hover .pkbd,.pcard.selected .pkbd,.pcard:focus-visible .pkbd{opacity:1;color:rgba(212,175,100,.85)}
@@ -270,6 +300,11 @@ footer a:hover{color:rgba(212,175,100,.55)}
   .rune-ring{width:90px;height:90px}
   .project-banner{flex-wrap:wrap}
   .pb-change{margin-left:0;margin-top:4px}
+  .chronicle-pill{flex-wrap:wrap;gap:.8rem;padding:.9rem 1rem}
+  .ch-body{flex-basis:100%;order:3}
+  .ch-title{font-size:.95rem;gap:6px}
+  .ch-title-sub{font-size:10px}
+  .ch-badge{order:2;margin-left:auto}
 }
 </style>
 </head>
@@ -307,7 +342,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
 <div class="shell">
 
-  <div class="eyebrow">Arcane Workspace · Anno MMXXIV</div>
+  <div class="eyebrow">Arcane Workspace · Anno MMXXVI</div>
   <h1>
     <span class="t-mal">Malignant</span>
     <span class="t-grim">Grimoire</span>
