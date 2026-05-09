@@ -7,6 +7,11 @@
 <title>Holiday Tracker · The Grimoire</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Perf: warm up Firebase / Firestore connections before the scripts run at body-end -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preload" as="script" crossorigin href="https://www.gstatic.com/firebasejs/10.7.2/firebase-app-compat.js">
+<link rel="preload" as="script" crossorigin href="https://www.gstatic.com/firebasejs/10.7.2/firebase-firestore-compat.js">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=Cinzel:wght@400;600;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/grimoire-core.css">
 <script src="assets/grimoire-core.js" defer></script>
@@ -715,6 +720,15 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db          = firebase.firestore();
+
+/* Perf: auto-detect long-polling (faster on restrictive networks / file://,
+   avoids a 30s wait for WebChannel to fail before falling back) + enable
+   IndexedDB offline cache so subsequent loads render from disk instantly. */
+try {
+  db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+} catch (e) { /* settings already applied */ }
+db.enablePersistence({ synchronizeTabs: true }).catch(() => { /* multi-tab or unsupported browser */ });
+
 const peopleCol   = db.collection('wmf_holiday_people');
 const holidaysCol = db.collection('wmf_holidays');
 const vacResetCol = db.collection('wmf_vac_resets');
@@ -843,25 +857,73 @@ function setAuthLoading(btnId, spinnerId, loading) {
 async function loadPeopleForAuth() {
   const [loginSel, regSel] = ['loginEmail', 'registerPerson'].map(id => document.getElementById(id));
   loginSel.innerHTML = regSel.innerHTML = '<option value="">— Loading… —</option>';
-  try {
-    const [peopleSnap, profSnap] = await Promise.all([
-      peopleCol.orderBy('name').get(),
-      userProfCol.get()
-    ]);
-    const linkedIds = new Set(profSnap.docs.map(d => d.data().personId));
 
-    loginSel.innerHTML = '<option value="">— Select your name —</option>';
-    regSel.innerHTML   = '<option value="">— Select your name —</option>';
+  // Perf: attach a single snapshot listener that feeds both the auth gate and
+  // (once logged in) the main app. This replaces two sequential Firestore
+  // `.get()` round-trips on every page load and avoids re-fetching people
+  // after sign-in. The listener is started lazily and only once.
+  attachAuthPrefetch();
+  renderAuthSelectors(loginSel, regSel);
+}
 
-    peopleSnap.docs.forEach(d => {
-      const opt = `<option value="${d.id}">${d.data().name} (${d.data().dept})</option>`;
-      loginSel.insertAdjacentHTML('beforeend', opt);
-      if (!linkedIds.has(d.id)) regSel.insertAdjacentHTML('beforeend', opt);
-    });
-    if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— All members have accounts —</option>';
-  } catch(e) {
-    loginSel.innerHTML = regSel.innerHTML = '<option value="">— Error loading —</option>';
-  }
+// Prefetch listeners — started from loadPeopleForAuth(), reused by startListeners().
+let _authPrefetchStarted = false;
+let _authPrefetchedPeople = false;
+let _authPrefetchedProfiles = false;
+
+function attachAuthPrefetch() {
+  if (_authPrefetchStarted) return;
+  _authPrefetchStarted = true;
+
+  peopleCol.orderBy('name').onSnapshot(snap => {
+    people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _authPrefetchedPeople = true;
+    bustCaches();
+    if (appStarted) { scheduleRender(); setStatus('online', 'Online'); }
+    if (!appStarted) {
+      renderAuthSelectors(
+        document.getElementById('loginEmail'),
+        document.getElementById('registerPerson')
+      );
+    }
+    if (document.getElementById('manageModal')?.classList.contains('open')) renderPeopleList();
+  }, err => {
+    if (appStarted) { setStatus('error', 'Error'); showToast('Connection error: ' + err.message, true); }
+    else {
+      const loginSel = document.getElementById('loginEmail');
+      const regSel   = document.getElementById('registerPerson');
+      if (loginSel) loginSel.innerHTML = '<option value="">— Error loading —</option>';
+      if (regSel)   regSel.innerHTML   = '<option value="">— Error loading —</option>';
+    }
+  });
+
+  userProfCol.onSnapshot(snap => {
+    userProfiles = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    _authPrefetchedProfiles = true;
+    if (!appStarted) {
+      renderAuthSelectors(
+        document.getElementById('loginEmail'),
+        document.getElementById('registerPerson')
+      );
+    }
+    if (document.getElementById('manageModal')?.classList.contains('open')) renderPeopleList();
+  }, () => {});
+}
+
+function renderAuthSelectors(loginSel, regSel) {
+  if (!loginSel || !regSel) return;
+  if (!_authPrefetchedPeople || !_authPrefetchedProfiles) return;
+
+  const linkedIds = new Set(userProfiles.map(p => p.personId));
+  loginSel.innerHTML = '<option value="">— Select your name —</option>';
+  regSel.innerHTML   = '<option value="">— Select your name —</option>';
+
+  people.forEach(p => {
+    const opt = `<option value="${p.id}">${p.name} (${p.dept})</option>`;
+    loginSel.insertAdjacentHTML('beforeend', opt);
+    if (!linkedIds.has(p.id)) regSel.insertAdjacentHTML('beforeend', opt);
+  });
+  if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— All members have accounts —</option>';
 }
 
 async function doLogin() {
@@ -1067,38 +1129,44 @@ function renderLogEntries() {
 function startListeners() {
   setStatus('', 'Connecting...');
 
-  peopleCol.orderBy('name').onSnapshot(snap => {
-    people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    bustCaches(); scheduleRender();
-    setStatus('online', 'Online');
-    if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
-  }, err => { setStatus('error', 'Error'); showToast('Connection error: ' + err.message, true); });
+  // Perf: people + userProfiles listeners were already attached by
+  // attachAuthPrefetch() at page load — no need to re-subscribe here. If we
+  // already have a people snapshot, mark the app online immediately.
+  attachAuthPrefetch();
+  if (_authPrefetchedPeople) setStatus('online', 'Online');
 
+  // Critical for first paint: holidays (drives the calendar/gantt).
   holidaysCol.orderBy('start').onSnapshot(snap => {
     holidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     bustCaches(); scheduleRender();
+    setStatus('online', 'Online');
   }, err => { showToast('Sync error: ' + err.message, true); });
 
-  vacResetCol.onSnapshot(snap => {
-    vacResets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    bustCaches(); scheduleRender();
-  }, () => {});
+  // Perf: defer non-critical listeners until after the first render lands,
+  // so the initial "Connecting..." flip happens as soon as possible.
+  const attachSecondary = () => {
+    vacResetCol.onSnapshot(snap => {
+      vacResets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      bustCaches(); scheduleRender();
+    }, () => {});
 
-  pubHolCol.orderBy('date').onSnapshot(snap => {
-    publicHolidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    bustCaches(); scheduleRender();
-  }, () => {});
+    pubHolCol.orderBy('date').onSnapshot(snap => {
+      publicHolidays = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      bustCaches(); scheduleRender();
+    }, () => {});
 
-  userProfCol.onSnapshot(snap => {
-    userProfiles = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-    if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
-  }, () => {});
+    settingsCol.doc('team').onSnapshot(snap => {
+      teamSettings = snap.exists ? { capacityThreshold: 0, ...snap.data() } : { capacityThreshold: 0 };
+      const thrInput = document.getElementById('capacityThreshold');
+      if (thrInput && document.activeElement !== thrInput) thrInput.value = teamSettings.capacityThreshold || '';
+    }, () => {});
+  };
 
-  settingsCol.doc('team').onSnapshot(snap => {
-    teamSettings = snap.exists ? { capacityThreshold: 0, ...snap.data() } : { capacityThreshold: 0 };
-    const thrInput = document.getElementById('capacityThreshold');
-    if (thrInput && document.activeElement !== thrInput) thrInput.value = teamSettings.capacityThreshold || '';
-  }, () => {});
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(attachSecondary, { timeout: 1500 });
+  } else {
+    setTimeout(attachSecondary, 250);
+  }
 }
 
 /* ════════════════════════════════════════════
