@@ -3,8 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d1117">
   <title>Siemens GP · Standard Wording</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/grimoire-core.css">
+  <script src="assets/grimoire-core.js" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -374,7 +379,10 @@
       .page-title { font-size: 1.5rem; }
     }
     @media (max-width: 560px) {
-      header { padding: 0 1rem; }
+      header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+      header .logo { flex-wrap: wrap; }
+      .header-right { order: 3; width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+      .header-right .btn-primary { flex: 1; min-width: 0; }
       main { padding: 1.25rem 1rem 5rem; }
       thead th.th-cat, td.td-cat { display: none; }
     }
@@ -387,6 +395,8 @@
   </style>
 </head>
 <body>
+
+<a class="skip-link" href="#main">Skip to content</a>
 
 <!-- Lock Screen -->
 <div id="lock-screen">
@@ -407,10 +417,10 @@
 <header>
   <a href="qa-siemens.html" class="btn-ghost btn" style="height:30px;font-size:11px;font-family:var(--mono);">← SGP KB</a>
   <div class="logo-sep"></div>
-  <a href="#" class="logo">
+  <div class="logo" role="heading" aria-level="1">
     <span class="logo-chip">SGP</span>
     Standard Wording
-  </a>
+  </div>
   <span class="logo-sub">// Reference Library</span>
   <div class="header-right">
     <div class="status"><div class="status-dot" id="status-dot"></div><span id="status-label" style="font-family:var(--mono);font-size:11px;">Connecting…</span></div>
@@ -425,7 +435,7 @@
   </div>
 </header>
 
-<main>
+<main id="main">
   <div class="page-head">
     <div class="page-title-block">
       <div class="eyebrow">Siemens GP · Reference Library</div>

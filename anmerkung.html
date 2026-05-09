@@ -3,10 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#02020a">
 <title>Anmerkung Processor · The Grimoire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link rel="stylesheet" href="assets/grimoire-core.css">
+<script src="assets/grimoire-core.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -251,11 +256,16 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 }
 .sub-continue-btn:hover { background: rgba(52,211,153,0.22); box-shadow: 0 0 20px rgba(52,211,153,0.18); }
 
-@media (max-width: 520px) { .fw-grid { grid-template-columns: 1fr; } }
+@media (max-width: 520px) {
+  .fw-grid { grid-template-columns: 1fr; }
+  header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+  header .nav-badge { margin-left: auto; }
+}
 </style>
 </head>
 <body>
-<canvas id="bg-canvas"></canvas>
+<a class="skip-link" href="#main">Skip to content</a>
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
 
 <header>
   <a href="index.html" class="nav-back">← Grimoire</a>
@@ -263,7 +273,7 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   <span class="nav-badge">The Alchemist</span>
 </header>
 
-<div class="container">
+<div class="container" id="main">
   <div class="page-eyebrow">// Tome III · The Alchemist</div>
   <div class="page-title">Anmerkung <span class="grad">Processor</span></div>
   <div class="page-sub">Upload · select forwarder · transmute · download</div>
@@ -391,9 +401,11 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
     });
     for(let i=0;i<pts.length;i++){const p=pts[i];for(let j=i+1;j<pts.length;j++){const q=pts[j];const d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){cx.strokeStyle=`rgba(${p.c},${(1-d/120)*.045})`;cx.lineWidth=.4;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(q.x,q.y);cx.stroke()}}const md=Math.hypot(p.x-mouse.x,p.y-mouse.y);if(md<160){cx.strokeStyle=`rgba(${p.c},${(1-md/160)*.22})`;cx.lineWidth=.6;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(mouse.x,mouse.y);cx.stroke()}}
     pts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.da*dt;if(p.a<.04||p.a>.48)p.da*=-1;if(p.x<-15)p.x=W+15;if(p.x>W+15)p.x=-15;if(p.y<-15)p.y=H+15;if(p.y>H+15)p.y=-15;const rdx=p.x-mouse.x,rdy=p.y-mouse.y,rd=Math.sqrt(rdx*rdx+rdy*rdy);if(rd<100&&rd>0){const f=(1-rd/100)*.4;p.vx+=(rdx/rd)*f*.035;p.vy+=(rdy/rd)*f*.035}const sp=Math.hypot(p.vx,p.vy);if(sp>.45){p.vx*=.45/sp;p.vy*=.45/sp}const bx=.5*Math.sin(t*1.1+p.ph),by=.5*Math.cos(t*.88+p.ph*1.3);cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a})`;cx.fill()});
-    requestAnimationFrame(frame)}
+    if (!document.hidden && !(window.Grimoire && window.Grimoire.reducedMotion)) requestAnimationFrame(frame)}
   window.addEventListener('resize',init);window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
-  init();requestAnimationFrame(frame);
+  init();
+  if (window.Grimoire && window.Grimoire.reducedMotion) { frame(0); }
+  else { requestAnimationFrame(frame); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) requestAnimationFrame(frame); }); }
 })();
 
 /* ══════════════════════════════════════════════════════════
