@@ -3,8 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f0f2f5">
   <title>Siemens GP · Knowledge Base</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/grimoire-core.css">
+  <script src="assets/grimoire-core.js" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -262,7 +267,15 @@
     .page-footer a:hover { color: var(--accent); }
     .fsep { margin: 0 10px; opacity: .4; }
 
-    @media (max-width: 560px) { header { padding: 0 1rem; } main { padding: 1.5rem 1rem 5rem; } }
+    @media (max-width: 560px) {
+      header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+      header .logo-back { flex-shrink: 0; }
+      header .logo { flex-wrap: wrap; }
+      .header-right { order: 3; width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+      .header-right .btn-primary { flex: 1; min-width: 0; }
+      main { padding: 1.5rem 1rem 5rem; }
+      .esn-vendor { min-width: 120px; font-size: 12px; }
+    }
 
     /* ESN Table */
     .esn-row td { padding: .55rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -280,6 +293,8 @@
   </style>
 </head>
 <body>
+
+<a class="skip-link" href="#main">Skip to content</a>
 
 <div id="lock-screen">
   <div class="lock-box">
@@ -304,13 +319,13 @@
 <header>
   <a href="index.html" class="logo-back">← Grimoire</a>
   <div class="logo-divider"></div>
-  <a href="#" class="logo">
+  <div class="logo" role="heading" aria-level="1">
     <div class="logo-mark">SGP</div>
     <div>
       <div>Siemens GP</div>
       <div class="logo-sub">Knowledge Base</div>
     </div>
-  </a>
+  </div>
   <div class="header-right">
     <div class="status-wrap">
       <div class="status-dot" id="status-dot"></div>
@@ -330,7 +345,7 @@
   </div>
 </header>
 
-<main>
+<main id="main">
   <div class="page-head">
     <div class="page-head-left">
       <div class="page-eyebrow">Tome II · The Oracle · Siemens GP</div>
