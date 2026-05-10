@@ -215,6 +215,7 @@
     { id: 'anmerkung',        href: 'anmerkung.html',        label: 'The Alchemist' },
     { id: 'todo',             href: 'todo.html',             label: 'The Ledger' },
     { id: 'standard-wording', href: 'standard-wording.html', label: 'Standard Wording' },
+    { id: 'task-reviewer-siemens', href: 'task-reviewer-siemens.html', label: 'SGP Task Reviewer' },
     { id: 'holiday-tracker',  href: 'holiday-tracker.html',  label: 'The Chronicle' }
   ];
 
