@@ -286,6 +286,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
 #tomes-section.show .grid .card:nth-child(3){animation-delay:.22s}
 #tomes-section.show .grid .card:nth-child(4){animation-delay:.29s}
 #tomes-section.show .grid .card:nth-child(5){animation-delay:.36s}
+#tomes-section.show .grid .card:nth-child(6){animation-delay:.43s}
 @keyframes tome-rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
 
 /* Cross-fade when swapping projects */
@@ -401,7 +402,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
       </div>
     </div>
 
-    <div class="pcard" id="proj-siemens" role="button" tabindex="0" aria-pressed="false" aria-label="Siemens GP project — 2 tomes, keyboard shortcut 2" onclick="selectProject('siemens',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('siemens',this)}">
+    <div class="pcard" id="proj-siemens" role="button" tabindex="0" aria-pressed="false" aria-label="Siemens GP project — 3 tomes, keyboard shortcut 2" onclick="selectProject('siemens',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('siemens',this)}">
       <div class="pcard-top"></div>
       <div class="pblob" style="background:rgba(59,130,246,0.12)"></div>
       <div class="pspot"></div>
@@ -417,10 +418,11 @@ footer a:hover{color:rgba(212,175,100,.55)}
         <div class="ptomes" aria-hidden="true">
           <span class="ptome" style="color:rgba(147,197,253,.75);border-color:rgba(59,130,246,.22);background:rgba(59,130,246,.06)"><span class="ptome-ic">📝</span>Oracle</span>
           <span class="ptome" style="color:rgba(147,197,253,.75);border-color:rgba(59,130,246,.22);background:rgba(59,130,246,.06)"><span class="ptome-ic">✍️</span>Scribe</span>
+          <span class="ptome" style="color:rgba(147,197,253,.75);border-color:rgba(59,130,246,.22);background:rgba(59,130,246,.06)"><span class="ptome-ic">📋</span>Reviewer</span>
         </div>
         <div class="pfoot">
           <div class="pstatus act" style="color:rgba(59,130,246,.65)"><div class="pdot" style="background:#3b82f6;box-shadow:0 0 7px #3b82f6;animation:dpulse 2.5s ease-in-out infinite"></div>Active</div>
-          <div class="ptcount" style="color:rgba(59,130,246,.4)">2 tomes</div>
+          <div class="ptcount" style="color:rgba(59,130,246,.4)">3 tomes</div>
           <div class="parr">⟶</div>
         </div>
       </div>
@@ -529,6 +531,21 @@ footer a:hover{color:rgba(212,175,100,.55)}
         <div class="deco">scribe.find()<br>&nbsp;.copy(phrase)<br>&nbsp;.paste()<br>// instant ✦</div>
       </a>
 
+      <a href="#" class="card card-tl" id="c6" role="button" aria-disabled="true" tabindex="-1">
+        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
+        <div class="cin">
+          <div class="icon">📋</div>
+          <div class="clabel">Tome IV · The Reviewer</div>
+          <div class="ctitle">Task Reviewer</div>
+          <div class="cdesc">Per-person weekly reviews — done, can't process, not done. Auto-scored with grades, trend vs last week, and suggestions.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">Weekly</span><span class="tag">Scoring</span><span class="tag">People</span></div>
+            <div class="arr">⟶</div>
+          </div>
+        </div>
+        <div class="deco">review.week()<br>&nbsp;.score(p)<br>&nbsp;.suggest()<br>// per person ✦</div>
+      </a>
+
     </div>
   </div>
 
@@ -542,7 +559,7 @@ footer a:hover{color:rgba(212,175,100,.55)}
 
   <footer>
     codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
-    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a><span class="fsep">✦</span><a href="todo.html">The Ledger</a><span class="fsep">✦</span><a href="standard-wording.html">Standard Wording</a><span class="fsep">✦</span><a href="holiday-tracker.html">The Chronicle</a>
+    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a><span class="fsep">✦</span><a href="todo.html">The Ledger</a><span class="fsep">✦</span><a href="standard-wording.html">Standard Wording</a><span class="fsep">✦</span><a href="task-reviewer-siemens.html">Task Reviewer</a><span class="fsep">✦</span><a href="holiday-tracker.html">The Chronicle</a>
   </footer>
 
 </div>
@@ -601,7 +618,7 @@ function bindTilt(id){
   });
   el.addEventListener('mouseleave',()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg')});
 }
-['c0','c1','c2','c3','c4','c5'].forEach(bindTilt);
+['c0','c1','c2','c3','c4','c5','c6'].forEach(bindTilt);
 
 document.querySelectorAll('.pcard').forEach(el=>{
   const spot=el.querySelector('.pspot');
@@ -623,7 +640,8 @@ const PROJECTS={
     qa:'qa.html',
     anmerkung:'anmerkung.html',
     todo:'todo.html',
-    wording:null
+    wording:null,
+    reviewer:null
   },
   siemens:{
     name:'Siemens GP',
@@ -632,7 +650,8 @@ const PROJECTS={
     qa:'qa-siemens.html',
     anmerkung:null,
     todo:null,
-    wording:'standard-wording.html'
+    wording:'standard-wording.html',
+    reviewer:'task-reviewer-siemens.html'
   }
 };
 
@@ -679,6 +698,7 @@ function selectProject(key,el,opts){
     wire('c2', proj.anmerkung);
     wire('c3', proj.wording);
     wire('c4', proj.todo);
+    wire('c6', proj.reviewer);
 
     // c0: Code Vault — WMF only
     document.getElementById('c0').style.display=isSiemens?'none':'';
@@ -688,6 +708,8 @@ function selectProject(key,el,opts){
     document.getElementById('c4').style.display=isSiemens?'none':'';
     // c3: Standard Wording — Siemens only
     document.getElementById('c3').style.display=isSiemens?'':'none';
+    // c6: Task Reviewer — Siemens only
+    document.getElementById('c6').style.display=isSiemens?'':'none';
 
     // Re-trigger stagger animation on swap (remove+add show)
     tomes.classList.remove('show');
@@ -703,7 +725,7 @@ function selectProject(key,el,opts){
     // Announce
     const live = document.getElementById('aria-live');
     if(live){
-      const tomeCount = [proj.code,proj.qa,proj.anmerkung,proj.todo,proj.wording].filter(Boolean).length;
+      const tomeCount = [proj.code,proj.qa,proj.anmerkung,proj.todo,proj.wording,proj.reviewer].filter(Boolean).length;
       live.textContent = `${proj.name} selected. ${tomeCount} tome${tomeCount===1?'':'s'} available.`;
     }
   };

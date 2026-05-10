@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f0f2f5">
+  <title>Siemens GP · Task Reviewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/grimoire-core.css">
+  <script src="assets/grimoire-core.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f2f5;
+      --bg2: #e4e8ee;
+      --surface: #ffffff;
+      --surface2: #f7f9fc;
+      --border: rgba(0,85,180,0.1);
+      --border2: rgba(0,85,180,0.25);
+      --text: #0a1628;
+      --text2: #3a5070;
+      --text3: #7a90a8;
+      --accent: #0055b4;
+      --accent2: #0078d7;
+      --accent-light: rgba(0,85,180,0.08);
+      --accent-mid: rgba(0,85,180,0.15);
+      --danger: #c0392b;
+      --danger-light: rgba(192,57,43,0.08);
+      --warn: #b7791f;
+      --warn-light: rgba(183,121,31,0.1);
+      --success: #1a7a4a;
+      --success-light: rgba(26,122,74,0.08);
+      --ibm-sans: 'IBM Plex Sans', sans-serif;
+      --ibm-mono: 'IBM Plex Mono', monospace;
+      --grotesk: 'Space Grotesk', sans-serif;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --shadow: 0 1px 3px rgba(0,40,100,0.08), 0 4px 16px rgba(0,40,100,0.04);
+      --shadow-lg: 0 4px 24px rgba(0,40,100,0.12), 0 1px 4px rgba(0,40,100,0.06);
+    }
+    html.dark {
+      --bg: #0d1117;
+      --bg2: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2333;
+      --border: rgba(47,129,247,0.12);
+      --border2: rgba(47,129,247,0.28);
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --text3: #484f58;
+      --accent: #2f81f7;
+      --accent2: #58a6ff;
+      --accent-light: rgba(47,129,247,0.1);
+      --accent-mid: rgba(47,129,247,0.18);
+      --danger: #f85149;
+      --danger-light: rgba(248,81,73,0.1);
+      --warn: #e3b341;
+      --warn-light: rgba(227,179,65,0.1);
+      --success: #3fb950;
+      --success-light: rgba(63,185,80,0.1);
+      --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+      --shadow-lg: 0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    html, body { min-height: 100vh; background: var(--bg); overflow-x: hidden; transition: background .25s; }
+    body { font-family: var(--ibm-sans); color: var(--text); font-size: 15px; line-height: 1.6; transition: color .25s; }
+
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,85,180,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,85,180,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    html.dark body::before {
+      background-image:
+        linear-gradient(rgba(47,129,247,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47,129,247,0.04) 1px, transparent 1px);
+    }
+
+    header {
+      background: var(--text); border-bottom: 3px solid var(--accent);
+      padding: 0 2rem; display: flex; align-items: center; gap: 16px; height: 58px;
+      position: sticky; top: 0; z-index: 10;
+    }
+    html.dark header { background: #010409; }
+    .logo-back { display: flex; align-items: center; gap: 6px; font-family: var(--ibm-mono); font-size: 11px; letter-spacing: .06em; color: rgba(255,255,255,0.45); text-decoration: none; padding: 5px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; transition: color .2s, border-color .2s; }
+    .logo-back:hover { color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.3); }
+    .logo-divider { width: 1px; height: 26px; background: rgba(255,255,255,0.1); }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--grotesk); font-weight: 700; font-size: 15px; color: #fff; text-decoration: none; letter-spacing: -.01em; }
+    .logo-mark { width: 30px; height: 30px; background: var(--accent); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: var(--ibm-mono); font-size: 10px; font-weight: 600; color: #fff; letter-spacing: .04em; }
+    .logo-sub { font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 400; font-family: var(--ibm-mono); }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .status-wrap { display: flex; align-items: center; gap: 6px; font-family: var(--ibm-mono); font-size: 11px; color: rgba(255,255,255,0.35); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: background .3s; }
+    .status-dot.online { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+    .status-dot.error { background: #f87171; }
+
+    .btn-theme { height: 30px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 0 10px; font-family: var(--ibm-mono); font-size: 11px; color: rgba(255,255,255,0.5); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all .15s; white-space: nowrap; }
+    .btn-theme:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.3); }
+    .theme-icon { font-size: 13px; line-height: 1; transition: transform .3s; }
+    html.dark .theme-icon { transform: rotate(180deg); }
+
+    .btn-primary { height: 34px; background: var(--accent); border: none; border-radius: 4px; padding: 0 18px; font-family: var(--ibm-sans); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: #fff; cursor: pointer; white-space: nowrap; transition: background .2s, box-shadow .2s; }
+    .btn-primary:hover { background: var(--accent2); box-shadow: 0 2px 12px rgba(0,85,180,0.4); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-sm { height: 30px; background: var(--surface); border: 1px solid var(--border2); border-radius: 4px; padding: 0 12px; font-family: var(--ibm-mono); font-size: 11px; cursor: pointer; color: var(--text2); transition: background .15s, border-color .15s, color .15s; white-space: nowrap; }
+    .btn-sm:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .btn-danger { color: var(--danger); border-color: rgba(192,57,43,0.3); }
+    .btn-danger:hover { background: var(--danger-light); border-color: var(--danger); }
+    html.dark .btn-danger { border-color: rgba(248,81,73,0.3); }
+    .btn-lock { height: 30px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; padding: 0 12px; font-family: var(--ibm-mono); font-size: 11px; cursor: pointer; color: rgba(255,255,255,0.4); transition: all .15s; }
+    .btn-lock:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+
+    main { max-width: 1080px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; position: relative; z-index: 2; }
+
+    .page-head { margin-bottom: 1.4rem; display: flex; align-items: flex-end; gap: 2rem; flex-wrap: wrap; }
+    .page-head-left { flex: 1; min-width: 280px; }
+    .page-eyebrow { font-family: var(--ibm-mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin-bottom: .4rem; display: flex; align-items: center; gap: 8px; }
+    .page-eyebrow::before { content: ''; width: 24px; height: 2px; background: var(--accent); }
+    .page-title { font-family: var(--grotesk); font-size: clamp(1.8rem, 3.5vw, 2.6rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.05; color: var(--text); }
+    .page-title span { color: var(--accent); }
+    .page-meta { font-family: var(--ibm-mono); font-size: 11px; color: var(--text3); margin-top: .5rem; letter-spacing: .04em; }
+    .rule { width: 100%; height: 1px; background: var(--border2); margin: 1.2rem 0 1.6rem; }
+
+    /* ── Week switcher & person filter ── */
+    .toolbar { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; align-items: stretch; }
+    .week-nav { display: flex; align-items: stretch; gap: 0; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .week-nav button { background: transparent; border: none; padding: 0 14px; font-family: var(--ibm-mono); font-size: 13px; color: var(--text2); cursor: pointer; transition: background .15s, color .15s; }
+    .week-nav button:hover { background: var(--accent-light); color: var(--accent); }
+    .week-nav .week-label { padding: 0 16px; display: flex; flex-direction: column; justify-content: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border); min-width: 230px; }
+    .week-label-main { font-family: var(--grotesk); font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: .02em; }
+    .week-label-sub { font-family: var(--ibm-mono); font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+    .toolbar select, .toolbar input[type="text"] {
+      height: 40px; border: 1px solid var(--border2); border-radius: var(--radius); padding: 0 12px;
+      font-family: var(--ibm-mono); font-size: 12px; background: var(--surface); color: var(--text);
+      outline: none; box-shadow: var(--shadow); min-width: 160px;
+    }
+    .toolbar select:focus, .toolbar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,85,180,0.1); }
+    html.dark .toolbar select:focus, html.dark .toolbar input:focus { box-shadow: 0 0 0 3px rgba(47,129,247,0.15); }
+
+    /* ── Summary metrics row ── */
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 10px; margin-bottom: 1.4rem; }
+    .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: .9rem 1.1rem; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    .metric::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--accent); }
+    .metric.m-done::before { background: var(--success); }
+    .metric.m-block::before { background: var(--warn); }
+    .metric.m-not::before { background: var(--danger); }
+    .metric-lbl { font-family: var(--ibm-mono); font-size: 9.5px; letter-spacing: .15em; text-transform: uppercase; color: var(--text3); }
+    .metric-val { font-family: var(--grotesk); font-size: 1.7rem; font-weight: 700; color: var(--text); margin-top: 2px; line-height: 1; }
+    .metric-sub { font-family: var(--ibm-mono); font-size: 10.5px; color: var(--text2); margin-top: 4px; }
+
+    /* ── Add / Edit review form ── */
+    .add-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.3rem 1.4rem; box-shadow: var(--shadow); margin-bottom: 1.4rem; }
+    .add-box h2 { font-family: var(--grotesk); font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: .9rem; display: flex; align-items: center; gap: 8px; }
+    .add-box h2 .mk { width: 26px; height: 26px; background: var(--accent); border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .form-row .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-family: var(--ibm-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); }
+    .field input[type="text"], .field select { width: 100%; border: 1px solid var(--border2); border-radius: var(--radius); padding: 9px 12px; font-family: var(--ibm-mono); font-size: 12.5px; background: var(--surface2); color: var(--text); outline: none; }
+    .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,85,180,0.1); }
+    .tri-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    @media (max-width: 780px) { .tri-grid { grid-template-columns: 1fr; } .form-row { grid-template-columns: 1fr; } }
+    .tri-col { display: flex; flex-direction: column; gap: 5px; }
+    .tri-head { font-family: var(--ibm-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+    .tri-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .tri-col.done .tri-dot { background: var(--success); }
+    .tri-col.block .tri-dot { background: var(--warn); }
+    .tri-col.not .tri-dot { background: var(--danger); }
+    .tri-col.done .tri-head { color: var(--success); }
+    .tri-col.block .tri-head { color: var(--warn); }
+    .tri-col.not .tri-head { color: var(--danger); }
+    .tri-col textarea {
+      min-height: 150px; resize: vertical; border: 1px solid var(--border2); border-radius: var(--radius);
+      padding: 10px 12px; font-family: var(--ibm-mono); font-size: 12px; line-height: 1.6;
+      background: var(--surface2); color: var(--text); outline: none;
+    }
+    .tri-col.done textarea:focus { border-color: var(--success); box-shadow: 0 0 0 3px rgba(26,122,74,0.12); }
+    .tri-col.block textarea:focus { border-color: var(--warn); box-shadow: 0 0 0 3px rgba(183,121,31,0.12); }
+    .tri-col.not textarea:focus { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(192,57,43,0.12); }
+    .tri-hint { font-family: var(--ibm-mono); font-size: 10px; color: var(--text3); }
+    .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); align-items: center; flex-wrap: wrap; }
+    .form-actions .left-note { margin-right: auto; font-family: var(--ibm-mono); font-size: 10.5px; color: var(--text3); }
+
+    /* ── Person cards ── */
+    .section-title { font-family: var(--grotesk); font-size: 14px; font-weight: 700; color: var(--text); margin: 1.6rem 0 .8rem; display: flex; align-items: center; gap: 10px; }
+    .section-title::after { content:''; flex:1; height: 1px; background: var(--border); }
+
+    .person-grid { display: grid; gap: 12px; }
+    .person-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.2rem 1.4rem; position: relative; overflow: hidden; }
+    .person-card::before { content:''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); opacity: .6; }
+    .person-card.grade-A::before { background: var(--success); opacity: 1; }
+    .person-card.grade-B::before { background: #4ea5f7; opacity: 1; }
+    .person-card.grade-C::before { background: var(--warn); opacity: 1; }
+    .person-card.grade-D::before { background: var(--danger); opacity: 1; }
+
+    .pc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .pc-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--grotesk); font-weight: 700; font-size: 14px; border: 1px solid var(--border2); }
+    .pc-name { font-family: var(--grotesk); font-size: 16px; font-weight: 700; color: var(--text); }
+    .pc-grade { font-family: var(--ibm-mono); font-size: 11px; padding: 3px 10px; border-radius: 4px; letter-spacing: .08em; font-weight: 600; }
+    .grade-A .pc-grade { background: var(--success-light); color: var(--success); border: 1px solid rgba(26,122,74,0.3); }
+    .grade-B .pc-grade { background: var(--accent-light); color: var(--accent); border: 1px solid var(--border2); }
+    .grade-C .pc-grade { background: var(--warn-light); color: var(--warn); border: 1px solid rgba(183,121,31,0.3); }
+    .grade-D .pc-grade { background: var(--danger-light); color: var(--danger); border: 1px solid rgba(192,57,43,0.3); }
+    .pc-trend { font-family: var(--ibm-mono); font-size: 10.5px; color: var(--text3); display: flex; align-items: center; gap: 5px; }
+    .pc-trend.up { color: var(--success); }
+    .pc-trend.down { color: var(--danger); }
+    .pc-trend.flat { color: var(--text3); }
+    .pc-actions { margin-left: auto; display: flex; gap: 6px; }
+
+    .pc-bar-wrap { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--bg2); margin: .3rem 0 .6rem; border: 1px solid var(--border); }
+    .pc-bar-done { background: var(--success); }
+    .pc-bar-block { background: var(--warn); }
+    .pc-bar-not { background: var(--danger); }
+    .pc-counts { display: flex; gap: 14px; flex-wrap: wrap; font-family: var(--ibm-mono); font-size: 11.5px; color: var(--text2); margin-bottom: .7rem; }
+    .pc-counts b { color: var(--text); font-weight: 600; }
+    .pc-counts .c-done b { color: var(--success); }
+    .pc-counts .c-block b { color: var(--warn); }
+    .pc-counts .c-not b { color: var(--danger); }
+
+    .pc-section-title { font-family: var(--ibm-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--text3); margin: .8rem 0 .35rem; }
+    .pc-tasks { display: grid; gap: 6px; grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 780px) { .pc-tasks { grid-template-columns: 1fr; } }
+    .pc-bucket { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: .6rem .75rem; }
+    .pc-bucket-head { font-family: var(--ibm-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+    .pc-bucket-head .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .pc-bucket.done .pc-bucket-head { color: var(--success); } .pc-bucket.done .dot { background: var(--success); }
+    .pc-bucket.block .pc-bucket-head { color: var(--warn); } .pc-bucket.block .dot { background: var(--warn); }
+    .pc-bucket.not .pc-bucket-head { color: var(--danger); } .pc-bucket.not .dot { background: var(--danger); }
+    .pc-bucket ul { list-style: none; font-family: var(--ibm-mono); font-size: 11.5px; color: var(--text2); line-height: 1.5; }
+    .pc-bucket li { padding: 2px 0; border-bottom: 1px dashed var(--border); }
+    .pc-bucket li:last-child { border-bottom: none; }
+    .pc-bucket li.muted { color: var(--text3); font-style: italic; }
+
+    .pc-insights { margin-top: .8rem; padding-top: .8rem; border-top: 1px dashed var(--border); }
+    .insight { display: flex; gap: 8px; align-items: flex-start; font-family: var(--ibm-sans); font-size: 12.5px; line-height: 1.55; color: var(--text2); margin-bottom: 5px; }
+    .insight .ic { flex-shrink: 0; width: 18px; text-align: center; font-size: 13px; }
+    .insight.good .ic { color: var(--success); }
+    .insight.warn .ic { color: var(--warn); }
+    .insight.bad .ic { color: var(--danger); }
+    .insight.tip .ic { color: var(--accent); }
+
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--text3); }
+    .empty-icon { font-size: 30px; margin-bottom: 10px; opacity: .45; }
+    .empty-sub { font-family: var(--ibm-mono); font-size: 11px; margin-top: 8px; }
+
+    /* ── Overall suggestions panel ── */
+    .sug-panel { margin-top: 1.6rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; }
+    .sug-head { background: var(--accent); color: #fff; padding: .7rem 1.2rem; display: flex; align-items: center; gap: 10px; }
+    .sug-head .lbl { font-family: var(--ibm-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+    .sug-head .sub { font-family: var(--ibm-mono); font-size: 10.5px; color: rgba(255,255,255,0.6); }
+    .sug-head .sug-toggle { margin-left: auto; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22); color: #fff; border-radius: 4px; padding: 3px 10px; font-family: var(--ibm-mono); font-size: 11px; cursor: pointer; }
+    .sug-body { padding: 1rem 1.2rem; display: grid; gap: 10px; }
+    .sug-item { display: flex; gap: 10px; align-items: flex-start; padding: .6rem .75rem; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); }
+    .sug-ic { flex-shrink: 0; width: 28px; height: 28px; border-radius: 5px; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .sug-title { font-family: var(--grotesk); font-size: 13px; font-weight: 600; color: var(--text); }
+    .sug-text { font-family: var(--ibm-sans); font-size: 12.5px; color: var(--text2); line-height: 1.55; margin-top: 2px; }
+
+    /* ── Edit overlay ── */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(10,22,40,0.6); z-index: 100; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px); }
+    html.dark .overlay { background: rgba(1,4,9,0.75); }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-lg); padding: 1.75rem; width: min(760px, 100%); max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,40,100,0.2); }
+    .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; padding-bottom: .9rem; border-bottom: 1px solid var(--border); }
+    .modal-header-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+    .modal h2 { font-family: var(--grotesk); font-size: 16px; font-weight: 700; color: var(--text); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.2rem; padding-top: .9rem; border-top: 1px solid var(--border); }
+
+    /* ── Lock screen ── */
+    #lock-screen { display: none; position: fixed; inset: 0; background: var(--text); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; }
+    html.dark #lock-screen { background: #010409; }
+    #lock-screen.active { display: flex; }
+    #lock-screen::before { content: ''; position: fixed; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(0,85,180,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,85,180,0.06) 1px, transparent 1px); background-size: 40px 40px; }
+    html.dark #lock-screen::before { background-image: linear-gradient(rgba(47,129,247,0.05) 1px,transparent 1px), linear-gradient(90deg,rgba(47,129,247,0.05) 1px,transparent 1px); }
+    .lock-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); padding: 2.8rem 2.4rem; width: min(380px, 92vw); display: flex; flex-direction: column; align-items: center; position: relative; }
+    .lock-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+    .lock-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 1.8rem; }
+    .lock-logo-mark { width: 44px; height: 44px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--ibm-mono); font-size: 12px; font-weight: 600; color: #fff; }
+    .lock-logo-text { font-family: var(--grotesk); font-size: 18px; font-weight: 700; color: #fff; }
+    .lock-logo-sub { font-family: var(--ibm-mono); font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    .lock-sub { font-family: var(--ibm-mono); font-size: 11px; color: rgba(255,255,255,0.3); margin-bottom: 1.8rem; text-align: center; letter-spacing: .06em; }
+    .lock-input-wrap { position: relative; width: 100%; margin-bottom: 12px; }
+    .lock-input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius); padding: 11px 44px 11px 16px; font-family: var(--ibm-mono); font-size: 14px; color: #fff; outline: none; }
+    .lock-input::placeholder { color: rgba(255,255,255,0.25); }
+    .lock-input:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(0,120,215,0.2); }
+    .lock-input.shake { animation: shake .35s ease; border-color: #f87171; }
+    .lock-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.3); font-size: 14px; padding: 4px; }
+    .lock-toggle:hover { color: rgba(255,255,255,0.7); }
+    .lock-btn { width: 100%; background: var(--accent); border: none; border-radius: var(--radius); padding: 12px; font-family: var(--grotesk); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: #fff; cursor: pointer; transition: background .2s; margin-bottom: 12px; }
+    .lock-btn:hover { background: var(--accent2); }
+    .lock-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .lock-error { font-family: var(--ibm-mono); font-size: 11px; color: #f87171; min-height: 16px; text-align: center; }
+    .lock-hint { font-family: var(--ibm-mono); font-size: 10px; color: rgba(255,255,255,0.2); margin-top: 1.2rem; text-align: center; line-height: 1.8; }
+    @keyframes shake { 0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)} }
+
+    #toast { position: fixed; bottom: 2.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 10px 22px; border-radius: 6px; font-family: var(--ibm-mono); font-size: 12px; opacity: 0; transition: all .25s; pointer-events: none; z-index: 999; }
+    html.dark #toast { background: #21262d; color: var(--text); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.error-toast { background: var(--danger); color: #fff; }
+
+    .page-footer { margin-top: 4rem; font-family: var(--ibm-mono); font-size: 10px; letter-spacing: .08em; color: var(--text3); text-align: center; line-height: 2.5; }
+    .page-footer a { color: var(--text3); text-decoration: none; }
+    .page-footer a:hover { color: var(--accent); }
+    .fsep { margin: 0 10px; opacity: .4; }
+
+    @media (max-width: 640px) {
+      header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+      .header-right { order: 3; width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+      main { padding: 1.5rem 1rem 5rem; }
+      .week-nav .week-label { min-width: 160px; }
+    }
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div id="lock-screen">
+  <div class="lock-box">
+    <div class="lock-logo">
+      <div class="lock-logo-mark">SGP</div>
+      <div>
+        <div class="lock-logo-text">Siemens GP</div>
+        <div class="lock-logo-sub">// Task Reviewer</div>
+      </div>
+    </div>
+    <div class="lock-sub">Enter your credentials to proceed</div>
+    <div class="lock-input-wrap">
+      <input class="lock-input" type="password" id="lock-input" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()">
+      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn">👁</button>
+    </div>
+    <button class="lock-btn" onclick="unlock()">Sign In</button>
+    <div class="lock-error" id="lock-error"></div>
+    <div class="lock-hint">Same password as Siemens GP Knowledge Base.<br>Separate from WMF Oracle.</div>
+  </div>
+</div>
+
+<header>
+  <a href="index.html" class="logo-back">← Grimoire</a>
+  <div class="logo-divider"></div>
+  <a href="qa-siemens.html" class="logo" role="heading" aria-level="1">
+    <div class="logo-mark">SGP</div>
+    <div>
+      <div>Siemens GP</div>
+      <div class="logo-sub">Task Reviewer</div>
+    </div>
+  </a>
+  <div class="header-right">
+    <div class="status-wrap">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-label">Connecting...</span>
+    </div>
+    <button class="btn-theme" onclick="Grimoire.Theme.toggle()" id="theme-btn" title="Toggle dark/light mode">
+      <span class="theme-icon" id="theme-icon">☀️</span>
+      <span id="theme-label">Light</span>
+    </button>
+    <button class="btn-lock" onclick="lockApp()" title="Lock">🔒 Lock</button>
+    <button class="btn-primary" onclick="scrollToForm()">+ Log Review</button>
+  </div>
+</header>
+
+<main id="main">
+  <div class="page-head">
+    <div class="page-head-left">
+      <div class="page-eyebrow">Tome · Siemens GP · Performance Reviewer</div>
+      <div class="page-title">Weekly <span>Task Reviewer</span></div>
+      <div class="page-meta">Per-person weekly log · Done · Can't process · Not done · Auto-scored</div>
+    </div>
+  </div>
+  <div class="rule"></div>
+
+  <!-- Week nav + filter -->
+  <div class="toolbar">
+    <div class="week-nav" role="group" aria-label="Week navigation">
+      <button type="button" onclick="shiftWeek(-1)" title="Previous week" aria-label="Previous week">‹</button>
+      <div class="week-label">
+        <div class="week-label-main" id="week-label-main">—</div>
+        <div class="week-label-sub" id="week-label-sub">—</div>
+      </div>
+      <button type="button" onclick="shiftWeek(1)" title="Next week" aria-label="Next week">›</button>
+      <button type="button" onclick="jumpToCurrentWeek()" title="Current week" aria-label="Current week" style="border-left:1px solid var(--border);padding:0 12px;font-size:11px">Today</button>
+    </div>
+    <select id="filter-person" onchange="render()" aria-label="Filter by person">
+      <option value="">All people</option>
+    </select>
+    <div style="flex:1"></div>
+    <button class="btn-sm" onclick="exportWeek()" title="Export week as text">⤓ Export</button>
+  </div>
+
+  <!-- Weekly summary metrics -->
+  <div class="metrics" id="metrics"></div>
+
+  <!-- Add/Edit review form -->
+  <div class="add-box" id="add-box">
+    <h2><span class="mk">✎</span><span id="form-heading">Log a review</span></h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="f-person">Person</label>
+        <input type="text" id="f-person" list="person-list" placeholder="e.g. Andreas, Maria, Lukas" autocomplete="off">
+        <datalist id="person-list"></datalist>
+      </div>
+      <div class="field">
+        <label for="f-week">Week of</label>
+        <input type="text" id="f-week" readonly style="background:var(--bg2);cursor:default">
+      </div>
+    </div>
+    <div class="tri-grid">
+      <div class="tri-col done">
+        <div class="tri-head"><div class="tri-dot"></div>Done</div>
+        <textarea id="f-done" placeholder="One task per line..."></textarea>
+        <div class="tri-hint">Completed &amp; closed. One task per line.</div>
+      </div>
+      <div class="tri-col block">
+        <div class="tri-head"><div class="tri-dot"></div>Can't process</div>
+        <textarea id="f-block" placeholder="Blocked tasks — waiting on vendor, approval, missing info..."></textarea>
+        <div class="tri-hint">Blocked. Flag the reason next to the task if useful.</div>
+      </div>
+      <div class="tri-col not">
+        <div class="tri-head"><div class="tri-dot"></div>Not done</div>
+        <textarea id="f-not" placeholder="Not yet worked on or dropped from the week..."></textarea>
+        <div class="tri-hint">Carried over. Deserves follow-up next week.</div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <span class="left-note" id="form-left-note"></span>
+      <button class="btn-sm" onclick="resetForm()">Reset</button>
+      <button class="btn-primary" id="save-btn" onclick="saveReview()">Save Review</button>
+    </div>
+  </div>
+
+  <!-- People section -->
+  <div class="section-title" id="people-section-title">This week's reviews</div>
+  <div id="people-grid" class="person-grid">
+    <div class="empty" id="loading-state">
+      <div class="empty-icon">⏳</div>
+      <div>Loading reviews...</div>
+    </div>
+  </div>
+
+  <!-- Feature suggestions panel -->
+  <div class="sug-panel" id="sug-panel">
+    <div class="sug-head">
+      <span style="font-size:16px">💡</span>
+      <span class="lbl">Suggested next features</span>
+      <span class="sub" id="sug-sub">— based on current data</span>
+      <button class="sug-toggle" onclick="toggleSug()" id="sug-toggle">Hide</button>
+    </div>
+    <div class="sug-body" id="sug-body"></div>
+  </div>
+
+  <div class="page-footer">
+    codingkuh.my.id<span class="fsep">·</span>Siemens GP · Task Reviewer<br>
+    <a href="index.html">Grimoire Home</a><span class="fsep">·</span><a href="qa-siemens.html">SGP Knowledge Base</a><span class="fsep">·</span><a href="standard-wording.html">Standard Wording</a>
+  </div>
+</main>
+
+<!-- Edit modal (reuses same form layout in a popup) -->
+<div class="overlay" id="edit-modal" onclick="if(event.target===this)closeEdit()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-icon">✎</div>
+      <h2 id="edit-title">Edit Review</h2>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Person</label>
+        <input type="text" id="e-person" readonly style="background:var(--bg2)">
+      </div>
+      <div class="field">
+        <label>Week of</label>
+        <input type="text" id="e-week" readonly style="background:var(--bg2)">
+      </div>
+    </div>
+    <div class="tri-grid">
+      <div class="tri-col done">
+        <div class="tri-head"><div class="tri-dot"></div>Done</div>
+        <textarea id="e-done" placeholder="One task per line..."></textarea>
+      </div>
+      <div class="tri-col block">
+        <div class="tri-head"><div class="tri-dot"></div>Can't process</div>
+        <textarea id="e-block"></textarea>
+      </div>
+      <div class="tri-col not">
+        <div class="tri-head"><div class="tri-dot"></div>Not done</div>
+        <textarea id="e-not"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-danger" onclick="deleteFromEdit()">Delete</button>
+      <div style="flex:1"></div>
+      <button class="btn-sm" onclick="closeEdit()">Cancel</button>
+      <button class="btn-primary" id="e-save-btn" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+/* ── Firebase — same project/config as the rest of the Grimoire ── */
+const firebaseConfig = {
+  apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",
+  authDomain:"vb-code-vault.firebaseapp.com",
+  projectId:"vb-code-vault",
+  storageBucket:"vb-code-vault.firebasestorage.app",
+  messagingSenderId:"773245175115",
+  appId:"1:773245175115:web:0b6a4f27388f58f026d4ce"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const col = db.collection('sgp_task_reviews');
+const authDoc = db.collection('_config').doc('auth_sgp'); /* Shares lock with qa-siemens.html */
+
+let reviews = [];     /* all reviews — listener keeps it fresh */
+let editId = null;
+let saving = false;
+let currentWeekStart = null; /* ISO Monday 00:00 */
+let sugVisible = true;
+
+/* ── Theme (light default, dark via .dark) — mirrors qa-siemens.html ── */
+function initTheme() {
+  Grimoire.Theme.init({
+    defaultMode:'light', mode:'dark', className:'dark',
+    iconEl:'#theme-icon', labelEl:'#theme-label',
+    icons:{light:'☀️', dark:'🌙'},
+    labels:{light:'Light', dark:'Dark'}
+  });
+}
+
+function setStatus(s,l){document.getElementById('status-dot').className='status-dot '+(s||'');document.getElementById('status-label').textContent=l;}
+
+function startListener(){
+  setStatus('','Connecting...');
+  col.onSnapshot(snap=>{
+    reviews = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    setStatus('online','Connected');
+    render();
+  }, err=>{
+    console.error('Firestore error:', err.code, err.message);
+    setStatus('error','Error');
+    showToast('Error: '+err.code+' — '+err.message, true);
+  });
+}
+
+/* ── Week helpers (ISO, Monday-start) ── */
+function startOfWeek(d){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = (x.getDay() + 6) % 7; /* Mon=0..Sun=6 */
+  x.setDate(x.getDate() - day);
+  x.setHours(0,0,0,0);
+  return x;
+}
+function endOfWeek(d){ const e = new Date(startOfWeek(d)); e.setDate(e.getDate()+6); return e; }
+function addDays(d,n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function fmtDay(d){ return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
+function fmtDayYear(d){ return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+function weekKey(d){
+  /* ISO week key YYYY-Www */
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = (x.getUTCDay()+6)%7;
+  x.setUTCDate(x.getUTCDate()-day+3);
+  const firstThursday = x.getUTCFullYear();
+  const jan4 = new Date(Date.UTC(firstThursday,0,4));
+  const week = 1 + Math.round(((x - jan4) / 86400000 - 3 + ((jan4.getUTCDay()+6)%7)) / 7);
+  return firstThursday + '-W' + String(week).padStart(2,'0');
+}
+function isoDate(d){ const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
+
+function shiftWeek(delta){
+  currentWeekStart = addDays(currentWeekStart, 7*delta);
+  updateWeekUI();
+  render();
+}
+function jumpToCurrentWeek(){
+  currentWeekStart = startOfWeek(new Date());
+  updateWeekUI();
+  render();
+}
+function updateWeekUI(){
+  const ws = currentWeekStart, we = endOfWeek(ws);
+  const now = new Date();
+  const isCurrent = startOfWeek(now).getTime() === ws.getTime();
+  document.getElementById('week-label-main').textContent = `${fmtDay(ws)} — ${fmtDayYear(we)}`;
+  document.getElementById('week-label-sub').textContent  = `${weekKey(ws)}${isCurrent?' · current week':''}`;
+  document.getElementById('f-week').value = `${fmtDay(ws)} — ${fmtDayYear(we)}`;
+}
+
+/* ── Data helpers ── */
+function normPerson(s){ return String(s||'').trim(); }
+function personKey(s){ return normPerson(s).toLowerCase(); }
+function lines(text){
+  return String(text||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+}
+function reviewsForWeek(wsDate){
+  const k = weekKey(wsDate);
+  return reviews.filter(r=>r.weekKey===k);
+}
+function reviewFor(person, wsDate){
+  const pk = personKey(person), wk = weekKey(wsDate);
+  return reviews.find(r=>r.weekKey===wk && personKey(r.person)===pk) || null;
+}
+function totals(r){
+  const d=(r&&r.done||[]).length, b=(r&&r.blocked||[]).length, n=(r&&r.notDone||[]).length;
+  return {done:d, blocked:b, notDone:n, total:d+b+n};
+}
+function completionPct(t){ return t.total===0 ? 0 : Math.round((t.done / t.total) * 100); }
+function gradeFromPct(pct, total){
+  if(total===0) return 'N/A';
+  if(pct >= 85) return 'A';
+  if(pct >= 70) return 'B';
+  if(pct >= 50) return 'C';
+  return 'D';
+}
+
+/* ── Rendering ── */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function refreshPersonList(){
+  const names = [...new Set(reviews.map(r=>normPerson(r.person)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const list = document.getElementById('person-list');
+  list.innerHTML = names.map(n=>`<option value="${esc(n)}">`).join('');
+  const sel = document.getElementById('filter-person');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">All people</option>' + names.map(n=>`<option value="${esc(n)}"${n===prev?' selected':''}>${esc(n)}</option>`).join('');
+}
+
+function render(){
+  refreshPersonList();
+  const weekReviews = reviewsForWeek(currentWeekStart);
+  const filterPerson = document.getElementById('filter-person').value;
+
+  /* ── Summary metrics ── */
+  let d=0,b=0,n=0;
+  weekReviews.forEach(r=>{ const t=totals(r); d+=t.done; b+=t.blocked; n+=t.notDone; });
+  const total = d+b+n;
+  const pct = total===0 ? 0 : Math.round(d/total*100);
+  const people = weekReviews.length;
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-lbl">People reviewed</div><div class="metric-val">${people}</div><div class="metric-sub">this week</div></div>
+    <div class="metric m-done"><div class="metric-lbl">Done</div><div class="metric-val">${d}</div><div class="metric-sub">closed tasks</div></div>
+    <div class="metric m-block"><div class="metric-lbl">Can't process</div><div class="metric-val">${b}</div><div class="metric-sub">blocked</div></div>
+    <div class="metric m-not"><div class="metric-lbl">Not done</div><div class="metric-val">${n}</div><div class="metric-sub">carried over</div></div>
+    <div class="metric"><div class="metric-lbl">Completion</div><div class="metric-val">${pct}%</div><div class="metric-sub">done / total</div></div>
+  `;
+
+  /* ── Person cards ── */
+  let list = weekReviews.slice();
+  if (filterPerson) list = list.filter(r=>personKey(r.person)===personKey(filterPerson));
+  /* stable sort: by grade desc, then by total desc, then name */
+  list.sort((a,b)=>{
+    const ta=totals(a), tb=totals(b);
+    const pa=completionPct(ta), pb=completionPct(tb);
+    if (pb !== pa) return pb - pa;
+    if (tb.total !== ta.total) return tb.total - ta.total;
+    return normPerson(a.person).localeCompare(normPerson(b.person));
+  });
+
+  const grid = document.getElementById('people-grid');
+  const titleEl = document.getElementById('people-section-title');
+  const ws = currentWeekStart, we = endOfWeek(ws);
+  titleEl.textContent = `Reviews · ${fmtDay(ws)} — ${fmtDayYear(we)}` + (filterPerson? ` · ${filterPerson}` : '');
+
+  if (list.length === 0){
+    grid.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">📭</div>
+        <div>No reviews for this week yet.</div>
+        <div class="empty-sub">Use the form above to log the first person — done / can't process / not done.</div>
+      </div>`;
+  } else {
+    grid.innerHTML = list.map(r=>renderPerson(r)).join('');
+  }
+
+  renderSuggestions(weekReviews);
+}
+
+function renderPerson(r){
+  const t = totals(r);
+  const pct = completionPct(t);
+  const grade = gradeFromPct(pct, t.total);
+  const prevWs = addDays(currentWeekStart, -7);
+  const prev = reviewFor(r.person, prevWs);
+  const prevPct = prev ? completionPct(totals(prev)) : null;
+  let trendHtml = '';
+  if (prevPct === null){
+    trendHtml = `<span class="pc-trend flat">◌ first logged week</span>`;
+  } else {
+    const delta = pct - prevPct;
+    if (delta >= 5)       trendHtml = `<span class="pc-trend up">▲ ${delta}pp vs last week</span>`;
+    else if (delta <= -5) trendHtml = `<span class="pc-trend down">▼ ${Math.abs(delta)}pp vs last week</span>`;
+    else                  trendHtml = `<span class="pc-trend flat">→ ${delta>=0?'+':''}${delta}pp vs last week</span>`;
+  }
+
+  /* proportional bar */
+  const barHtml = t.total === 0
+    ? `<div class="pc-bar-wrap"><div style="flex:1;background:var(--bg2)"></div></div>`
+    : `<div class="pc-bar-wrap">
+        ${t.done>0?`<div class="pc-bar-done" style="flex:${t.done}" title="${t.done} done"></div>`:''}
+        ${t.blocked>0?`<div class="pc-bar-block" style="flex:${t.blocked}" title="${t.blocked} blocked"></div>`:''}
+        ${t.notDone>0?`<div class="pc-bar-not" style="flex:${t.notDone}" title="${t.notDone} not done"></div>`:''}
+      </div>`;
+
+  const bucket = (cls, label, arr) => `
+    <div class="pc-bucket ${cls}">
+      <div class="pc-bucket-head"><div class="dot"></div>${label} · ${arr.length}</div>
+      <ul>${arr.length===0 ? '<li class="muted">—</li>' : arr.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>
+    </div>`;
+
+  const initials = (r.person||'?').trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
+  const insights = buildPersonInsights(r, t, pct, prev, prevPct);
+
+  return `
+    <div class="person-card grade-${grade==='N/A'?'B':grade}" data-id="${esc(r.id)}">
+      <div class="pc-head">
+        <div class="pc-avatar">${esc(initials||'?')}</div>
+        <div>
+          <div class="pc-name">${esc(r.person||'—')}</div>
+          <div style="font-family:var(--ibm-mono);font-size:10.5px;color:var(--text3);">${t.total} task${t.total===1?'':'s'} · ${pct}% done</div>
+        </div>
+        <div class="pc-grade">Grade ${grade}</div>
+        ${trendHtml}
+        <div class="pc-actions">
+          <button class="btn-sm" onclick="openEdit('${esc(r.id)}')">✎ Edit</button>
+        </div>
+      </div>
+      <div class="pc-counts">
+        <span class="c-done">Done · <b>${t.done}</b></span>
+        <span class="c-block">Can't process · <b>${t.blocked}</b></span>
+        <span class="c-not">Not done · <b>${t.notDone}</b></span>
+      </div>
+      ${barHtml}
+      <div class="pc-tasks">
+        ${bucket('done','Done', r.done||[])}
+        ${bucket('block',"Can't process", r.blocked||[])}
+        ${bucket('not','Not done', r.notDone||[])}
+      </div>
+      <div class="pc-insights">
+        ${insights.map(i=>`<div class="insight ${i.kind}"><div class="ic">${i.icon}</div><div>${esc(i.text)}</div></div>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* ── Per-person insights ── */
+function buildPersonInsights(r, t, pct, prev, prevPct){
+  const out = [];
+  if (t.total === 0){
+    out.push({kind:'tip', icon:'ℹ', text:`No tasks logged this week. Add at least the carry-over items to get a meaningful score.`});
+    return out;
+  }
+  /* Overall verdict */
+  if (pct >= 85) out.push({kind:'good', icon:'✓', text:`Strong week — ${pct}% of ${t.total} tasks closed. Keep the momentum and document what worked.`});
+  else if (pct >= 70) out.push({kind:'good', icon:'✓', text:`Solid output at ${pct}% completion. A little cleanup on blocked / carry-over items would push this into top tier.`});
+  else if (pct >= 50) out.push({kind:'warn', icon:'!', text:`Mixed week at ${pct}% — ${t.done} closed but ${t.blocked+t.notDone} still open. Prioritize next week, start with the oldest items.`});
+  else out.push({kind:'bad', icon:'✕', text:`Tough week — only ${pct}% of ${t.total} tasks closed. Worth a 1:1 to unblock and re-scope the load.`});
+
+  /* Blocked ratio */
+  const blockedRatio = t.total ? t.blocked/t.total : 0;
+  if (t.blocked >= 3 && blockedRatio >= 0.3){
+    out.push({kind:'warn', icon:'⏸', text:`High block rate (${t.blocked}/${t.total}). Escalate blockers early — vendor response, approvals, missing data.`});
+  } else if (t.blocked === 0 && t.total >= 3){
+    out.push({kind:'good', icon:'✓', text:`Zero blockers — execution is clean this week.`});
+  }
+
+  /* Not-done ratio */
+  const notRatio = t.total ? t.notDone/t.total : 0;
+  if (t.notDone >= 3 && notRatio >= 0.3){
+    out.push({kind:'bad', icon:'↻', text:`${t.notDone} tasks carried over. Schedule them into next week explicitly and check if workload is realistic.`});
+  }
+
+  /* Trend */
+  if (prevPct !== null){
+    const delta = pct - prevPct;
+    if (delta >= 10) out.push({kind:'good', icon:'▲', text:`Improving trend: ${delta}pp better than last week (${prevPct}% → ${pct}%).`});
+    else if (delta <= -10) out.push({kind:'bad', icon:'▼', text:`Declining trend: ${Math.abs(delta)}pp worse than last week (${prevPct}% → ${pct}%). Check what changed.`});
+  }
+
+  /* Recurrence hint — blocked / not-done items repeated from previous week */
+  if (prev){
+    const prevOpen = new Set([...(prev.blocked||[]), ...(prev.notDone||[])].map(s=>s.toLowerCase().trim()));
+    const repeated = [...(r.blocked||[]), ...(r.notDone||[])]
+      .filter(s=>prevOpen.has(s.toLowerCase().trim()));
+    if (repeated.length){
+      out.push({kind:'warn', icon:'⟲', text:`${repeated.length} item${repeated.length>1?'s':''} repeated from last week. If it's stuck 2+ weeks, escalate or de-scope.`});
+    }
+  }
+
+  return out;
+}
+
+/* ── Cross-cutting feature suggestions for the reviewer tool ── */
+function renderSuggestions(weekReviews){
+  const body = document.getElementById('sug-body');
+  const sub  = document.getElementById('sug-sub');
+  const sugs = [];
+
+  const people = weekReviews.length;
+  let tot = {done:0,blocked:0,notDone:0,total:0};
+  weekReviews.forEach(r=>{ const t=totals(r); tot.done+=t.done; tot.blocked+=t.blocked; tot.notDone+=t.notDone; tot.total+=t.total; });
+  const teamPct = tot.total ? Math.round(tot.done/tot.total*100) : 0;
+
+  /* Adaptive, data-aware suggestions */
+  if (people === 0){
+    sugs.push({ic:'➕', t:'Seed the first week', x:'Log at least 2–3 people for this week so the analytics and trends have something to compare to.'});
+  }
+  if (tot.blocked >= Math.max(3, Math.round(tot.total*0.25))){
+    sugs.push({ic:'⛓', t:'Add a "blocker reason" tag', x:`This week ${tot.blocked}/${tot.total} items are blocked. Tag each blocker (vendor / approval / data / system) to spot recurring root causes over time.`});
+  }
+  if (tot.notDone >= Math.max(3, Math.round(tot.total*0.25))){
+    sugs.push({ic:'↻', t:'Auto carry-over to next week', x:`${tot.notDone} items are "not done". A 1-click "carry forward to next week" would cut manual re-typing.`});
+  }
+  if (people >= 2){
+    sugs.push({ic:'🏆', t:'Team leaderboard + averages', x:'With multiple people reviewed, a podium of top 3 completion-% and a team average trendline would add motivation.'});
+  }
+  if (tot.total >= 10){
+    sugs.push({ic:'🔥', t:'Heatmap of blockers per category', x:'A small 7-day heatmap per person (done vs blocked vs not-done) helps spot when in the week people stall.'});
+  }
+
+  /* Always-on foundational suggestions */
+  sugs.push({ic:'📊', t:'Monthly / quarterly rollup', x:'Aggregate weeks into a monthly scorecard per person: average completion %, total tasks, top recurring blockers.'});
+  sugs.push({ic:'📤', t:'Export to Excel / PDF', x:'One-click export of the current week\'s review as XLSX or a printable PDF briefing.'});
+  sugs.push({ic:'🔔', t:'Slack / Teams weekly digest', x:'Post the Friday summary automatically (totals + top-done + top-blocked) to a channel.'});
+  sugs.push({ic:'🎯', t:'Per-person weekly target', x:'Let the reviewer set a target number of tasks per person and highlight over/under-performance against it.'});
+  sugs.push({ic:'🔗', t:'Link tasks to SGP Oracle entries', x:'Let each task reference a knowledge-base entry so reviewers can click through to the process doc.'});
+  sugs.push({ic:'🗣', t:'Private reviewer notes', x:'Add a 1:1 notes field per person per week, visible only to the reviewer, for follow-up talking points.'});
+
+  sub.textContent = `— ${weekReviews.length} review${weekReviews.length===1?'':'s'} · ${tot.total} task${tot.total===1?'':'s'} · ${teamPct}% team completion`;
+  body.innerHTML = sugs.slice(0, 10).map(s=>`
+    <div class="sug-item">
+      <div class="sug-ic">${s.ic}</div>
+      <div>
+        <div class="sug-title">${esc(s.t)}</div>
+        <div class="sug-text">${esc(s.x)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleSug(){
+  sugVisible = !sugVisible;
+  document.getElementById('sug-body').style.display = sugVisible ? '' : 'none';
+  document.getElementById('sug-toggle').textContent = sugVisible ? 'Hide' : 'Show';
+}
+
+/* ── Form handlers ── */
+function scrollToForm(){
+  document.getElementById('add-box').scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>document.getElementById('f-person').focus(),250);
+}
+function resetForm(){
+  editId = null;
+  document.getElementById('form-heading').textContent = 'Log a review';
+  document.getElementById('form-left-note').textContent = '';
+  ['f-person','f-done','f-block','f-not'].forEach(id=>document.getElementById(id).value='');
+}
+async function saveReview(){
+  if (saving) return;
+  const person = normPerson(document.getElementById('f-person').value);
+  if (!person){ document.getElementById('f-person').focus(); showToast('Please enter a person.', true); return; }
+  const done    = lines(document.getElementById('f-done').value);
+  const blocked = lines(document.getElementById('f-block').value);
+  const notDone = lines(document.getElementById('f-not').value);
+  if (done.length+blocked.length+notDone.length === 0){
+    showToast('Add at least one task in any column.', true); return;
+  }
+
+  const ws = currentWeekStart;
+  const payload = {
+    person,
+    personKey: personKey(person),
+    weekKey:   weekKey(ws),
+    weekStart: isoDate(ws),
+    done, blocked, notDone,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  saving = true;
+  const btn = document.getElementById('save-btn'); btn.disabled = true; btn.textContent = 'Saving...';
+  try{
+    const existing = reviewFor(person, ws);
+    if (existing){
+      await col.doc(existing.id).update(payload);
+      showToast('Review updated for '+person+'.');
+    } else {
+      payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await col.add(payload);
+      showToast('Review saved for '+person+'.');
+    }
+    resetForm();
+  } catch(e){
+    console.error(e);
+    showToast('Save failed: '+e.message, true);
+  } finally {
+    saving = false; btn.disabled = false; btn.textContent = 'Save Review';
+  }
+}
+
+function openEdit(id){
+  const r = reviews.find(x=>x.id===id);
+  if (!r) return;
+  editId = id;
+  document.getElementById('e-person').value = r.person || '';
+  const ws = new Date(r.weekStart + 'T00:00:00');
+  const we = endOfWeek(ws);
+  document.getElementById('e-week').value = `${fmtDay(ws)} — ${fmtDayYear(we)}`;
+  document.getElementById('e-done').value  = (r.done||[]).join('\n');
+  document.getElementById('e-block').value = (r.blocked||[]).join('\n');
+  document.getElementById('e-not').value   = (r.notDone||[]).join('\n');
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeEdit(){ document.getElementById('edit-modal').classList.remove('open'); editId = null; }
+async function saveEdit(){
+  if (!editId) return;
+  const done    = lines(document.getElementById('e-done').value);
+  const blocked = lines(document.getElementById('e-block').value);
+  const notDone = lines(document.getElementById('e-not').value);
+  const btn = document.getElementById('e-save-btn'); btn.disabled = true; btn.textContent = 'Saving...';
+  try{
+    await col.doc(editId).update({
+      done, blocked, notDone,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast('Review updated.');
+    closeEdit();
+  } catch(e){ showToast('Save failed: '+e.message, true); }
+  finally { btn.disabled = false; btn.textContent = 'Save'; }
+}
+async function deleteFromEdit(){
+  if (!editId) return;
+  if (!confirm('Delete this review entirely?')) return;
+  try{
+    await col.doc(editId).delete();
+    showToast('Review deleted.');
+    closeEdit();
+  } catch(e){ showToast('Delete failed: '+e.message, true); }
+}
+
+/* ── Export ── */
+function exportWeek(){
+  const weekReviews = reviewsForWeek(currentWeekStart);
+  if (!weekReviews.length){ showToast('Nothing to export for this week.', true); return; }
+  const ws = currentWeekStart, we = endOfWeek(ws);
+  let txt = `Siemens GP — Task Review\nWeek ${weekKey(ws)} · ${fmtDay(ws)} — ${fmtDayYear(we)}\n\n`;
+  weekReviews.forEach(r=>{
+    const t = totals(r), pct = completionPct(t), g = gradeFromPct(pct, t.total);
+    txt += `── ${r.person} · Grade ${g} · ${pct}% (${t.done}/${t.total}) ──\n`;
+    txt += `DONE (${(r.done||[]).length}):\n`;      (r.done||[]).forEach(x=>txt+=`  + ${x}\n`);
+    txt += `CAN'T PROCESS (${(r.blocked||[]).length}):\n`; (r.blocked||[]).forEach(x=>txt+=`  ! ${x}\n`);
+    txt += `NOT DONE (${(r.notDone||[]).length}):\n`; (r.notDone||[]).forEach(x=>txt+=`  - ${x}\n`);
+    txt += `\n`;
+  });
+  const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `sgp-task-review-${weekKey(ws)}.txt`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+  showToast('Exported week file.');
+}
+
+/* ── Misc ── */
+function showToast(msg, isError){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = isError ? 'error-toast show' : 'show';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.className=''; }, 2500);
+}
+
+document.addEventListener('keydown', e=>{
+  if (e.key === 'Escape'){ closeEdit(); }
+});
+
+/* ── Lock (shares auth doc with qa-siemens.html) ── */
+const SESSION_KEY = 'vb_vault_session';
+async function hashPass(pass){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass+'vb_vault_salt_2024'));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function toggleLockVis(){
+  const inp = document.getElementById('lock-input'), btn = document.getElementById('lock-vis-btn');
+  if (inp.type === 'password'){ inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
+}
+function setLockLoading(on){
+  const b = document.querySelector('.lock-btn');
+  b.textContent = on ? 'Verifying...' : 'Sign In';
+  b.disabled = on;
+}
+async function unlock(){
+  const input = document.getElementById('lock-input').value; if (!input) return;
+  setLockLoading(true);
+  try{
+    const hash = await hashPass(input);
+    const snap = await authDoc.get();
+    if (!snap.exists){
+      await authDoc.set({ hash, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      grantAccess();
+    } else if (snap.data().hash === hash){
+      grantAccess();
+    } else {
+      document.getElementById('lock-error').textContent = 'Incorrect password.';
+      const inp = document.getElementById('lock-input');
+      inp.classList.add('shake'); inp.value = '';
+      setTimeout(()=>inp.classList.remove('shake'), 400);
+      setTimeout(()=>document.getElementById('lock-error').textContent='', 3000);
+    }
+  } catch(e){
+    document.getElementById('lock-error').textContent = 'Connection error.';
+  } finally {
+    setLockLoading(false);
+  }
+}
+function grantAccess(){
+  sessionStorage.setItem(SESSION_KEY, '1');
+  document.getElementById('lock-screen').classList.remove('active');
+  startListener();
+}
+function lockApp(){
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('lock-input').value = '';
+  document.getElementById('lock-error').textContent = '';
+  document.getElementById('lock-screen').classList.add('active');
+  setTimeout(()=>document.getElementById('lock-input').focus(), 100);
+}
+function checkAuth(){
+  if (sessionStorage.getItem(SESSION_KEY) === '1'){ grantAccess(); return; }
+  document.getElementById('lock-screen').classList.add('active');
+  setTimeout(()=>document.getElementById('lock-input').focus(), 100);
+}
+
+/* ── Init ── */
+initTheme();
+currentWeekStart = startOfWeek(new Date());
+updateWeekUI();
+checkAuth();
+
+/* Register service worker for offline (same as other pages) */
+if (window.Grimoire && window.Grimoire.Offline) {
+  window.Grimoire.Offline.register();
+}
+</script>
+</body>
+</html>
