@@ -269,12 +269,27 @@
     .modal h2 { font-family: var(--grotesk); font-size: 16px; font-weight: 700; color: var(--text); }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.2rem; padding-top: .9rem; border-top: 1px solid var(--border); }
 
-    /* ── Lock screen ── */
-    #lock-screen { display: none; position: fixed; inset: 0; background: var(--text); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; }
-    html.dark #lock-screen { background: #010409; }
-    #lock-screen.active { display: flex; }
-    #lock-screen::before { content: ''; position: fixed; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(0,85,180,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,85,180,0.06) 1px, transparent 1px); background-size: 40px 40px; }
-    html.dark #lock-screen::before { background-image: linear-gradient(rgba(47,129,247,0.05) 1px,transparent 1px), linear-gradient(90deg,rgba(47,129,247,0.05) 1px,transparent 1px); }
+    /* ── Auth gate (per-user Sign In / Register) ── */
+    #auth-gate { display: none; position: fixed; inset: 0; background: var(--text); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
+    html.dark #auth-gate { background: #010409; }
+    #auth-gate.active { display: flex; }
+    #auth-gate::before { content: ''; position: fixed; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(0,85,180,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,85,180,0.06) 1px, transparent 1px); background-size: 40px 40px; }
+    html.dark #auth-gate::before { background-image: linear-gradient(rgba(47,129,247,0.05) 1px,transparent 1px), linear-gradient(90deg,rgba(47,129,247,0.05) 1px,transparent 1px); }
+    .auth-tabs { display: flex; gap: 4px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius); padding: 3px; margin-bottom: 16px; width: 100%; }
+    .auth-tab { flex: 1; background: transparent; border: none; color: rgba(255,255,255,0.4); font-family: var(--ibm-mono); font-size: 11px; padding: 8px 0; cursor: pointer; border-radius: calc(var(--radius) - 2px); transition: all .15s; letter-spacing: .04em; }
+    .auth-tab.active { background: rgba(255,255,255,0.08); color: #fff; }
+    .auth-tab:hover:not(.active) { color: rgba(255,255,255,0.7); }
+    .auth-field { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius); padding: 11px 16px; font-family: var(--ibm-mono); font-size: 14px; color: #fff; outline: none; margin-bottom: 10px; box-sizing: border-box; }
+    .auth-field::placeholder { color: rgba(255,255,255,0.25); }
+    .auth-field:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(0,120,215,0.2); }
+    .auth-field.shake { animation: shake .35s ease; border-color: #f87171; }
+    .user-chip { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 5px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; font-family: var(--ibm-mono); font-size: 11px; color: rgba(255,255,255,0.65); cursor: pointer; transition: all .15s; }
+    .user-chip:hover { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.25); }
+    .user-chip-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; letter-spacing: 0; }
+    .user-chip-out { font-size: 12px; opacity: .5; }
+    .pc-by { font-family: var(--ibm-mono); font-size: 10px; color: var(--text3); letter-spacing: .02em; margin-top: 2px; }
+    .form-whoami { font-family: var(--ibm-mono); font-size: 11px; color: var(--text3); letter-spacing: .03em; }
+    .form-whoami b { color: var(--text); font-weight: 600; }
     .lock-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); padding: 2.8rem 2.4rem; width: min(380px, 92vw); display: flex; flex-direction: column; align-items: center; position: relative; }
     .lock-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
     .lock-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 1.8rem; }
@@ -318,7 +333,7 @@
 
 <a class="skip-link" href="#main">Skip to content</a>
 
-<div id="lock-screen">
+<div id="auth-gate">
   <div class="lock-box">
     <div class="lock-logo">
       <div class="lock-logo-mark">SGP</div>
@@ -327,14 +342,35 @@
         <div class="lock-logo-sub">// Task Reviewer</div>
       </div>
     </div>
-    <div class="lock-sub">Enter your credentials to proceed</div>
-    <div class="lock-input-wrap">
-      <input class="lock-input" type="password" id="lock-input" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()">
-      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn">👁</button>
+    <div class="lock-sub" id="auth-subtitle">Sign in to continue</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')">Register</button>
     </div>
-    <button class="lock-btn" onclick="unlock()">Sign In</button>
-    <div class="lock-error" id="lock-error"></div>
-    <div class="lock-hint">Same password as Siemens GP Knowledge Base.<br>Separate from WMF Oracle.</div>
+
+    <div id="auth-login-panel" style="width:100%;">
+      <input class="auth-field" type="text" id="login-name" placeholder="Name" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="lock-input-wrap" style="margin-bottom:12px;">
+        <input class="auth-field" type="password" id="login-pass" placeholder="Password" autocomplete="current-password" style="margin-bottom:0;padding-right:44px;" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="lock-toggle" onclick="toggleAuthVis('login-pass', this)" id="login-vis-btn">👁</button>
+      </div>
+      <button class="lock-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+      <div class="lock-error" id="login-error"></div>
+    </div>
+
+    <div id="auth-register-panel" style="display:none;width:100%;">
+      <input class="auth-field" type="text" id="reg-name" placeholder="Name (e.g. Andreas Müller)" autocomplete="name" onkeydown="if(event.key==='Enter')doRegister()">
+      <div class="lock-input-wrap" style="margin-bottom:10px;">
+        <input class="auth-field" type="password" id="reg-pass" placeholder="Password (min 6 characters)" autocomplete="new-password" style="margin-bottom:0;padding-right:44px;" onkeydown="if(event.key==='Enter')doRegister()">
+        <button class="lock-toggle" onclick="toggleAuthVis('reg-pass', this)" id="reg-vis-btn">👁</button>
+      </div>
+      <input class="auth-field" type="password" id="reg-pass2" placeholder="Confirm password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()">
+      <button class="lock-btn" id="register-btn" onclick="doRegister()">Create Account</button>
+      <div class="lock-error" id="register-error"></div>
+    </div>
+
+    <div class="lock-hint">Per-user accounts for the Task Reviewer only.<br>Separate from Siemens GP Knowledge Base and WMF Oracle.</div>
   </div>
 </div>
 
@@ -357,7 +393,11 @@
       <span class="theme-icon" id="theme-icon">☀️</span>
       <span id="theme-label">Light</span>
     </button>
-    <button class="btn-lock" onclick="lockApp()" title="Lock">🔒 Lock</button>
+    <button class="user-chip" id="user-chip" onclick="doSignOut()" title="Sign out">
+      <span class="user-chip-avatar" id="user-chip-avatar">?</span>
+      <span id="user-chip-name">…</span>
+      <span class="user-chip-out">↪</span>
+    </button>
     <button class="btn-primary" onclick="scrollToForm()">+ Log Review</button>
   </div>
 </header>
@@ -395,7 +435,7 @@
 
   <!-- Add/Edit review form -->
   <div class="add-box" id="add-box">
-    <h2><span class="mk">✎</span><span id="form-heading">Log a review</span></h2>
+    <h2><span class="mk">✎</span><span id="form-heading">Log a review</span><span class="form-whoami" style="margin-left:auto;" id="form-whoami"></span></h2>
     <div class="form-row">
       <div class="field">
         <label for="f-person">Person</label>
@@ -515,13 +555,14 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const col = db.collection('sgp_task_reviews');
-const authDoc = db.collection('_config').doc('auth_sgp'); /* Shares lock with qa-siemens.html */
+const profilesCol = db.collection('sgp_reviewer_profiles'); /* per-user accounts, scoped to this page only */
 
 let reviews = [];     /* all reviews — listener keeps it fresh */
 let editId = null;
 let saving = false;
 let currentWeekStart = null; /* ISO Monday 00:00 */
 let sugVisible = true;
+let currentUser = null; /* { uid, name, nameKey } — null until signed in */
 
 /* ── Theme (light default, dark via .dark) — mirrors qa-siemens.html ── */
 function initTheme() {
@@ -714,6 +755,8 @@ function renderPerson(r){
 
   const initials = (r.person||'?').trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
   const insights = buildPersonInsights(r, t, pct, prev, prevPct);
+  const byName = r.lastEditedByName || r.reviewerName || null;
+  const byHtml = byName ? `<div class="pc-by">Reviewed by ${esc(byName)}${r.lastEditedByName && r.reviewerName && r.lastEditedByName !== r.reviewerName ? ` · originally by ${esc(r.reviewerName)}` : ''}</div>` : '';
 
   return `
     <div class="person-card grade-${grade==='N/A'?'B':grade}" data-id="${esc(r.id)}">
@@ -722,6 +765,7 @@ function renderPerson(r){
         <div>
           <div class="pc-name">${esc(r.person||'—')}</div>
           <div style="font-family:var(--ibm-mono);font-size:10.5px;color:var(--text3);">${t.total} task${t.total===1?'':'s'} · ${pct}% done</div>
+          ${byHtml}
         </div>
         <div class="pc-grade">Grade ${grade}</div>
         ${trendHtml}
@@ -876,6 +920,8 @@ async function saveReview(){
     weekKey:   weekKey(ws),
     weekStart: isoDate(ws),
     done, blocked, notDone,
+    lastEditedByUid:  currentUser ? currentUser.uid  : null,
+    lastEditedByName: currentUser ? currentUser.name : null,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -888,6 +934,8 @@ async function saveReview(){
       showToast('Review updated for '+person+'.');
     } else {
       payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      payload.reviewerUid  = currentUser ? currentUser.uid  : null;
+      payload.reviewerName = currentUser ? currentUser.name : null;
       await col.add(payload);
       showToast('Review saved for '+person+'.');
     }
@@ -923,6 +971,8 @@ async function saveEdit(){
   try{
     await col.doc(editId).update({
       done, blocked, notDone,
+      lastEditedByUid:  currentUser ? currentUser.uid  : null,
+      lastEditedByName: currentUser ? currentUser.name : null,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     showToast('Review updated.');
@@ -976,62 +1026,178 @@ document.addEventListener('keydown', e=>{
   if (e.key === 'Escape'){ closeEdit(); }
 });
 
-/* ── Lock (shares auth doc with qa-siemens.html) ── */
-const SESSION_KEY = 'vb_vault_session';
+/* ── Per-user auth (scoped to this page only) ──
+   • Profiles live in `sgp_reviewer_profiles` — separate from the SGP shared password doc
+     and separate from the WMF holiday-tracker `wmf_user_profiles`.
+   • Password hash = SHA-256(pass + 'sgp_reviewer_salt_2024') — distinct salt to prevent
+     cross-use of hashes with other Grimoire tools.
+   • Session persists in localStorage so users stay signed in across tabs/reloads. */
+const SESSION_KEY = 'sgp_reviewer_session';
+const AUTH_SALT   = 'sgp_reviewer_salt_2024';
+
 async function hashPass(pass){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass+'vb_vault_salt_2024'));
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass + AUTH_SALT));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-function toggleLockVis(){
-  const inp = document.getElementById('lock-input'), btn = document.getElementById('lock-vis-btn');
+function nameToKey(name){
+  return (name||'').trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}
+function makeUid(name){
+  const key = nameToKey(name) || 'user';
+  const suffix = btoa(unescape(encodeURIComponent(name))).replace(/[^a-zA-Z0-9]/g,'').slice(0, 6) || Math.random().toString(36).slice(2,8);
+  return key + '_' + suffix;
+}
+function saveSession(profile){ localStorage.setItem(SESSION_KEY, JSON.stringify(profile)); }
+function loadSession(){ try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; } }
+function clearSessionLS(){ localStorage.removeItem(SESSION_KEY); }
+
+function toggleAuthVis(inputId, btn){
+  const inp = document.getElementById(inputId);
   if (inp.type === 'password'){ inp.type = 'text'; btn.textContent = '🙈'; }
   else { inp.type = 'password'; btn.textContent = '👁'; }
 }
-function setLockLoading(on){
-  const b = document.querySelector('.lock-btn');
-  b.textContent = on ? 'Verifying...' : 'Sign In';
-  b.disabled = on;
+function switchAuthTab(tab){
+  const login = tab === 'login';
+  document.getElementById('auth-tab-login').classList.toggle('active', login);
+  document.getElementById('auth-tab-register').classList.toggle('active', !login);
+  document.getElementById('auth-login-panel').style.display = login ? '' : 'none';
+  document.getElementById('auth-register-panel').style.display = login ? 'none' : '';
+  document.getElementById('auth-subtitle').textContent = login ? 'Sign in to continue' : 'Create your account';
+  ['login-error','register-error'].forEach(id=>document.getElementById(id).textContent='');
 }
-async function unlock(){
-  const input = document.getElementById('lock-input').value; if (!input) return;
-  setLockLoading(true);
+function setAuthBtn(btnId, loading, idleLabel){
+  const b = document.getElementById(btnId);
+  b.disabled = loading;
+  b.textContent = loading ? 'Please wait...' : idleLabel;
+}
+function shakeAuth(id){
+  const el = document.getElementById(id);
+  el.classList.add('shake');
+  setTimeout(()=>el.classList.remove('shake'), 400);
+}
+
+async function doLogin(){
+  const name = document.getElementById('login-name').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-error');
+  err.textContent = '';
+  if (!name || !pass){ err.textContent = 'Enter your name and password.'; return; }
+  setAuthBtn('login-btn', true, 'Sign In');
   try{
-    const hash = await hashPass(input);
-    const snap = await authDoc.get();
-    if (!snap.exists){
-      await authDoc.set({ hash, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-      grantAccess();
-    } else if (snap.data().hash === hash){
-      grantAccess();
-    } else {
-      document.getElementById('lock-error').textContent = 'Incorrect password.';
-      const inp = document.getElementById('lock-input');
-      inp.classList.add('shake'); inp.value = '';
-      setTimeout(()=>inp.classList.remove('shake'), 400);
-      setTimeout(()=>document.getElementById('lock-error').textContent='', 3000);
+    const hash = await hashPass(pass);
+    const snap = await profilesCol.where('nameKey','==',nameToKey(name)).limit(1).get();
+    if (snap.empty){
+      err.textContent = 'No account found — use Register.';
+      shakeAuth('login-name');
+      return;
     }
+    const doc = snap.docs[0];
+    const data = doc.data();
+    if (data.passwordHash !== hash){
+      err.textContent = 'Incorrect password.';
+      shakeAuth('login-pass');
+      document.getElementById('login-pass').value = '';
+      return;
+    }
+    currentUser = { uid: doc.id, name: data.name, nameKey: data.nameKey };
+    saveSession(currentUser);
+    grantAccess();
   } catch(e){
-    document.getElementById('lock-error').textContent = 'Connection error.';
+    console.error(e);
+    err.textContent = 'Connection error.';
   } finally {
-    setLockLoading(false);
+    setAuthBtn('login-btn', false, 'Sign In');
   }
 }
+
+async function doRegister(){
+  const name  = document.getElementById('reg-name').value.trim();
+  const pass  = document.getElementById('reg-pass').value;
+  const pass2 = document.getElementById('reg-pass2').value;
+  const err   = document.getElementById('register-error');
+  err.textContent = '';
+  if (!name)            { err.textContent = 'Enter your name.'; shakeAuth('reg-name'); return; }
+  if (pass.length < 6)  { err.textContent = 'Password must be at least 6 characters.'; shakeAuth('reg-pass'); return; }
+  if (pass !== pass2)   { err.textContent = 'Passwords do not match.'; shakeAuth('reg-pass2'); return; }
+  setAuthBtn('register-btn', true, 'Create Account');
+  try{
+    const nameKey = nameToKey(name);
+    const existing = await profilesCol.where('nameKey','==',nameKey).limit(1).get();
+    if (!existing.empty){
+      err.textContent = 'That name is already registered — use Sign In.';
+      shakeAuth('reg-name');
+      return;
+    }
+    const hash = await hashPass(pass);
+    const uid  = makeUid(name);
+    await profilesCol.doc(uid).set({
+      name, nameKey, passwordHash: hash,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    currentUser = { uid, name, nameKey };
+    saveSession(currentUser);
+    grantAccess();
+  } catch(e){
+    console.error(e);
+    err.textContent = 'Connection error.';
+  } finally {
+    setAuthBtn('register-btn', false, 'Create Account');
+  }
+}
+
+function doSignOut(){
+  if (!confirm('Sign out?')) return;
+  clearSessionLS();
+  currentUser = null;
+  showAuthGate();
+  showToast('Signed out.');
+}
+
+function updateUserChip(){
+  if (!currentUser) return;
+  const initials = (currentUser.name||'?').trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase() || '?';
+  document.getElementById('user-chip-avatar').textContent = initials;
+  document.getElementById('user-chip-name').textContent   = currentUser.name;
+  const fw = document.getElementById('form-whoami');
+  if (fw) fw.innerHTML = `Logging as <b>${esc(currentUser.name)}</b>`;
+}
+
 function grantAccess(){
-  sessionStorage.setItem(SESSION_KEY, '1');
-  document.getElementById('lock-screen').classList.remove('active');
+  document.getElementById('auth-gate').classList.remove('active');
+  updateUserChip();
   startListener();
 }
-function lockApp(){
-  sessionStorage.removeItem(SESSION_KEY);
-  document.getElementById('lock-input').value = '';
-  document.getElementById('lock-error').textContent = '';
-  document.getElementById('lock-screen').classList.add('active');
-  setTimeout(()=>document.getElementById('lock-input').focus(), 100);
+function showAuthGate(){
+  document.getElementById('auth-gate').classList.add('active');
+  switchAuthTab('login');
+  ['login-name','login-pass','reg-name','reg-pass','reg-pass2'].forEach(id=>{
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  setTimeout(()=>document.getElementById('login-name').focus(), 100);
 }
-function checkAuth(){
-  if (sessionStorage.getItem(SESSION_KEY) === '1'){ grantAccess(); return; }
-  document.getElementById('lock-screen').classList.add('active');
-  setTimeout(()=>document.getElementById('lock-input').focus(), 100);
+async function checkAuth(){
+  const session = loadSession();
+  if (session && session.uid){
+    /* Best-effort validation against Firestore; on network failure, still trust local session. */
+    try {
+      const snap = await profilesCol.doc(session.uid).get();
+      if (snap.exists){
+        const d = snap.data();
+        currentUser = { uid: session.uid, name: d.name, nameKey: d.nameKey };
+        saveSession(currentUser);
+        grantAccess();
+        return;
+      } else {
+        clearSessionLS();
+      }
+    } catch(e){
+      /* offline — trust local session */
+      currentUser = session;
+      grantAccess();
+      return;
+    }
+  }
+  showAuthGate();
 }
 
 /* ── Init ── */
