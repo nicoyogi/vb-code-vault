@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="assets/grimoire-core.css">
 <script src="assets/grimoire-core.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -330,6 +331,134 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
   header .nav-badge { margin-left: auto; }
 }
+
+/* ── HEADER CHROME: version, changelog button, theme toggle (#24 / #13) ── */
+.ver-badge { font-family: var(--mono); font-size: 9.5px; padding: 3px 9px; border-radius: 14px; border: 1px solid var(--border); color: var(--text3); letter-spacing: .08em; }
+.hdr-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 14px; cursor: pointer; letter-spacing: .08em; transition: color .2s, border-color .2s; display: inline-flex; align-items: center; gap: 6px; }
+.hdr-btn:hover { color: var(--text2); border-color: var(--border2); }
+.hdr-btn[aria-pressed="true"] { color: var(--accent); border-color: rgba(52,211,153,0.35); }
+.hdr-btn svg { flex-shrink: 0; }
+
+/* ── LIGHT THEME — "Scriptorium" (#13) ── */
+body.theme-light {
+  --bg: #f4efe3;
+  --surface: rgba(255,251,240,0.9);
+  --surface2: rgba(252,246,232,0.95);
+  --border: rgba(80,55,20,0.12);
+  --border2: rgba(80,55,20,0.25);
+  --text: #1c1307;
+  --text2: rgba(80,55,20,0.75);
+  --text3: rgba(80,55,20,0.45);
+  --accent: #0d8c5f;
+  --danger: #b91c1c;
+  --gold: #8a6314;
+}
+body.theme-light header { background: rgba(252,246,232,0.92); }
+body.theme-light #bg-canvas { opacity: 0.35; }
+body.theme-light body::before { background-image: linear-gradient(rgba(80,55,20,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(80,55,20,0.04) 1px, transparent 1px); }
+body.theme-light .preview-table thead,
+body.theme-light .sub-box { background: #fcf6e8; }
+body.theme-light .trig-bar-bg { background: rgba(80,55,20,0.08); }
+
+/* ── LOG STREAM (#16) ── */
+.log { font-variant-ligatures: none; max-height: 240px; overflow-y: auto; }
+.log-line { display: block; padding: 2px 0; }
+.log-line .ts { color: var(--text3); margin-right: 10px; font-size: 10px; }
+.log-line.ok-line { color: var(--accent); }
+.log-line.err-line { color: var(--danger); }
+.log-line.info-line { color: var(--text2); }
+.log-clear { float: right; background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 9px; padding: 2px 8px; border-radius: 10px; cursor: pointer; letter-spacing: .08em; margin-bottom: 4px; }
+.log-clear:hover { color: var(--text2); border-color: var(--border2); }
+
+/* ── A11Y: focus rings (#17) ── */
+:focus-visible { outline: 2px solid rgba(52,211,153,0.6); outline-offset: 2px; border-radius: 4px; }
+body.theme-light :focus-visible { outline-color: rgba(13,140,95,0.7); }
+.fw-btn[aria-checked="true"] { border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.05); box-shadow: 0 8px 30px rgba(52,211,153,0.1); }
+.fw-btn[aria-checked="true"]::before { content: '✦'; width: auto; height: auto; border: none; font-size: 11px; color: var(--accent); font-family: var(--cinzel); top: 10px; right: 12px; left: auto; opacity: 1; }
+
+/* ── COLLAPSIBLE BONUS SECTIONS: TESTER + DIFF ── */
+.bonus-wrap { margin-top: 2.5rem; }
+.bonus-toggle { width: 100%; display: flex; align-items: center; gap: 10px; font-family: var(--cinzel); font-size: 10.5px; color: var(--text2); padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; cursor: pointer; letter-spacing: .22em; text-transform: uppercase; margin-bottom: 10px; transition: border-color .2s, color .2s; }
+.bonus-toggle:hover { border-color: var(--border2); color: var(--text); }
+.bonus-toggle .chev { transition: transform .2s; margin-left: auto; color: var(--text3); }
+.bonus-toggle.open .chev { transform: rotate(90deg); }
+.bonus-toggle .bonus-tag { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: .12em; text-transform: none; padding: 2px 8px; border: 1px solid var(--border); border-radius: 10px; }
+.bonus-panel { display: none; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.3rem; margin-bottom: 1rem; }
+.bonus-panel.open { display: block; }
+
+/* ── RULE TESTER (#18) ── */
+.tester-intro { font-family: var(--mono); font-size: 10.5px; color: var(--text3); margin-bottom: 12px; line-height: 1.6; }
+.tester-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.tester-field { display: flex; flex-direction: column; gap: 3px; }
+.tester-field label { font-family: var(--cinzel); font-size: 8.5px; color: var(--text3); letter-spacing: .18em; text-transform: uppercase; }
+.tester-field input { font-family: var(--mono); font-size: 11px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+.tester-field input:focus { outline: none; border-color: rgba(52,211,153,0.45); }
+.tester-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.tester-btn { background: transparent; border: 1px solid var(--border2); color: var(--text2); font-family: var(--mono); font-size: 10.5px; padding: 6px 12px; border-radius: 10px; cursor: pointer; letter-spacing: .06em; transition: all .15s; }
+.tester-btn:hover { color: var(--text); border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.04); }
+.tester-btn.primary { color: var(--accent); border-color: rgba(52,211,153,0.4); }
+.tester-output { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-family: var(--mono); font-size: 11.5px; color: var(--text2); min-height: 40px; line-height: 1.6; word-break: break-word; }
+.tester-output .to-label { color: var(--text3); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; }
+.tester-output .to-result { color: var(--text); font-weight: 600; }
+.tester-output .to-empty { color: rgba(167,139,250,0.6); font-style: italic; }
+.tester-output .to-null { color: var(--text3); font-style: italic; }
+.tester-output .to-reason { color: var(--text3); font-size: 9.5px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.tester-preset { display: inline-flex; align-items: center; gap: 4px; background: rgba(91,156,246,0.08); border: 1px solid rgba(91,156,246,0.25); color: rgba(91,156,246,0.85); font-family: var(--mono); font-size: 9px; padding: 3px 8px; border-radius: 8px; cursor: pointer; letter-spacing: .04em; transition: background .15s; }
+.tester-preset:hover { background: rgba(91,156,246,0.15); }
+.tester-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.tester-presets-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: .08em; margin-right: 4px; align-self: center; }
+
+/* ── DIFF MODE (#19) ── */
+.diff-intro { font-family: var(--mono); font-size: 10.5px; color: var(--text3); margin-bottom: 12px; line-height: 1.6; }
+.diff-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.diff-slot { background: var(--surface); border: 1.5px dashed var(--border); border-radius: 12px; padding: 1rem 1.1rem; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+.diff-slot:hover, .diff-slot.drag { border-color: rgba(52,211,153,0.35); background: rgba(52,211,153,0.04); }
+.diff-slot.loaded { border-color: rgba(52,211,153,0.5); background: rgba(52,211,153,0.05); border-style: solid; }
+.diff-slot-label { font-family: var(--cinzel); font-size: 9.5px; color: var(--text3); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 6px; }
+.diff-slot-name { font-family: var(--mono); font-size: 10.5px; color: var(--text2); word-break: break-all; }
+.diff-slot.loaded .diff-slot-name { color: var(--accent); }
+.diff-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.diff-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .7rem .8rem; text-align: center; }
+.diff-stat-n { font-family: var(--cinzel); font-size: 18px; font-weight: 900; color: var(--text); }
+.diff-stat-l { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 2px; letter-spacing: .04em; }
+.diff-stat.added .diff-stat-n { color: var(--accent); }
+.diff-stat.removed .diff-stat-n { color: var(--danger); }
+.diff-stat.changed .diff-stat-n { color: #fbbf24; }
+.diff-table-wrap { max-height: 380px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
+.diff-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 10px; }
+.diff-table thead { position: sticky; top: 0; background: #08081a; z-index: 1; }
+body.theme-light .diff-table thead { background: #fcf6e8; }
+.diff-table th { font-family: var(--cinzel); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text3); text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.diff-table td { padding: 5px 10px; border-bottom: 1px solid rgba(212,175,100,0.05); color: var(--text2); vertical-align: top; line-height: 1.5; }
+body.theme-light .diff-table td { border-bottom-color: rgba(80,55,20,0.05); }
+.diff-table tr.df-added td { background: rgba(52,211,153,0.05); }
+.diff-table tr.df-removed td { background: rgba(248,113,113,0.05); }
+.diff-table tr.df-changed td { background: rgba(251,191,36,0.04); }
+.diff-table .df-before { color: var(--danger); text-decoration: line-through; opacity: 0.75; }
+.diff-table .df-after { color: var(--accent); }
+.diff-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 8px; }
+.diff-empty { font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; padding: 20px 0; }
+
+/* ── CHANGELOG MODAL (#24) ── */
+#cl-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 600; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(8px); }
+body.theme-light #cl-overlay { background: rgba(244,239,227,0.82); }
+#cl-overlay.open { display: flex; }
+.cl-box { background: #08081a; border: 1px solid rgba(212,175,100,0.35); border-radius: 20px; padding: 2rem 1.8rem 1.8rem; width: min(520px, 100%); max-height: 80vh; display: flex; flex-direction: column; position: relative; }
+body.theme-light .cl-box { background: #fcf6e8; }
+.cl-box::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,100,0.6), transparent); }
+.cl-title { font-family: var(--cinzel); font-size: 18px; font-weight: 900; letter-spacing: .06em; color: var(--text); margin-bottom: .4rem; }
+.cl-title .grad { background: linear-gradient(120deg, #34d399 0%, #5b9cf6 55%, #d4af64 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.cl-sub { font-family: var(--mono); font-size: 10.5px; color: var(--text3); margin-bottom: 1.2rem; letter-spacing: .06em; }
+.cl-list { overflow-y: auto; flex: 1; padding-right: 4px; }
+.cl-entry { margin-bottom: 1.1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.cl-entry:last-child { border-bottom: none; }
+.cl-ver { display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--accent); background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.25); padding: 2px 10px; border-radius: 10px; letter-spacing: .06em; margin-right: 8px; }
+.cl-date { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.cl-items { margin-top: 8px; list-style: none; padding: 0; }
+.cl-items li { font-family: var(--mono); font-size: 11px; color: var(--text2); padding: 4px 0 4px 18px; line-height: 1.55; position: relative; }
+.cl-items li::before { content: '✦'; position: absolute; left: 0; top: 4px; color: rgba(52,211,153,0.5); font-size: 10px; }
+.cl-close { position: absolute; top: 14px; right: 14px; background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10px; padding: 3px 10px; border-radius: 12px; cursor: pointer; letter-spacing: .06em; }
+.cl-close:hover { color: var(--text2); border-color: var(--border2); }
 </style>
 </head>
 <body>
@@ -339,6 +468,15 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 <header>
   <a href="index.html" class="nav-back">← Grimoire</a>
   <div class="header-spacer"></div>
+  <span class="ver-badge" id="verBadge" title="Current version">v0.0.0</span>
+  <button type="button" class="hdr-btn" id="btnChangelog" onclick="openChangelog()" title="What's new" aria-label="What's new">
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3v2.8l1.6 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+    News
+  </button>
+  <button type="button" class="hdr-btn" id="btnTheme" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme" aria-pressed="false">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" id="themeIcon"><path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.5 2.5l.7.7M8.8 8.8l.7.7M2.5 9.5l.7-.7M8.8 3.2l.7-.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="6" r="2.3" stroke="currentColor" stroke-width="1.1"/></svg>
+    <span id="themeLabel">Dark</span>
+  </button>
   <span class="nav-badge">The Alchemist</span>
 </header>
 
@@ -348,21 +486,21 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   <div class="page-sub">Upload · select forwarder · transmute · download</div>
   <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᚦ ✦</div><div class="page-orn-line"></div></div>
 
-  <div class="section-label">I — Select Forwarder</div>
-  <div class="fw-grid">
-    <button class="fw-btn" data-fw="dachser" onclick="selectFW(this)">
+  <div class="section-label" id="fwLabel">I — Select Forwarder</div>
+  <div class="fw-grid" role="radiogroup" aria-labelledby="fwLabel" id="fwGroup">
+    <button class="fw-btn" data-fw="dachser" role="radio" aria-checked="false" tabindex="0" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">Dachser</div>
       <div class="fw-desc">CekKondisi_Freigabe · dynamic cols<br>ZZ·SAM·DGR·EXP·SNK·SBFU·FR·ZW·TZ<br>502·503·LG·AV</div>
     </button>
-    <button class="fw-btn" data-fw="kn" onclick="selectFW(this)">
+    <button class="fw-btn" data-fw="kn" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">K+N</div>
       <div class="fw-desc">FillAnmerkung · dynamic cols<br>Amazon tiers · bundling · SNK 5/9/18/34 · Kontierung</div>
     </button>
-    <button class="fw-btn" data-fw="dhl" onclick="selectFW(this)">
+    <button class="fw-btn" data-fw="dhl" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">DHL Express</div>
       <div class="fw-desc">YO ×15 · SNK 25/30/60<br>FR·PAL·OW blocker groups</div>
     </button>
-    <button class="fw-btn" data-fw="wackler" onclick="selectFW(this)">
+    <button class="fw-btn" data-fw="wackler" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">Wackler</div>
       <div class="fw-desc">Fremdnummer · AVIS 7.5/8.5/1 · SNK 38/−11.5<br>Gewichte · Bündelung · Return · Kontierung · TZ</div>
     </button>
@@ -453,7 +591,86 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
       <div id="trigList"></div>
     </div>
   </div>
-  <div class="log" id="log"></div>
+  <div class="log" id="log" role="status" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ═══════════ BONUS: RULE TESTER (#18) ═══════════ -->
+  <div class="bonus-wrap">
+    <button type="button" class="bonus-toggle" id="testerToggle" onclick="toggleBonus('tester')" aria-expanded="false" aria-controls="testerPanel">
+      <span>IV — Rule Tester</span>
+      <span class="bonus-tag">Playground</span>
+      <span class="chev">›</span>
+    </button>
+    <div class="bonus-panel" id="testerPanel" role="region" aria-label="Rule tester playground">
+      <div class="tester-intro">Type values for the cells the selected forwarder reads, hit <strong>Evaluate</strong>, and see exactly what Anmerkung the rules would produce. No file needed — pure what-if.</div>
+
+      <div class="tester-presets" id="testerPresets">
+        <span class="tester-presets-label">// presets:</span>
+      </div>
+
+      <div class="tester-grid" id="testerFields"></div>
+
+      <div class="tester-actions">
+        <button type="button" class="tester-btn primary" onclick="runTester()">✦ Evaluate</button>
+        <button type="button" class="tester-btn" onclick="clearTester()">Clear</button>
+      </div>
+
+      <div class="tester-output" id="testerOutput">
+        <div class="to-label">Result — select a forwarder above and fill in any fields to test</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ BONUS: DIFF MODE (#19) ═══════════ -->
+  <div class="bonus-wrap">
+    <button type="button" class="bonus-toggle" id="diffToggle" onclick="toggleBonus('diff')" aria-expanded="false" aria-controls="diffPanel">
+      <span>V — Diff Mode</span>
+      <span class="bonus-tag">Compare before/after</span>
+      <span class="chev">›</span>
+    </button>
+    <div class="bonus-panel" id="diffPanel" role="region" aria-label="Diff between before and after files">
+      <div class="diff-intro">Drop two processed workbooks to see every Anmerkung that was <span style="color:var(--accent)">added</span>, <span style="color:var(--danger)">removed</span>, or <span style="color:#fbbf24">changed</span>.</div>
+
+      <div class="diff-slots">
+        <div class="diff-slot" id="diffSlotA" data-slot="a"
+          onclick="document.getElementById('diffInputA').click()"
+          ondragover="onDiffDrag(event,'a',true)" ondragleave="onDiffDrag(event,'a',false)" ondrop="onDiffDrop(event,'a')">
+          <div class="diff-slot-label">A — Before</div>
+          <div class="diff-slot-name" id="diffNameA">Click or drop an .xlsx</div>
+        </div>
+        <div class="diff-slot" id="diffSlotB" data-slot="b"
+          onclick="document.getElementById('diffInputB').click()"
+          ondragover="onDiffDrag(event,'b',true)" ondragleave="onDiffDrag(event,'b',false)" ondrop="onDiffDrop(event,'b')">
+          <div class="diff-slot-label">B — After</div>
+          <div class="diff-slot-name" id="diffNameB">Click or drop an .xlsx</div>
+        </div>
+      </div>
+      <input type="file" id="diffInputA" accept=".xlsx" style="display:none" onchange="onDiffFile(event,'a')">
+      <input type="file" id="diffInputB" accept=".xlsx" style="display:none" onchange="onDiffFile(event,'b')">
+
+      <div class="tester-actions">
+        <button type="button" class="tester-btn primary" id="btnDiffRun" disabled onclick="runDiff()">✦ Compare</button>
+        <button type="button" class="tester-btn" onclick="clearDiff()">Clear</button>
+        <button type="button" class="tester-btn" id="btnDiffCsv" style="display:none" onclick="downloadDiffCsv()">↓ Export CSV</button>
+      </div>
+
+      <div id="diffResults" style="display:none">
+        <div class="diff-meta" id="diffMeta"></div>
+        <div class="diff-summary">
+          <div class="diff-stat"><div class="diff-stat-n" id="dCount">0</div><div class="diff-stat-l">total rows</div></div>
+          <div class="diff-stat added"><div class="diff-stat-n" id="dAdded">0</div><div class="diff-stat-l">added</div></div>
+          <div class="diff-stat removed"><div class="diff-stat-n" id="dRemoved">0</div><div class="diff-stat-l">removed</div></div>
+          <div class="diff-stat changed"><div class="diff-stat-n" id="dChanged">0</div><div class="diff-stat-l">changed</div></div>
+        </div>
+        <div class="diff-table-wrap">
+          <table class="diff-table" id="diffTable">
+            <thead><tr><th>Sheet</th><th>Row</th><th>Change</th><th>Before (A)</th><th>After (B)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="diff-empty" id="diffEmpty" style="display:none">No differences found — the two files match.</div>
+    </div>
+  </div>
 
   <!-- DOWNLOAD THE GRIMOIRE -->
   <div class="sigil-div" style="margin-top:3.5rem">
@@ -481,6 +698,16 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   <div class="footer">
     codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
     <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a>
+  </div>
+</div>
+
+<!-- Changelog Modal (#24) -->
+<div id="cl-overlay" onclick="handleClBgClick(event)" role="dialog" aria-modal="true" aria-labelledby="clTitle">
+  <div class="cl-box" onclick="event.stopPropagation()">
+    <button type="button" class="cl-close" onclick="closeChangelog()" aria-label="Close changelog">✕ Close</button>
+    <div class="cl-title" id="clTitle">What's <span class="grad">new</span></div>
+    <div class="cl-sub" id="clSub">// The Alchemist · v0.0.0</div>
+    <div class="cl-list" id="clList"></div>
   </div>
 </div>
 
@@ -598,10 +825,237 @@ document.addEventListener('DOMContentLoaded',()=>{
     el.addEventListener('input',()=>onThInput(key,el));
     el.addEventListener('change',()=>onThInput(key,el));
   });
+  setVersionBadge();
+  renderChangelog();
 });
 
+/* Changelog Escape key handling (separate because theme modal uses same key). */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    const cl=document.getElementById('cl-overlay');
+    if(cl&&cl.classList.contains('open'))closeChangelog();
+  }
+});
+
+/* ══════════════════════════════════════════════════════════
+   VERSION + CHANGELOG (#24)
+══════════════════════════════════════════════════════════ */
+const VERSION='1.1.0';
+const CHANGELOG=[
+  {ver:'1.1.0',date:'2026-05-10',items:[
+    'Rule Tester — play with hypothetical values without uploading a file.',
+    'Diff Mode — compare two processed workbooks side-by-side with CSV export.',
+    'Light "Scriptorium" theme toggle in the header, persisted locally.',
+    'Streaming timestamped log with Clear button; aria-live for screen readers.',
+    'Forwarder tiles are now a proper radiogroup — arrow keys and Home/End work.',
+    'Offline PWA — install The Alchemist to your machine from Chrome/Edge.',
+    'Phrase catalog (PHRASES) extracted — single source of truth for all rule output strings.',
+    'Version badge + "What\u2019s new" button in the header.',
+  ]},
+  {ver:'1.0.0',date:'2026-05-10',items:[
+    'Preview / dry-run with color-coded per-row status.',
+    'Opt-in "Why?" reason column written next to Anmerkung.',
+    'Configurable tolerance thresholds per forwarder, saved locally.',
+    'Trigger breakdown bar chart + empty/preserved stat tiles.',
+  ]},
+  {ver:'0.9.0',date:'earlier',items:[
+    'Four forwarder engines: Dachser, K+N, DHL Express, Wackler.',
+    'In-browser XLSX patching without re-encoding styles.',
+  ]},
+];
+function setVersionBadge(){const b=document.getElementById('verBadge');if(b)b.textContent='v'+VERSION;const sub=document.getElementById('clSub');if(sub)sub.textContent='// The Alchemist \u00b7 v'+VERSION;}
+function renderChangelog(){
+  const list=document.getElementById('clList');if(!list)return;
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  list.innerHTML=CHANGELOG.map(e=>
+    `<div class="cl-entry"><span class="cl-ver">v${esc(e.ver)}</span><span class="cl-date">${esc(e.date)}</span>`+
+    `<ul class="cl-items">${e.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`
+  ).join('');
+}
+function openChangelog(){document.getElementById('cl-overlay').classList.add('open');}
+function closeChangelog(){document.getElementById('cl-overlay').classList.remove('open');}
+function handleClBgClick(e){if(e.target===document.getElementById('cl-overlay'))closeChangelog();}
+
+/* ══════════════════════════════════════════════════════════
+   THEME TOGGLE — "Scriptorium" light (#13)
+══════════════════════════════════════════════════════════ */
+const THEME_KEY='anmerkung.theme.v1';
+function applyTheme(t){
+  const light=t==='light';
+  document.body.classList.toggle('theme-light',light);
+  const btn=document.getElementById('btnTheme'),lbl=document.getElementById('themeLabel');
+  if(btn)btn.setAttribute('aria-pressed',light?'true':'false');
+  if(lbl)lbl.textContent=light?'Light':'Dark';
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content',light?'#f4efe3':'#02020a');
+}
+function toggleTheme(){
+  const cur=document.body.classList.contains('theme-light')?'light':'dark';
+  const next=cur==='light'?'dark':'light';
+  applyTheme(next);
+  try{localStorage.setItem(THEME_KEY,next);}catch(_){}
+}
+(function loadTheme(){try{const saved=localStorage.getItem(THEME_KEY);if(saved==='light'||saved==='dark')applyTheme(saved);}catch(_){}})();
+
+/* ══════════════════════════════════════════════════════════
+   PHRASE CATALOG (#11 partial) — single source of truth for all
+   rule output strings. Rule engine imports from here; Rule Tester
+   uses the same catalog. Changing wording is now a 1-line edit.
+══════════════════════════════════════════════════════════ */
+const PHRASES={
+  // Dachser
+  ausfallfracht:              'AUSFALLFRACHT',
+  standgeld:                  'Standgeld',
+  speditionskostenGemText:    'Speditionskosten gem. Text',
+  ausfallfrachtSchadensersatz:'Ausfallfracht/Schadensersatz',
+  snkTelAnk:                  'Differenz Telefonische Zustellankündigung - Laderaumzuschlag',
+  snkAutoZustell:             'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag',
+  snkLaderaumEntw:            'Differenz Laderaumkostenentwicklung',
+  adminZeitfenster:           'Admin Zeitfensterbuchung Handel',
+  adminZeitfensterDiff:       'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag',
+  snkTelZustell:              'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag',
+  terminZuschlag:             'Termin-zuschlag',
+  produktZuschlag:            'Produktzuschlag',
+  einlagern:                  'Einlagern',
+  auslagern:                  'Auslagern',
+  lagergeld:                  'Lagergeld',
+  gebuehrVergeblich:          'Gebühr für vergeblichen Abholversuch',
+  zustell2:                   '2. Zustellung',
+  samstag:                    'Samstagzustellung',
+  gefahrgut:                  'Gefahrgut-Zuschlag',
+  mautDiff:                   'Mautdifferenz',
+  sbfu:                       'SBfU-Bescheinigung f. Umsatzsteuerzwecke',
+  vorholung:                  'VORHOLUNG',
+  sonderfahrt:                'Sonderfahrt',
+  buendelKoennen:             'hätte gebündelt werden können?',
+  abweichGewicht:             'Differenz aufgrund von abweichendem Gewicht',
+  abholtermin:                'Abholterminvereinbarung',
+  treibstof:                  'Differenz treibstof',
+  zwPrefix:                   'Differenz aufgrund abweichender Zwischenempfänger',
+  // K+N
+  buendelMuessenOk:           'hätte gebündelt werden müssen, ok?',
+  amazonMuessen:              'hätte nach Amazon Tarif abrechnen müssen',
+  amazonDuerfen:              'hätte nach Amazon Tarif abrechnen dürfen',
+  abweichGewichte:            'Differenz aufgrund abweichender Gewichte',
+  fixtermin:                  'FIXTERMIN',
+  portalavisOk:               'Portalavisierung, ok?',
+  avisOk:                     'Avis, ok?',
+  snkDifferenz:               'SNK Differenz',
+  treibstoff:                 'Differenz treibstoff',
+  kontierungQ:                'Kontierung?',
+  // DHL
+  fremdnummerDotPunkt:        'Fremdnummer doppelt berechnet.',
+  kontierungLower:            'kontierung?',
+  abweichGewichtVolumen:      'Differenz aufgrund von abweichendem Gewicht/Volumen',
+  nichtStapelbar:             'nicht stapelbar ok?',
+  overweight:                 'overweight ok?',
+  nonConvWeight:              'Non conveyable piece-weight ok?',
+  nonConvPiece:               'non conveyable piece ok?',
+  nonConvIrregular:           'Non-conveyable piece irregular ok?',
+  neutralDelivery:            'Neutral delivery ok?',
+  directSignature:            'Direct signature ok?',
+  limitedQuantities:          'Limited quantities ok?',
+  elevatedRisk:               'Elevated Risk, ok?',
+  elevatedRestricted:         'Eelevated risk ok? // Restricted destination ok?',
+  addressCorrectionOk:        'Addres Correction, ok?',
+  addressCorrectionQ:         'Address Correction ok?',
+  demandSurcharge:            'demand surcharge ok?',
+  oversizePiece:              'Oversize piece ok?',
+  // Wackler
+  fremdnummer:                'Fremdnummer Doppelt berechnet',
+  nlFix:                      'NL-FIX',
+  b2cLine:                    'hätte B2C-Line abrechnen dürfen',
+  buendelMuessen:             'hätte gebündelt werden müssen',
+  differenzAvisOk:            'Differenz avis, ok?',
+  returnOk:                   'Return, ok?',
+  frachtDiff:                 'Frachtdifferenz',
+};
+/* Expose under shorter alias for compactness inside processors. */
+const P=PHRASES;
+
+/* ══════════════════════════════════════════════════════════
+   TIMESTAMPED STREAMING LOG (#16) — replaces original showLog
+   with an append-only stream. Kept the same public signature
+   so all existing call sites work unchanged.
+══════════════════════════════════════════════════════════ */
+function pad2(n){return n<10?'0'+n:''+n;}
+function nowTs(){const d=new Date();return pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds());}
+let _logHasClear=false;
+function ensureLogClear(el){
+  if(_logHasClear)return;
+  _logHasClear=true;
+  const btn=document.createElement('button');
+  btn.type='button';btn.className='log-clear';btn.textContent='clear';
+  btn.onclick=clearLog;
+  el.parentNode.insertBefore(btn,el);
+}
+function clearLog(){const el=document.getElementById('log');el.innerHTML='';el.style.display='none';}
+/* Override showLog. Previous behavior: replace content each call.
+   New behavior: append timestamped line; 'err' / 'ok' color the line.
+   Signature preserved: showLog(msg, type). */
+function showLog(msg,type){
+  const el=document.getElementById('log');
+  el.style.display='block';
+  el.className='log'; /* clear any legacy single-line coloring */
+  ensureLogClear(el);
+  const lines=String(msg==null?'':msg).split('\n');
+  for(const line of lines){
+    const div=document.createElement('div');
+    div.className='log-line '+(type==='err'?'err-line':(type==='ok'?'ok-line':'info-line'));
+    const ts=document.createElement('span');ts.className='ts';ts.textContent=nowTs();
+    div.appendChild(ts);
+    div.appendChild(document.createTextNode(line));
+    el.appendChild(div);
+  }
+  el.scrollTop=el.scrollHeight;
+}
+
+/* ══════════════════════════════════════════════════════════
+   A11Y: forwarder radiogroup keyboard nav (#17)
+══════════════════════════════════════════════════════════ */
+function fwKeydown(e){
+  const btns=[...document.querySelectorAll('#fwGroup .fw-btn')];
+  const i=btns.indexOf(e.currentTarget);if(i<0)return;
+  let next=null;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')next=btns[(i+1)%btns.length];
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')next=btns[(i-1+btns.length)%btns.length];
+  else if(e.key==='Home')next=btns[0];
+  else if(e.key==='End')next=btns[btns.length-1];
+  else if(e.key===' '||e.key==='Enter'){e.preventDefault();e.currentTarget.click();return;}
+  if(next){e.preventDefault();btns.forEach(b=>b.tabIndex=-1);next.tabIndex=0;next.focus();next.click();}
+}
+
+/* ══════════════════════════════════════════════════════════
+   PWA REGISTRATION (#21)
+══════════════════════════════════════════════════════════ */
+(function registerPWA(){
+  if(!('serviceWorker' in navigator))return;
+  if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.protocol!=='file:')return;
+  if(location.protocol==='file:')return; /* file:// can't register */
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(()=>{
+      /* silent success */
+    }).catch(()=>{
+      /* silent — PWA is additive */
+    });
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════
+   BONUS PANEL TOGGLES (Tester + Diff)
+══════════════════════════════════════════════════════════ */
+function toggleBonus(which){
+  const m={tester:['testerToggle','testerPanel'],diff:['diffToggle','diffPanel']};
+  const [tId,pId]=m[which];
+  const t=document.getElementById(tId),p=document.getElementById(pId);
+  const open=!p.classList.contains('open');
+  p.classList.toggle('open',open);t.classList.toggle('open',open);
+  t.setAttribute('aria-expanded',open?'true':'false');
+  if(open&&which==='tester')renderTesterFields();
+}
+
 /* ── UI HELPERS ── */
-function selectFW(btn){document.querySelectorAll('.fw-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');selectedFW=btn.dataset.fw;checkReady();}
+function selectFW(btn){document.querySelectorAll('.fw-btn').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-checked','false');b.tabIndex=-1;});btn.classList.add('selected');btn.setAttribute('aria-checked','true');btn.tabIndex=0;selectedFW=btn.dataset.fw;checkReady();renderTesterFields();}
 function onDrag(e,over){e.preventDefault();document.getElementById('dropArea').classList.toggle('drag',over);}
 function onDrop(e){e.preventDefault();onDrag(e,false);if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);}
 function onFileSelect(e){if(e.target.files[0])loadFile(e.target.files[0]);}
@@ -970,6 +1424,310 @@ async function runProcess(){
 
 /* ── DOWNLOAD ── */
 function downloadResult(){if(!resultBlob)return;const url=URL.createObjectURL(resultBlob),a=document.createElement('a');a.href=url;a.download=originalFileName||'anmerkung_processed.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+/* ══════════════════════════════════════════════════════════
+   RULE TESTER (#18) — builds a synthetic worksheet + cols from
+   user-entered values and runs the actual processor. Guarantees
+   identical behavior to the production engine, not a mock.
+══════════════════════════════════════════════════════════ */
+
+/* Per-forwarder field catalog — [key, label, type] where key matches
+   the cols.* property the resolver returns. The tester writes values
+   into a synthetic ws at stable column indices. */
+const TESTER_FIELDS={
+  dachser:[
+    ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],
+    ['fr','FR Differenz','num'],['snk_diff','SNK Differenz','num'],['snk_dl','SNK Kosten DL','num'],['snk_tar','SNK Kosten lt.Tarif','num'],
+    ['zz','ZZ Differenz','num'],['sam','SAM Differenz','num'],['dgr','DGR Differenz','num'],
+    ['exp','EXP Differenz','num'],['exp_dl','EXP Kosten DL','num'],
+    ['maut','MT Differenz','num'],['sbfu','SBFU Differenz','num'],['tz','TZ Differenz','num'],
+    ['lg_diff','LG Differenz','num'],['av_diff','AV Differenz','num'],
+    ['c502_dl','502 Kosten DL','str'],['c503_dl','503 Kosten DL','str'],
+    ['_referenz3','ReferenzNr3','str'],['_serv','Serv.-Art','str'],['_sach','Sachkonto','str'],
+    ['_plz','Empf.-PLZ','str'],['_ort','Empf.-Ort','str'],['_anzSdg','Anz.Sdg','str'],
+  ],
+  kn:[
+    ['stat','Stat_Freigabe','num'],
+    ['fr','FR Differenz','num'],['snk_diff','SNK Differenz','num'],['snk_dl','SNK Kosten DL','num'],
+    ['exp','EXP Differenz','num'],['toll','MT Differenz','num'],['fuel','TZ Differenz','num'],
+    ['referenz','ReferenzNr','str'],['recip','Empf.-Name','str'],
+    ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
+    ['kost','Kostenstelle','str'],['sach','Sachkonto','str'],
+  ],
+  dhl:[
+    ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],
+    ['addr','FR Differenz','num'],['stack','PAL Differenz','num'],['weight','OW Differenz','num'],
+    ['conv','YO Differenz','num'],['irr','YL Differenz','num'],['neut','ND Differenz','num'],['sign','SF Differenz','num'],
+    ['snk','SNK Differenz','num'],['diff','AC Differenz','num'],['maut','MT Differenz','num'],
+    ['surc','NX Differenz','num'],['over','OS Differenz','num'],['tz','TZ Differenz','num'],
+    ['kost','KOSTENSTELLE','str'],['sach','SACHKONTO','str'],
+  ],
+  wackler:[
+    ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],['target','Existing Anmerkung','str'],
+    ['avis_diff','AVIS Differenz','num'],['snk_diff','SNK Differenz','num'],['fr','FR Differenz','num'],
+    ['maut','MT Differenz','num'],['tz','TZ Differenz','num'],
+    ['referenz','ReferenzNr','str'],
+    ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
+    ['empf_plz','Empf.-PLZ','str'],['empf_ort','Empf.-Ort','str'],
+    ['kostenstelle','KOSTENSTELLE','str'],['sachkonto','SACHKONTO','str'],
+  ],
+};
+
+/* Presets that exercise common rule branches — great smoke tests. */
+const TESTER_PRESETS={
+  dachser:[
+    {name:'AUSFALLFRACHT 190',values:{stat:10,snk_dl:190,snk_diff:0}},
+    {name:'Saturday delivery',values:{stat:10,sam:25,tarif:'150,00'}},
+    {name:'ZW intermediary',values:{stat:10,fr:15,_referenz3:'ZW',_plz:'88499',_ort:'Riedlingen',tarif:'200,00'}},
+    {name:'K1AV zeitfenster',values:{stat:10,snk_dl:5,snk_diff:12,_serv:'K1AV',tarif:'100,00'}},
+  ],
+  kn:[
+    {name:'Bundled, should be',values:{stat:10,fr:15,referenz:'123,456'}},
+    {name:'Amazon tariff miss',values:{stat:10,fr:12,recip:'Amazon Logistics',referenz:'single'}},
+    {name:'Portal avis 5',values:{stat:10,snk_diff:5,snk_dl:5}},
+    {name:'Clean row',values:{stat:10,kost:'1234',sach:'5678'}},
+  ],
+  dhl:[
+    {name:'Overweight trigger',values:{stat:10,weight:20,tarif:'120,00'}},
+    {name:'Non-conv ×15',values:{stat:10,conv:30,tarif:'100,00'}},
+    {name:'Elevated risk 60',values:{stat:10,snk:60,tarif:'80,00'}},
+    {name:'Fremdnummer dup',values:{stat:10,tarif:'0'}},
+  ],
+  wackler:[
+    {name:'Protected existing',values:{stat:10,target:'Return, ok?'}},
+    {name:'AVIS 7.5',values:{stat:10,avis_diff:7.5,tarif:'60,00'}},
+    {name:'Riedlingen return',values:{stat:10,fr:10,empf_plz:'88499',empf_ort:'Riedlingen',tarif:'70,00'}},
+    {name:'NL-FIX SNK 38',values:{stat:10,snk_diff:38,tarif:'80,00'}},
+  ],
+};
+
+function renderTesterFields(){
+  const fw=selectedFW,wrap=document.getElementById('testerFields'),presetsWrap=document.getElementById('testerPresets'),out=document.getElementById('testerOutput');
+  if(!wrap)return;
+  if(!fw){
+    wrap.innerHTML='';
+    presetsWrap.innerHTML='<span class="tester-presets-label">// select a forwarder above to begin</span>';
+    if(out)out.innerHTML='<div class="to-label">Result — select a forwarder above and fill in any fields to test</div>';
+    return;
+  }
+  const fields=TESTER_FIELDS[fw]||[];
+  wrap.innerHTML=fields.map(([k,l,t])=>
+    `<div class="tester-field"><label for="t_${k}">${l}</label><input type="${t==='num'?'text':'text'}" id="t_${k}" data-k="${k}" inputmode="${t==='num'?'decimal':'text'}" autocomplete="off"></div>`
+  ).join('');
+  const presets=TESTER_PRESETS[fw]||[];
+  presetsWrap.innerHTML='<span class="tester-presets-label">// presets:</span>'+
+    presets.map((p,i)=>`<button type="button" class="tester-preset" data-i="${i}" onclick="applyTesterPreset(${i})">${p.name}</button>`).join('');
+}
+
+function applyTesterPreset(idx){
+  const fw=selectedFW;if(!fw)return;
+  const preset=(TESTER_PRESETS[fw]||[])[idx];if(!preset)return;
+  clearTester();
+  Object.entries(preset.values).forEach(([k,v])=>{
+    const el=document.getElementById('t_'+k);if(el)el.value=String(v);
+  });
+  runTester();
+}
+
+function clearTester(){
+  document.querySelectorAll('#testerFields input').forEach(el=>el.value='');
+  const out=document.getElementById('testerOutput');
+  if(out)out.innerHTML='<div class="to-label">Result — fill in any fields to test</div>';
+}
+
+/* Build a synthetic ws that maps column index -> {v}. Keep column
+   indices assigned in a Map keyed by the cols.* property name. */
+function buildSyntheticWs(fw,userVals){
+  const ws={};
+  const cols={};
+  let nextCol=1; /* column 0 reserved, anything starting >=1 is fine */
+  /* cols.target has special meaning — only assign if user provided value
+     or if wackler (so it can exist and be empty for rules that read it). */
+  const realFields=(TESTER_FIELDS[fw]||[]).filter(([k])=>!k.startsWith('_'));
+  for(const [k] of realFields){
+    const col=nextCol++;
+    cols[k]=col;
+    const v=userVals[k];
+    if(v!==undefined&&v!==''){
+      ws[XLSX.utils.encode_cell({r:3,c:col})]={v};
+    }
+  }
+  /* Dachser reads a handful of values from hard-coded indices — we need
+     to place them at those exact DA_COL_* indices for the processor to find. */
+  if(fw==='dachser'){
+    const placeAt=(idx,v)=>{if(v!==undefined&&v!=='')ws[XLSX.utils.encode_cell({r:3,c:idx})]={v};};
+    placeAt(DA_COL_REFERENZ3,userVals._referenz3);
+    placeAt(DA_COL_SERV_ART,userVals._serv);
+    placeAt(DA_COL_SACHKONTO,userVals._sach);
+    placeAt(DA_COL_EMPF_PLZ,userVals._plz);
+    placeAt(DA_COL_EMPF_ORT,userVals._ort);
+    placeAt(DA_COL_ANZ_SDG,userVals._anzSdg);
+  }
+  /* Fill missing cols with -1 so processors know the field is absent. */
+  const allKeys={
+    dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','c502_dl','c503_dl','lg_diff','av_diff'],
+    kn:['target','stat','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
+    dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
+    wackler:['target','stat','tarif','avis_diff','snk_diff','fr','maut','tz','referenz','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
+  }[fw]||[];
+  for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
+  return{ws,cols};
+}
+
+function runTester(){
+  const fw=selectedFW,out=document.getElementById('testerOutput');
+  if(!fw){out.innerHTML='<div class="to-label">Result</div><div class="to-null">Select a forwarder first.</div>';return;}
+  const userVals={};
+  document.querySelectorAll('#testerFields input').forEach(el=>{
+    const v=el.value.trim();if(v!=='')userVals[el.dataset.k]=v;
+  });
+  const{ws,cols}=buildSyntheticWs(fw,userVals);
+  let result;
+  try{
+    if(fw==='dachser')result=processDachser(ws,3,cols);
+    else if(fw==='kn')result=processKN(ws,3,cols);
+    else if(fw==='dhl')result=processDHL(ws,3,cols);
+    else result=processWackler(ws,3,cols);
+  }catch(e){
+    out.innerHTML='<div class="to-label">Error</div><div class="to-null">'+String(e.message||e)+'</div>';
+    return;
+  }
+  const reason=buildReason(fw,ws,3,cols);
+  const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let body;
+  if(result===null){
+    body='<div class="to-null">null — row would be skipped (Stat_Freigabe ≠ 10 or protected existing value).</div>';
+  } else if(result===''){
+    body='<div class="to-empty">empty — no trigger fired, row would be filled with blank.</div>';
+  } else {
+    body='<div class="to-result">'+esc(result)+'</div>';
+  }
+  out.innerHTML=
+    '<div class="to-label">Result — '+fw+'</div>'+body+
+    (reason?'<div class="to-reason">Reason trace: '+esc(reason)+'</div>':'');
+}
+
+/* ══════════════════════════════════════════════════════════
+   DIFF MODE (#19) — compare two processed xlsx files on the
+   Anmerkung column per sheet/row. Purely client-side.
+══════════════════════════════════════════════════════════ */
+const diffState={a:null,b:null,results:null};
+
+function onDiffDrag(e,slot,over){e.preventDefault();const el=document.getElementById('diffSlot'+slot.toUpperCase());if(el)el.classList.toggle('drag',over);}
+function onDiffDrop(e,slot){e.preventDefault();onDiffDrag(e,slot,false);const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)loadDiffFile(slot,f);}
+function onDiffFile(e,slot){const f=e.target.files&&e.target.files[0];if(f)loadDiffFile(slot,f);}
+function loadDiffFile(slot,file){
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array',cellNF:true});
+      diffState[slot]={name:file.name,wb};
+      const el=document.getElementById('diffSlot'+slot.toUpperCase());el.classList.add('loaded');
+      document.getElementById('diffName'+slot.toUpperCase()).textContent=file.name+' \u00b7 '+wb.SheetNames.length+' sheet(s)';
+      document.getElementById('btnDiffRun').disabled=!(diffState.a&&diffState.b);
+      showLog('Diff — loaded '+slot.toUpperCase()+': '+file.name,'ok');
+    }catch(err){showLog('Diff — could not read '+slot.toUpperCase()+': '+err.message,'err');}
+  };
+  r.readAsArrayBuffer(file);
+}
+function clearDiff(){
+  diffState.a=null;diffState.b=null;diffState.results=null;
+  ['a','b'].forEach(s=>{
+    const el=document.getElementById('diffSlot'+s.toUpperCase());el.classList.remove('loaded','drag');
+    document.getElementById('diffName'+s.toUpperCase()).textContent='Click or drop an .xlsx';
+    document.getElementById('diffInput'+s.toUpperCase()).value='';
+  });
+  document.getElementById('btnDiffRun').disabled=true;
+  document.getElementById('btnDiffCsv').style.display='none';
+  document.getElementById('diffResults').style.display='none';
+  document.getElementById('diffEmpty').style.display='none';
+}
+
+/* Locate the Anmerkung column by scanning row 3 (and row 2 as a fallback). */
+function findAnmerkungCol(ws,range){
+  for(let c=0;c<=range.e.c;c++){
+    const v3=(ws[XLSX.utils.encode_cell({r:2,c})]||{v:''}).v;
+    if(String(v3||'').trim().toLowerCase()==='anmerkung')return c;
+  }
+  for(let c=0;c<=range.e.c;c++){
+    const v2=(ws[XLSX.utils.encode_cell({r:1,c})]||{v:''}).v;
+    if(String(v2||'').trim().toLowerCase()==='anmerkung')return c;
+  }
+  return -1;
+}
+
+function runDiff(){
+  if(!diffState.a||!diffState.b){showLog('Diff — load both files first.','err');return;}
+  const rows=[];
+  let added=0,removed=0,changed=0,total=0;
+  const sheetsA=diffState.a.wb.SheetNames,sheetsB=diffState.b.wb.SheetNames;
+  const allSheets=[...new Set([...sheetsA,...sheetsB])];
+  for(const name of allSheets){
+    const wsA=diffState.a.wb.Sheets[name],wsB=diffState.b.wb.Sheets[name];
+    if(!wsA||!wsB){
+      rows.push({sheet:name,row:'—',change:'sheet',before:wsA?'(present)':'(missing in A)',after:wsB?'(present)':'(missing in B)'});
+      continue;
+    }
+    const rA=XLSX.utils.decode_range(wsA['!ref']||'A1:A1'),rB=XLSX.utils.decode_range(wsB['!ref']||'A1:A1');
+    const cA=findAnmerkungCol(wsA,rA),cB=findAnmerkungCol(wsB,rB);
+    if(cA<0||cB<0){
+      rows.push({sheet:name,row:'—',change:'sheet',before:cA<0?'(no Anmerkung col)':'(ok)',after:cB<0?'(no Anmerkung col)':'(ok)'});
+      continue;
+    }
+    const lastRow=Math.max(rA.e.r,rB.e.r);
+    for(let r=3;r<=lastRow;r++){
+      total++;
+      const vA=cellStr(wsA,r,cA),vB=cellStr(wsB,r,cB);
+      if(vA===vB)continue;
+      let change;
+      if(!vA&&vB){change='added';added++;}
+      else if(vA&&!vB){change='removed';removed++;}
+      else{change='changed';changed++;}
+      rows.push({sheet:name,row:r+1,change,before:vA,after:vB});
+    }
+  }
+  diffState.results={rows,total,added,removed,changed};
+  renderDiff();
+}
+
+function renderDiff(){
+  const{rows,total,added,removed,changed}=diffState.results;
+  document.getElementById('dCount').textContent=total;
+  document.getElementById('dAdded').textContent=added;
+  document.getElementById('dRemoved').textContent=removed;
+  document.getElementById('dChanged').textContent=changed;
+  document.getElementById('diffMeta').textContent=`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}  \u00b7  showing ${Math.min(rows.length,500)} of ${rows.length} differences`;
+  const tbody=document.querySelector('#diffTable tbody');
+  const MAX=500;
+  const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  tbody.innerHTML=rows.slice(0,MAX).map(r=>
+    `<tr class="df-${r.change}"><td>${esc(r.sheet)}</td><td>${r.row}</td><td>${r.change}</td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td></tr>`
+  ).join('');
+  if(!rows.length){
+    document.getElementById('diffResults').style.display='none';
+    document.getElementById('diffEmpty').style.display='block';
+    document.getElementById('btnDiffCsv').style.display='none';
+  } else {
+    document.getElementById('diffResults').style.display='block';
+    document.getElementById('diffEmpty').style.display='none';
+    document.getElementById('btnDiffCsv').style.display='inline-block';
+  }
+  showLog(`Diff \u2014 ${added} added, ${removed} removed, ${changed} changed (${total} rows scanned).`,'ok');
+}
+
+function downloadDiffCsv(){
+  if(!diffState.results||!diffState.results.rows.length)return;
+  const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const lines=['sheet,row,change,before,after'];
+  for(const r of diffState.results.rows){
+    lines.push([r.sheet,r.row,r.change,r.before,r.after].map(esc).join(','));
+  }
+  const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  a.href=url;a.download='anmerkung_diff_'+stamp+'.csv';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 </script>
 </body>
 </html>
