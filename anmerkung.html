@@ -826,8 +826,13 @@ document.addEventListener('keydown',e=>{
 /* ══════════════════════════════════════════════════════════
    VERSION + CHANGELOG (#24)
 ══════════════════════════════════════════════════════════ */
-const VERSION='1.1.0';
+const VERSION='1.2.0';
 const CHANGELOG=[
+  {ver:'1.2.0',date:'2026-05-10',items:[
+    'Download-for-offline button in the header — binds the whole Grimoire (all pages + assets) to your device via the service worker, with live progress and a "Available offline" state on return visits.',
+    'Service worker bumped to v1.2.0 with explicit PRECACHE / CACHE_STATUS message handlers so any page can request a one-click download.',
+    'Removed the old "Download the Grimoire" Google Drive link from the footer — the new header button replaces it.',
+  ]},
   {ver:'1.1.0',date:'2026-05-10',items:[
     'Rule Tester — play with hypothetical values without uploading a file.',
     'Diff Mode — compare two processed workbooks side-by-side with CSV export.',
