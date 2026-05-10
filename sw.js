@@ -3,7 +3,7 @@
    next load), cache-first for external scripts & fonts. Keeps the app fully
    functional offline once the first online visit has primed the caches.
 */
-const VERSION = 'v1.2.0';
+const VERSION = 'v1.3.0';
 const CACHE = 'alchemist-' + VERSION;
 
 /* Core assets to pre-cache on install. Keep the list short and let
@@ -12,6 +12,7 @@ const CORE = [
   './anmerkung.html',
   './assets/grimoire-core.css',
   './assets/grimoire-core.js',
+  './assets/anmerkung-changelog.json',
   './manifest.webmanifest',
 ];
 

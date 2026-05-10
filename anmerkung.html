@@ -818,7 +818,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     el.addEventListener('change',()=>onThInput(key,el));
   });
   setVersionBadge();
-  renderChangelog();
+  loadChangelog();
 });
 
 /* Changelog Escape key handling (separate because theme modal uses same key). */
@@ -831,47 +831,39 @@ document.addEventListener('keydown',e=>{
 
 /* ══════════════════════════════════════════════════════════
    VERSION + CHANGELOG (#24)
+   Data lives in assets/anmerkung-changelog.json so the release
+   notes can be edited without touching the app shell. The file
+   is precached by the service worker so offline mode still has
+   the full history.
 ══════════════════════════════════════════════════════════ */
-const VERSION='1.3.0';
-const CHANGELOG=[
-  {ver:'1.3.0',date:'2026-05-10',items:[
-    'Diff Mode — new "Training Set" export (CSV + JSONL). For every row where A and B disagree, writes the predicted value, expected value, mismatch label (wrong / missed / overfired), the full set of input cells the rules actually read, and the trigger trace — so you can feed the results straight back into improving the rules.',
-    'Training set auto-detects the forwarder per sheet (falls back to the selected one) so mixed workbooks Just Work.',
-    '"Include matching rows" checkbox — optionally also export rows where A == B as positive examples.',
-  ]},
-  {ver:'1.2.0',date:'2026-05-10',items:[
-    'Download-for-offline button in the header — binds the whole Grimoire (all pages + assets) to your device via the service worker, with live progress and a "Available offline" state on return visits.',
-    'Service worker bumped to v1.2.0 with explicit PRECACHE / CACHE_STATUS message handlers so any page can request a one-click download.',
-    'Removed the old "Download the Grimoire" Google Drive link from the footer — the new header button replaces it.',
-  ]},
-  {ver:'1.1.0',date:'2026-05-10',items:[
-    'Rule Tester — play with hypothetical values without uploading a file.',
-    'Diff Mode — compare two processed workbooks side-by-side with CSV export.',
-    'Light "Scriptorium" theme toggle in the header, persisted locally.',
-    'Streaming timestamped log with Clear button; aria-live for screen readers.',
-    'Forwarder tiles are now a proper radiogroup — arrow keys and Home/End work.',
-    'Offline PWA — install The Alchemist to your machine from Chrome/Edge.',
-    'Phrase catalog (PHRASES) extracted — single source of truth for all rule output strings.',
-    'Version badge + "What\u2019s new" button in the header.',
-  ]},
-  {ver:'1.0.0',date:'2026-05-10',items:[
-    'Preview / dry-run with color-coded per-row status.',
-    'Opt-in "Why?" reason column written next to Anmerkung.',
-    'Configurable tolerance thresholds per forwarder, saved locally.',
-    'Trigger breakdown bar chart + empty/preserved stat tiles.',
-  ]},
-  {ver:'0.9.0',date:'earlier',items:[
-    'Four forwarder engines: Dachser, K+N, DHL Express, Wackler.',
-    'In-browser XLSX patching without re-encoding styles.',
-  ]},
-];
+const CHANGELOG_URL='assets/anmerkung-changelog.json';
+let VERSION='0.0.0';
+let CHANGELOG=[];
+async function loadChangelog(){
+  try{
+    const r=await fetch(CHANGELOG_URL,{cache:'no-cache'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    VERSION=String(d.version||'0.0.0');
+    CHANGELOG=Array.isArray(d.entries)?d.entries:[];
+  }catch(err){
+    /* Leave defaults; render an explanatory empty state. */
+    console.warn('[changelog] load failed:',err);
+  }
+  setVersionBadge();
+  renderChangelog();
+}
 function setVersionBadge(){const b=document.getElementById('verBadge');if(b)b.textContent='v'+VERSION;const sub=document.getElementById('clSub');if(sub)sub.textContent='// The Alchemist \u00b7 v'+VERSION;}
 function renderChangelog(){
   const list=document.getElementById('clList');if(!list)return;
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  if(!CHANGELOG.length){
+    list.innerHTML='<div class="cl-entry" style="opacity:.6"><span class="cl-ver">—</span><span class="cl-date">offline</span><ul class="cl-items"><li>Changelog data could not be loaded.</li></ul></div>';
+    return;
+  }
   list.innerHTML=CHANGELOG.map(e=>
     `<div class="cl-entry"><span class="cl-ver">v${esc(e.ver)}</span><span class="cl-date">${esc(e.date)}</span>`+
-    `<ul class="cl-items">${e.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`
+    `<ul class="cl-items">${(e.items||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`
   ).join('');
 }
 function openChangelog(){document.getElementById('cl-overlay').classList.add('open');}
@@ -1041,6 +1033,7 @@ function fwKeydown(e){
   window.Grimoire.Offline.register();
   /* Wait until DOM is parsed — this script runs at end of body, so it is. */
   window.Grimoire.Offline.mount('#btnOffline', {
+    urls: window.Grimoire.Offline.defaultUrls().concat(['./assets/anmerkung-changelog.json']),
     idleLabel:    'Download for offline',
     readyLabel:   'Available offline',
     workingLabel: 'Downloading…',
