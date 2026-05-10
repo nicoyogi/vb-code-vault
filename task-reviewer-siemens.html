@@ -638,6 +638,10 @@ function personKey(s){ return normPerson(s).toLowerCase(); }
 function lines(text){
   return String(text||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
 }
+/* Natural sort: "task 2" < "task 12" (numeric-aware, case-insensitive) */
+function naturalCompare(a, b){
+  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+}
 function reviewsForWeek(wsDate){
   const k = weekKey(wsDate);
   return reviews.filter(r=>r.weekKey===k);
@@ -747,11 +751,14 @@ function renderPerson(r){
         ${t.notDone>0?`<div class="pc-bar-not" style="flex:${t.notDone}" title="${t.notDone} not done"></div>`:''}
       </div>`;
 
-  const bucket = (cls, label, arr) => `
+  const bucket = (cls, label, arr) => {
+    const sorted = arr.slice().sort(naturalCompare);
+    return `
     <div class="pc-bucket ${cls}">
-      <div class="pc-bucket-head"><div class="dot"></div>${label} · ${arr.length}</div>
-      <ul>${arr.length===0 ? '<li class="muted">—</li>' : arr.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>
+      <div class="pc-bucket-head"><div class="dot"></div>${label} · ${sorted.length}</div>
+      <ul>${sorted.length===0 ? '<li class="muted">—</li>' : sorted.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>
     </div>`;
+  };
 
   const initials = (r.person||'?').trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
   const insights = buildPersonInsights(r, t, pct, prev, prevPct);
