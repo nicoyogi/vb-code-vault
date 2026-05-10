@@ -131,6 +131,75 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 .log.err { color: var(--danger); border-color: rgba(248,113,113,0.2); background: rgba(248,113,113,0.04); }
 .log.ok { color: var(--accent); border-color: rgba(52,211,153,0.2); }
 
+/* OPTIONS (reason column + advanced panel) */
+.opt-wrap { margin-bottom: 1.4rem; }
+.opt-row { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11.5px; color: var(--text2); padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: border-color .2s, background .2s; }
+.opt-row:hover { border-color: var(--border2); }
+.opt-row input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border: 1px solid var(--border2); border-radius: 4px; background: transparent; cursor: pointer; position: relative; flex-shrink: 0; transition: background .15s, border-color .15s; }
+.opt-row input[type="checkbox"]:checked { background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,.55); }
+.opt-row input[type="checkbox"]:checked::after { content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 11px; font-weight: 700; }
+.opt-desc { flex: 1; }
+.opt-desc strong { color: var(--text); font-weight: 600; }
+.opt-desc .hint { color: var(--text3); font-size: 10px; display: block; margin-top: 2px; letter-spacing: .03em; }
+
+.adv-toggle { width: 100%; display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--text3); padding: 10px 14px; background: transparent; border: 1px dashed var(--border); border-radius: 12px; cursor: pointer; transition: color .2s, border-color .2s; letter-spacing: .06em; }
+.adv-toggle:hover { color: var(--text2); border-color: var(--border2); }
+.adv-toggle .chev { transition: transform .2s; display: inline-block; }
+.adv-toggle.open .chev { transform: rotate(90deg); }
+.adv-panel { display: none; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.2rem; margin-top: 8px; }
+.adv-panel.open { display: block; }
+.adv-intro { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 10px; line-height: 1.6; }
+.adv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.adv-field { display: flex; flex-direction: column; gap: 4px; }
+.adv-field label { font-family: var(--cinzel); font-size: 9.5px; color: var(--text3); letter-spacing: .18em; text-transform: uppercase; }
+.adv-field input { font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; transition: border-color .15s, background .15s; }
+.adv-field input:focus { outline: none; border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.04); }
+.adv-field .default-hint { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: .04em; }
+.adv-reset { margin-top: 10px; background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10.5px; padding: 6px 14px; border-radius: 20px; cursor: pointer; letter-spacing: .1em; transition: color .15s, border-color .15s; }
+.adv-reset:hover { color: var(--text2); border-color: var(--border2); }
+
+.btn-preview { width: 100%; padding: 13px; background: transparent; border: 1px dashed rgba(91,156,246,0.35); border-radius: 14px; font-family: var(--cinzel); font-size: 12px; font-weight: 600; letter-spacing: .12em; color: rgba(91,156,246,0.75); cursor: pointer; transition: color .2s, border-color .2s, background .2s, box-shadow .2s; margin-bottom: 10px; text-transform: uppercase; }
+.btn-preview:hover:not(:disabled) { color: #8ab8fa; border-color: rgba(91,156,246,0.55); background: rgba(91,156,246,0.04); box-shadow: 0 0 20px rgba(91,156,246,0.1); }
+.btn-preview:disabled { opacity: .3; cursor: not-allowed; }
+
+/* PREVIEW PANEL */
+.preview-wrap { display: none; margin-top: 1rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.preview-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.preview-title { font-family: var(--cinzel); font-size: 11px; color: var(--text2); letter-spacing: .18em; text-transform: uppercase; }
+.preview-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.preview-close { background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 14px; cursor: pointer; letter-spacing: .08em; }
+.preview-close:hover { color: var(--text2); border-color: var(--border2); }
+.preview-scroll { max-height: 420px; overflow: auto; }
+.preview-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 10.5px; }
+.preview-table thead { position: sticky; top: 0; background: #08081a; z-index: 1; }
+.preview-table th { text-align: left; font-family: var(--cinzel); font-weight: 600; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--text3); padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.preview-table td { padding: 7px 12px; border-bottom: 1px solid rgba(212,175,100,0.05); color: var(--text2); vertical-align: top; line-height: 1.5; }
+.preview-table tr.pr-filled td { color: var(--text); }
+.preview-table tr.pr-skipped td { color: var(--text3); font-style: italic; }
+.preview-table tr.pr-empty td { color: rgba(167,139,250,0.5); }
+.preview-table tr:hover td { background: rgba(52,211,153,0.03); }
+.pr-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.pr-dot.filled { background: var(--accent); box-shadow: 0 0 6px rgba(52,211,153,0.5); }
+.pr-dot.skipped { background: var(--text3); }
+.pr-dot.empty { background: rgba(167,139,250,0.5); }
+.pr-dot.preserved { background: #d4af64; box-shadow: 0 0 6px rgba(212,175,100,0.5); }
+.pr-value { max-width: 280px; word-break: break-word; }
+.pr-reason { max-width: 260px; word-break: break-word; font-size: 9.5px; color: var(--text3); }
+
+/* TRIGGER BREAKDOWN */
+.trig-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+.trig-title { font-family: var(--cinzel); font-size: 10px; color: var(--text3); letter-spacing: .22em; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.trig-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(212,175,100,.1), transparent); }
+.trig-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-bottom: 6px; font-family: var(--mono); font-size: 10.5px; }
+.trig-label { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trig-count { color: var(--text3); font-size: 10px; min-width: 28px; text-align: right; }
+.trig-bar-bg { grid-column: 1 / -1; height: 3px; background: rgba(255,255,255,0.04); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.trig-bar-fill { height: 100%; background: linear-gradient(90deg, #34d399, #5b9cf6); border-radius: 2px; }
+.trig-empty { font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; padding: 10px 0; }
+.stat.mini { padding: .75rem 1rem; }
+.stat.mini .stat-n { font-size: 20px; }
+.stats-grid-ext { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
+
 /* DOWNLOAD */
 .sigil-div { display: flex; align-items: center; gap: 16px; width: 100%; }
 .sigil-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,100,.15), transparent); }
@@ -310,15 +379,78 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   <input type="file" id="fileInput" accept=".xlsx" style="display:none" onchange="onFileSelect(event)">
 
   <div class="section-label">III — Transmute &amp; Download</div>
+
+  <div class="opt-wrap">
+    <label class="opt-row" for="optReason">
+      <input type="checkbox" id="optReason">
+      <span class="opt-desc"><strong>Add "Why?" reason column</strong><span class="hint">Writes an extra <code>Anmerkung_Reason</code> column with the triggers that fired (e.g. <code>FR=+12.40 | SNK_DL=14</code>). Audit-friendly.</span></span>
+    </label>
+
+    <button type="button" class="adv-toggle" id="advToggle" onclick="toggleAdv()" aria-expanded="false" aria-controls="advPanel">
+      <span class="chev">›</span><span>Advanced — tolerance thresholds</span>
+    </button>
+    <div class="adv-panel" id="advPanel" role="region" aria-label="Advanced threshold settings">
+      <div class="adv-intro">Values below this absolute difference are treated as "no error" per forwarder. Saved locally in your browser.</div>
+      <div class="adv-grid">
+        <div class="adv-field">
+          <label for="thDachser">Dachser</label>
+          <input type="number" id="thDachser" step="0.01" min="0" inputmode="decimal">
+          <span class="default-hint">default 0.08</span>
+        </div>
+        <div class="adv-field">
+          <label for="thKN">K+N</label>
+          <input type="number" id="thKN" step="0.01" min="0" inputmode="decimal">
+          <span class="default-hint">default 0.09</span>
+        </div>
+        <div class="adv-field">
+          <label for="thDHL">DHL Express</label>
+          <input type="number" id="thDHL" step="0.01" min="0" inputmode="decimal">
+          <span class="default-hint">default 0.04</span>
+        </div>
+        <div class="adv-field">
+          <label for="thWackler">Wackler</label>
+          <input type="number" id="thWackler" step="0.01" min="0" inputmode="decimal">
+          <span class="default-hint">default 0.09</span>
+        </div>
+      </div>
+      <button type="button" class="adv-reset" onclick="resetThresholds()">↺ Reset to defaults</button>
+    </div>
+  </div>
+
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
+  <button class="btn-preview" id="btnPreview" disabled onclick="runPreview()">Preview — dry-run without writing</button>
   <button class="btn-run" id="btnRun" disabled onclick="openRunGate()">Invoke the Ritual</button>
   <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Transmuted Scroll ↓</button>
+
+  <div class="preview-wrap" id="previewWrap" role="region" aria-label="Preview of proposed annotations">
+    <div class="preview-head">
+      <div>
+        <div class="preview-title">Dry-run Preview</div>
+        <div class="preview-meta" id="previewMeta"></div>
+      </div>
+      <button type="button" class="preview-close" onclick="closePreview()">✕ Close</button>
+    </div>
+    <div class="preview-scroll">
+      <table class="preview-table" id="previewTable">
+        <thead><tr><th>Sheet</th><th>Row</th><th>Status</th><th>Proposed Anmerkung</th><th>Reason</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 
   <div id="stats-wrap">
     <div class="stats-grid">
       <div class="stat"><div class="stat-n" id="sTotal">0</div><div class="stat-l">rows scanned</div></div>
       <div class="stat"><div class="stat-n" id="sFilled">0</div><div class="stat-l">anmerkung filled</div></div>
       <div class="stat"><div class="stat-n" id="sSkipped">0</div><div class="stat-l">skipped (stat≠10)</div></div>
+    </div>
+    <div class="stats-grid-ext">
+      <div class="stat mini"><div class="stat-n" id="sEmpty">0</div><div class="stat-l">no trigger (empty)</div></div>
+      <div class="stat mini"><div class="stat-n" id="sPreserved">0</div><div class="stat-l">preserved (protected)</div></div>
+    </div>
+    <div class="trig-wrap" id="trigWrap">
+      <div class="trig-title">Trigger Breakdown</div>
+      <div id="trigList"></div>
     </div>
   </div>
   <div class="log" id="log"></div>
@@ -446,7 +578,27 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSubModa
    STATE
 ══════════════════════════════════════════════════════════ */
 let selectedFW=null,rawFileBytes=null,workbook=null,resultBlob=null,originalFileName='';
-const T_DACHSER=0.08,T_KN=0.09,T_DHL=0.04,T_WACKLER=0.09;
+/* Thresholds are mutable + persisted (feature #8). Defaults chosen to preserve original behavior. */
+const TH_DEFAULTS={dachser:0.08,kn:0.09,dhl:0.04,wackler:0.09};
+const TH_KEY='anmerkung.thresholds.v1';
+let TH={...TH_DEFAULTS};
+(function loadTh(){try{const saved=JSON.parse(localStorage.getItem(TH_KEY)||'null');if(saved&&typeof saved==='object')TH={...TH_DEFAULTS,...saved};}catch(_){}})();
+/* Dynamic threshold accessors — used everywhere the old constants were used. */
+let T_DACHSER=TH.dachser,T_KN=TH.kn,T_DHL=TH.dhl,T_WACKLER=TH.wackler;
+function applyThresholds(){T_DACHSER=TH.dachser;T_KN=TH.kn;T_DHL=TH.dhl;T_WACKLER=TH.wackler;}
+function saveThresholds(){try{localStorage.setItem(TH_KEY,JSON.stringify(TH));}catch(_){}}
+function syncThFields(){document.getElementById('thDachser').value=TH.dachser;document.getElementById('thKN').value=TH.kn;document.getElementById('thDHL').value=TH.dhl;document.getElementById('thWackler').value=TH.wackler;}
+function onThInput(key,el){const n=parseFloat(el.value);if(!isNaN(n)&&n>=0){TH[key]=n;applyThresholds();saveThresholds();}}
+function resetThresholds(){TH={...TH_DEFAULTS};applyThresholds();saveThresholds();syncThFields();}
+function toggleAdv(){const t=document.getElementById('advToggle'),p=document.getElementById('advPanel');const open=!p.classList.contains('open');p.classList.toggle('open',open);t.classList.toggle('open',open);t.setAttribute('aria-expanded',open?'true':'false');}
+document.addEventListener('DOMContentLoaded',()=>{
+  syncThFields();
+  [['thDachser','dachser'],['thKN','kn'],['thDHL','dhl'],['thWackler','wackler']].forEach(([id,key])=>{
+    const el=document.getElementById(id);
+    el.addEventListener('input',()=>onThInput(key,el));
+    el.addEventListener('change',()=>onThInput(key,el));
+  });
+});
 
 /* ── UI HELPERS ── */
 function selectFW(btn){document.querySelectorAll('.fw-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');selectedFW=btn.dataset.fw;checkReady();}
@@ -454,7 +606,7 @@ function onDrag(e,over){e.preventDefault();document.getElementById('dropArea').c
 function onDrop(e){e.preventDefault();onDrag(e,false);if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);}
 function onFileSelect(e){if(e.target.files[0])loadFile(e.target.files[0]);}
 function loadFile(file){originalFileName=file.name;const reader=new FileReader();reader.onload=ev=>{try{rawFileBytes=ev.target.result;workbook=XLSX.read(rawFileBytes,{type:'array',cellNF:true});const fn=document.getElementById('fileName');fn.textContent=file.name+' — '+workbook.SheetNames.length+' sheet(s)';fn.style.display='block';showLog('Scroll loaded: '+file.name,'ok');checkReady();}catch(err){showLog('Could not read scroll: '+err.message,'err');}};reader.readAsArrayBuffer(file);}
-function checkReady(){document.getElementById('btnRun').disabled=!(selectedFW&&workbook);}
+function checkReady(){const ok=!!(selectedFW&&workbook);document.getElementById('btnRun').disabled=!ok;document.getElementById('btnPreview').disabled=!ok;}
 function showLog(msg,type){const el=document.getElementById('log');el.style.display='block';el.className='log '+(type||'');el.textContent=msg;}
 function setProgress(pct){document.getElementById('progressWrap').style.display='block';document.getElementById('progressFill').style.width=pct+'%';}
 
@@ -630,23 +782,153 @@ function ensureSharedStringsRel(relXml){if(relXml.includes('sharedStrings'))retu
 function patchSheet(sheetXml,targetCol,rowResults,strings){const tIdx=colToIdx(targetCol);for(const[rowNum,value]of rowResults){if(value===null)continue;const cellRef=targetCol+rowNum,ssIdx=getOrAdd(strings,value);const existRe=new RegExp(`<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`);const existMatch=existRe.exec(sheetXml);if(existMatch){const rawAttrs=(existMatch[1]+' '+(existMatch[2]||'')).replace(/\s*\bt="[^"]*"/g,'').replace(/\s+/g,' ').trim();const attrStr=rawAttrs?' '+rawAttrs:'';sheetXml=sheetXml.slice(0,existMatch.index)+`<c r="${cellRef}"${attrStr} t="s"><v>${ssIdx}</v></c>`+sheetXml.slice(existMatch.index+existMatch[0].length);continue;}const rowOpenRe=new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^/][^>]*>`);const rowOpenMatch=rowOpenRe.exec(sheetXml);if(!rowOpenMatch)continue;const afterOpen=rowOpenMatch.index+rowOpenMatch[0].length;const closeTag='</row>';const closeIdx=sheetXml.indexOf(closeTag,afterOpen);if(closeIdx<0)continue;const rowContent=sheetXml.slice(afterOpen,closeIdx);const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);const freq={};sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});const styleIdx=sVals.length?Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]:'0';const newCell=`<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;let insertAt=rowContent.length;for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)){if(colToIdx(m[1])>tIdx){insertAt=m.index;break;}}const newContent=rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);sheetXml=sheetXml.slice(0,afterOpen)+newContent+sheetXml.slice(closeIdx);}return sheetXml;}
 
 /* ── MAIN RUNNER ── */
+/* Split a processor result into distinct triggers (they're joined with ' // '). */
+function splitTriggers(s){if(!s)return[];return s.split(/\s*\/\/\s*/).map(x=>x.trim()).filter(Boolean);}
+/* Build a compact "why" string for the reason column. Captures raw values of the cells
+   the processor actually reads, per-forwarder. Purely diagnostic — never affects rules. */
+function buildReason(fw,ws,r,cols){
+  const parts=[];const push=(k,v)=>{if(v!==''&&v!=null&&v!=='0'&&v!=='-')parts.push(k+'='+v);};
+  const num=c=>c>=0?cellStr(ws,r,c):'';
+  if(fw==='dachser'){
+    push('STAT',num(cols.stat));push('TARIF',num(cols.tarif));
+    push('FR',num(cols.fr));push('SNK_DL',num(cols.snk_dl));push('SNK_DIFF',num(cols.snk_diff));
+    push('ZZ',num(cols.zz));push('SAM',num(cols.sam));push('DGR',num(cols.dgr));
+    push('EXP',num(cols.exp));push('EXP_DL',num(cols.exp_dl));push('MAUT',num(cols.maut));
+    push('LG',num(cols.lg_diff));push('AV',num(cols.av_diff));push('TZ',num(cols.tz));
+    const ref3=cellStr(ws,r,DA_COL_REFERENZ3);if(ref3)parts.push('REF3='+ref3);
+    const sa=cellStr(ws,r,DA_COL_SERV_ART);if(sa)parts.push('SERV='+sa);
+    const sk=cellStr(ws,r,DA_COL_SACHKONTO);if(sk)parts.push('SACH='+sk);
+  } else if(fw==='kn'){
+    push('STAT',num(cols.stat));push('FR',num(cols.fr));
+    push('SNK_DL',num(cols.snk_dl));push('SNK_DIFF',num(cols.snk_diff));
+    push('EXP',num(cols.exp));push('MT',num(cols.toll));push('TZ',num(cols.fuel));
+    const ref=cellStr(ws,r,cols.referenz);if(ref)parts.push('REF='+ref);
+    const rc=cellStr(ws,r,cols.recip);if(rc)parts.push('RECIP='+rc);
+    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
+    push('KOST',cellStr(ws,r,cols.kost));push('SACH',cellStr(ws,r,cols.sach));
+  } else if(fw==='dhl'){
+    push('STAT',num(cols.stat));push('TARIF',num(cols.tarif));
+    push('FR',num(cols.addr));push('PAL',num(cols.stack));push('OW',num(cols.weight));
+    push('YO',num(cols.conv));push('YL',num(cols.irr));push('ND',num(cols.neut));push('SF',num(cols.sign));
+    push('SNK',num(cols.snk));push('AC',num(cols.diff));push('MT',num(cols.maut));
+    push('NX',num(cols.surc));push('OS',num(cols.over));push('TZ',num(cols.tz));
+    push('KOST',cellStr(ws,r,cols.kost));push('SACH',cellStr(ws,r,cols.sach));
+  } else if(fw==='wackler'){
+    push('STAT',num(cols.stat));push('TARIF',num(cols.tarif));
+    push('AVIS',num(cols.avis_diff));push('SNK',num(cols.snk_diff));push('FR',num(cols.fr));
+    push('MT',num(cols.maut));push('TZ',num(cols.tz));
+    const ref=cellStr(ws,r,cols.referenz);if(ref)parts.push('REF='+ref);
+    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
+    const plz=cellStr(ws,r,cols.empf_plz),ort=cellStr(ws,r,cols.empf_ort);
+    if(plz||ort)parts.push('DEST='+[plz,ort].filter(Boolean).join(' '));
+    push('KOST',cellStr(ws,r,cols.kostenstelle));push('SACH',cellStr(ws,r,cols.sachkonto));
+  }
+  return parts.join(' | ');
+}
+
+/* Run rules across the workbook without mutating files. Returns in-memory results + stats. */
+function runRules(){
+  let total=0,filled=0,skipped=0,empty=0,preserved=0,unreachable=0;
+  const allResults={};
+  const trigCounts=new Map();
+  const previewRows=[];
+  for(const name of workbook.SheetNames){
+    const ws=workbook.Sheets[name],range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+    let cols,fn;
+    if(selectedFW==='dachser'){cols=resolveDachser(ws,range);fn=processDachser;}
+    else if(selectedFW==='kn'){cols=resolveKN(ws,range);fn=processKN;}
+    else if(selectedFW==='dhl'){cols=resolveDHL(ws,range);fn=processDHL;}
+    else{cols=resolveWackler(ws,range);fn=processWackler;}
+    if(cols.target<0){showLog(`Sheet "${name}": Anmerkung column not found.`,'err');unreachable++;continue;}
+    const targetCol=idxToCol(cols.target),rowMap=new Map(),reasonMap=new Map();
+    for(let r=3;r<=range.e.r;r++){
+      total++;
+      const excelRow=r+1;
+      const result=fn(ws,r,cols);
+      if(result===null){
+        let isPreserved=false;
+        /* For Wackler, processor returns null for both stat≠10 and protected existing value.
+           Distinguish via current Stat_Freigabe. */
+        if(selectedFW==='wackler'){
+          const statOk=cols.stat<0||cellNum(ws,r,cols.stat)===10;
+          if(statOk){isPreserved=true;preserved++;}
+          else{skipped++;}
+        } else {
+          skipped++;
+        }
+        previewRows.push({sheet:name,row:excelRow,status:isPreserved?'preserved':'skipped',value:'',reason:''});
+        continue;
+      }
+      rowMap.set(excelRow,result);
+      const trigs=splitTriggers(result);
+      trigs.forEach(t=>trigCounts.set(t,(trigCounts.get(t)||0)+1));
+      if(result){filled++;}else{empty++;}
+      const reason=buildReason(selectedFW,ws,r,cols);
+      reasonMap.set(excelRow,reason);
+      previewRows.push({sheet:name,row:excelRow,status:result?'filled':'empty',value:result,reason});
+    }
+    allResults[name]={targetCol,rowMap,reasonMap,targetIdx:cols.target};
+  }
+  /* previewRows already has status flags set inline above (filled/empty/skipped/preserved). */
+  return{total,filled,skipped,empty,preserved,unreachable,allResults,trigCounts,previewRows};
+}
+
+/* ── PREVIEW (#1) ── */
+function runPreview(){
+  const btn=document.getElementById('btnPreview');btn.disabled=true;btn.textContent='Computing dry-run...';
+  document.getElementById('stats-wrap').style.display='none';
+  document.getElementById('btnDl').style.display='none';
+  try{
+    const rep=runRules();
+    renderStats(rep);
+    renderPreview(rep);
+    showLog(`Dry-run — ${rep.filled} would be filled, ${rep.skipped} skipped, ${rep.empty} empty, ${rep.preserved} preserved.`,'ok');
+  }catch(e){showLog('Preview failed: '+e.message,'err');console.error(e);}
+  btn.disabled=false;btn.textContent='Preview — dry-run without writing';
+}
+function renderPreview(rep){
+  const wrap=document.getElementById('previewWrap'),tbody=document.querySelector('#previewTable tbody');
+  const MAX=200;const rows=rep.previewRows.slice(0,MAX);
+  tbody.innerHTML=rows.map(r=>{
+    const cls=r.status==='filled'?'pr-filled':(r.status==='empty'?'pr-empty':'pr-skipped');
+    const dot=`<span class="pr-dot ${r.status}"></span>`;
+    const label=r.status==='filled'?'filled':r.status==='empty'?'empty':'skipped';
+    const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<tr class="${cls}"><td>${esc(r.sheet)}</td><td>${r.row}</td><td>${dot}${label}</td><td class="pr-value">${esc(r.value)}</td><td class="pr-reason">${esc(r.reason)}</td></tr>`;
+  }).join('');
+  document.getElementById('previewMeta').textContent=`showing ${rows.length} of ${rep.previewRows.length} rows · ${rep.filled} filled · ${rep.empty} empty · ${rep.skipped} skipped`;
+  wrap.style.display='block';
+}
+function closePreview(){document.getElementById('previewWrap').style.display='none';}
+
+/* ── STATS + TRIGGER BREAKDOWN (#12) ── */
+function renderStats(rep){
+  document.getElementById('sTotal').textContent=rep.total;
+  document.getElementById('sFilled').textContent=rep.filled;
+  document.getElementById('sSkipped').textContent=rep.skipped;
+  document.getElementById('sEmpty').textContent=rep.empty;
+  document.getElementById('sPreserved').textContent=rep.preserved;
+  const list=document.getElementById('trigList');
+  const entries=[...rep.trigCounts.entries()].sort((a,b)=>b[1]-a[1]);
+  if(!entries.length){list.innerHTML='<div class="trig-empty">No triggers fired — all clean.</div>';}
+  else{
+    const max=entries[0][1];
+    const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    list.innerHTML=entries.map(([name,count])=>{
+      const pct=Math.max(4,Math.round(count/max*100));
+      return `<div class="trig-row"><div class="trig-label" title="${esc(name)}">${esc(name)}</div><div class="trig-count">${count}</div><div class="trig-bar-bg"><div class="trig-bar-fill" style="width:${pct}%"></div></div></div>`;
+    }).join('');
+  }
+  document.getElementById('stats-wrap').style.display='block';
+}
+
 async function runProcess(){
   const btn=document.getElementById('btnRun');btn.disabled=true;btn.textContent='Invoking ritual...';
   document.getElementById('btnDl').style.display='none';document.getElementById('stats-wrap').style.display='none';setProgress(5);
   try{
-    let total=0,filled=0,skipped=0;const allResults={};
-    for(const name of workbook.SheetNames){
-      const ws=workbook.Sheets[name],range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
-      let cols,fn;
-      if(selectedFW==='dachser'){cols=resolveDachser(ws,range);fn=processDachser;}
-      else if(selectedFW==='kn'){cols=resolveKN(ws,range);fn=processKN;}
-      else if(selectedFW==='dhl'){cols=resolveDHL(ws,range);fn=processDHL;}
-      else{cols=resolveWackler(ws,range);fn=processWackler;}
-      if(cols.target<0){showLog(`Sheet "${name}": Anmerkung column not found.`,'err');continue;}
-      const targetCol=idxToCol(cols.target),rowMap=new Map();
-      for(let r=3;r<=range.e.r;r++){total++;const result=fn(ws,r,cols),excelRow=r+1;if(result===null){skipped++;}else{rowMap.set(excelRow,result);if(result)filled++;}}
-      allResults[name]={targetCol,rowMap};
-    }
+    const rep=runRules();
+    const allResults=rep.allResults;
+    const wantReason=document.getElementById('optReason').checked;
     setProgress(25);
     const zip=await JSZip.loadAsync(rawFileBytes);setProgress(40);
     const ssFile=zip.file('xl/sharedStrings.xml');let ssXml=ssFile?await ssFile.async('string'):'';const strings=ssXml?parseSharedStrings(ssXml):[];
@@ -654,16 +936,33 @@ async function runProcess(){
     const sheetRids={};for(const m of wbXml.matchAll(/<sheet\b[^>]+\bname="([^"]+)"[^>]+\br:id="(rId\d+)"/g))sheetRids[m[1]]=m[2];
     const ridPaths={};for(const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g))ridPaths[m[1]]=m[2];
     const sheetNames=Object.keys(allResults);
-    for(let si=0;si<sheetNames.length;si++){const name=sheetNames[si],{targetCol,rowMap}=allResults[name];if(!rowMap.size)continue;const rId=sheetRids[name];if(!rId)continue;let rel=ridPaths[rId]||'';rel=rel.replace(/^\/+/,'');if(!rel.startsWith('xl/'))rel='xl/'+rel;let sheetXml=await zip.file(rel).async('string');sheetXml=patchSheet(sheetXml,targetCol,rowMap,strings);zip.file(rel,sheetXml);setProgress(40+Math.round(40*(si+1)/sheetNames.length));}
+    for(let si=0;si<sheetNames.length;si++){
+      const name=sheetNames[si],{targetCol,rowMap,reasonMap,targetIdx}=allResults[name];
+      if(!rowMap.size&&!(wantReason&&reasonMap&&reasonMap.size)){continue;}
+      const rId=sheetRids[name];if(!rId)continue;
+      let rel=ridPaths[rId]||'';rel=rel.replace(/^\/+/,'');if(!rel.startsWith('xl/'))rel='xl/'+rel;
+      let sheetXml=await zip.file(rel).async('string');
+      sheetXml=patchSheet(sheetXml,targetCol,rowMap,strings);
+      if(wantReason){
+        /* Reason column is placed one column to the right of Anmerkung. Header goes in row 3 (the
+           header row used by the processors' findCol). */
+        const reasonColIdx=targetIdx+1;
+        const reasonCol=idxToCol(reasonColIdx);
+        const headerMap=new Map([[3,'Anmerkung_Reason']]);
+        sheetXml=patchSheet(sheetXml,reasonCol,headerMap,strings);
+        sheetXml=patchSheet(sheetXml,reasonCol,reasonMap,strings);
+      }
+      zip.file(rel,sheetXml);
+      setProgress(40+Math.round(40*(si+1)/sheetNames.length));
+    }
     zip.file('xl/sharedStrings.xml',rebuildSharedStrings(strings));
     const ctFile=zip.file('[Content_Types].xml');if(ctFile){let ctXml=await ctFile.async('string');ctXml=ensureSharedStringsContentType(ctXml);zip.file('[Content_Types].xml',ctXml);}
     const wbRelFile=zip.file('xl/_rels/workbook.xml.rels');if(wbRelFile){let wbRel=await wbRelFile.async('string');wbRel=ensureSharedStringsRel(wbRel);zip.file('xl/_rels/workbook.xml.rels',wbRel);}
     setProgress(85);
     resultBlob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE',compressionOptions:{level:6}});
     setProgress(100);
-    document.getElementById('sTotal').textContent=total;document.getElementById('sFilled').textContent=filled;document.getElementById('sSkipped').textContent=skipped;
-    document.getElementById('stats-wrap').style.display='block';
-    showLog(`Ritual complete — ${filled} rows transmuted, ${skipped} skipped (Stat_Freigabe ≠ 10).`,'ok');
+    renderStats(rep);
+    showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (Stat_Freigabe ≠ 10)${rep.preserved?`, ${rep.preserved} preserved`:''}${wantReason?' · reason column written':''}.`,'ok');
     document.getElementById('btnDl').style.display='block';
   }catch(e){showLog('Ritual failed: '+e.message+'\n'+e.stack,'err');console.error(e);}
   btn.disabled=false;btn.textContent='Invoke the Ritual';
