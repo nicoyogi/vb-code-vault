@@ -338,6 +338,10 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 .hdr-btn:hover { color: var(--text2); border-color: var(--border2); }
 .hdr-btn[aria-pressed="true"] { color: var(--accent); border-color: rgba(52,211,153,0.35); }
 .hdr-btn svg { flex-shrink: 0; }
+.hdr-btn[data-offline-state="ready"] { color: var(--accent); border-color: rgba(52,211,153,0.35); }
+.hdr-btn[data-offline-state="working"] { color: var(--text2); border-color: var(--border2); cursor: progress; }
+.hdr-btn[data-offline-state="error"] { color: #f87171; border-color: rgba(248,113,113,0.35); }
+.hdr-btn:disabled { opacity: .7; cursor: progress; }
 
 /* ── LIGHT THEME — "Scriptorium" (#13) ── */
 body.theme-light {
@@ -476,6 +480,11 @@ body.theme-light .cl-box { background: #fcf6e8; }
   <button type="button" class="hdr-btn" id="btnTheme" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme" aria-pressed="false">
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" id="themeIcon"><path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.5 2.5l.7.7M8.8 8.8l.7.7M2.5 9.5l.7-.7M8.8 3.2l.7-.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="6" r="2.3" stroke="currentColor" stroke-width="1.1"/></svg>
     <span id="themeLabel">Dark</span>
+  </button>
+  <button type="button" class="hdr-btn" id="btnOffline" title="Download all Grimoire pages for offline use" aria-label="Download for offline use">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.5v6.3M3.3 5.3L6 8l2.7-2.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.8 9.2v.6c0 .4.3.7.7.7h7c.4 0 .7-.3.7-.7v-.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+    <span data-offline-label>Download for offline</span>
+    <span data-offline-progress style="opacity:.7;font-size:9.5px"></span>
   </button>
   <span class="nav-badge">The Alchemist</span>
 </header>
@@ -1026,18 +1035,23 @@ function fwKeydown(e){
 }
 
 /* ══════════════════════════════════════════════════════════
-   PWA REGISTRATION (#21)
+   PWA REGISTRATION + OFFLINE DOWNLOAD BUTTON (#21)
+   Uses Grimoire.Offline (see assets/grimoire-core.js) which:
+     • registers sw.js
+     • posts { type:'PRECACHE', urls:[…] } to the active SW
+     • reports progress back via a MessageChannel
+     • reflects state on the button via data-offline-state
 ══════════════════════════════════════════════════════════ */
-(function registerPWA(){
-  if(!('serviceWorker' in navigator))return;
-  if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.protocol!=='file:')return;
-  if(location.protocol==='file:')return; /* file:// can't register */
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js').then(()=>{
-      /* silent success */
-    }).catch(()=>{
-      /* silent — PWA is additive */
-    });
+(function setupOffline(){
+  if(!window.Grimoire || !window.Grimoire.Offline) return; /* core failed to load */
+  /* Register first so the SW is ready by the time a user clicks. */
+  window.Grimoire.Offline.register();
+  /* Wait until DOM is parsed — this script runs at end of body, so it is. */
+  window.Grimoire.Offline.mount('#btnOffline', {
+    idleLabel:    'Download for offline',
+    readyLabel:   'Available offline',
+    workingLabel: 'Downloading…',
+    failLabel:    'Retry download'
   });
 })();
 
