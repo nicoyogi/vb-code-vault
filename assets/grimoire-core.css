@@ -1,0 +1,71 @@
+/* ──────────────────────────────────────────────────────────
+   Grimoire — core a11y + perf primitives
+   Additive only. Never overrides per-page design.
+   ────────────────────────────────────────────────────────── */
+
+/* Skip-to-content link — visible only on focus */
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 12px;
+  z-index: 10000;
+  background: #02020a;
+  color: #d4af64;
+  border: 1px solid rgba(212, 175, 100, 0.55);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  transition: top 0.2s ease;
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  top: 12px;
+  outline: 2px solid rgba(212, 175, 100, 0.9);
+  outline-offset: 2px;
+}
+
+/* Screen-reader-only utility */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Universal focus-visible ring — only when page hasn't already defined one */
+:where(a, button, [role="button"], input, select, textarea):focus-visible {
+  outline: 2px solid rgba(212, 175, 100, 0.85);
+  outline-offset: 3px;
+}
+
+/* Enforce ≥44×44 touch targets on obvious controls (mobile-safe) */
+@media (pointer: coarse) {
+  :where(button, [role="button"], a.btn, .btn, .tab, .chip):not(.inline):not(.small) {
+    min-height: 44px;
+  }
+}
+
+/* Global reduced-motion honouring. Pages can still opt out locally. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Still show content — just freeze motion on the canvas */
+  #bg { opacity: 0.35; }
+}
+
+/* Prevent horizontal overflow on tiny devices (defensive) */
+html, body { max-width: 100%; }

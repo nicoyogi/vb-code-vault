@@ -3,8 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0e0f13">
 <title>Holiday Tracker · The Grimoire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=Cinzel:wght@400;600;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/grimoire-core.css">
+<script src="assets/grimoire-core.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -346,9 +351,43 @@
   .account-badge.admin    { background: var(--accent2-a12); color: var(--accent2); border: 1px solid rgba(245,158,11,0.2); }
 
   .pw-change-note { background: rgba(110,231,183,0.07); border: 1px solid rgba(110,231,183,0.15); border-radius: 8px; padding: 10px 14px; font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-dim); margin-bottom: 18px; line-height: 1.6; }
+
+  /* ── DEPT FILTER ── */
+  .dept-filter-wrap { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 3px 3px 3px 10px; }
+  .dept-filter-wrap.active { border-color: var(--accent3); background: var(--accent3-a08); }
+  .dept-filter-label { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .dept-filter-wrap.active .dept-filter-label { color: var(--accent3); }
+  .dept-filter-select { background: transparent; border: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.72rem; padding: 5px 24px 5px 6px; outline: none; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; }
+  .dept-filter-select option { background: var(--surface2); }
+
+  /* ── DEPT MANAGER ── */
+  .dept-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .dept-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-dim); }
+  .dept-chip .dept-count { font-size: 0.58rem; color: var(--text-muted); padding: 1px 5px; background: var(--surface3); border-radius: 8px; }
+  .dept-chip-btn { width: 18px; height: 18px; border-radius: 50%; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; padding: 0; transition: all 0.15s; }
+  .dept-chip-btn:hover { color: var(--accent3); background: var(--accent3-a12); }
+  .dept-chip-btn.del:hover { color: var(--red); background: var(--red-a10); }
+
+  /* ── MOBILE POLISH ── */
+  @media (max-width: 640px) {
+    .app { padding: 18px 14px 60px; }
+    header.page-header { gap: 12px; }
+    .month-label { min-width: 0; font-size: 1.1rem; }
+    .calendar-header { padding: 14px 14px; }
+    .calendar-header-left { width: 100%; justify-content: space-between; }
+    .calendar-grid { padding: 10px 10px 14px; }
+    .days-grid { gap: 2px; }
+    .day-headers { gap: 2px; }
+    .day-cell { min-height: 56px; padding: 4px; border-radius: 8px; }
+    .day-num { font-size: 0.7rem; }
+    .auth-card { padding: 24px 20px; }
+    .modal { padding: 20px; }
+  }
 </style>
 </head>
 <body>
+
+<a class="skip-link" href="#main">Skip to content</a>
 
 <!-- AUTH GATE -->
 <div id="authGate">
@@ -440,6 +479,12 @@
         <button class="view-btn active" id="viewCalBtn" onclick="setView('calendar')">📅 Calendar</button>
         <button class="view-btn" id="viewGanttBtn" onclick="setView('gantt')">📊 Timeline</button>
       </div>
+      <div class="dept-filter-wrap" id="deptFilterWrap">
+        <span class="dept-filter-label">Dept</span>
+        <select class="dept-filter-select" id="deptFilter" onchange="setDeptFilter(this.value)">
+          <option value="">All</option>
+        </select>
+      </div>
       <button class="btn btn-export" onclick="exportCSV()">⬇ Export CSV</button>
       <button class="btn btn-ghost admin-only-btn" id="pubHolBtn" onclick="openPublicHolidays()" style="display:none;">🗓 Public Hols</button>
       <button class="btn btn-ghost admin-only-btn" id="manageBtn" onclick="openManage()" style="display:none;">⚙ Manage People</button>
@@ -506,10 +551,10 @@
   </div>
 </div>
 
-<!-- Add Holiday Modal -->
+<!-- Add / Edit Holiday Modal -->
 <div class="modal-overlay" id="addModal">
   <div class="modal">
-    <div class="modal-title">Add Holiday</div>
+    <div class="modal-title" id="addModalTitle">Add Holiday</div>
     <div class="modal-sub" id="addModalSub">Record who's out and when · weekdays (Mon–Fri) only</div>
     <div class="form-group"><label class="form-label">Person</label><select id="formPerson"></select></div>
     <div class="form-group form-row">
@@ -537,32 +582,80 @@
     </div>
     <div class="form-group"><label class="form-label">Note (optional)</label><input type="text" id="formNote" placeholder="e.g. Bali trip, doctor appointment…"></div>
     <div class="conflict-warn" id="conflictWarn"></div>
+    <div id="capacityWarn" style="border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;margin-bottom:4px;display:none;border:1px solid transparent;"></div>
     <div id="vacWarning"></div>
     <div class="modal-footer">
+      <button class="btn btn-danger" id="editDeleteBtn" onclick="deleteFromEdit()" style="display:none;margin-right:auto;">🗑 Delete</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveHoliday()">Save Holiday</button>
+      <button class="btn btn-primary" id="saveHolBtn" onclick="saveHoliday()">Save Holiday</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Person Modal -->
+<div class="modal-overlay" id="editPersonModal" style="z-index:150;">
+  <div class="modal">
+    <div class="modal-title">Edit Person</div>
+    <div class="modal-sub" id="editPersonSub">Update name and department · 👑 Admin only</div>
+    <div class="form-group">
+      <label class="form-label">Full Name</label>
+      <input type="text" id="editPersonName" placeholder="Full name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Department</label>
+      <input type="text" id="editPersonDept" list="editPersonDeptOptions" placeholder="Department">
+      <datalist id="editPersonDeptOptions"></datalist>
+    </div>
+    <div class="auth-error" id="editPersonError" style="font-family:'DM Mono',monospace;font-size:0.7rem;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeEditPerson()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditPerson()">Save Changes</button>
     </div>
   </div>
 </div>
 
 <!-- Manage People Modal -->
 <div class="modal-overlay" id="manageModal">
-  <div class="modal">
+  <div class="modal" style="max-width:520px;">
     <div class="modal-title">Manage People</div>
-    <div class="modal-sub">Add or remove team members · 👑 Admin only</div>
+    <div class="modal-sub">Add, edit, or remove team members · 👑 Admin only</div>
     <div class="form-group" style="display:flex;gap:8px;">
       <input type="text" id="newPersonName" placeholder="Full name">
-      <input type="text" id="newPersonDept" placeholder="Department" style="flex:0.6">
+      <input type="text" id="newPersonDept" list="newPersonDeptOptions" placeholder="Department" style="flex:0.6">
+      <datalist id="newPersonDeptOptions"></datalist>
       <button class="btn btn-primary" onclick="addPerson()" style="flex-shrink:0;padding:9px 14px;">+</button>
     </div>
-    <div class="scrollable" id="peopleList" style="max-height:300px;"></div>
+    <div class="scrollable" id="peopleList" style="max-height:240px;"></div>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="form-label" style="margin-bottom:8px;">🏷 Departments</div>
+      <div class="dept-list" id="deptManagerList"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="newDeptName" placeholder="New department name" style="flex:1;">
+        <button class="btn btn-primary btn-sm" onclick="addDepartment()" style="flex-shrink:0;">+ Add</button>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-muted);margin-top:6px;line-height:1.5;">
+        Managed departments show in the filter and autocomplete. Free-text depts on existing people still work.
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="form-label" style="margin-bottom:8px;">⚠ Team Capacity Threshold</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="number" id="capacityThreshold" min="0" max="20" step="1" style="flex:0 0 80px;" placeholder="3">
+        <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--text-muted);flex:1;min-width:120px;">
+          Warn if this many people (or more) are off on the same day. 0 = disabled.
+        </span>
+        <button class="btn btn-primary btn-sm" onclick="saveCapacityThreshold()" style="flex-shrink:0;">Save</button>
+      </div>
+    </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeManage()">Close</button></div>
   </div>
 </div>
 
 <!-- Public Holidays Modal -->
 <div class="modal-overlay" id="pubHolModal">
-  <div class="modal">
+  <div class="modal" style="max-width:520px;">
     <div class="modal-title">Public Holidays</div>
     <div class="modal-sub">National/regional holidays · 👑 Admin only</div>
     <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -570,6 +663,43 @@
       <input type="text" id="newPubName" placeholder="Holiday name" style="flex:1;min-width:140px;">
       <button class="btn btn-primary" onclick="addPublicHoliday()" style="flex-shrink:0;padding:9px 14px;">+</button>
     </div>
+    <details style="margin-bottom:14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;">
+      <summary style="cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:0.06em;color:var(--accent3);">
+        🌍 Import from country (date.nager.at)
+      </summary>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select id="pubHolCountry" style="flex:1;min-width:140px;">
+          <option value="">— Select country —</option>
+          <option value="DE">🇩🇪 Germany</option>
+          <option value="AT">🇦🇹 Austria</option>
+          <option value="CH">🇨🇭 Switzerland</option>
+          <option value="FR">🇫🇷 France</option>
+          <option value="GB">🇬🇧 United Kingdom</option>
+          <option value="US">🇺🇸 United States</option>
+          <option value="ES">🇪🇸 Spain</option>
+          <option value="IT">🇮🇹 Italy</option>
+          <option value="NL">🇳🇱 Netherlands</option>
+          <option value="BE">🇧🇪 Belgium</option>
+          <option value="PL">🇵🇱 Poland</option>
+          <option value="IE">🇮🇪 Ireland</option>
+          <option value="PT">🇵🇹 Portugal</option>
+          <option value="SE">🇸🇪 Sweden</option>
+          <option value="NO">🇳🇴 Norway</option>
+          <option value="DK">🇩🇰 Denmark</option>
+          <option value="FI">🇫🇮 Finland</option>
+          <option value="CA">🇨🇦 Canada</option>
+          <option value="AU">🇦🇺 Australia</option>
+          <option value="NZ">🇳🇿 New Zealand</option>
+          <option value="JP">🇯🇵 Japan</option>
+          <option value="IN">🇮🇳 India</option>
+          <option value="BR">🇧🇷 Brazil</option>
+          <option value="MX">🇲🇽 Mexico</option>
+        </select>
+        <input type="number" id="pubHolYear" min="2020" max="2099" step="1" style="flex:0 0 90px;" placeholder="2026">
+        <button class="btn btn-export btn-sm" id="pubHolFetchBtn" onclick="fetchCountryHolidays()" style="flex-shrink:0;">Fetch</button>
+      </div>
+      <div id="pubHolFetchStatus" style="margin-top:8px;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-muted);"></div>
+    </details>
     <div class="pub-hol-list" id="pubHolList"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closePubHol()">Close</button></div>
   </div>
@@ -588,6 +718,22 @@
       <button class="btn btn-danger" onclick="doSignOut()">🚪 Sign Out</button>
       <button class="btn btn-ghost" onclick="closeProfileModal()">Cancel</button>
       <button class="btn btn-primary" onclick="doChangePassword()">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Inactivity Warning Modal -->
+<div class="modal-overlay" id="inactivityModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">Still there?</div>
+    <div class="modal-sub">You'll be signed out automatically due to inactivity.</div>
+    <div style="text-align:center;margin:18px 0;">
+      <div style="font-family:'DM Serif Display',serif;font-size:3rem;color:var(--accent2);line-height:1;" id="inactivitySeconds">60</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.1em;margin-top:4px;">SECONDS REMAINING</div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-danger" onclick="doSignOut()">Sign out now</button>
+      <button class="btn btn-primary" onclick="dismissInactivityWarning()">Stay signed in</button>
     </div>
   </div>
 </div>
@@ -633,6 +779,7 @@ const vacResetCol = db.collection('wmf_vac_resets');
 const activityCol = db.collection('wmf_activity_log');
 const pubHolCol   = db.collection('wmf_public_holidays');
 const userProfCol = db.collection('wmf_user_profiles');
+const settingsCol = db.collection('wmf_settings');
 
 /* ════════════════════════════════════════════
    CONSTANTS
@@ -666,9 +813,11 @@ let holidays       = [];
 let vacResets      = [];
 let publicHolidays = [];
 let userProfiles   = [];
+let teamSettings   = { capacityThreshold: 0, departments: [] };
 let viewYear       = new Date().getFullYear();
 let viewMonth      = new Date().getMonth();
 let currentView    = 'calendar';
+let deptFilter     = localStorage.getItem('ht_dept_filter') || '';
 
 // Derived caches — busted on data change
 let _pubHolSetCache = null;   // Set of public holiday ISO strings
@@ -717,6 +866,9 @@ function showApp() {
   saveSession(currentUser);
   updateUserChip();
   updateAdminUI();
+  // Restore dept filter UI state from localStorage (dropdown is populated later via snapshots)
+  const wrap = document.getElementById('deptFilterWrap');
+  if (wrap) wrap.classList.toggle('active', !!deptFilter);
   if (!appStarted) { appStarted = true; startListeners(); startLogListener(); }
 }
 function showAuthGate() {
@@ -981,7 +1133,12 @@ function startListeners() {
     people = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     bustCaches(); scheduleRender();
     setStatus('online', 'Online');
-    if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
+    updateDeptFilterOptions();
+    updateDeptDatalists();
+    if (document.getElementById('manageModal').classList.contains('open')) {
+      renderPeopleList();
+      renderDeptManager();
+    }
   }, err => { setStatus('error', 'Error'); showToast('Connection error: ' + err.message, true); });
 
   holidaysCol.orderBy('start').onSnapshot(snap => {
@@ -1002,6 +1159,19 @@ function startListeners() {
   userProfCol.onSnapshot(snap => {
     userProfiles = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
     if (document.getElementById('manageModal').classList.contains('open')) renderPeopleList();
+  }, () => {});
+
+  settingsCol.doc('team').onSnapshot(snap => {
+    teamSettings = snap.exists
+      ? { capacityThreshold: 0, departments: [], ...snap.data() }
+      : { capacityThreshold: 0, departments: [] };
+    if (!Array.isArray(teamSettings.departments)) teamSettings.departments = [];
+    const thrInput = document.getElementById('capacityThreshold');
+    if (thrInput && document.activeElement !== thrInput) thrInput.value = teamSettings.capacityThreshold || '';
+    updateDeptFilterOptions();
+    updateDeptDatalists();
+    if (document.getElementById('manageModal').classList.contains('open')) renderDeptManager();
+    scheduleRender();
   }, () => {});
 }
 
@@ -1105,6 +1275,57 @@ function getConflicts(personId, start, end, excludeId) {
 function fmtDays(n) { return n % 1 !== 0 ? n.toFixed(1) : String(n); }
 
 /* ════════════════════════════════════════════
+   DEPARTMENTS + FILTER
+════════════════════════════════════════════ */
+/** Union of admin-managed departments and any free-text depts on existing people. */
+function effectiveDepartments() {
+  const set = new Set();
+  (teamSettings.departments || []).forEach(d => { if (d) set.add(d); });
+  people.forEach(p => { if (p.dept) set.add(p.dept); });
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+/** True if a person passes the current dept filter. */
+function passDeptFilter(personId) {
+  if (!deptFilter) return true;
+  const p = getPerson(personId);
+  return p ? p.dept === deptFilter : false;
+}
+
+function setDeptFilter(val) {
+  deptFilter = val || '';
+  if (deptFilter) localStorage.setItem('ht_dept_filter', deptFilter);
+  else            localStorage.removeItem('ht_dept_filter');
+  document.getElementById('deptFilterWrap').classList.toggle('active', !!deptFilter);
+  scheduleRender();
+}
+
+function updateDeptFilterOptions() {
+  const sel = document.getElementById('deptFilter');
+  if (!sel) return;
+  const depts = effectiveDepartments();
+  const current = deptFilter;
+  // If the filtered dept no longer exists, clear the filter
+  if (current && !depts.includes(current)) {
+    deptFilter = '';
+    localStorage.removeItem('ht_dept_filter');
+  }
+  sel.innerHTML = '<option value="">All</option>' +
+    depts.map(d => `<option value="${d}"${d === deptFilter ? ' selected' : ''}>${d}</option>`).join('');
+  sel.value = deptFilter;
+  document.getElementById('deptFilterWrap').classList.toggle('active', !!deptFilter);
+}
+
+function updateDeptDatalists() {
+  const depts = effectiveDepartments();
+  const opts = depts.map(d => `<option value="${d}">`).join('');
+  ['newPersonDeptOptions', 'editPersonDeptOptions'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+/* ════════════════════════════════════════════
    RENDER ORCHESTRATOR
 ════════════════════════════════════════════ */
 function render() {
@@ -1139,11 +1360,18 @@ function updateAdminUI() {
 ════════════════════════════════════════════ */
 function renderStats() {
   const today = dateStr(new Date());
-  const awayToday = new Set(holidaysOnDate(today).map(h => h.personId)).size;
+  const visiblePeople = deptFilter ? people.filter(p => p.dept === deptFilter) : people;
+  const awayToday = new Set(
+    holidaysOnDate(today).filter(h => passDeptFilter(h.personId)).map(h => h.personId)
+  ).size;
   const monthKey = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}`;
-  const thisMonth = holidays.filter(h => h.start.slice(0,7) === monthKey || h.end.slice(0,7) === monthKey).length;
+  const thisMonth = holidays.filter(h =>
+    passDeptFilter(h.personId) &&
+    (h.start.slice(0,7) === monthKey || h.end.slice(0,7) === monthKey)
+  ).length;
+  const teamLabel = deptFilter ? `${deptFilter}` : 'Team Members';
   document.getElementById('statsRow').innerHTML =
-    `<div class="stat-box"><div class="stat-num">${people.length}</div><div class="stat-label">Team Members</div></div>
+    `<div class="stat-box"><div class="stat-num">${visiblePeople.length}</div><div class="stat-label">${teamLabel}</div></div>
      <div class="stat-box"><div class="stat-num" style="color:var(--accent2)">${awayToday}</div><div class="stat-label">Away Today</div></div>
      <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${thisMonth}</div><div class="stat-label">This Month</div></div>`;
 }
@@ -1203,6 +1431,8 @@ function renderCalendar() {
   for (const h of holidays) {
     // Skip entries that don't touch this month at all
     if (h.end < monthStart || h.start > monthEnd) continue;
+    // Apply dept filter
+    if (!passDeptFilter(h.personId)) continue;
     // Clamp to the visible month window
     const clampStart = h.start < monthStart ? monthStart : h.start;
     const clampEnd   = h.end   > monthEnd   ? monthEnd   : h.end;
@@ -1278,16 +1508,22 @@ function renderGantt() {
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const today = dateStr(new Date());
   const mPad  = String(viewMonth+1).padStart(2,'0');
+  const DOW_LETTERS = ['S','M','T','W','T','F','S']; // Sun=0 .. Sat=6
 
   let html = `<div class="gantt-header-row"><div class="gantt-name-col">Person</div><div class="gantt-days-header">`;
   for (let d = 1; d <= daysInMonth; d++) {
     const iso = `${viewYear}-${mPad}-${String(d).padStart(2,'0')}`;
     const dow = parseDate(iso).getDay();
-    html += `<div class="gantt-day-label${iso===today?' today-col':''}${dow===0||dow===6?' weekend-col':''}">${d}</div>`;
+    const isWknd = dow === 0 || dow === 6;
+    html += `<div class="gantt-day-label${iso===today?' today-col':''}${isWknd?' weekend-col':''}" style="line-height:1.25;">
+      <div style="font-size:0.52rem;opacity:0.75;">${DOW_LETTERS[dow]}</div>
+      <div>${d}</div>
+    </div>`;
   }
   html += `</div></div>`;
 
   people.forEach(p => {
+    if (!passDeptFilter(p.id)) return;
     const color = getColor(p.id);
     let cells = '';
     for (let d = 1; d <= daysInMonth; d++) {
@@ -1322,9 +1558,13 @@ function renderVacBalance() {
   const year = viewYear;
   document.getElementById('vacYearTag').textContent = year;
   const list = document.getElementById('vacBalanceList');
-  if (!people.length) { list.innerHTML = '<div class="empty-state">No team members yet</div>'; return; }
+  const filtered = deptFilter ? people.filter(p => p.dept === deptFilter) : people;
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state">${deptFilter ? `No one in ${deptFilter}` : 'No team members yet'}</div>`;
+    return;
+  }
 
-  list.innerHTML = people.map(p => {
+  list.innerHTML = filtered.map(p => {
     const color    = getColor(p.id);
     const allot    = vacAllotment(p.id, year);
     const used     = vacUsedByYear(p.id, year);
@@ -1333,10 +1573,11 @@ function renderVacBalance() {
     let remainClass = 'ok', barColor = '#6ee7b7';
     if (remaining <= 0)  { remainClass = 'exhausted'; barColor = '#f87171'; }
     else if (remaining <= 3) { remainClass = 'warn';  barColor = '#f59e0b'; }
-    const bonusBadge = allot > VACATION_DAYS_PER_YEAR
-      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--accent3);margin-left:3px;">+${allot-VACATION_DAYS_PER_YEAR}↩</span>` : '';
+    const bonus      = allot - VACATION_DAYS_PER_YEAR;
+    const bonusBadge = bonus !== 0
+      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:${bonus > 0 ? 'var(--accent3)' : 'var(--red)'};margin-left:3px;">${bonus > 0 ? '+' : ''}${bonus}↩</span>` : '';
     const resetBtn = isAdmin()
-      ? `<button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name}',${year})" title="Reset vacation balance">↺</button>` : '';
+      ? `<button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name.replace(/'/g,"\\'")}',${year})" title="Adjust vacation bonus">↺</button>` : '';
     return `<div class="vac-row">
       <div class="avatar" style="width:30px;height:30px;font-size:0.65rem;background:${color.bg};color:${color.text};">${initials(p.name)}</div>
       <div class="vac-info">
@@ -1360,10 +1601,10 @@ function renderVacBalance() {
 ════════════════════════════════════════════ */
 function renderAway() {
   const today = dateStr(new Date());
-  const away  = holidaysOnDate(today);  // simple filter — no index needed
+  const away  = holidaysOnDate(today).filter(h => passDeptFilter(h.personId));
   document.getElementById('awayCount').textContent = away.length;
   const list = document.getElementById('awayList');
-  if (!away.length) { list.innerHTML = '<div class="empty-state">No one is away today ✓</div>'; return; }
+  if (!away.length) { list.innerHTML = `<div class="empty-state">${deptFilter ? `No one in ${deptFilter} is away today ✓` : 'No one is away today ✓'}</div>`; return; }
   list.innerHTML = away.map(h => {
     const p = getPerson(h.personId); if (!p) return '';
     const color = getColor(h.personId);
@@ -1376,15 +1617,19 @@ function renderAway() {
 }
 
 function renderAllList() {
-  const sorted = [...holidays].sort((a, b) => a.start.localeCompare(b.start));
+  const sorted = [...holidays].filter(h => passDeptFilter(h.personId))
+    .sort((a, b) => a.start.localeCompare(b.start));
   document.getElementById('allCount').textContent = sorted.length;
   const list = document.getElementById('allList');
-  if (!sorted.length) { list.innerHTML = '<div class="empty-state">No holidays recorded yet</div>'; return; }
+  if (!sorted.length) { list.innerHTML = `<div class="empty-state">${deptFilter ? `No entries for ${deptFilter}` : 'No holidays recorded yet'}</div>`; return; }
   list.innerHTML = sorted.map(h => {
     const p = getPerson(h.personId); if (!p) return '';
     const color   = getColor(h.personId);
     const halfTag = h.halfDay ? ` · ½ ${h.halfDayPart||''}` : '';
     const days    = entryDays(h);
+    const canEd   = canEdit(h.personId);
+    const edit    = canEd
+      ? `<button class="delete-btn" onclick="editHoliday('${h.id}')" title="Edit" style="color:var(--accent3);">✎</button>` : '';
     const del     = canDelete(h)
       ? `<button class="delete-btn" onclick="deleteHoliday('${h.id}')" title="Delete">✕</button>` : '';
     return `<div class="list-item-row">
@@ -1393,6 +1638,7 @@ function renderAllList() {
         <div class="list-item-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'📌'}<span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:4px;">${fmtDays(days)}d</span></div>
         <div class="list-item-date">${fmtDate(h.start)} → ${fmtDate(h.end)}${halfTag}${h.note?' · '+h.note:''}</div>
       </div>
+      ${edit}
       ${del}
     </div>`;
   }).join('');
@@ -1400,8 +1646,9 @@ function renderAllList() {
 
 function renderLegend() {
   const pubHolLegend = publicHolidays.length ? `<div class="legend-item"><div class="legend-dot" style="background:var(--accent3)"></div>Public Holiday</div>` : '';
+  const legendPeople = deptFilter ? people.filter(p => p.dept === deptFilter) : people;
   document.getElementById('legend').innerHTML =
-    people.map(p => {
+    legendPeople.map(p => {
       const color = getColor(p.id);
       return `<div class="legend-item"><div class="legend-dot" style="background:${color.bg}"></div>${p.name.split(' ')[0]}</div>`;
     }).join('') +
@@ -1429,6 +1676,7 @@ function renderPeopleList() {
       <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
       <div class="list-item-info"><div class="list-item-name">${p.name}</div><div class="list-item-date">${p.dept}</div></div>
       ${badge}${toggleAdmin}
+      <button class="delete-btn" onclick="openEditPerson('${p.id}')" title="Edit name &amp; department" style="color:var(--accent3);">✎</button>
       <button class="delete-btn" onclick="removePerson('${p.id}')" title="Remove">✕</button>
     </div>`;
   }).join('');
@@ -1440,6 +1688,10 @@ function renderPeopleList() {
 function openPublicHolidays() {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   renderPubHolList();
+  const yr = document.getElementById('pubHolYear');
+  if (yr && !yr.value) yr.value = new Date().getFullYear();
+  const status = document.getElementById('pubHolFetchStatus');
+  if (status) status.textContent = '';
   document.getElementById('pubHolModal').classList.add('open');
 }
 function closePubHol() { document.getElementById('pubHolModal').classList.remove('open'); }
@@ -1478,6 +1730,77 @@ async function deletePublicHoliday(id) {
   finally { showSaving(false); }
 }
 
+/**
+ * Fetch a country's public holidays for a year from date.nager.at
+ * and bulk-insert ones that aren't already in the collection.
+ * API docs: https://date.nager.at/Api
+ */
+async function fetchCountryHolidays() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const country = document.getElementById('pubHolCountry').value;
+  const yearRaw = document.getElementById('pubHolYear').value.trim();
+  const year    = Number(yearRaw);
+  const status  = document.getElementById('pubHolFetchStatus');
+  const btn     = document.getElementById('pubHolFetchBtn');
+
+  if (!country) { status.textContent = '⚠ Select a country first.'; status.style.color = 'var(--red)'; return; }
+  if (!Number.isInteger(year) || year < 2020 || year > 2099) {
+    status.textContent = '⚠ Enter a valid year (2020–2099).'; status.style.color = 'var(--red)'; return;
+  }
+
+  btn.disabled = true;
+  status.style.color = 'var(--text-muted)';
+  status.textContent = `Fetching ${country} ${year}…`;
+
+  try {
+    const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${country}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`API returned ${resp.status}`);
+    const entries = await resp.json();
+    if (!Array.isArray(entries) || !entries.length) {
+      status.style.color = 'var(--accent2)';
+      status.textContent = `No holidays returned for ${country} ${year}.`;
+      return;
+    }
+
+    // Skip duplicates: same date + same name already in our collection
+    const existingKeys = new Set(publicHolidays.map(ph => `${ph.date}|${(ph.name||'').toLowerCase()}`));
+    const toAdd = entries
+      .map(e => ({ date: e.date, name: e.localName || e.name || 'Holiday' }))
+      .filter(e => e.date && !existingKeys.has(`${e.date}|${e.name.toLowerCase()}`));
+
+    if (!toAdd.length) {
+      status.style.color = 'var(--accent2)';
+      status.textContent = `All ${entries.length} ${country} ${year} holidays already imported.`;
+      return;
+    }
+
+    showSaving(true);
+    // Firestore batches are limited to 500 ops — comfortably above any country's annual count
+    const batch = db.batch();
+    const stamp = firebase.firestore.FieldValue.serverTimestamp();
+    toAdd.forEach(e => {
+      batch.set(pubHolCol.doc(), { date: e.date, name: e.name, country, createdAt: stamp });
+    });
+    await batch.commit();
+
+    await writeLog('vac_reset',
+      `<strong>Public holidays</strong> — imported ${toAdd.length} ${country} ${year} holiday${toAdd.length === 1 ? '' : 's'}`,
+      { country, year, added: toAdd.length });
+
+    status.style.color = 'var(--accent)';
+    status.textContent = `✓ Imported ${toAdd.length} holiday${toAdd.length === 1 ? '' : 's'} (${entries.length - toAdd.length} already existed).`;
+    showToast(`Imported ${toAdd.length} ${country} ${year} holidays!`);
+    renderPubHolList();
+  } catch(e) {
+    status.style.color = 'var(--red)';
+    status.textContent = `⚠ Fetch failed: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    showSaving(false);
+  }
+}
+
 /* ════════════════════════════════════════════
    VACATION RESET (admin)
 ════════════════════════════════════════════ */
@@ -1485,13 +1808,38 @@ async function resetVacation(personId, personName, year) {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   const existing    = vacResets.find(r => r.personId === personId && r.year === year);
   const currentBonus = existing ? (existing.resetDays || 0) : 0;
-  const newBonus    = currentBonus + VACATION_DAYS_PER_YEAR;
-  if (!confirm(`Reset vacation for ${personName}?\n\nAdds ${VACATION_DAYS_PER_YEAR} days to ${year} allotment.\n${VACATION_DAYS_PER_YEAR+currentBonus} → ${VACATION_DAYS_PER_YEAR+newBonus} days`)) return;
+  const currentAllot = VACATION_DAYS_PER_YEAR + currentBonus;
+
+  const msg =
+    `Adjust ${personName}'s vacation bonus for ${year}.\n\n` +
+    `Base allotment: ${VACATION_DAYS_PER_YEAR} days\n` +
+    `Current bonus:  ${currentBonus >= 0 ? '+' : ''}${currentBonus} days\n` +
+    `Current total:  ${currentAllot} days\n\n` +
+    `Enter the NEW bonus (positive = add, negative = reduce, 0 = remove bonus).\n` +
+    `Example: "3" for carry-over, "-6" for half-year proration, "12" for a fresh year reset.`;
+
+  const raw = prompt(msg, String(currentBonus));
+  if (raw === null) return;
+  const newBonus = Number(raw.trim());
+  if (!Number.isFinite(newBonus)) { showToast('Invalid number.', true); return; }
+  if (newBonus === currentBonus)  { showToast('No change.'); return; }
+
+  const newAllot = VACATION_DAYS_PER_YEAR + newBonus;
+  if (newAllot < 0) { showToast('Total allotment cannot be negative.', true); return; }
+  if (!confirm(`Set ${personName}'s ${year} allotment to ${newAllot} days (bonus ${newBonus >= 0 ? '+' : ''}${newBonus})?`)) return;
+
   showSaving(true);
   try {
-    await vacResetCol.doc(`${personId}_${year}`).set({ personId, year, resetDays: newBonus, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    await writeLog('vac_reset', `<strong>${personName}</strong> — vacation balance reset (+${VACATION_DAYS_PER_YEAR} days for ${year})`, { personId, year, newBonus });
-    showToast(`+${VACATION_DAYS_PER_YEAR} days added for ${personName} in ${year}`);
+    await vacResetCol.doc(`${personId}_${year}`).set({
+      personId, year, resetDays: newBonus,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const delta = newBonus - currentBonus;
+    const sign  = delta >= 0 ? '+' : '';
+    await writeLog('vac_reset',
+      `<strong>${personName}</strong> — ${year} bonus set to ${newBonus >= 0 ? '+' : ''}${newBonus} days (${sign}${delta} change · total ${newAllot}d)`,
+      { personId, year, newBonus, previousBonus: currentBonus });
+    showToast(`${personName}: ${year} allotment now ${newAllot} days`);
   } catch(e) { showToast('Reset failed: '+e.message, true); }
   finally { showSaving(false); }
 }
@@ -1534,7 +1882,7 @@ function searchByDate() {
   const val = document.getElementById('searchDate').value;
   const res = document.getElementById('searchResults');
   if (!val) { res.innerHTML = ''; return; }
-  const hs     = holidaysOnDate(val);  // simple filter
+  const hs     = holidaysOnDate(val).filter(h => passDeptFilter(h.personId));
   const pubHol = publicHolOnDate(val);
   let html = '';
   if (pubHol) html += `<div class="search-result-item" style="border-color:var(--accent3-a25);">
@@ -1575,7 +1923,7 @@ function scheduleModalWarnings() {
   _warnTimer = setTimeout(updateModalWarnings, 16);
 }
 function updateModalWarnings() {
-  updateWeekendWarn(); updateConflictWarn(); updateVacWarning();
+  updateWeekendWarn(); updateConflictWarn(); updateVacWarning(); updateCapacityWarn();
 }
 
 function attachModalListeners() {
@@ -1589,44 +1937,83 @@ function attachModalListeners() {
 }
 
 let _modalListenersAttached = false;
-function openAddModal(keepDates) {
+let editingHolidayId = null;
+function openAddModal(keepDates, editH) {
   if (!currentUser) { showToast('Please sign in first.', true); return; }
   if (!_modalListenersAttached) { _modalListenersAttached = true; attachModalListeners(); }
+
+  editingHolidayId = editH ? editH.id : null;
+  const titleEl  = document.getElementById('addModalTitle');
+  const subEl    = document.getElementById('addModalSub');
+  const saveBtn  = document.getElementById('saveHolBtn');
+  const delBtn   = document.getElementById('editDeleteBtn');
+  titleEl.textContent = editH ? 'Edit Holiday' : 'Add Holiday';
+  saveBtn.textContent = editH ? 'Update Holiday' : 'Save Holiday';
+  delBtn.style.display = editH ? '' : 'none';
 
   const sel = document.getElementById('formPerson');
   if (isAdmin()) {
     sel.innerHTML = '<option value="">— Select person —</option>';
     people.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.dept})</option>`; });
     sel.disabled = false;
-    document.getElementById('addModalSub').textContent = 'Record who\'s out and when · weekdays (Mon–Fri) only';
+    if (!editH) subEl.textContent = 'Record who\'s out and when · weekdays (Mon–Fri) only';
   } else {
     const myId = myPersonId();
     const me   = getPerson(myId);
     sel.innerHTML = me ? `<option value="${myId}">${me.name} (${me.dept})</option>` : '<option value="">— Not linked to a person —</option>';
     sel.disabled  = true;
-    document.getElementById('addModalSub').textContent = `Adding holiday for you · ${me ? me.name : ''} · weekdays only`;
+    if (!editH) subEl.textContent = `Adding holiday for you · ${me ? me.name : ''} · weekdays only`;
   }
 
-  if (!keepDates) {
-    document.getElementById('formStart').value = '';
-    document.getElementById('formEnd').value   = '';
+  if (editH) {
+    sel.value = editH.personId;
+    document.getElementById('formStart').value = editH.start;
+    document.getElementById('formEnd').value   = editH.end;
+    document.getElementById('formType').value  = editH.type || 'vacation';
+    document.getElementById('formNote').value  = editH.note || '';
+    document.getElementById('halfDayCheck').checked = !!editH.halfDay;
+    document.getElementById('halfDaySelect').classList.toggle('visible', !!editH.halfDay);
+    if (editH.halfDay && editH.halfDayPart) document.getElementById('halfDayPart').value = editH.halfDayPart;
+    subEl.textContent = `Editing entry for ${getPersonName(editH.personId)}`;
+  } else {
+    if (!keepDates) {
+      document.getElementById('formStart').value = '';
+      document.getElementById('formEnd').value   = '';
+    }
+    document.getElementById('formNote').value   = '';
+    document.getElementById('formType').value   = 'vacation';
+    document.getElementById('halfDayCheck').checked = false;
+    document.getElementById('halfDaySelect').classList.remove('visible');
   }
-  document.getElementById('formNote').value   = '';
-  document.getElementById('formType').value   = 'vacation';
-  document.getElementById('halfDayCheck').checked = false;
-  document.getElementById('halfDaySelect').classList.remove('visible');
+
   document.getElementById('vacWarning').style.display    = 'none';
   document.getElementById('conflictWarn').style.display  = 'none';
   document.getElementById('weekendWarn').style.display   = 'none';
+  document.getElementById('capacityWarn').style.display  = 'none';
   document.getElementById('addModal').classList.add('open');
-  setTimeout(() => { if (!sel.disabled) sel.focus(); }, 100);
-  if (keepDates) updateModalWarnings();
+  setTimeout(() => { if (!sel.disabled && !editH) sel.focus(); }, 100);
+  if (keepDates || editH) updateModalWarnings();
 }
 
 function closeModal() {
   document.getElementById('addModal').classList.remove('open');
+  editingHolidayId = null;
   dragStart = null; dragEnd = null;
   document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('drag-range','drag-start','drag-end'));
+}
+
+function editHoliday(id) {
+  const h = holidays.find(x => x.id === id);
+  if (!h) { showToast('Entry not found.', true); return; }
+  if (!canEdit(h.personId)) { showToast('You can only edit your own entries.', true); return; }
+  openAddModal(false, h);
+}
+
+async function deleteFromEdit() {
+  if (!editingHolidayId) return;
+  const id = editingHolidayId;
+  closeModal();
+  await deleteHoliday(id);
 }
 
 /* ════════════════════════════════════════════
@@ -1675,7 +2062,7 @@ function updateConflictWarn() {
   const end      = document.getElementById('formEnd').value;
   const warn     = document.getElementById('conflictWarn');
   if (!personId || !start || !end || end < start) { warn.style.display = 'none'; return; }
-  const conflicts = getConflicts(personId, start, end, null);
+  const conflicts = getConflicts(personId, start, end, editingHolidayId);
   warn.style.display = conflicts.length ? 'block' : 'none';
   if (conflicts.length) {
     const names = conflicts.map(h => `${LEAVE_TYPE_ICONS[h.type]||'📌'} ${fmtDate(h.start)}→${fmtDate(h.end)}`).join(', ');
@@ -1735,6 +2122,192 @@ function updateVacWarning() {
   warn.textContent   = `${p.name}: ` + lines.join(' · ');
 }
 
+/**
+ * Capacity warning — flags days in the proposed range where the number
+ * of DISTINCT people already off (excluding the person being booked and
+ * the entry being edited) meets or exceeds the admin-configured threshold.
+ */
+function updateCapacityWarn() {
+  const warn     = document.getElementById('capacityWarn');
+  const threshold = Number(teamSettings.capacityThreshold) || 0;
+  if (!warn) return;
+  if (threshold <= 0) { warn.style.display = 'none'; return; }
+
+  const personId = document.getElementById('formPerson').value;
+  const start    = document.getElementById('formStart').value;
+  const end      = document.getElementById('formEnd').value;
+  const halfDay  = document.getElementById('halfDayCheck').checked;
+  if (!personId || !start || !end || end < start) { warn.style.display = 'none'; return; }
+
+  const phSet  = pubHolSet();
+  const hotDays = []; // array of { iso, names[] }
+  const rangeEnd = halfDay ? start : end;
+  const cur = parseDate(start);
+  const last = parseDate(rangeEnd);
+  while (cur <= last) {
+    const iso = dateStr(cur);
+    cur.setDate(cur.getDate() + 1);
+    if (!isWeekday(parseDate(iso)) || phSet.has(iso)) continue;
+    // People already off that day, excluding self & the entry we're editing
+    const offIds = new Set();
+    for (const h of holidays) {
+      if (h.id === editingHolidayId) continue;
+      if (h.personId === personId)   continue;
+      if (h.start <= iso && h.end >= iso) offIds.add(h.personId);
+    }
+    // Adding this person would push the count up by 1
+    const totalIfBooked = offIds.size + 1;
+    if (totalIfBooked >= threshold) {
+      const names = [...offIds].map(getPersonName).join(', ');
+      hotDays.push({ iso, totalIfBooked, names });
+    }
+  }
+
+  if (!hotDays.length) { warn.style.display = 'none'; return; }
+
+  const preview = hotDays.slice(0, 3)
+    .map(d => `${fmtDate(d.iso)} (${d.totalIfBooked} people${d.names ? ': ' + d.names : ''})`)
+    .join(' · ');
+  const moreTag = hotDays.length > 3 ? ` · +${hotDays.length - 3} more day${hotDays.length - 3 === 1 ? '' : 's'}` : '';
+  warn.style.display = 'block';
+  warn.className     = 'warn-caution';
+  warn.textContent   = `⚠ Team capacity: ${hotDays.length} day${hotDays.length === 1 ? '' : 's'} would hit ≥${threshold} people off — ${preview}${moreTag}`;
+}
+
+async function saveCapacityThreshold() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const raw = document.getElementById('capacityThreshold').value.trim();
+  const val = raw === '' ? 0 : Number(raw);
+  if (!Number.isFinite(val) || val < 0 || val > 20) { showToast('Enter a number 0–20.', true); return; }
+  showSaving(true);
+  try {
+    await settingsCol.doc('team').set({
+      capacityThreshold: val,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    showToast(val === 0 ? 'Capacity warnings disabled.' : `Threshold set to ${val} people.`);
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+/* ════════════════════════════════════════════
+   DEPARTMENT MANAGER (admin)
+════════════════════════════════════════════ */
+function renderDeptManager() {
+  const list = document.getElementById('deptManagerList');
+  if (!list) return;
+  const depts = effectiveDepartments();
+  if (!depts.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:8px 0;">No departments yet — add one below or they appear automatically when you set a dept on a person.</div>';
+    return;
+  }
+  list.innerHTML = depts.map(d => {
+    const count = people.filter(p => p.dept === d).length;
+    return `<div class="dept-chip">
+      <span>${d}</span>
+      <span class="dept-count" title="${count} ${count === 1 ? 'person' : 'people'}">${count}</span>
+      <button class="dept-chip-btn" onclick="renameDepartment(${JSON.stringify(d).replace(/"/g,'&quot;')})" title="Rename">✎</button>
+      <button class="dept-chip-btn del" onclick="removeDepartment(${JSON.stringify(d).replace(/"/g,'&quot;')})" title="Remove">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function addDepartment() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const input = document.getElementById('newDeptName');
+  const name = input.value.trim();
+  if (!name) { showToast('Enter a department name.', true); return; }
+  const existing = effectiveDepartments();
+  if (existing.some(d => d.toLowerCase() === name.toLowerCase())) {
+    showToast('Department already exists.', true); return;
+  }
+  showSaving(true);
+  try {
+    const next = [...(teamSettings.departments || []), name];
+    await settingsCol.doc('team').set({
+      departments: next,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    input.value = '';
+    showToast(`Added "${name}".`);
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+async function renameDepartment(oldName) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const raw = prompt(`Rename department "${oldName}" to:`, oldName);
+  if (raw === null) return;
+  const newName = raw.trim();
+  if (!newName || newName === oldName) return;
+  const existing = effectiveDepartments().filter(d => d !== oldName);
+  if (existing.some(d => d.toLowerCase() === newName.toLowerCase())) {
+    showToast('A department with that name already exists.', true); return;
+  }
+  const affected = people.filter(p => p.dept === oldName);
+  if (affected.length &&
+      !confirm(`Rename "${oldName}" to "${newName}"?\nThis will update ${affected.length} ${affected.length === 1 ? 'person' : 'people'}.`)) return;
+
+  showSaving(true);
+  try {
+    const batch = db.batch();
+    // Update settings list
+    const managed = teamSettings.departments || [];
+    const idx = managed.indexOf(oldName);
+    const nextManaged = idx >= 0
+      ? managed.map(d => d === oldName ? newName : d)
+      : [...managed, newName];
+    batch.set(settingsCol.doc('team'),
+      { departments: nextManaged, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true });
+    // Cascade to people
+    affected.forEach(p => batch.update(peopleCol.doc(p.id), { dept: newName }));
+    await batch.commit();
+
+    // If the currently-filtered dept was renamed, follow the rename
+    if (deptFilter === oldName) {
+      deptFilter = newName;
+      localStorage.setItem('ht_dept_filter', newName);
+    }
+    await writeLog('person_add',
+      `Department renamed: <strong>${oldName}</strong> → <strong>${newName}</strong> (${affected.length} updated)`,
+      { oldName, newName, affected: affected.length });
+    showToast(`Renamed to "${newName}".`);
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
+async function removeDepartment(name) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const affected = people.filter(p => p.dept === name);
+  const msg = affected.length
+    ? `Remove department "${name}"?\n${affected.length} ${affected.length === 1 ? 'person will be' : 'people will be'} moved to "Team".`
+    : `Remove department "${name}" from the managed list?`;
+  if (!confirm(msg)) return;
+
+  showSaving(true);
+  try {
+    const managed = teamSettings.departments || [];
+    const nextManaged = managed.filter(d => d !== name);
+    const batch = db.batch();
+    batch.set(settingsCol.doc('team'),
+      { departments: nextManaged, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true });
+    affected.forEach(p => batch.update(peopleCol.doc(p.id), { dept: 'Team' }));
+    await batch.commit();
+
+    if (deptFilter === name) {
+      deptFilter = '';
+      localStorage.removeItem('ht_dept_filter');
+    }
+    await writeLog('person_remove',
+      `Department <strong>${name}</strong> removed${affected.length ? ` (${affected.length} moved to Team)` : ''}`,
+      { name, affected: affected.length });
+    showToast('Department removed.');
+  } catch(e) { showToast('Failed: '+e.message, true); }
+  finally { showSaving(false); }
+}
+
 /* ════════════════════════════════════════════
    SAVE / DELETE HOLIDAY
 ════════════════════════════════════════════ */
@@ -1757,18 +2330,31 @@ async function saveHoliday() {
 
   showSaving(true);
   try {
-    const entry = { personId, start, end, type, note, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedByUid: currentUser.uid };
-    if (halfDay) { entry.halfDay = true; entry.halfDayPart = halfDayPart; }
-    await holidaysCol.add(entry);
     const savedName = getPersonName(personId);
     const icon      = LEAVE_TYPE_ICONS[type] || '📌';
     const halfTag   = halfDay ? ` (½ ${halfDayPart})` : '';
     const wdays     = halfDay ? 0.5 : countWeekdays(start, end);
-    await writeLog('holiday_add',
-      `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} from ${fmtDate(start)} to ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`,
-      { personId, start, end, type }
-    );
-    closeModal(); showToast('Holiday saved!');
+
+    if (editingHolidayId) {
+      const update = { personId, start, end, type, note, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedByUid: currentUser.uid };
+      if (halfDay) { update.halfDay = true; update.halfDayPart = halfDayPart; }
+      else         { update.halfDay = firebase.firestore.FieldValue.delete(); update.halfDayPart = firebase.firestore.FieldValue.delete(); }
+      await holidaysCol.doc(editingHolidayId).update(update);
+      await writeLog('holiday_add',
+        `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} updated: ${fmtDate(start)} → ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`,
+        { personId, start, end, type, edited: true }
+      );
+      closeModal(); showToast('Holiday updated!');
+    } else {
+      const entry = { personId, start, end, type, note, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedByUid: currentUser.uid };
+      if (halfDay) { entry.halfDay = true; entry.halfDayPart = halfDayPart; }
+      await holidaysCol.add(entry);
+      await writeLog('holiday_add',
+        `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} from ${fmtDate(start)} to ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`,
+        { personId, start, end, type }
+      );
+      closeModal(); showToast('Holiday saved!');
+    }
   } catch(e) { showToast('Save failed: '+e.message, true); }
   finally { showSaving(false); }
 }
@@ -1797,6 +2383,10 @@ async function deleteHoliday(id) {
 function openManage() {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   renderPeopleList();
+  renderDeptManager();
+  updateDeptDatalists();
+  const thrInput = document.getElementById('capacityThreshold');
+  if (thrInput) thrInput.value = teamSettings.capacityThreshold || '';
   document.getElementById('manageModal').classList.add('open');
 }
 function closeManage() { document.getElementById('manageModal').classList.remove('open'); }
@@ -1806,6 +2396,14 @@ async function addPerson() {
   const name = document.getElementById('newPersonName').value.trim();
   const dept = document.getElementById('newPersonDept').value.trim() || 'Team';
   if (!name) { showToast('Enter a name.', true); return; }
+
+  // Duplicate detection — case-insensitive exact match on name
+  const normalized = name.toLowerCase();
+  const dupe = people.find(p => p.name.toLowerCase() === normalized);
+  if (dupe) {
+    if (!confirm(`⚠ "${dupe.name}" already exists in ${dupe.dept}.\n\nAdd a second person with the same name anyway?`)) return;
+  }
+
   showSaving(true);
   try {
     await peopleCol.add({ name, dept, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -1836,6 +2434,83 @@ async function removePerson(id) {
     renderPeopleList(); showToast('Person removed.');
   } catch(e) { showToast('Failed: '+e.message, true); }
   finally { showSaving(false); }
+}
+
+let _editingPersonId = null;
+
+function openEditPerson(id) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const person = people.find(p => p.id === id);
+  if (!person) { showToast('Person not found.', true); return; }
+  _editingPersonId = id;
+  document.getElementById('editPersonName').value = person.name || '';
+  document.getElementById('editPersonDept').value = person.dept || '';
+  document.getElementById('editPersonSub').textContent = `Editing ${person.name}`;
+  const err = document.getElementById('editPersonError');
+  err.textContent = ''; err.classList.remove('show');
+  updateDeptDatalists();
+  document.getElementById('editPersonModal').classList.add('open');
+  setTimeout(() => document.getElementById('editPersonName').focus(), 100);
+}
+
+function closeEditPerson() {
+  document.getElementById('editPersonModal').classList.remove('open');
+  _editingPersonId = null;
+}
+
+async function saveEditPerson() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  if (!_editingPersonId) return;
+  const person = people.find(p => p.id === _editingPersonId);
+  if (!person) { showToast('Person not found.', true); closeEditPerson(); return; }
+
+  const newName = document.getElementById('editPersonName').value.trim();
+  const newDept = document.getElementById('editPersonDept').value.trim() || 'Team';
+  const err = document.getElementById('editPersonError');
+  err.textContent = ''; err.classList.remove('show');
+
+  if (!newName) { err.textContent = 'Name cannot be empty.'; err.classList.add('show'); return; }
+
+  // Duplicate name check (case-insensitive, excluding self)
+  const normalized = newName.toLowerCase();
+  if (newName.toLowerCase() !== (person.name || '').toLowerCase()) {
+    const dupe = people.find(p => p.id !== _editingPersonId && (p.name || '').toLowerCase() === normalized);
+    if (dupe && !confirm(`⚠ "${dupe.name}" already exists in ${dupe.dept}.\n\nUse the same name anyway?`)) return;
+  }
+
+  const nameChanged = newName !== person.name;
+  const deptChanged = newDept !== person.dept;
+  if (!nameChanged && !deptChanged) { showToast('No change.'); closeEditPerson(); return; }
+
+  showSaving(true);
+  try {
+    const update = {};
+    if (nameChanged) update.name = newName;
+    if (deptChanged) update.dept = newDept;
+    await peopleCol.doc(_editingPersonId).update(update);
+
+    // Also update the linked user profile displayName so login shows the new name
+    if (nameChanged) {
+      const prof = userProfiles.find(u => u.personId === _editingPersonId);
+      if (prof) {
+        try { await userProfCol.doc(prof.uid).update({ displayName: newName }); } catch (e) {}
+      }
+    }
+
+    const parts = [];
+    if (nameChanged) parts.push(`name: ${person.name} → ${newName}`);
+    if (deptChanged) parts.push(`dept: ${person.dept} → ${newDept}`);
+    await writeLog('person_add',
+      `<strong>${newName}</strong> updated (${parts.join(' · ')})`,
+      { personId: _editingPersonId, oldName: person.name, newName, oldDept: person.dept, newDept });
+
+    showToast('Person updated.');
+    closeEditPerson();
+    renderPeopleList();
+  } catch (e) {
+    err.textContent = 'Failed: ' + e.message;
+    err.classList.add('show');
+  } finally { showSaving(false); }
 }
 
 /* ════════════════════════════════════════════
@@ -1881,45 +2556,79 @@ function exportCSV() {
 }
 // --- Auto-Logout on Inactivity ---
   (function() {
-    let inactivityTimeout;
-    
-    // Set to 15 minutes. 
-    // Tip: Change "15" to "0.1" (6 seconds) if you want to test if it works quickly!
-    const INACTIVITY_LIMIT = 10 * 60 * 1000; 
+    const INACTIVITY_LIMIT   = 15 * 60 * 1000;  // 15 minutes
+    const WARNING_LEAD_TIME  = 60 * 1000;       // warn 60 seconds before logout
+
+    let idleTimer     = null;
+    let warningTimer  = null;
+    let countdownInt  = null;
+    let warningShown  = false;
+
+    function isAppActive() {
+      const mainApp = document.getElementById('mainApp');
+      return mainApp && mainApp.style.display !== 'none';
+    }
+
+    function hideWarning() {
+      warningShown = false;
+      const modal = document.getElementById('inactivityModal');
+      if (modal) modal.classList.remove('open');
+      clearInterval(countdownInt); countdownInt = null;
+    }
+
+    function showWarning() {
+      if (!isAppActive()) return;
+      warningShown = true;
+      const modal = document.getElementById('inactivityModal');
+      const secEl = document.getElementById('inactivitySeconds');
+      let remaining = Math.floor(WARNING_LEAD_TIME / 1000);
+      if (secEl) secEl.textContent = remaining;
+      if (modal) modal.classList.add('open');
+
+      clearInterval(countdownInt);
+      countdownInt = setInterval(() => {
+        remaining--;
+        if (secEl) secEl.textContent = Math.max(0, remaining);
+        if (remaining <= 0) {
+          clearInterval(countdownInt); countdownInt = null;
+          hideWarning();
+          if (isAppActive()) {
+            showToast('Signed out due to inactivity.', true);
+            doSignOut();
+          }
+        }
+      }, 1000);
+    }
 
     function resetInactivityTimer() {
-      // Clear the previous timer
-      clearTimeout(inactivityTimeout);
-      
-      // Start a new timer
-      inactivityTimeout = setTimeout(() => {
-        
-        // Check if the user is actively logged in by checking if mainApp is visible
-        const mainApp = document.getElementById('mainApp');
-        
-        if (mainApp && mainApp.style.display !== 'none') {
-             console.log("Inactivity limit reached. Executing auto-logout.");
-             doSignOut(); // Your existing logout function
-             alert("You have been automatically logged out due to 15 minutes of inactivity.");
+      // If the warning modal is showing, activity alone doesn't dismiss it —
+      // user must click "Stay signed in". This prevents background events
+      // (e.g. scroll from touch hover) from silently resetting the countdown.
+      if (warningShown) return;
+
+      clearTimeout(idleTimer);
+      clearTimeout(warningTimer);
+
+      warningTimer = setTimeout(showWarning, INACTIVITY_LIMIT - WARNING_LEAD_TIME);
+      idleTimer    = setTimeout(() => {
+        if (isAppActive()) {
+          hideWarning();
+          showToast('Signed out due to inactivity.', true);
+          doSignOut();
         }
       }, INACTIVITY_LIMIT);
     }
 
-    // List of events that prove the user is still at their computer/phone
-    const activityEvents = [
-      'mousemove', 
-      'mousedown', 
-      'keydown', 
-      'touchstart', 
-      'scroll'
-    ];
+    // Exposed so the "Stay signed in" button can reset everything cleanly.
+    window.dismissInactivityWarning = function() {
+      hideWarning();
+      resetInactivityTimer();
+    };
 
-    // Attach the reset function to the window
-    activityEvents.forEach(event => {
+    ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(event => {
       window.addEventListener(event, resetInactivityTimer, { passive: true });
     });
 
-    // Start the initial timer
     resetInactivityTimer();
   })();
  

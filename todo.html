@@ -3,8 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#02020a">
 <title>The Ledger · WMF Grimoire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/grimoire-core.css">
+<script src="assets/grimoire-core.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -57,6 +62,7 @@ html.light .view-btn{background:rgba(255,252,245,.75);border-color:rgba(160,130,
 html.light .view-btn:hover{border-color:rgba(180,80,120,.4);color:rgba(160,60,100,.85)}
 html.light .view-btn.active{background:rgba(180,80,120,.12);border-color:rgba(180,80,120,.45);color:rgba(140,50,90,.95)}
 html.light .view-btn.scribe-active{background:rgba(10,140,80,.1);border-color:rgba(10,140,80,.38);color:rgba(10,120,70,.95)}
+html.light .view-btn.chronicle-active{background:rgba(91,156,246,.1);border-color:rgba(40,100,200,.42);color:rgba(30,80,180,.95)}
 html.light .task-card{background:rgba(255,252,245,.86);border-color:rgba(160,130,60,.16)}
 html.light .task-card:hover{border-color:rgba(180,80,120,.28);background:rgba(255,250,240,.97)}
 html.light .task-card.is-done{border-color:rgba(10,140,80,.14)}
@@ -182,7 +188,7 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .status-dot.online{background:#34d399;box-shadow:0 0 8px #34d399}
 .status-dot.error{background:#f87171;box-shadow:0 0 8px #f87171}
 .status-label{font-family:var(--mono);font-size:10px;color:var(--status-label);letter-spacing:.08em}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;margin-bottom:1.8rem;animation:rise .9s .3s ease both}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;width:100%;margin-bottom:1.8rem;animation:rise .9s .3s ease both}
 .stat{background:var(--surface);border:1px solid var(--border-pk);border-radius:16px;padding:.9rem 1rem;text-align:center;backdrop-filter:blur(20px);transition:border-color .3s}
 .stat:hover{border-color:rgba(244,114,182,.35)}
 .stat-num{font-family:var(--cinzel);font-size:1.7rem;font-weight:600;color:rgba(255,255,255,.95);line-height:1}
@@ -190,6 +196,7 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .stat-num.s-pending{color:rgba(251,191,36,.95)}
 .stat-num.s-done{color:rgba(52,211,153,.95)}
 .stat-num.s-fwds{color:rgba(244,114,182,.95)}
+.stat-num.s-overdue{color:rgba(248,113,113,.98)}
 .add-ritual{width:100%;background:var(--surface);border:1px solid var(--border-pk);border-radius:22px;padding:1.8rem 1.8rem 1.5rem;margin-bottom:1.6rem;backdrop-filter:blur(24px);animation:rise .9s .34s ease both;position:relative;overflow:hidden}
 .add-ritual::before{content:'';position:absolute;width:16px;height:16px;top:14px;left:14px;border-top:1px solid rgba(244,114,182,.45);border-left:1px solid rgba(244,114,182,.45)}
 .add-ritual::after{content:'';position:absolute;width:16px;height:16px;bottom:14px;right:14px;border-bottom:1px solid rgba(244,114,182,.45);border-right:1px solid rgba(244,114,182,.45)}
@@ -212,6 +219,7 @@ html.light .theme-toggle:hover{border-color:rgba(180,80,120,.55);box-shadow:0 0 
 .view-btn:hover{border-color:rgba(244,114,182,.4);color:rgba(244,114,182,.88)}
 .view-btn.active{background:rgba(244,114,182,.12);border-color:rgba(244,114,182,.45);color:rgba(244,114,182,.98);box-shadow:0 0 14px rgba(244,114,182,.1)}
 .view-btn.scribe-active{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.38);color:rgba(52,211,153,.98);box-shadow:0 0 14px rgba(52,211,153,.1)}
+.view-btn.chronicle-active{background:rgba(91,156,246,.1);border-color:rgba(91,156,246,.38);color:rgba(147,197,253,.98);box-shadow:0 0 14px rgba(91,156,246,.1)}
 .view-sep{flex:1}
 
 /* ── SEARCH BAR ── */
@@ -403,11 +411,106 @@ footer a:hover{color:rgba(212,175,100,.82)}
   .fwd-group-pills{display:none}
   .scribe-cards{grid-template-columns:1fr 1fr}
 }
+@media(min-width:581px) and (max-width:900px){
+  .stats-row{grid-template-columns:repeat(5,1fr)}
+}
+
+/* ── DUE DATE BADGES ── */
+.badge-due{color:rgba(91,156,246,.95);border-color:rgba(91,156,246,.3);background:rgba(91,156,246,.09);display:inline-flex;align-items:center;gap:4px}
+.badge-due.soon{color:rgba(251,191,36,.98);border-color:rgba(251,191,36,.38);background:rgba(251,191,36,.1)}
+.badge-due.overdue{color:rgba(248,113,113,.98);border-color:rgba(248,113,113,.45);background:rgba(248,113,113,.12);animation:pulse-overdue 2.2s ease-in-out infinite}
+@keyframes pulse-overdue{0%,100%{box-shadow:0 0 0 rgba(248,113,113,0)}50%{box-shadow:0 0 12px rgba(248,113,113,.25)}}
+html.light .badge-due{color:rgba(40,90,180,.95);border-color:rgba(91,156,246,.35);background:rgba(91,156,246,.09)}
+html.light .badge-due.soon{color:rgba(130,85,0,.92);border-color:rgba(180,120,0,.35);background:rgba(180,120,0,.09)}
+html.light .badge-due.overdue{color:rgba(170,30,30,.95);border-color:rgba(200,50,50,.42);background:rgba(200,50,50,.1)}
+.task-card.is-overdue{border-color:rgba(248,113,113,.28)}
+.task-card.is-overdue:hover{border-color:rgba(248,113,113,.5)}
+html.light .task-card.is-overdue{border-color:rgba(200,50,50,.25)}
+html.light .task-card.is-overdue:hover{border-color:rgba(200,50,50,.45)}
+
+/* ── EDIT BUTTON + UNSEAL BUTTON ── */
+.btn-edit,.btn-unseal{background:none;border:none;cursor:pointer;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(212,175,100,.42);transition:all .2s}
+.btn-edit:hover{background:rgba(91,156,246,.14);color:rgba(147,197,253,.95)}
+.btn-unseal:hover{background:rgba(251,191,36,.14);color:rgba(251,191,36,.95)}
+html.light .btn-edit:hover{background:rgba(91,156,246,.14);color:rgba(40,90,180,.92)}
+html.light .btn-unseal:hover{background:rgba(180,120,0,.12);color:rgba(140,90,0,.95)}
+
+/* ── EDIT MODAL (reuses .modal-overlay + .modal-box but with a blue accent) ── */
+.modal-overlay.edit-modal .modal-box{border-color:rgba(91,156,246,.35);box-shadow:0 0 60px rgba(91,156,246,.14)}
+.modal-overlay.edit-modal .modal-corner.tl,.modal-overlay.edit-modal .modal-corner.br{border-color:rgba(91,156,246,.5)}
+.modal-overlay.edit-modal .modal-shine{background:linear-gradient(90deg,transparent,rgba(91,156,246,.6),transparent)}
+.modal-overlay.edit-modal .modal-title{color:rgba(91,156,246,.92)}
+.modal-overlay.edit-modal .modal-input{border-color:rgba(91,156,246,.28)}
+.modal-overlay.edit-modal .modal-input:focus{border-color:rgba(91,156,246,.55);box-shadow:0 0 0 3px rgba(91,156,246,.1)}
+.modal-overlay.edit-modal .modal-btn-confirm{color:rgba(147,197,253,.98);border-color:rgba(91,156,246,.4);background:rgba(91,156,246,.1)}
+.modal-overlay.edit-modal .modal-btn-confirm:hover{background:rgba(91,156,246,.2);border-color:rgba(91,156,246,.65);box-shadow:0 0 18px rgba(91,156,246,.16)}
+.edit-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.85rem}
+.edit-field{display:flex;flex-direction:column;gap:5px}
+.edit-field.full{grid-column:1/-1}
+.edit-field select,.edit-field textarea{width:100%;background:rgba(2,2,10,.7);border:1px solid rgba(91,156,246,.28);border-radius:10px;color:rgba(237,232,255,.95);font-family:var(--mono);font-size:12px;padding:.55rem .85rem;outline:none;transition:border-color .25s,box-shadow .25s}
+.edit-field textarea{resize:vertical;min-height:60px;line-height:1.6}
+.edit-field select:focus,.edit-field textarea:focus{border-color:rgba(91,156,246,.55);box-shadow:0 0 0 3px rgba(91,156,246,.1)}
+.edit-field select option{background:#0e0b1a}
+html.light .edit-field select,html.light .edit-field textarea{background:rgba(255,252,245,.85);border-color:rgba(91,156,246,.3);color:rgba(20,12,36,.9)}
+html.light .edit-field select:focus,html.light .edit-field textarea:focus{border-color:rgba(91,156,246,.55);box-shadow:0 0 0 3px rgba(91,156,246,.09)}
+html.light .edit-field select option{background:#faf5eb;color:rgba(20,12,36,.9)}
+
+/* ── NEW FORWARDER INLINE ── */
+.new-fwd-wrap{display:none;grid-template-columns:1fr auto auto;gap:6px;margin-top:6px;animation:rise .25s ease both}
+.new-fwd-wrap.open{display:grid}
+.btn-fwd-mini{font-family:var(--cinzel);font-size:9px;letter-spacing:.2em;text-transform:uppercase;padding:.45rem .7rem;border-radius:8px;border:1px solid;cursor:pointer;transition:all .2s;background:transparent;white-space:nowrap}
+.btn-fwd-save{color:rgba(52,211,153,.95);border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.08)}
+.btn-fwd-save:hover{background:rgba(52,211,153,.18);border-color:rgba(52,211,153,.6)}
+.btn-fwd-cancel{color:rgba(212,175,100,.55);border-color:rgba(212,175,100,.22)}
+.btn-fwd-cancel:hover{color:rgba(212,175,100,.9);border-color:rgba(212,175,100,.42)}
+
+/* ── CHRONICLE VIEW ── */
+.chronicle-section{width:100%;display:flex;flex-direction:column;gap:1.2rem;animation:rise .9s .42s ease both}
+.chronicle-card{background:var(--surface);border:1px solid var(--border-pk);border-radius:18px;padding:1.2rem 1.4rem 1.4rem;backdrop-filter:blur(20px);position:relative;overflow:hidden}
+.chronicle-card::before{content:'';position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(244,114,182,.3),transparent)}
+.chronicle-title{font-family:var(--cinzel);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:rgba(244,114,182,.82);margin-bottom:.3rem}
+.chronicle-sub{font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.06em;margin-bottom:1rem}
+.chronicle-svg{width:100%;height:auto;display:block;overflow:visible}
+.chronicle-empty{font-family:var(--mono);font-size:10px;color:var(--text-faint);letter-spacing:.08em;padding:1.5rem;text-align:center}
+.chron-axis{stroke:rgba(212,175,100,.18);stroke-width:1}
+.chron-grid{stroke:rgba(212,175,100,.08);stroke-width:1;stroke-dasharray:2,4}
+.chron-axis-label{font-family:var(--mono);font-size:9px;fill:rgba(212,175,100,.5);letter-spacing:.05em}
+html.light .chron-axis{stroke:rgba(100,70,20,.22)}
+html.light .chron-grid{stroke:rgba(100,70,20,.12)}
+html.light .chron-axis-label{fill:rgba(100,70,20,.58)}
+.chron-line{fill:none;stroke:rgba(244,114,182,.88);stroke-width:2}
+.chron-area{fill:url(#chron-grad);opacity:.28}
+.chron-dot{fill:rgba(244,114,182,.98);stroke:var(--bg);stroke-width:1.5}
+.chron-bar{fill:rgba(91,156,246,.7);transition:fill .2s}
+.chron-bar:hover{fill:rgba(91,156,246,.95)}
+.chron-bar-label{font-family:var(--mono);font-size:9px;fill:rgba(237,232,255,.62);letter-spacing:.04em}
+html.light .chron-bar-label{fill:rgba(20,12,36,.72)}
+.chron-bar-value{font-family:var(--cinzel);font-size:10px;fill:rgba(91,156,246,.98);font-weight:600}
+.chron-leader-row{display:grid;grid-template-columns:24px 1fr auto auto 80px;gap:10px;align-items:center;padding:.55rem .3rem;border-bottom:1px solid rgba(212,175,100,.08)}
+.chron-leader-row:last-child{border-bottom:none}
+.chron-leader-rank{font-family:var(--cinzel);font-size:11px;color:rgba(212,175,100,.55);text-align:center}
+.chron-leader-rank.top{color:rgba(251,191,36,.98)}
+.chron-leader-name{font-family:var(--cinzel);font-size:12px;color:var(--text-main);letter-spacing:.04em}
+.chron-leader-count{font-family:var(--mono);font-size:10px;color:rgba(52,211,153,.85);letter-spacing:.05em}
+.chron-leader-delta{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;padding:2px 8px;border-radius:12px;border:1px solid;white-space:nowrap;text-align:center;min-width:54px}
+.delta-up{color:rgba(52,211,153,.98);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.08)}
+.delta-down{color:rgba(248,113,113,.98);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.08)}
+.delta-same{color:rgba(212,175,100,.72);border-color:rgba(212,175,100,.22);background:rgba(212,175,100,.06)}
+.chronicle-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:.4rem}
+.chronicle-metric{background:rgba(10,8,24,.55);border:1px solid rgba(244,114,182,.15);border-radius:12px;padding:.7rem .8rem;text-align:center}
+html.light .chronicle-metric{background:rgba(255,252,245,.85);border-color:rgba(180,80,120,.18)}
+.chronicle-metric-num{font-family:var(--cinzel);font-size:1.3rem;font-weight:600;color:var(--text-main);line-height:1}
+.chronicle-metric-lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--text-sub);margin-top:.35rem;text-transform:uppercase}
+@media(max-width:580px){
+  .chron-leader-row{grid-template-columns:22px 1fr auto 56px;font-size:10px}
+  .chron-leader-count{display:none}
+}
 </style>
 </head>
 <body>
-<canvas id="bg"></canvas>
-<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+<a class="skip-link" href="#main">Skip to content</a>
+<canvas id="bg" aria-hidden="true"></canvas>
+<button class="theme-toggle" onclick="Grimoire.Theme.toggle()" title="Toggle light/dark mode">
   <span class="theme-icon" id="theme-icon">&#9789;</span>
   <span class="theme-label" id="theme-label">Dark</span>
 </button>
@@ -421,12 +524,62 @@ footer a:hover{color:rgba(212,175,100,.82)}
     <div class="modal-title">Seal this task</div>
     <div class="modal-task-name" id="modal-task-name">&mdash;</div>
     <div class="modal-label">Completed by (your name)</div>
-    <input class="modal-input" type="text" id="modal-scribe-input" placeholder="e.g. Nico, Marco, Ana..." autocomplete="off" />
+    <select class="modal-input" id="modal-scribe-select" onchange="onScribeChange()">
+      <option value="">&mdash; select &mdash;</option>
+    </select>
+    <div class="new-fwd-wrap" id="new-scribe-wrap" style="margin-top:8px">
+      <input type="text" id="modal-new-scribe" placeholder="New scribe name..." maxlength="40" />
+      <button type="button" class="btn-fwd-mini btn-fwd-save" onclick="saveNewScribe()">&#10003; Add</button>
+      <button type="button" class="btn-fwd-mini btn-fwd-cancel" onclick="cancelNewScribe()">&#10005;</button>
+    </div>
     <div class="modal-btns">
       <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="modal-btn modal-btn-confirm" onclick="confirmDone()">Seal &middot; Mark Done</button>
     </div>
     <div class="modal-skip" onclick="confirmDoneAnonymous()">Skip &mdash; mark done without a name</div>
+  </div>
+</div>
+
+<!-- EDIT TASK MODAL -->
+<div class="modal-overlay edit-modal" id="edit-modal">
+  <div class="modal-box">
+    <div class="modal-corner tl"></div>
+    <div class="modal-corner br"></div>
+    <div class="modal-shine"></div>
+    <div class="modal-title">Amend inscription</div>
+    <div class="modal-task-name" id="edit-modal-task-name" style="margin-bottom:1rem">&mdash;</div>
+    <div class="edit-row">
+      <div class="edit-field full">
+        <div class="modal-label">Task title</div>
+        <input class="modal-input" type="text" id="edit-title" />
+      </div>
+    </div>
+    <div class="edit-row">
+      <div class="edit-field">
+        <div class="modal-label">Forwarder</div>
+        <select id="edit-fwd"></select>
+      </div>
+      <div class="edit-field">
+        <div class="modal-label">Due date</div>
+        <input class="modal-input" type="date" id="edit-due" />
+      </div>
+    </div>
+    <div class="edit-row">
+      <div class="edit-field full">
+        <div class="modal-label">Total data</div>
+        <input class="modal-input" type="text" id="edit-total" placeholder="e.g. 3 AWBs &middot; 120 kg" />
+      </div>
+    </div>
+    <div class="edit-row">
+      <div class="edit-field full">
+        <div class="modal-label">Notes</div>
+        <textarea id="edit-notes" placeholder="Any additional details..."></textarea>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="modal-btn modal-btn-confirm" onclick="confirmEdit()">&#10022; Save Changes</button>
+    </div>
   </div>
 </div>
 
@@ -451,7 +604,7 @@ footer a:hover{color:rgba(212,175,100,.82)}
   </div>
 </div>
 
-<div class="shell">
+<div class="shell" id="main">
   <a class="nav-back" href="index.html">
     <span class="nav-back-arr">&#10232;</span>
     <span>Return to Grimoire</span>
@@ -476,6 +629,7 @@ footer a:hover{color:rgba(212,175,100,.82)}
   <div class="stats-row">
     <div class="stat"><div class="stat-num" id="st-total">&mdash;</div><div class="stat-lbl">Total tasks</div></div>
     <div class="stat"><div class="stat-num s-pending" id="st-pending">&mdash;</div><div class="stat-lbl">Pending</div></div>
+    <div class="stat"><div class="stat-num s-overdue" id="st-overdue">&mdash;</div><div class="stat-lbl">Overdue</div></div>
     <div class="stat"><div class="stat-num s-done" id="st-done">&mdash;</div><div class="stat-lbl">Done</div></div>
     <div class="stat"><div class="stat-num s-fwds" id="st-fwds">&mdash;</div><div class="stat-lbl">Forwarders</div></div>
   </div>
@@ -486,22 +640,27 @@ footer a:hover{color:rgba(212,175,100,.82)}
       <div class="form-field"><label>Task title</label><input type="text" id="inp-title" placeholder="e.g. Chase AWB status" /></div>
       <div class="form-field">
         <label>Forwarder</label>
-        <select id="inp-fwd">
+        <select id="inp-fwd" onchange="onFwdChange()">
           <option value="">&mdash; select &mdash;</option>
-          <option>Dachser</option><option>K+N</option><option>DHL Express</option>
-          <option>Wackler</option><option>Honold</option><option>ERKA</option>
         </select>
+        <div class="new-fwd-wrap" id="new-fwd-wrap">
+          <input type="text" id="inp-new-fwd" placeholder="New forwarder name..." maxlength="40" />
+          <button type="button" class="btn-fwd-mini btn-fwd-save" onclick="saveNewForwarder()">&#10003; Add</button>
+          <button type="button" class="btn-fwd-mini btn-fwd-cancel" onclick="cancelNewForwarder()">&#10005;</button>
+        </div>
       </div>
       <div class="form-field"><label>Total data</label><input type="text" id="inp-total" placeholder="e.g. 3 AWBs &middot; 120 kg" /></div>
+      <div class="form-field"><label>Due date (optional)</label><input type="date" id="inp-due" /></div>
       <div class="form-field form-full"><label>Notes</label><textarea id="inp-notes" placeholder="Any additional details, references, or remarks..."></textarea></div>
     </div>
     <button class="btn-inscribe" id="btn-inscribe" onclick="addTask()"><span>&#10022;</span><span>Inscribe Task</span></button>
   </div>
 
-  <!-- VIEW TOGGLE — only 2 views now -->
+  <!-- VIEW TOGGLE — 3 views -->
   <div class="view-toggle-row">
     <button class="view-btn active" id="btn-view-fwd" onclick="setView('forwarder')"><span>&#9672;</span> By Forwarder</button>
     <button class="view-btn" id="btn-view-scribes" onclick="setView('scribes')"><span>&#8853;</span> Hall of Scribes</button>
+    <button class="view-btn" id="btn-view-chronicle" onclick="setView('chronicle')"><span>&#9775;</span> The Chronicle</button>
     <div class="view-sep"></div>
   </div>
 
@@ -525,6 +684,7 @@ footer a:hover{color:rgba(212,175,100,.82)}
   <div id="scribes-view" style="display:none;width:100%;flex-direction:column;gap:0">
     <div class="scribe-detail" id="scribe-detail" style="display:none"></div>
   </div>
+  <div id="chronicle-view" style="display:none;width:100%"></div>
   <div class="sigil-div"><div class="sdl2"></div><div class="sigil-sym">&#10022; &#5807; &#10022;</div><div class="sdl2"></div></div>
   <footer>
     codingkuh.my.id<span class="fsep">&middot;</span>Firebase + GitHub Pages<br>
@@ -559,35 +719,168 @@ function frame(ts){
   runeChars.forEach(r=>{r.y+=r.vy*dt;r.life-=.0004*dt;if(r.y<-40||r.life<=0)Object.assign(r,mkRune(),{y:H+20});cx.font=`${r.size}px 'Cinzel',serif`;cx.fillStyle=`rgba(${r.c},${r.a*r.life})`;cx.fillText(r.ch,r.x,r.y)});
   for(let i=0;i<pts.length;i++){const p=pts[i];for(let j=i+1;j<pts.length;j++){const q=pts[j];const d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){cx.strokeStyle=`rgba(${p.c},${(1-d/120)*.05})`;cx.lineWidth=.4;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(q.x,q.y);cx.stroke()}}const md=Math.hypot(p.x-mouse.x,p.y-mouse.y);if(md<160){cx.strokeStyle=`rgba(${p.c},${(1-md/160)*.24})`;cx.lineWidth=.7;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(mouse.x,mouse.y);cx.stroke()}}
   pts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.da*dt;if(p.a<.04||p.a>.5)p.da*=-1;if(p.x<-20)p.x=W+20;if(p.x>W+20)p.x=-20;if(p.y<-20)p.y=H+20;if(p.y>H+20)p.y=-20;const rdx=p.x-mouse.x,rdy=p.y-mouse.y,rd=Math.sqrt(rdx*rdx+rdy*rdy);if(rd<110&&rd>0){const f=(1-rd/110)*.5;p.vx+=(rdx/rd)*f*.04;p.vy+=(rdy/rd)*f*.04}const sp=Math.hypot(p.vx,p.vy);if(sp>.5){p.vx*=.5/sp;p.vy*=.5/sp}const bx=.5*Math.sin(t*1.1+p.ph),by=.5*Math.cos(t*.88+p.ph*1.3);if(p.r>1.7){cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r*3.5,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a*.08})`;cx.fill()}cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a})`;cx.fill()});
-  requestAnimationFrame(frame);
+  if (!document.hidden && !(window.Grimoire && window.Grimoire.reducedMotion)) requestAnimationFrame(frame);
 }
 window.addEventListener('resize',init);
 window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
 window.addEventListener('touchmove',e=>{const tt=e.touches[0];mouse.x=tt.clientX;mouse.y=tt.clientY},{passive:true});
 window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
-init();requestAnimationFrame(frame);
+init();
+if (window.Grimoire && window.Grimoire.reducedMotion) { frame(0); }
+else { requestAnimationFrame(frame); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) requestAnimationFrame(frame); }); }
 })();
 
-(function(){const s=localStorage.getItem('grimoire-theme');if(s==='light')applyLight();})();
-function applyLight(){document.documentElement.classList.add('light');document.body.style.color='rgba(20,12,36,.9)';const i=document.getElementById('theme-icon'),l=document.getElementById('theme-label');if(i)i.textContent='\u2600';if(l)l.textContent='Light';}
-function applyDark(){document.documentElement.classList.remove('light');document.body.style.color='#ede8ff';const i=document.getElementById('theme-icon'),l=document.getElementById('theme-label');if(i)i.textContent='\u263D';if(l)l.textContent='Dark';}
-function toggleTheme(){const isLight=document.documentElement.classList.contains('light');if(isLight){applyDark();localStorage.setItem('grimoire-theme','dark');}else{applyLight();localStorage.setItem('grimoire-theme','light');}}
+Grimoire.Theme.init({
+  defaultMode:'dark', mode:'light', className:'light',
+  iconEl:'#theme-icon', labelEl:'#theme-label',
+  icons:{light:'\u2600',dark:'\u263D'},
+  labels:{light:'Light',dark:'Dark'},
+  onChange:function(m){document.body.style.color=m==='light'?'rgba(20,12,36,.9)':'#ede8ff';}
+});
 
 const firebaseConfig={apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",authDomain:"vb-code-vault.firebaseapp.com",projectId:"vb-code-vault",storageBucket:"vb-code-vault.firebasestorage.app",messagingSenderId:"773245175115",appId:"1:773245175115:web:0b6a4f27388f58f026d4ce"};
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore(),col=db.collection('wmf_tasks');
+const fwdCol=db.collection('wmf_forwarders');
+const scribeCol=db.collection('wmf_scribes');
+const DEFAULT_FWDS=['Dachser','K+N','DHL Express','Wackler','Honold','ERKA'];
+const LS_KEY='wmf_todo_state_v1';
 
-let tasks=[],saving=false,curView='forwarder',openGroups=new Set(),selectedScribe=null,pendingToggleId=null,searchQuery='';
+let tasks=[],saving=false,curView='forwarder',openGroups=new Set(),selectedScribe=null,pendingToggleId=null,searchQuery='',pendingEditId=null,customFwds=[],customScribes=[];
+
+/* ── LOCAL STATE PERSISTENCE ── */
+function saveState(){
+  try{
+    localStorage.setItem(LS_KEY,JSON.stringify({
+      curView,
+      openGroups:Array.from(openGroups),
+      selectedScribe,
+      searchQuery
+    }));
+  }catch(e){/* ignore */}
+}
+function loadState(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);if(!raw)return;
+    const s=JSON.parse(raw);
+    if(s.curView&&['forwarder','scribes','chronicle'].includes(s.curView))curView=s.curView;
+    if(Array.isArray(s.openGroups))openGroups=new Set(s.openGroups);
+    if(typeof s.selectedScribe==='string'||s.selectedScribe===null)selectedScribe=s.selectedScribe;
+    if(typeof s.searchQuery==='string'){
+      searchQuery=s.searchQuery;
+      const inp=document.getElementById('search-input');
+      if(inp){inp.value=searchQuery;document.getElementById('search-clear').classList.toggle('visible',searchQuery.trim().length>0);}
+    }
+  }catch(e){/* ignore */}
+}
+
+/* ── FORWARDERS (default + custom) ── */
+function getAllForwarders(){
+  const fromTasks=[...new Set(tasks.map(t=>t.fwd).filter(Boolean))];
+  const merged=[...DEFAULT_FWDS];
+  [...customFwds,...fromTasks].forEach(f=>{if(!merged.includes(f))merged.push(f);});
+  return merged;
+}
+function populateForwarderSelect(selectEl,selectedVal){
+  if(!selectEl)return;
+  const cur=selectedVal!==undefined?selectedVal:selectEl.value;
+  const all=getAllForwarders();
+  selectEl.innerHTML='<option value="">\u2014 select \u2014</option>'+
+    all.map(f=>`<option${f===cur?' selected':''}>${esc(f)}</option>`).join('')+
+    '<option value="__new__">\u2795 Add new forwarder...</option>';
+  if(cur&&!all.includes(cur)&&cur!=='__new__'){
+    // insert a one-off option so the current value stays visible
+    const o=document.createElement('option');o.value=cur;o.textContent=cur;o.selected=true;
+    selectEl.insertBefore(o,selectEl.options[1]);
+  }
+}
+function loadForwarders(){
+  fwdCol.orderBy('name').onSnapshot(snap=>{
+    customFwds=snap.docs.map(d=>d.data().name).filter(n=>n&&!DEFAULT_FWDS.includes(n));
+    populateForwarderSelect(document.getElementById('inp-fwd'));
+  },err=>{console.warn('Forwarder list unavailable:',err);});
+}
+
+/* ── SCRIBES (persons who complete tasks) ── */
+function getAllScribes(){
+  const fromTasks=[...new Set(tasks.map(t=>(t.completedBy||'').trim()).filter(Boolean))];
+  const merged=[];
+  [...customScribes,...fromTasks].forEach(n=>{if(!merged.some(x=>x.toLowerCase()===n.toLowerCase()))merged.push(n);});
+  return merged.sort((a,b)=>a.localeCompare(b));
+}
+function populateScribeSelect(selectEl,selectedVal){
+  if(!selectEl)return;
+  const cur=selectedVal!==undefined?selectedVal:selectEl.value;
+  const all=getAllScribes();
+  selectEl.innerHTML='<option value="">\u2014 select \u2014</option>'+
+    all.map(n=>`<option${n===cur?' selected':''}>${esc(n)}</option>`).join('')+
+    '<option value="__new__">\u2795 Add new scribe...</option>';
+  if(cur&&!all.includes(cur)&&cur!=='__new__'){
+    const o=document.createElement('option');o.value=cur;o.textContent=cur;o.selected=true;
+    selectEl.insertBefore(o,selectEl.options[1]);
+  }
+}
+function onScribeChange(){
+  const sel=document.getElementById('modal-scribe-select');
+  const wrap=document.getElementById('new-scribe-wrap');
+  if(sel.value==='__new__'){
+    wrap.classList.add('open');
+    sel.value='';
+    setTimeout(()=>document.getElementById('modal-new-scribe').focus(),50);
+  }
+}
+async function saveNewScribe(){
+  const input=document.getElementById('modal-new-scribe');
+  const name=input.value.trim();
+  if(!name){shake(input);return;}
+  const existing=getAllScribes().some(n=>n.toLowerCase()===name.toLowerCase());
+  if(existing){
+    // already on the list — just select it
+    populateScribeSelect(document.getElementById('modal-scribe-select'),name);
+    input.value='';
+    document.getElementById('new-scribe-wrap').classList.remove('open');
+    showToast(`"${name}" selected.`);
+    return;
+  }
+  try{
+    await scribeCol.add({name,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    if(!customScribes.includes(name))customScribes.push(name);
+    populateScribeSelect(document.getElementById('modal-scribe-select'),name);
+    input.value='';
+    document.getElementById('new-scribe-wrap').classList.remove('open');
+    showToast(`"${name}" added to the scribes.`);
+  }catch(e){showToast('Could not save scribe.',true);console.error(e);}
+}
+function cancelNewScribe(){
+  document.getElementById('modal-new-scribe').value='';
+  document.getElementById('new-scribe-wrap').classList.remove('open');
+}
+function loadScribes(){
+  scribeCol.orderBy('name').onSnapshot(snap=>{
+    customScribes=snap.docs.map(d=>d.data().name).filter(Boolean);
+    // refresh the modal dropdown if it's open
+    const sel=document.getElementById('modal-scribe-select');
+    if(sel&&document.getElementById('complete-modal').classList.contains('open')){
+      populateScribeSelect(sel,sel.value);
+    }
+  },err=>{console.warn('Scribe list unavailable:',err);});
+}
 
 function setView(v){
   curView=v;
   document.getElementById('btn-view-fwd').classList.toggle('active',v==='forwarder');
   document.getElementById('btn-view-scribes').classList.toggle('active',v==='scribes');
   document.getElementById('btn-view-scribes').classList.toggle('scribe-active',v==='scribes');
-  // Show toolbar only on forwarder view
+  document.getElementById('btn-view-chronicle').classList.toggle('active',v==='chronicle');
+  document.getElementById('btn-view-chronicle').classList.toggle('chronicle-active',v==='chronicle');
+  // Show forwarder toolbar only on forwarder view
   document.getElementById('fwd-toolbar').style.display=v==='forwarder'?'flex':'none';
   document.getElementById('fwd-view').style.display=v==='forwarder'?'flex':'none';
   document.getElementById('scribes-view').style.display=v==='scribes'?'flex':'none';
+  document.getElementById('chronicle-view').style.display=v==='chronicle'?'block':'none';
+  // Hide search on chronicle view (it doesn't filter charts)
+  document.getElementById('search-wrap').style.display=v==='chronicle'?'none':'block';
+  saveState();
   render();
 }
 function setStatus(s,l){document.getElementById('status-dot').className='status-dot '+(s||'');document.getElementById('status-label').textContent=l;}
@@ -602,6 +895,7 @@ function onSearch(){
     const q=searchQuery.trim().toLowerCase();
     tasks.forEach(t=>{if(taskMatchesSearch(t,q))openGroups.add(t.fwd);});
   }
+  saveState();
   render();
 }
 function clearSearch(){
@@ -609,6 +903,7 @@ function clearSearch(){
   searchQuery='';
   document.getElementById('search-clear').classList.remove('visible');
   document.getElementById('search-count').textContent='';
+  saveState();
   render();
 }
 function taskMatchesSearch(t,q){
@@ -632,20 +927,69 @@ function fmtDateShort(ts){return fmtDate(ts,{day:'2-digit',month:'short',year:'n
 function tsToMonthKey(ts){if(!ts)return null;const d=ts.toDate?ts.toDate():new Date(ts);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
 function monthKeyToLabel(k){const[y,m]=k.split('-');return new Date(+y,+m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});}
 
+/* ── DUE DATE HELPERS ── */
+function tsToDate(ts){if(!ts)return null;return ts.toDate?ts.toDate():new Date(ts);}
+function dueInfo(task){
+  if(!task.dueAt||task.status==='done')return null;
+  const due=tsToDate(task.dueAt);if(!due||isNaN(due))return null;
+  const today=new Date();today.setHours(0,0,0,0);
+  const dd=new Date(due.getFullYear(),due.getMonth(),due.getDate());
+  const diffDays=Math.round((dd-today)/86400000);
+  let state='future',label='';
+  if(diffDays<0){state='overdue';label=`Overdue by ${-diffDays} day${-diffDays!==1?'s':''}`;}
+  else if(diffDays===0){state='soon';label='Due today';}
+  else if(diffDays===1){state='soon';label='Due tomorrow';}
+  else if(diffDays<=3){state='soon';label=`Due in ${diffDays} days`;}
+  else{state='future';label=`Due ${dd.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}`;}
+  return{state,label,diffDays,date:dd};
+}
+function isOverdue(task){const i=dueInfo(task);return!!i&&i.state==='overdue';}
+function dateInputValue(ts){
+  const d=tsToDate(ts);if(!d||isNaN(d))return '';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function parseDateInput(s){
+  if(!s)return null;
+  const[y,m,d]=s.split('-').map(Number);if(!y||!m||!d)return null;
+  return new Date(y,m-1,d,12,0,0); // noon to avoid TZ edge
+}
+
+/* ── PROGRESS BAR GRADIENT (red \u2192 amber \u2192 green) ── */
+function progressGradient(pct){
+  // 0% red \u2192 50% amber \u2192 100% green
+  let a,b;
+  if(pct<50){
+    // red \u2192 amber
+    const k=pct/50;
+    a=`rgba(${Math.round(248-(248-251)*k)},${Math.round(113+(191-113)*k)},${Math.round(113-(113-36)*k)},.75)`;
+    b=`rgba(${Math.round(248-(248-251)*k)},${Math.round(113+(191-113)*k)},${Math.round(113-(113-36)*k)},.95)`;
+  }else{
+    // amber \u2192 green
+    const k=(pct-50)/50;
+    a=`rgba(${Math.round(251-(251-52)*k)},${Math.round(191+(211-191)*k)},${Math.round(36+(153-36)*k)},.75)`;
+    b=`rgba(${Math.round(251-(251-52)*k)},${Math.round(191+(211-191)*k)},${Math.round(36+(153-36)*k)},.95)`;
+  }
+  return`linear-gradient(90deg,${a},${b})`;
+}
+
 async function addTask(){
   if(saving)return;
   const title=document.getElementById('inp-title').value.trim();
   const fwd=document.getElementById('inp-fwd').value;
   const total=document.getElementById('inp-total').value.trim();
   const notes=document.getElementById('inp-notes').value.trim();
+  const dueStr=document.getElementById('inp-due').value;
   if(!title){shake(document.getElementById('inp-title'));showToast('Please enter a task title.',true);return;}
-  if(!fwd){shake(document.getElementById('inp-fwd'));showToast('Please select a forwarder.',true);return;}
+  if(!fwd||fwd==='__new__'){shake(document.getElementById('inp-fwd'));showToast('Please select a forwarder.',true);return;}
   saving=true;const btn=document.getElementById('btn-inscribe');btn.disabled=true;btn.querySelector('span:last-child').textContent='Sealing...';
   try{
-    await col.add({title,fwd,total,notes,status:'pending',completedBy:'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-    document.getElementById('inp-title').value='';document.getElementById('inp-fwd').value='';document.getElementById('inp-total').value='';document.getElementById('inp-notes').value='';
+    const payload={title,fwd,total,notes,status:'pending',completedBy:'',createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const dueDate=parseDateInput(dueStr);
+    if(dueDate)payload.dueAt=firebase.firestore.Timestamp.fromDate(dueDate);
+    await col.add(payload);
+    document.getElementById('inp-title').value='';document.getElementById('inp-fwd').value='';document.getElementById('inp-total').value='';document.getElementById('inp-notes').value='';document.getElementById('inp-due').value='';
     showToast('Task inscribed into the ledger!');
-    if(curView==='forwarder')openGroups.add(fwd);
+    if(curView==='forwarder'){openGroups.add(fwd);saveState();}
   }catch(e){showToast('Failed to inscribe.',true);console.error(e);}
   finally{saving=false;btn.disabled=false;btn.querySelector('span:last-child').textContent='Inscribe Task';}
 }
@@ -655,12 +999,14 @@ function openCompleteModal(id){
   const task=tasks.find(x=>x.id===id);if(!task)return;
   pendingToggleId=id;
   document.getElementById('modal-task-name').textContent=task.title;
-  document.getElementById('modal-scribe-input').value='';
+  populateScribeSelect(document.getElementById('modal-scribe-select'),'');
+  document.getElementById('new-scribe-wrap').classList.remove('open');
+  document.getElementById('modal-new-scribe').value='';
   document.getElementById('complete-modal').classList.add('open');
-  setTimeout(()=>document.getElementById('modal-scribe-input').focus(),300);
+  setTimeout(()=>document.getElementById('modal-scribe-select').focus(),300);
 }
 function closeModal(){document.getElementById('complete-modal').classList.remove('open');pendingToggleId=null;}
-async function confirmDone(){if(!pendingToggleId)return;const id=pendingToggleId;const name=document.getElementById('modal-scribe-input').value.trim();closeModal();await applyDone(id,name);}
+async function confirmDone(){if(!pendingToggleId)return;const id=pendingToggleId;const sel=document.getElementById('modal-scribe-select');const name=(sel&&sel.value&&sel.value!=='__new__')?sel.value.trim():'';closeModal();await applyDone(id,name);}
 async function confirmDoneAnonymous(){if(!pendingToggleId)return;const id=pendingToggleId;closeModal();await applyDone(id,'');}
 async function applyDone(id,scribeName){
   try{
@@ -685,6 +1031,89 @@ async function deleteTask(id){
   if(!confirm('Banish this task from the ledger? This cannot be undone.'))return;
   try{await col.doc(id).delete();showToast('Task dissolved.');}
   catch(e){showToast('Delete failed.',true);console.error(e);}
+}
+
+/* ── CUSTOM FORWARDERS ── */
+function onFwdChange(){
+  const sel=document.getElementById('inp-fwd');
+  const wrap=document.getElementById('new-fwd-wrap');
+  if(sel.value==='__new__'){
+    wrap.classList.add('open');
+    sel.value='';
+    setTimeout(()=>document.getElementById('inp-new-fwd').focus(),50);
+  }
+}
+async function saveNewForwarder(){
+  const input=document.getElementById('inp-new-fwd');
+  const name=input.value.trim();
+  if(!name){shake(input);return;}
+  const existing=getAllForwarders().some(f=>f.toLowerCase()===name.toLowerCase());
+  if(existing){showToast('That forwarder already exists.',true);return;}
+  try{
+    await fwdCol.add({name,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    // Immediately include & select it (snapshot listener will follow)
+    if(!customFwds.includes(name))customFwds.push(name);
+    populateForwarderSelect(document.getElementById('inp-fwd'),name);
+    input.value='';
+    document.getElementById('new-fwd-wrap').classList.remove('open');
+    showToast(`"${name}" added to the roster.`);
+  }catch(e){showToast('Could not save forwarder.',true);console.error(e);}
+}
+function cancelNewForwarder(){
+  document.getElementById('inp-new-fwd').value='';
+  document.getElementById('new-fwd-wrap').classList.remove('open');
+}
+
+/* ── EDIT MODAL ── */
+function openEditModal(id){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  pendingEditId=id;
+  document.getElementById('edit-modal-task-name').textContent=t.title;
+  document.getElementById('edit-title').value=t.title||'';
+  document.getElementById('edit-total').value=t.total||'';
+  document.getElementById('edit-notes').value=t.notes||'';
+  document.getElementById('edit-due').value=dateInputValue(t.dueAt);
+  populateForwarderSelect(document.getElementById('edit-fwd'),t.fwd||'');
+  // Remove the "Add new forwarder..." sentinel — we keep edit modal simpler
+  const sel=document.getElementById('edit-fwd');
+  const addOpt=Array.from(sel.options).find(o=>o.value==='__new__');
+  if(addOpt)sel.removeChild(addOpt);
+  document.getElementById('edit-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('edit-title').focus(),250);
+}
+function closeEditModal(){document.getElementById('edit-modal').classList.remove('open');pendingEditId=null;}
+async function confirmEdit(){
+  if(!pendingEditId)return;
+  const id=pendingEditId;
+  const title=document.getElementById('edit-title').value.trim();
+  const fwd=document.getElementById('edit-fwd').value;
+  const total=document.getElementById('edit-total').value.trim();
+  const notes=document.getElementById('edit-notes').value.trim();
+  const dueStr=document.getElementById('edit-due').value;
+  if(!title){shake(document.getElementById('edit-title'));return;}
+  if(!fwd){shake(document.getElementById('edit-fwd'));return;}
+  const update={title,fwd,total,notes,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  const dueDate=parseDateInput(dueStr);
+  if(dueDate)update.dueAt=firebase.firestore.Timestamp.fromDate(dueDate);
+  else update.dueAt=firebase.firestore.FieldValue.delete();
+  closeEditModal();
+  try{await col.doc(id).update(update);showToast('Inscription amended.');}
+  catch(e){showToast('Could not save changes.',true);console.error(e);}
+}
+
+/* ── UNSEAL (reopen a done task) ── */
+async function unsealTask(id){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  if(t.status!=='done')return;
+  if(!confirm(`Unseal "${t.title}"? It will return to Pending.`))return;
+  try{
+    await col.doc(id).update({
+      status:'pending',
+      unsealedAt:firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast('Task unsealed \u00b7 back to pending.');
+  }catch(e){showToast('Could not unseal.',true);console.error(e);}
 }
 
 /* ── DELETE BY MONTH ── */
@@ -728,57 +1157,71 @@ async function execDelByMonth(){
   showToast(`${count} task${count!==1?'s':''} from ${label} dissolved.`);
 }
 
-function toggleGroup(n){if(openGroups.has(n))openGroups.delete(n);else openGroups.add(n);render();}
-function selectScribe(n){selectedScribe=selectedScribe===n?null:n;render();}
+function toggleGroup(n){if(openGroups.has(n))openGroups.delete(n);else openGroups.add(n);saveState();render();}
+function selectScribe(n){selectedScribe=selectedScribe===n?null:n;saveState();render();}
 
 function taskCardHTML(t,i,hideForwarderBadge,showCompletedDate){
   const dateStr=fmtDateShort(t.createdAt)||'\u2014';
   const isDone=t.status==='done';
   const q=searchQuery.trim().toLowerCase();
+  const due=dueInfo(t);
+  const overdueCls=due&&due.state==='overdue'?' is-overdue':'';
   const doneByStr=t.completedBy
     ?`<div class="task-done-by">\u2295 Sealed by <strong style="color:rgba(52,211,153,.72)">${highlight(t.completedBy,q)}</strong>${(showCompletedDate&&t.completedAt)?` \u00b7 ${fmtDateShort(t.completedAt)}`:''}</div>`
     :(isDone
       ?`<div class="task-done-by" style="color:rgba(212,175,100,.35)">\u2295 Sealed anonymously${(showCompletedDate&&t.completedAt)?` \u00b7 ${fmtDateShort(t.completedAt)}`:''}</div>`
       :'');
   const checkAttrs=isDone
-    ? 'checked disabled title="Task is sealed — cannot be reopened via checkbox"'
+    ? 'checked disabled title="Task is sealed \u2014 use Unseal to reopen"'
     : `onchange="toggleDone('${t.id}',event)"`;
-  return `<div class="task-card${isDone?' is-done':''}" style="animation:task-in .3s ${i*.04}s ease both">
+  const dueBadge=due
+    ? `<span class="badge badge-due ${due.state}" title="${esc(due.date.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))}">&#9201; ${esc(due.label)}</span>`
+    : '';
+  // Show plain "Due on <date>" for sealed tasks that had a due date
+  const dueStaticStr=(isDone&&t.dueAt)
+    ? `<div class="task-date" style="opacity:.7">Due was ${esc(fmtDateShort(t.dueAt))}</div>`
+    : '';
+  const editBtn=`<button class="btn-edit" onclick="openEditModal('${t.id}')" title="Amend inscription">&#9998;</button>`;
+  const unsealBtn=isDone?`<button class="btn-unseal" onclick="unsealTask('${t.id}')" title="Unseal \u00b7 reopen task">&#8634;</button>`:'';
+  return `<div class="task-card${isDone?' is-done':''}${overdueCls}" style="animation:task-in .3s ${i*.04}s ease both">
     <div class="task-check-wrap"><input type="checkbox" class="task-check" ${checkAttrs} /></div>
     <div class="task-body">
       <div class="task-title">${highlight(t.title,q)}</div>
       <div class="task-meta">
         ${!hideForwarderBadge?`<span class="badge badge-fwd">${highlight(t.fwd,q)}</span>`:''}
         <span class="badge badge-${t.status}">${t.status}</span>
+        ${dueBadge}
         ${t.completedBy?`<span class="badge badge-scribe">\u2295 ${highlight(t.completedBy,q)}</span>`:''}
         ${t.total?`<span class="task-data">\u2B21 ${highlight(t.total,q)}</span>`:''}
       </div>
       ${t.notes?`<div class="task-notes">${highlight(t.notes,q)}</div>`:''}
       ${doneByStr}
       <div class="task-date">Inscribed ${dateStr}</div>
+      ${dueStaticStr}
     </div>
-    <div class="task-actions"><button class="btn-del" onclick="deleteTask('${t.id}')" title="Banish task">\u2715</button></div>
+    <div class="task-actions">${editBtn}${unsealBtn}<button class="btn-del" onclick="deleteTask('${t.id}')" title="Banish task">\u2715</button></div>
   </div>`;
 }
 
 function render(){
   const pending=tasks.filter(t=>t.status==='pending').length;
   const done=tasks.filter(t=>t.status==='done').length;
+  const overdue=tasks.filter(t=>isOverdue(t)).length;
   const fwds=new Set(tasks.map(t=>t.fwd).filter(Boolean)).size;
   document.getElementById('st-total').textContent=tasks.length;
   document.getElementById('st-pending').textContent=pending;
+  document.getElementById('st-overdue').textContent=overdue;
   document.getElementById('st-done').textContent=done;
   document.getElementById('st-fwds').textContent=fwds;
   if(curView==='forwarder')renderForwarderView();
   else if(curView==='scribes')renderScribesView();
+  else if(curView==='chronicle')renderChronicleView();
 }
 
 function renderForwarderView(){
   const container=document.getElementById('fwd-view');
   const q=searchQuery.trim().toLowerCase();
-  const knownFwds=['Dachser','K+N','DHL Express','Wackler','Honold','ERKA'];
-  const extraFwds=[...new Set(tasks.map(t=>t.fwd).filter(Boolean))].filter(f=>!knownFwds.includes(f));
-  const allFwds=[...knownFwds,...extraFwds];
+  const allFwds=getAllForwarders();
   const activeFwds=allFwds.filter(f=>tasks.some(t=>t.fwd===f));
 
   // Apply search filter
@@ -797,11 +1240,13 @@ function renderForwarderView(){
     const allFwdTasks=tasks.filter(t=>t.fwd===fwdName);
     const fwdPending=fwdTasks.filter(t=>t.status==='pending').length;
     const fwdDone=fwdTasks.filter(t=>t.status==='done').length;
+    const fwdOverdue=fwdTasks.filter(t=>isOverdue(t)).length;
     const fwdTotal=fwdTasks.length;
     const totalForPct=allFwdTasks.length;
     const pct=totalForPct>0?Math.round((allFwdTasks.filter(t=>t.status==='done').length/totalForPct)*100):0;
-    const isOpen=openGroups.has(fwdName)||q;
+    const isOpen=openGroups.has(fwdName)||!!q;
     const tasksHTML=fwdTasks.length>0?fwdTasks.map((t,i)=>taskCardHTML(t,i,true,false)).join(''):`<div class="fwd-group-empty">No tasks for this forwarder</div>`;
+    const grad=progressGradient(pct);
     return `<div class="fwd-group" style="animation-delay:${gi*.06}s">
       <div class="fwd-group-header${isOpen?' open':''}" onclick="toggleGroup('${esc(fwdName)}')">
         <span class="fwd-group-icon">\u25B6</span>
@@ -809,11 +1254,12 @@ function renderForwarderView(){
         <div class="fwd-group-pills">
           <span class="fwd-pill fwd-pill-total">${fwdTotal} task${fwdTotal!==1?'s':''}</span>
           ${fwdPending>0?`<span class="fwd-pill fwd-pill-pending">${fwdPending} pending</span>`:''}
+          ${fwdOverdue>0?`<span class="fwd-pill" style="color:rgba(248,113,113,.98);border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.09)">${fwdOverdue} overdue</span>`:''}
           ${fwdDone>0?`<span class="fwd-pill fwd-pill-done">${fwdDone} done</span>`:''}
         </div>
         <div class="fwd-progress-wrap">
-          <div class="fwd-progress-bar"><div class="fwd-progress-fill" style="width:${pct}%"></div></div>
-          <span class="fwd-progress-pct">${pct}%</span>
+          <div class="fwd-progress-bar"><div class="fwd-progress-fill" style="width:${pct}%;background:${grad}"></div></div>
+          <span class="fwd-progress-pct" style="color:${pct<50?'rgba(248,113,113,.85)':pct<75?'rgba(251,191,36,.9)':'rgba(52,211,153,.85)'}">${pct}%</span>
         </div>
       </div>
       <div class="fwd-group-body${isOpen?' open':''}">${tasksHTML}</div>
@@ -880,15 +1326,223 @@ function renderScribesView(){
   container.innerHTML=cardsHTML+`<div class="scribe-detail" style="display:${selectedScribe?'block':'none'}">${detailHTML}</div>`;
 }
 
-document.getElementById('modal-scribe-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmDone();if(e.key==='Escape')closeModal();});
+/* ── CHRONICLE VIEW ── */
+function renderChronicleView(){
+  const container=document.getElementById('chronicle-view');
+  const doneTasks=tasks.filter(t=>t.status==='done'&&t.completedAt);
+  if(tasks.length===0){
+    container.innerHTML=`<div class="empty-state"><div class="empty-rune">\u2726</div><div class="empty-text">The chronicle is empty</div><div class="empty-sub">Inscribe and seal tasks to reveal patterns</div></div>`;
+    return;
+  }
+
+  // Header metrics
+  const totalSealed=doneTasks.length;
+  const avgSealMs=(()=>{
+    const samples=doneTasks.map(t=>{
+      const c=tsToDate(t.createdAt),d=tsToDate(t.completedAt);
+      return(c&&d)?(d-c):null;
+    }).filter(x=>x!=null&&x>=0);
+    if(!samples.length)return null;
+    return samples.reduce((a,b)=>a+b,0)/samples.length;
+  })();
+  const avgSealStr=avgSealMs==null?'\u2014':(()=>{
+    const h=avgSealMs/3600000;
+    if(h<24)return `${h.toFixed(1)}h`;
+    return `${(h/24).toFixed(1)}d`;
+  })();
+  const overdueCnt=tasks.filter(t=>isOverdue(t)).length;
+
+  const header=`<div class="chronicle-card">
+    <div class="chronicle-title">\u2726 The Chronicle \u2014 Patterns in the Ledger</div>
+    <div class="chronicle-sub">Aggregate insights from every inscribed and sealed task</div>
+    <div class="chronicle-stats-row">
+      <div class="chronicle-metric"><div class="chronicle-metric-num">${totalSealed}</div><div class="chronicle-metric-lbl">Total sealed</div></div>
+      <div class="chronicle-metric"><div class="chronicle-metric-num">${avgSealStr}</div><div class="chronicle-metric-lbl">Avg time-to-seal</div></div>
+      <div class="chronicle-metric"><div class="chronicle-metric-num" style="color:${overdueCnt>0?'rgba(248,113,113,.98)':'inherit'}">${overdueCnt}</div><div class="chronicle-metric-lbl">Currently overdue</div></div>
+    </div>
+  </div>`;
+
+  // Chart 1: Weekly completions (line chart, last 12 weeks)
+  const weekly=buildWeeklyCompletions(doneTasks,12);
+  const chart1=renderWeeklyChart(weekly);
+
+  // Chart 2: Avg time-to-seal per forwarder (bar chart)
+  const fwdStats=buildFwdAvgStats(doneTasks);
+  const chart2=renderFwdAvgChart(fwdStats);
+
+  // Chart 3: Month-over-month leaderboard
+  const leaderboard=buildLeaderboard(doneTasks);
+  const chart3=renderLeaderboard(leaderboard);
+
+  container.innerHTML=header+chart1+chart2+chart3;
+}
+
+function buildWeeklyCompletions(doneTasks,weeks){
+  const now=new Date();
+  // Monday-based week
+  const dow=(now.getDay()+6)%7; // 0=Mon
+  const mondayThisWeek=new Date(now.getFullYear(),now.getMonth(),now.getDate()-dow);
+  const buckets=[];
+  for(let i=weeks-1;i>=0;i--){
+    const start=new Date(mondayThisWeek);start.setDate(start.getDate()-i*7);
+    const end=new Date(start);end.setDate(end.getDate()+7);
+    buckets.push({start,end,count:0});
+  }
+  doneTasks.forEach(t=>{
+    const d=tsToDate(t.completedAt);if(!d)return;
+    buckets.forEach(b=>{if(d>=b.start&&d<b.end)b.count++;});
+  });
+  return buckets;
+}
+
+function renderWeeklyChart(buckets){
+  if(!buckets.length){
+    return `<div class="chronicle-card"><div class="chronicle-title">Weekly Completions</div><div class="chronicle-empty">No sealed tasks yet</div></div>`;
+  }
+  const W=680,H=200,padL=36,padR=14,padT=18,padB=30;
+  const innerW=W-padL-padR,innerH=H-padT-padB;
+  const maxVal=Math.max(1,...buckets.map(b=>b.count));
+  const stepX=buckets.length>1?innerW/(buckets.length-1):0;
+  const pts=buckets.map((b,i)=>{
+    const x=padL+i*stepX;
+    const y=padT+innerH-(b.count/maxVal)*innerH;
+    return{x,y,b};
+  });
+  const linePath='M '+pts.map(p=>`${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L ');
+  const areaPath=linePath+` L ${(padL+innerW).toFixed(1)} ${(padT+innerH).toFixed(1)} L ${padL.toFixed(1)} ${(padT+innerH).toFixed(1)} Z`;
+  // y-axis ticks (0, mid, max)
+  const yTicks=[0,Math.round(maxVal/2),maxVal];
+  const yTickLines=yTicks.map(v=>{
+    const y=padT+innerH-(v/maxVal)*innerH;
+    return`<line class="chron-grid" x1="${padL}" x2="${padL+innerW}" y1="${y}" y2="${y}"/><text class="chron-axis-label" x="${padL-6}" y="${y+3}" text-anchor="end">${v}</text>`;
+  }).join('');
+  // x-axis labels — show every other week
+  const xLabels=pts.map((p,i)=>{
+    if(i%2!==buckets.length%2&&buckets.length>6)return'';
+    const lbl=p.b.start.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    return`<text class="chron-axis-label" x="${p.x}" y="${padT+innerH+18}" text-anchor="middle">${lbl}</text>`;
+  }).join('');
+  const dots=pts.map(p=>`<circle class="chron-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.2"><title>${p.b.start.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})} \u2013 ${p.b.count} sealed</title></circle>`).join('');
+  return `<div class="chronicle-card">
+    <div class="chronicle-title">\u29EB Weekly Completions</div>
+    <div class="chronicle-sub">Tasks sealed per week \u00b7 last ${buckets.length} weeks</div>
+    <svg class="chronicle-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+      <defs><linearGradient id="chron-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(244,114,182,.55)"/>
+        <stop offset="100%" stop-color="rgba(244,114,182,0)"/>
+      </linearGradient></defs>
+      ${yTickLines}
+      <line class="chron-axis" x1="${padL}" x2="${padL}" y1="${padT}" y2="${padT+innerH}"/>
+      <line class="chron-axis" x1="${padL}" x2="${padL+innerW}" y1="${padT+innerH}" y2="${padT+innerH}"/>
+      <path class="chron-area" d="${areaPath}"/>
+      <path class="chron-line" d="${linePath}"/>
+      ${dots}
+      ${xLabels}
+    </svg>
+  </div>`;
+}
+
+function buildFwdAvgStats(doneTasks){
+  const map={};
+  doneTasks.forEach(t=>{
+    const c=tsToDate(t.createdAt),d=tsToDate(t.completedAt);
+    if(!c||!d)return;
+    const ms=d-c;if(ms<0)return;
+    const f=t.fwd||'(Unknown)';
+    if(!map[f])map[f]={sum:0,n:0};
+    map[f].sum+=ms;map[f].n++;
+  });
+  return Object.entries(map).map(([fwd,v])=>({fwd,avgMs:v.sum/v.n,count:v.n})).sort((a,b)=>a.avgMs-b.avgMs);
+}
+
+function renderFwdAvgChart(stats){
+  if(!stats.length){
+    return `<div class="chronicle-card"><div class="chronicle-title">Average Seal Time by Forwarder</div><div class="chronicle-empty">Not enough sealed tasks to compute averages</div></div>`;
+  }
+  const W=680,H=Math.max(140,40+stats.length*34),padL=110,padR=80,padT=10,padB=10;
+  const innerW=W-padL-padR;
+  const maxMs=Math.max(...stats.map(s=>s.avgMs));
+  const fmt=ms=>{const h=ms/3600000;return h<24?`${h.toFixed(1)}h`:`${(h/24).toFixed(1)}d`;};
+  const rows=stats.map((s,i)=>{
+    const y=padT+i*34+6;
+    const w=Math.max(2,(s.avgMs/maxMs)*innerW);
+    return`<text class="chron-bar-label" x="${padL-8}" y="${y+16}" text-anchor="end">${esc(s.fwd)}</text>
+<rect class="chron-bar" x="${padL}" y="${y+4}" width="${w.toFixed(1)}" height="20" rx="4"><title>${s.count} sealed \u00b7 avg ${fmt(s.avgMs)}</title></rect>
+<text class="chron-bar-value" x="${padL+w+8}" y="${y+18}">${fmt(s.avgMs)}</text>`;
+  }).join('');
+  return `<div class="chronicle-card">
+    <div class="chronicle-title">\u29B8 Average Seal Time by Forwarder</div>
+    <div class="chronicle-sub">Mean time from inscription to seal \u00b7 lower is faster</div>
+    <svg class="chronicle-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${rows}</svg>
+  </div>`;
+}
+
+function buildLeaderboard(doneTasks){
+  // Current month vs previous month counts per scribe
+  const now=new Date();
+  const curKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const prevDate=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const prevKey=`${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,'0')}`;
+  const cur={},prev={};
+  doneTasks.forEach(t=>{
+    const d=tsToDate(t.completedAt);if(!d)return;
+    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const name=(t.completedBy||'').trim()||'(Anonymous)';
+    if(k===curKey)cur[name]=(cur[name]||0)+1;
+    else if(k===prevKey)prev[name]=(prev[name]||0)+1;
+  });
+  const allNames=new Set([...Object.keys(cur),...Object.keys(prev)]);
+  const rows=Array.from(allNames).map(name=>({
+    name,
+    cur:cur[name]||0,
+    prev:prev[name]||0,
+    delta:(cur[name]||0)-(prev[name]||0)
+  }));
+  rows.sort((a,b)=>b.cur-a.cur||b.delta-a.delta);
+  return{rows,curKey,prevKey};
+}
+
+function renderLeaderboard({rows,curKey,prevKey}){
+  if(!rows.length){
+    return `<div class="chronicle-card"><div class="chronicle-title">Month-over-Month Leaderboard</div><div class="chronicle-empty">No sealed tasks this month or last</div></div>`;
+  }
+  const curLbl=monthKeyToLabel(curKey);
+  const prevLbl=monthKeyToLabel(prevKey);
+  const body=rows.map((r,i)=>{
+    const dCls=r.delta>0?'delta-up':r.delta<0?'delta-down':'delta-same';
+    const dStr=r.delta>0?`\u25B2 +${r.delta}`:r.delta<0?`\u25BC ${r.delta}`:'\u2014';
+    return `<div class="chron-leader-row">
+      <div class="chron-leader-rank${i<3?' top':''}">${i+1}</div>
+      <div class="chron-leader-name">${esc(r.name)}</div>
+      <div class="chron-leader-count">${r.prev} prev</div>
+      <div class="chron-leader-count" style="color:rgba(244,114,182,.85)">${r.cur} this</div>
+      <div class="chron-leader-delta ${dCls}">${dStr}</div>
+    </div>`;
+  }).join('');
+  return `<div class="chronicle-card">
+    <div class="chronicle-title">\u265B Month-over-Month Leaderboard</div>
+    <div class="chronicle-sub">${esc(prevLbl)} \u2192 ${esc(curLbl)} \u00b7 tasks sealed per scribe</div>
+    ${body}
+  </div>`;
+}
+
+document.getElementById('modal-scribe-select').addEventListener('keydown',e=>{if(e.key==='Enter')confirmDone();if(e.key==='Escape')closeModal();});
+document.getElementById('modal-new-scribe').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveNewScribe();}if(e.key==='Escape')cancelNewScribe();});
 document.getElementById('search-input').addEventListener('keydown',e=>{if(e.key==='Escape')clearSearch();});
 document.getElementById('complete-modal').addEventListener('click',e=>{if(e.target===document.getElementById('complete-modal'))closeModal();});
+document.getElementById('edit-modal').addEventListener('click',e=>{if(e.target===document.getElementById('edit-modal'))closeEditModal();});
+document.getElementById('edit-title').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey)confirmEdit();if(e.key==='Escape')closeEditModal();});
+document.getElementById('inp-new-fwd').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveNewForwarder();}if(e.key==='Escape')cancelNewForwarder();});
 document.getElementById('del-month-modal').addEventListener('click',e=>{if(e.target===document.getElementById('del-month-modal'))closeDelMonthModal();});
 document.getElementById('inp-title').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
 
-// Initialize — default view is forwarder
-setView('forwarder');
+// Initialize — restore saved view state, then kick off Firestore sync
+loadState();
+populateForwarderSelect(document.getElementById('inp-fwd'));
+setView(curView);
 startListener();
+loadForwarders();
+loadScribes();
 </script>
 </body>
 </html>
