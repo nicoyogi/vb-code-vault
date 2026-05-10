@@ -439,7 +439,7 @@
     <div class="form-row">
       <div class="field">
         <label for="f-person">Person</label>
-        <input type="text" id="f-person" list="person-list" placeholder="e.g. Andreas, Maria, Lukas" autocomplete="off">
+        <input type="text" id="f-person" readonly placeholder="Sign in to auto-fill" style="background:var(--bg2);cursor:default" autocomplete="off">
         <datalist id="person-list"></datalist>
       </div>
       <div class="field">
@@ -894,18 +894,21 @@ function toggleSug(){
 /* ── Form handlers ── */
 function scrollToForm(){
   document.getElementById('add-box').scrollIntoView({behavior:'smooth',block:'center'});
-  setTimeout(()=>document.getElementById('f-person').focus(),250);
+  setTimeout(()=>document.getElementById('f-done').focus(),250);
 }
 function resetForm(){
   editId = null;
   document.getElementById('form-heading').textContent = 'Log a review';
   document.getElementById('form-left-note').textContent = '';
-  ['f-person','f-done','f-block','f-not'].forEach(id=>document.getElementById(id).value='');
+  ['f-done','f-block','f-not'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-person').value = currentUser ? currentUser.name : '';
 }
 async function saveReview(){
   if (saving) return;
-  const person = normPerson(document.getElementById('f-person').value);
-  if (!person){ document.getElementById('f-person').focus(); showToast('Please enter a person.', true); return; }
+  if (!currentUser){ showToast('Sign in first.', true); return; }
+  const person = normPerson(currentUser.name);
+  if (!person){ showToast('Your account has no name set.', true); return; }
+  document.getElementById('f-person').value = person;
   const done    = lines(document.getElementById('f-done').value);
   const blocked = lines(document.getElementById('f-block').value);
   const notDone = lines(document.getElementById('f-not').value);
@@ -1160,6 +1163,8 @@ function updateUserChip(){
   document.getElementById('user-chip-name').textContent   = currentUser.name;
   const fw = document.getElementById('form-whoami');
   if (fw) fw.innerHTML = `Logging as <b>${esc(currentUser.name)}</b>`;
+  const fp = document.getElementById('f-person');
+  if (fp) fp.value = currentUser.name;
 }
 
 function grantAccess(){
