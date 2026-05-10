@@ -3,7 +3,7 @@
    next load), cache-first for external scripts & fonts. Keeps the app fully
    functional offline once the first online visit has primed the caches.
 */
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.2.0';
 const CACHE = 'alchemist-' + VERSION;
 
 /* Core assets to pre-cache on install. Keep the list short and let
@@ -33,6 +33,60 @@ self.addEventListener('activate', event => {
       keys.filter(k => k !== CACHE).map(k => caches.delete(k))
     )).then(() => self.clients.claim())
   );
+});
+
+/* ──────────────────────────────────────────────────────────
+   Explicit precache on demand (wired to a "Download for Offline"
+   button in the page). The page posts:
+     { type: 'PRECACHE', urls: [...] }
+   and we reply (via the MessageChannel port) with progress events:
+     { type: 'PRECACHE_PROGRESS', done, total, url, ok }
+     { type: 'PRECACHE_DONE',     done, total, failed: [urls] }
+   Pages can also probe current status with { type: 'CACHE_STATUS', urls }
+   which returns { type: 'CACHE_STATUS_RESULT', cached: [...], missing: [...] }.
+   ────────────────────────────────────────────────────────── */
+self.addEventListener('message', event => {
+  const data = event.data || {};
+  const port = event.ports && event.ports[0];
+
+  if (data.type === 'PRECACHE' && Array.isArray(data.urls)) {
+    event.waitUntil((async () => {
+      const cache = await caches.open(CACHE);
+      const total = data.urls.length;
+      let done = 0;
+      const failed = [];
+      for (const url of data.urls) {
+        let ok = false;
+        try {
+          const resp = await fetch(url, { cache: 'no-cache', credentials: 'same-origin' });
+          if (resp && resp.ok) { await cache.put(url, resp.clone()); ok = true; }
+        } catch (e) { /* swallow — reported via failed[] */ }
+        done++;
+        if (!ok) failed.push(url);
+        if (port) port.postMessage({ type: 'PRECACHE_PROGRESS', done, total, url, ok });
+      }
+      if (port) port.postMessage({ type: 'PRECACHE_DONE', done, total, failed });
+    })());
+    return;
+  }
+
+  if (data.type === 'CACHE_STATUS' && Array.isArray(data.urls)) {
+    event.waitUntil((async () => {
+      const cache = await caches.open(CACHE);
+      const cached = [];
+      const missing = [];
+      for (const url of data.urls) {
+        const hit = await cache.match(url);
+        (hit ? cached : missing).push(url);
+      }
+      if (port) port.postMessage({ type: 'CACHE_STATUS_RESULT', cached, missing });
+    })());
+    return;
+  }
+
+  if (data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', event => {
