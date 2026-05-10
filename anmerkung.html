@@ -637,7 +637,7 @@ body.theme-light .cl-box { background: #fcf6e8; }
       <span class="chev">›</span>
     </button>
     <div class="bonus-panel" id="diffPanel" role="region" aria-label="Diff between before and after files">
-      <div class="diff-intro">Drop two processed workbooks to see every Anmerkung that was <span style="color:var(--accent)">added</span>, <span style="color:var(--danger)">removed</span>, or <span style="color:#fbbf24">changed</span>.</div>
+      <div class="diff-intro">Drop two processed workbooks to see every Anmerkung that was <span style="color:var(--accent)">added</span>, <span style="color:var(--danger)">removed</span>, or <span style="color:#fbbf24">changed</span>. Export a <strong>training set</strong> (CSV or JSONL) with <em>predicted vs. expected</em> values, the input cells the rules read, and the trigger trace &mdash; ideal for debugging rules or feeding an ML pipeline. Put your tool's output in <strong>A</strong>, the hand-corrected file in <strong>B</strong>.</div>
 
       <div class="diff-slots">
         <div class="diff-slot" id="diffSlotA" data-slot="a"
@@ -660,7 +660,13 @@ body.theme-light .cl-box { background: #fcf6e8; }
         <button type="button" class="tester-btn primary" id="btnDiffRun" disabled onclick="runDiff()">✦ Compare</button>
         <button type="button" class="tester-btn" onclick="clearDiff()">Clear</button>
         <button type="button" class="tester-btn" id="btnDiffCsv" style="display:none" onclick="downloadDiffCsv()">↓ Export CSV</button>
+        <button type="button" class="tester-btn" id="btnDiffTrainCsv" style="display:none" onclick="downloadTrainingSet('csv')" title="Export wrong/true pairs with input cells + trigger trace, one row per mismatch">↓ Training Set (CSV)</button>
+        <button type="button" class="tester-btn" id="btnDiffTrainJsonl" style="display:none" onclick="downloadTrainingSet('jsonl')" title="Same as CSV but JSONL — one JSON record per line, ML-friendly">↓ Training Set (JSONL)</button>
       </div>
+      <label class="opt-row" id="diffIncludeMatchWrap" style="display:none;margin-top:6px;font-size:10.5px;padding:8px 12px" for="diffIncludeMatch">
+        <input type="checkbox" id="diffIncludeMatch">
+        <span class="opt-desc"><strong>Include matching rows in training set</strong><span class="hint">Adds rows where A and B agree, labeled <code>correct</code>. Useful as positive examples; increases file size.</span></span>
+      </label>
 
       <div id="diffResults" style="display:none">
         <div class="diff-meta" id="diffMeta"></div>
@@ -826,8 +832,13 @@ document.addEventListener('keydown',e=>{
 /* ══════════════════════════════════════════════════════════
    VERSION + CHANGELOG (#24)
 ══════════════════════════════════════════════════════════ */
-const VERSION='1.2.0';
+const VERSION='1.3.0';
 const CHANGELOG=[
+  {ver:'1.3.0',date:'2026-05-10',items:[
+    'Diff Mode — new "Training Set" export (CSV + JSONL). For every row where A and B disagree, writes the predicted value, expected value, mismatch label (wrong / missed / overfired), the full set of input cells the rules actually read, and the trigger trace — so you can feed the results straight back into improving the rules.',
+    'Training set auto-detects the forwarder per sheet (falls back to the selected one) so mixed workbooks Just Work.',
+    '"Include matching rows" checkbox — optionally also export rows where A == B as positive examples.',
+  ]},
   {ver:'1.2.0',date:'2026-05-10',items:[
     'Download-for-offline button in the header — binds the whole Grimoire (all pages + assets) to your device via the service worker, with live progress and a "Available offline" state on return visits.',
     'Service worker bumped to v1.2.0 with explicit PRECACHE / CACHE_STATUS message handlers so any page can request a one-click download.',
@@ -1635,6 +1646,10 @@ function clearDiff(){
   });
   document.getElementById('btnDiffRun').disabled=true;
   document.getElementById('btnDiffCsv').style.display='none';
+  const tCsv=document.getElementById('btnDiffTrainCsv');if(tCsv)tCsv.style.display='none';
+  const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='none';
+  const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='none';
+  const incCb=document.getElementById('diffIncludeMatch');if(incCb)incCb.checked=false;
   document.getElementById('diffResults').style.display='none';
   document.getElementById('diffEmpty').style.display='none';
 }
@@ -1703,10 +1718,16 @@ function renderDiff(){
     document.getElementById('diffResults').style.display='none';
     document.getElementById('diffEmpty').style.display='block';
     document.getElementById('btnDiffCsv').style.display='none';
+    const tCsv=document.getElementById('btnDiffTrainCsv');if(tCsv)tCsv.style.display='none';
+    const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='none';
+    const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='none';
   } else {
     document.getElementById('diffResults').style.display='block';
     document.getElementById('diffEmpty').style.display='none';
     document.getElementById('btnDiffCsv').style.display='inline-block';
+    const tCsv=document.getElementById('btnDiffTrainCsv');if(tCsv)tCsv.style.display='inline-block';
+    const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='inline-block';
+    const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='flex';
   }
   showLog(`Diff \u2014 ${added} added, ${removed} removed, ${changed} changed (${total} rows scanned).`,'ok');
 }
@@ -1723,6 +1744,209 @@ function downloadDiffCsv(){
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   a.href=url;a.download='anmerkung_diff_'+stamp+'.csv';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* ══════════════════════════════════════════════════════════
+   TRAINING SET EXPORT (#20) — build (predicted, expected) pairs
+   from the diff, enriched with the input cells each forwarder's
+   rules actually read + the trigger trace (reason).
+
+   A = your tool's output (predicted)
+   B = hand-corrected truth (expected)
+
+   Row label:
+     • "wrong"     — both non-empty, disagree
+     • "missed"    — A empty, B non-empty (rule should have fired)
+     • "overfired" — A non-empty, B empty (rule fired when it shouldn't have)
+     • "correct"   — A === B (only exported when the "Include matching rows" checkbox is ticked)
+
+   Forwarder is auto-detected per sheet by scanning which resolver finds
+   the most known columns; falls back to the currently-selected forwarder.
+══════════════════════════════════════════════════════════ */
+
+const FW_RESOLVERS={dachser:resolveDachser,kn:resolveKN,dhl:resolveDHL,wackler:resolveWackler};
+
+/* Count how many known columns a resolver finds for a given sheet.
+   More matches = better confidence that this is the right forwarder. */
+function tsResolverScore(resolveFn,ws,range){
+  try{
+    const cols=resolveFn(ws,range);
+    let score=0;
+    for(const k of Object.keys(cols))if(cols[k]>=0)score++;
+    return score;
+  }catch(_){return 0;}
+}
+
+/* Pick the best forwarder for a sheet. Requires target (Anmerkung) col present.
+   Ties broken in this order: dachser, kn, dhl, wackler (most-specific first). */
+function tsDetectForwarder(ws,range){
+  const order=['dachser','kn','dhl','wackler'];
+  let best=null,bestScore=-1;
+  for(const fw of order){
+    const cols=FW_RESOLVERS[fw](ws,range);
+    if(cols.target<0)continue;
+    const score=tsResolverScore(FW_RESOLVERS[fw],ws,range);
+    if(score>bestScore){bestScore=score;best=fw;}
+  }
+  if(best)return best;
+  return selectedFW||'unknown';
+}
+
+/* Classify a mismatch — see comment block above for the label taxonomy. */
+function tsLabelFor(before,after){
+  const a=(before||'').trim(),b=(after||'').trim();
+  if(a===b)return 'correct';
+  if(!a&&b)return 'missed';
+  if(a&&!b)return 'overfired';
+  return 'wrong';
+}
+
+/* Collect structured (key -> value) input features for a single row,
+   joined by forwarder. Returns an ordered array of {key,value} pairs
+   so column order is stable in CSV output. */
+function tsCollectInputs(fw,ws,r,cols){
+  const pairs=[];
+  const push=(k,c)=>{
+    if(c===undefined||c<0)return;
+    const v=cellStr(ws,r,c);
+    pairs.push({key:k,value:v});
+  };
+  if(fw==='dachser'){
+    push('stat',cols.stat);push('tarif',cols.tarif);
+    push('fr_diff',cols.fr);
+    push('snk_dl',cols.snk_dl);push('snk_diff',cols.snk_diff);push('snk_tarif',cols.snk_tar);
+    push('zz_diff',cols.zz);push('sam_diff',cols.sam);push('dgr_diff',cols.dgr);
+    push('exp_diff',cols.exp);push('exp_dl',cols.exp_dl);
+    push('maut_diff',cols.maut);push('sbfu_diff',cols.sbfu);push('tz_diff',cols.tz);
+    push('lg_diff',cols.lg_diff);push('av_diff',cols.av_diff);
+    /* Hard-coded Dachser columns (position-based, same as processor). */
+    pairs.push({key:'referenz3',value:cellStr(ws,r,DA_COL_REFERENZ3)});
+    pairs.push({key:'empf_plz', value:cellStr(ws,r,DA_COL_EMPF_PLZ)});
+    pairs.push({key:'empf_ort', value:cellStr(ws,r,DA_COL_EMPF_ORT)});
+    pairs.push({key:'anz_sdg',  value:cellStr(ws,r,DA_COL_ANZ_SDG)});
+    pairs.push({key:'serv_art', value:cellStr(ws,r,DA_COL_SERV_ART)});
+    pairs.push({key:'sachkonto',value:cellStr(ws,r,DA_COL_SACHKONTO)});
+  } else if(fw==='kn'){
+    push('stat',cols.stat);
+    push('fr_diff',cols.fr);push('exp_diff',cols.exp);push('mt_diff',cols.toll);push('tz_diff',cols.fuel);
+    push('snk_dl',cols.snk_dl);push('snk_diff',cols.snk_diff);
+    push('referenz',cols.referenz);push('recip',cols.recip);
+    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
+    push('kostenstelle',cols.kost);push('sachkonto',cols.sach);
+  } else if(fw==='dhl'){
+    push('stat',cols.stat);push('tarif',cols.tarif);
+    push('fr_diff',cols.addr);push('pal_diff',cols.stack);push('ow_diff',cols.weight);
+    push('yo_diff',cols.conv);push('yl_diff',cols.irr);push('nd_diff',cols.neut);push('sf_diff',cols.sign);
+    push('snk_diff',cols.snk);push('ac_diff',cols.diff);push('mt_diff',cols.maut);
+    push('nx_diff',cols.surc);push('os_diff',cols.over);push('tz_diff',cols.tz);
+    push('kostenstelle',cols.kost);push('sachkonto',cols.sach);
+  } else if(fw==='wackler'){
+    push('stat',cols.stat);push('tarif',cols.tarif);push('existing_anmerkung',cols.target);
+    push('avis_diff',cols.avis_diff);push('snk_diff',cols.snk_diff);push('fr_diff',cols.fr);
+    push('mt_diff',cols.maut);push('tz_diff',cols.tz);
+    push('referenz',cols.referenz);
+    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
+    push('empf_plz',cols.empf_plz);push('empf_ort',cols.empf_ort);
+    push('kostenstelle',cols.kostenstelle);push('sachkonto',cols.sachkonto);
+  }
+  return pairs;
+}
+
+/* Re-run the actual production processor on slot-A's row to capture
+   the trigger trace + verify what the rule engine would produce right
+   now. This is how we recover the "reason" / "why" for training data. */
+function tsRunRule(fw,ws,r,cols){
+  try{
+    let predicted=null;
+    if(fw==='dachser')predicted=processDachser(ws,r,cols);
+    else if(fw==='kn')predicted=processKN(ws,r,cols);
+    else if(fw==='dhl')predicted=processDHL(ws,r,cols);
+    else if(fw==='wackler')predicted=processWackler(ws,r,cols);
+    const reason=buildReason(fw,ws,r,cols);
+    return{predicted,reason};
+  }catch(e){return{predicted:null,reason:'error: '+(e.message||e)};}
+}
+
+/* Build the training-set records. One per mismatch (and optionally per match). */
+function buildTrainingSet(){
+  if(!diffState.a||!diffState.b)return{records:[],inputKeys:[]};
+  const includeMatches=!!document.getElementById('diffIncludeMatch')?.checked;
+  const wbA=diffState.a.wb,wbB=diffState.b.wb;
+  /* Per-sheet: detect forwarder, resolve cols, walk rows. */
+  const sheetsA=wbA.SheetNames,sheetsB=wbB.SheetNames;
+  const commonSheets=sheetsA.filter(n=>sheetsB.includes(n));
+  const records=[];
+  const allKeys=new Set();
+  for(const name of commonSheets){
+    const wsA=wbA.Sheets[name],wsB=wbB.Sheets[name];
+    if(!wsA||!wsB)continue;
+    const rA=XLSX.utils.decode_range(wsA['!ref']||'A1:A1');
+    const rB=XLSX.utils.decode_range(wsB['!ref']||'A1:A1');
+    const fw=tsDetectForwarder(wsA,rA);
+    if(fw==='unknown')continue;
+    const resolver=FW_RESOLVERS[fw];
+    const colsA=resolver(wsA,rA);
+    const colsB=resolver(wsB,rB);
+    if(colsA.target<0||colsB.target<0)continue;
+    const lastRow=Math.max(rA.e.r,rB.e.r);
+    for(let r=3;r<=lastRow;r++){
+      const predicted=cellStr(wsA,r,colsA.target);
+      const expected=cellStr(wsB,r,colsB.target);
+      const label=tsLabelFor(predicted,expected);
+      if(label==='correct'&&!includeMatches)continue;
+      const{predicted:rulePredicted,reason}=tsRunRule(fw,wsA,r,colsA);
+      const inputs=tsCollectInputs(fw,wsA,r,colsA);
+      inputs.forEach(p=>allKeys.add(p.key));
+      const inputObj={};
+      for(const p of inputs)inputObj[p.key]=p.value;
+      records.push({
+        sheet:name,
+        row:r+1,
+        forwarder:fw,
+        label,
+        predicted,                                   /* what slot A says */
+        expected,                                    /* what slot B says */
+        rule_engine_now:rulePredicted==null?'':rulePredicted, /* what engine would say today */
+        engine_matches_a:(rulePredicted==null?'':rulePredicted)===predicted,
+        reason,                                      /* trigger trace */
+        inputs:inputObj,
+      });
+    }
+  }
+  /* Stable ordering of input keys: keep first-seen order from Set iteration. */
+  const inputKeys=[...allKeys];
+  return{records,inputKeys};
+}
+
+function downloadTrainingSet(format){
+  const{records,inputKeys}=buildTrainingSet();
+  if(!records.length){showLog('Training set \u2014 no rows to export (maybe all rows matched; try "Include matching rows").','err');return;}
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  let blob,ext;
+  if(format==='jsonl'){
+    const lines=records.map(r=>JSON.stringify(r));
+    blob=new Blob([lines.join('\n')+'\n'],{type:'application/x-ndjson;charset=utf-8'});
+    ext='jsonl';
+  } else {
+    /* CSV: flatten inputs to one column per key. */
+    const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    const header=['sheet','row','forwarder','label','predicted','expected','rule_engine_now','engine_matches_a','reason',...inputKeys.map(k=>'in_'+k)];
+    const lines=[header.join(',')];
+    for(const r of records){
+      const row=[r.sheet,r.row,r.forwarder,r.label,r.predicted,r.expected,r.rule_engine_now,r.engine_matches_a?'true':'false',r.reason];
+      for(const k of inputKeys)row.push(r.inputs[k]==null?'':r.inputs[k]);
+      lines.push(row.map(esc).join(','));
+    }
+    blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+    ext='csv';
+  }
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='anmerkung_training_'+stamp+'.'+ext;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  /* Quick summary in the log so users know what they got. */
+  const by={};for(const r of records)by[r.label]=(by[r.label]||0)+1;
+  const parts=Object.keys(by).sort().map(k=>k+'='+by[k]);
+  showLog('Training set exported \u2014 '+records.length+' row(s) as '+ext.toUpperCase()+' ('+parts.join(', ')+').','ok');
 }
 </script>
 </body>
