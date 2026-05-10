@@ -524,7 +524,14 @@ html.light .chronicle-metric{background:rgba(255,252,245,.85);border-color:rgba(
     <div class="modal-title">Seal this task</div>
     <div class="modal-task-name" id="modal-task-name">&mdash;</div>
     <div class="modal-label">Completed by (your name)</div>
-    <input class="modal-input" type="text" id="modal-scribe-input" placeholder="e.g. Nico, Marco, Ana..." autocomplete="off" />
+    <select class="modal-input" id="modal-scribe-select" onchange="onScribeChange()">
+      <option value="">&mdash; select &mdash;</option>
+    </select>
+    <div class="new-fwd-wrap" id="new-scribe-wrap" style="margin-top:8px">
+      <input type="text" id="modal-new-scribe" placeholder="New scribe name..." maxlength="40" />
+      <button type="button" class="btn-fwd-mini btn-fwd-save" onclick="saveNewScribe()">&#10003; Add</button>
+      <button type="button" class="btn-fwd-mini btn-fwd-cancel" onclick="cancelNewScribe()">&#10005;</button>
+    </div>
     <div class="modal-btns">
       <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="modal-btn modal-btn-confirm" onclick="confirmDone()">Seal &middot; Mark Done</button>
@@ -735,10 +742,11 @@ const firebaseConfig={apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",authDomai
 if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore(),col=db.collection('wmf_tasks');
 const fwdCol=db.collection('wmf_forwarders');
+const scribeCol=db.collection('wmf_scribes');
 const DEFAULT_FWDS=['Dachser','K+N','DHL Express','Wackler','Honold','ERKA'];
 const LS_KEY='wmf_todo_state_v1';
 
-let tasks=[],saving=false,curView='forwarder',openGroups=new Set(),selectedScribe=null,pendingToggleId=null,searchQuery='',pendingEditId=null,customFwds=[];
+let tasks=[],saving=false,curView='forwarder',openGroups=new Set(),selectedScribe=null,pendingToggleId=null,searchQuery='',pendingEditId=null,customFwds=[],customScribes=[];
 
 /* ── LOCAL STATE PERSISTENCE ── */
 function saveState(){
@@ -791,6 +799,71 @@ function loadForwarders(){
     customFwds=snap.docs.map(d=>d.data().name).filter(n=>n&&!DEFAULT_FWDS.includes(n));
     populateForwarderSelect(document.getElementById('inp-fwd'));
   },err=>{console.warn('Forwarder list unavailable:',err);});
+}
+
+/* ── SCRIBES (persons who complete tasks) ── */
+function getAllScribes(){
+  const fromTasks=[...new Set(tasks.map(t=>(t.completedBy||'').trim()).filter(Boolean))];
+  const merged=[];
+  [...customScribes,...fromTasks].forEach(n=>{if(!merged.some(x=>x.toLowerCase()===n.toLowerCase()))merged.push(n);});
+  return merged.sort((a,b)=>a.localeCompare(b));
+}
+function populateScribeSelect(selectEl,selectedVal){
+  if(!selectEl)return;
+  const cur=selectedVal!==undefined?selectedVal:selectEl.value;
+  const all=getAllScribes();
+  selectEl.innerHTML='<option value="">\u2014 select \u2014</option>'+
+    all.map(n=>`<option${n===cur?' selected':''}>${esc(n)}</option>`).join('')+
+    '<option value="__new__">\u2795 Add new scribe...</option>';
+  if(cur&&!all.includes(cur)&&cur!=='__new__'){
+    const o=document.createElement('option');o.value=cur;o.textContent=cur;o.selected=true;
+    selectEl.insertBefore(o,selectEl.options[1]);
+  }
+}
+function onScribeChange(){
+  const sel=document.getElementById('modal-scribe-select');
+  const wrap=document.getElementById('new-scribe-wrap');
+  if(sel.value==='__new__'){
+    wrap.classList.add('open');
+    sel.value='';
+    setTimeout(()=>document.getElementById('modal-new-scribe').focus(),50);
+  }
+}
+async function saveNewScribe(){
+  const input=document.getElementById('modal-new-scribe');
+  const name=input.value.trim();
+  if(!name){shake(input);return;}
+  const existing=getAllScribes().some(n=>n.toLowerCase()===name.toLowerCase());
+  if(existing){
+    // already on the list — just select it
+    populateScribeSelect(document.getElementById('modal-scribe-select'),name);
+    input.value='';
+    document.getElementById('new-scribe-wrap').classList.remove('open');
+    showToast(`"${name}" selected.`);
+    return;
+  }
+  try{
+    await scribeCol.add({name,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    if(!customScribes.includes(name))customScribes.push(name);
+    populateScribeSelect(document.getElementById('modal-scribe-select'),name);
+    input.value='';
+    document.getElementById('new-scribe-wrap').classList.remove('open');
+    showToast(`"${name}" added to the scribes.`);
+  }catch(e){showToast('Could not save scribe.',true);console.error(e);}
+}
+function cancelNewScribe(){
+  document.getElementById('modal-new-scribe').value='';
+  document.getElementById('new-scribe-wrap').classList.remove('open');
+}
+function loadScribes(){
+  scribeCol.orderBy('name').onSnapshot(snap=>{
+    customScribes=snap.docs.map(d=>d.data().name).filter(Boolean);
+    // refresh the modal dropdown if it's open
+    const sel=document.getElementById('modal-scribe-select');
+    if(sel&&document.getElementById('complete-modal').classList.contains('open')){
+      populateScribeSelect(sel,sel.value);
+    }
+  },err=>{console.warn('Scribe list unavailable:',err);});
 }
 
 function setView(v){
@@ -926,12 +999,14 @@ function openCompleteModal(id){
   const task=tasks.find(x=>x.id===id);if(!task)return;
   pendingToggleId=id;
   document.getElementById('modal-task-name').textContent=task.title;
-  document.getElementById('modal-scribe-input').value='';
+  populateScribeSelect(document.getElementById('modal-scribe-select'),'');
+  document.getElementById('new-scribe-wrap').classList.remove('open');
+  document.getElementById('modal-new-scribe').value='';
   document.getElementById('complete-modal').classList.add('open');
-  setTimeout(()=>document.getElementById('modal-scribe-input').focus(),300);
+  setTimeout(()=>document.getElementById('modal-scribe-select').focus(),300);
 }
 function closeModal(){document.getElementById('complete-modal').classList.remove('open');pendingToggleId=null;}
-async function confirmDone(){if(!pendingToggleId)return;const id=pendingToggleId;const name=document.getElementById('modal-scribe-input').value.trim();closeModal();await applyDone(id,name);}
+async function confirmDone(){if(!pendingToggleId)return;const id=pendingToggleId;const sel=document.getElementById('modal-scribe-select');const name=(sel&&sel.value&&sel.value!=='__new__')?sel.value.trim():'';closeModal();await applyDone(id,name);}
 async function confirmDoneAnonymous(){if(!pendingToggleId)return;const id=pendingToggleId;closeModal();await applyDone(id,'');}
 async function applyDone(id,scribeName){
   try{
@@ -1451,7 +1526,8 @@ function renderLeaderboard({rows,curKey,prevKey}){
   </div>`;
 }
 
-document.getElementById('modal-scribe-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmDone();if(e.key==='Escape')closeModal();});
+document.getElementById('modal-scribe-select').addEventListener('keydown',e=>{if(e.key==='Enter')confirmDone();if(e.key==='Escape')closeModal();});
+document.getElementById('modal-new-scribe').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveNewScribe();}if(e.key==='Escape')cancelNewScribe();});
 document.getElementById('search-input').addEventListener('keydown',e=>{if(e.key==='Escape')clearSearch();});
 document.getElementById('complete-modal').addEventListener('click',e=>{if(e.target===document.getElementById('complete-modal'))closeModal();});
 document.getElementById('edit-modal').addEventListener('click',e=>{if(e.target===document.getElementById('edit-modal'))closeEditModal();});
@@ -1466,6 +1542,7 @@ populateForwarderSelect(document.getElementById('inp-fwd'));
 setView(curView);
 startListener();
 loadForwarders();
+loadScribes();
 </script>
 </body>
 </html>
