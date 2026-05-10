@@ -3,7 +3,7 @@
    next load), cache-first for external scripts & fonts. Keeps the app fully
    functional offline once the first online visit has primed the caches.
 */
-const VERSION = 'v1.4.0';
+const VERSION = 'v1.4.1';
 const CACHE = 'alchemist-' + VERSION;
 
 /* Core assets to pre-cache on install. Keep the list short and let
