@@ -917,9 +917,11 @@ async function loadPeopleForAuth() {
 
     peopleSnap.docs.forEach(d => {
       const opt = `<option value="${d.id}">${d.data().name} (${d.data().dept})</option>`;
-      loginSel.insertAdjacentHTML('beforeend', opt);
+      // Only show people who have already created an account in the Sign In dropdown
+      if (linkedIds.has(d.id)) loginSel.insertAdjacentHTML('beforeend', opt);
       if (!linkedIds.has(d.id)) regSel.insertAdjacentHTML('beforeend', opt);
     });
+    if (loginSel.options.length === 1) loginSel.innerHTML = '<option value="">— No accounts yet — register first —</option>';
     if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— All members have accounts —</option>';
   } catch(e) {
     loginSel.innerHTML = regSel.innerHTML = '<option value="">— Error loading —</option>';
