@@ -302,6 +302,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
 <script>
 /* ── BACKGROUND PARTICLES ── */
 (function(){
@@ -326,8 +327,7 @@
   else { requestAnimationFrame(frame); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) requestAnimationFrame(frame); }); }
 })();
 
-const firebaseConfig={apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",authDomain:"vb-code-vault.firebaseapp.com",projectId:"vb-code-vault",storageBucket:"vb-code-vault.firebasestorage.app",messagingSenderId:"773245175115",appId:"1:773245175115:web:0b6a4f27388f58f026d4ce"};
-firebase.initializeApp(firebaseConfig);
+if(!firebase.apps.length)firebase.initializeApp(window.firebaseConfig);
 const db=firebase.firestore(),storage=firebase.storage();
 const col=db.collection('wmf_entries');  /* ── WMF collection ── */
 const authDoc=db.collection('_config').doc('auth');
