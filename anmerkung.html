@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="assets/grimoire-core.css">
 <script src="assets/grimoire-core.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
@@ -130,6 +131,75 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 .log { font-family: var(--mono); font-size: 11.5px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.2rem; margin-top: .5rem; display: none; line-height: 1.85; white-space: pre-wrap; }
 .log.err { color: var(--danger); border-color: rgba(248,113,113,0.2); background: rgba(248,113,113,0.04); }
 .log.ok { color: var(--accent); border-color: rgba(52,211,153,0.2); }
+
+/* OPTIONS (reason column + advanced panel) */
+.opt-wrap { margin-bottom: 1.4rem; }
+.opt-row { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11.5px; color: var(--text2); padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: border-color .2s, background .2s; }
+.opt-row:hover { border-color: var(--border2); }
+.opt-row input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border: 1px solid var(--border2); border-radius: 4px; background: transparent; cursor: pointer; position: relative; flex-shrink: 0; transition: background .15s, border-color .15s; }
+.opt-row input[type="checkbox"]:checked { background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,.55); }
+.opt-row input[type="checkbox"]:checked::after { content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 11px; font-weight: 700; }
+.opt-desc { flex: 1; }
+.opt-desc strong { color: var(--text); font-weight: 600; }
+.opt-desc .hint { color: var(--text3); font-size: 10px; display: block; margin-top: 2px; letter-spacing: .03em; }
+
+.adv-toggle { width: 100%; display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--text3); padding: 10px 14px; background: transparent; border: 1px dashed var(--border); border-radius: 12px; cursor: pointer; transition: color .2s, border-color .2s; letter-spacing: .06em; }
+.adv-toggle:hover { color: var(--text2); border-color: var(--border2); }
+.adv-toggle .chev { transition: transform .2s; display: inline-block; }
+.adv-toggle.open .chev { transform: rotate(90deg); }
+.adv-panel { display: none; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.2rem; margin-top: 8px; }
+.adv-panel.open { display: block; }
+.adv-intro { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 10px; line-height: 1.6; }
+.adv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.adv-field { display: flex; flex-direction: column; gap: 4px; }
+.adv-field label { font-family: var(--cinzel); font-size: 9.5px; color: var(--text3); letter-spacing: .18em; text-transform: uppercase; }
+.adv-field input { font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; transition: border-color .15s, background .15s; }
+.adv-field input:focus { outline: none; border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.04); }
+.adv-field .default-hint { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: .04em; }
+.adv-reset { margin-top: 10px; background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10.5px; padding: 6px 14px; border-radius: 20px; cursor: pointer; letter-spacing: .1em; transition: color .15s, border-color .15s; }
+.adv-reset:hover { color: var(--text2); border-color: var(--border2); }
+
+.btn-preview { width: 100%; padding: 13px; background: transparent; border: 1px dashed rgba(91,156,246,0.35); border-radius: 14px; font-family: var(--cinzel); font-size: 12px; font-weight: 600; letter-spacing: .12em; color: rgba(91,156,246,0.75); cursor: pointer; transition: color .2s, border-color .2s, background .2s, box-shadow .2s; margin-bottom: 10px; text-transform: uppercase; }
+.btn-preview:hover:not(:disabled) { color: #8ab8fa; border-color: rgba(91,156,246,0.55); background: rgba(91,156,246,0.04); box-shadow: 0 0 20px rgba(91,156,246,0.1); }
+.btn-preview:disabled { opacity: .3; cursor: not-allowed; }
+
+/* PREVIEW PANEL */
+.preview-wrap { display: none; margin-top: 1rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.preview-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.preview-title { font-family: var(--cinzel); font-size: 11px; color: var(--text2); letter-spacing: .18em; text-transform: uppercase; }
+.preview-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.preview-close { background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 14px; cursor: pointer; letter-spacing: .08em; }
+.preview-close:hover { color: var(--text2); border-color: var(--border2); }
+.preview-scroll { max-height: 420px; overflow: auto; }
+.preview-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 10.5px; }
+.preview-table thead { position: sticky; top: 0; background: #08081a; z-index: 1; }
+.preview-table th { text-align: left; font-family: var(--cinzel); font-weight: 600; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--text3); padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.preview-table td { padding: 7px 12px; border-bottom: 1px solid rgba(212,175,100,0.05); color: var(--text2); vertical-align: top; line-height: 1.5; }
+.preview-table tr.pr-filled td { color: var(--text); }
+.preview-table tr.pr-skipped td { color: var(--text3); font-style: italic; }
+.preview-table tr.pr-empty td { color: rgba(167,139,250,0.5); }
+.preview-table tr:hover td { background: rgba(52,211,153,0.03); }
+.pr-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.pr-dot.filled { background: var(--accent); box-shadow: 0 0 6px rgba(52,211,153,0.5); }
+.pr-dot.skipped { background: var(--text3); }
+.pr-dot.empty { background: rgba(167,139,250,0.5); }
+.pr-dot.preserved { background: #d4af64; box-shadow: 0 0 6px rgba(212,175,100,0.5); }
+.pr-value { max-width: 280px; word-break: break-word; }
+.pr-reason { max-width: 260px; word-break: break-word; font-size: 9.5px; color: var(--text3); }
+
+/* TRIGGER BREAKDOWN */
+.trig-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+.trig-title { font-family: var(--cinzel); font-size: 10px; color: var(--text3); letter-spacing: .22em; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.trig-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(212,175,100,.1), transparent); }
+.trig-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-bottom: 6px; font-family: var(--mono); font-size: 10.5px; }
+.trig-label { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trig-count { color: var(--text3); font-size: 10px; min-width: 28px; text-align: right; }
+.trig-bar-bg { grid-column: 1 / -1; height: 3px; background: rgba(255,255,255,0.04); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.trig-bar-fill { height: 100%; background: linear-gradient(90deg, #34d399, #5b9cf6); border-radius: 2px; }
+.trig-empty { font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; padding: 10px 0; }
+.stat.mini { padding: .75rem 1rem; }
+.stat.mini .stat-n { font-size: 20px; }
+.stats-grid-ext { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
 
 /* DOWNLOAD */
 .sigil-div { display: flex; align-items: center; gap: 16px; width: 100%; }
@@ -261,6 +331,138 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
   header .nav-badge { margin-left: auto; }
 }
+
+/* ── HEADER CHROME: version, changelog button, theme toggle (#24 / #13) ── */
+.ver-badge { font-family: var(--mono); font-size: 9.5px; padding: 3px 9px; border-radius: 14px; border: 1px solid var(--border); color: var(--text3); letter-spacing: .08em; }
+.hdr-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 14px; cursor: pointer; letter-spacing: .08em; transition: color .2s, border-color .2s; display: inline-flex; align-items: center; gap: 6px; }
+.hdr-btn:hover { color: var(--text2); border-color: var(--border2); }
+.hdr-btn[aria-pressed="true"] { color: var(--accent); border-color: rgba(52,211,153,0.35); }
+.hdr-btn svg { flex-shrink: 0; }
+.hdr-btn[data-offline-state="ready"] { color: var(--accent); border-color: rgba(52,211,153,0.35); }
+.hdr-btn[data-offline-state="working"] { color: var(--text2); border-color: var(--border2); cursor: progress; }
+.hdr-btn[data-offline-state="error"] { color: #f87171; border-color: rgba(248,113,113,0.35); }
+.hdr-btn:disabled { opacity: .7; cursor: progress; }
+
+/* ── LIGHT THEME — "Scriptorium" (#13) ── */
+body.theme-light {
+  --bg: #f4efe3;
+  --surface: rgba(255,251,240,0.9);
+  --surface2: rgba(252,246,232,0.95);
+  --border: rgba(80,55,20,0.12);
+  --border2: rgba(80,55,20,0.25);
+  --text: #1c1307;
+  --text2: rgba(80,55,20,0.75);
+  --text3: rgba(80,55,20,0.45);
+  --accent: #0d8c5f;
+  --danger: #b91c1c;
+  --gold: #8a6314;
+}
+body.theme-light header { background: rgba(252,246,232,0.92); }
+body.theme-light #bg-canvas { opacity: 0.35; }
+body.theme-light body::before { background-image: linear-gradient(rgba(80,55,20,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(80,55,20,0.04) 1px, transparent 1px); }
+body.theme-light .preview-table thead,
+body.theme-light .sub-box { background: #fcf6e8; }
+body.theme-light .trig-bar-bg { background: rgba(80,55,20,0.08); }
+
+/* ── LOG STREAM (#16) ── */
+.log { font-variant-ligatures: none; max-height: 240px; overflow-y: auto; }
+.log-line { display: block; padding: 2px 0; }
+.log-line .ts { color: var(--text3); margin-right: 10px; font-size: 10px; }
+.log-line.ok-line { color: var(--accent); }
+.log-line.err-line { color: var(--danger); }
+.log-line.info-line { color: var(--text2); }
+.log-clear { float: right; background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 9px; padding: 2px 8px; border-radius: 10px; cursor: pointer; letter-spacing: .08em; margin-bottom: 4px; }
+.log-clear:hover { color: var(--text2); border-color: var(--border2); }
+
+/* ── A11Y: focus rings (#17) ── */
+:focus-visible { outline: 2px solid rgba(52,211,153,0.6); outline-offset: 2px; border-radius: 4px; }
+body.theme-light :focus-visible { outline-color: rgba(13,140,95,0.7); }
+.fw-btn[aria-checked="true"] { border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.05); box-shadow: 0 8px 30px rgba(52,211,153,0.1); }
+.fw-btn[aria-checked="true"]::before { content: '✦'; width: auto; height: auto; border: none; font-size: 11px; color: var(--accent); font-family: var(--cinzel); top: 10px; right: 12px; left: auto; opacity: 1; }
+
+/* ── COLLAPSIBLE BONUS SECTIONS: TESTER + DIFF ── */
+.bonus-wrap { margin-top: 2.5rem; }
+.bonus-toggle { width: 100%; display: flex; align-items: center; gap: 10px; font-family: var(--cinzel); font-size: 10.5px; color: var(--text2); padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; cursor: pointer; letter-spacing: .22em; text-transform: uppercase; margin-bottom: 10px; transition: border-color .2s, color .2s; }
+.bonus-toggle:hover { border-color: var(--border2); color: var(--text); }
+.bonus-toggle .chev { transition: transform .2s; margin-left: auto; color: var(--text3); }
+.bonus-toggle.open .chev { transform: rotate(90deg); }
+.bonus-toggle .bonus-tag { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: .12em; text-transform: none; padding: 2px 8px; border: 1px solid var(--border); border-radius: 10px; }
+.bonus-panel { display: none; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.3rem; margin-bottom: 1rem; }
+.bonus-panel.open { display: block; }
+
+/* ── RULE TESTER (#18) ── */
+.tester-intro { font-family: var(--mono); font-size: 10.5px; color: var(--text3); margin-bottom: 12px; line-height: 1.6; }
+.tester-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.tester-field { display: flex; flex-direction: column; gap: 3px; }
+.tester-field label { font-family: var(--cinzel); font-size: 8.5px; color: var(--text3); letter-spacing: .18em; text-transform: uppercase; }
+.tester-field input { font-family: var(--mono); font-size: 11px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+.tester-field input:focus { outline: none; border-color: rgba(52,211,153,0.45); }
+.tester-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.tester-btn { background: transparent; border: 1px solid var(--border2); color: var(--text2); font-family: var(--mono); font-size: 10.5px; padding: 6px 12px; border-radius: 10px; cursor: pointer; letter-spacing: .06em; transition: all .15s; }
+.tester-btn:hover { color: var(--text); border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.04); }
+.tester-btn.primary { color: var(--accent); border-color: rgba(52,211,153,0.4); }
+.tester-output { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-family: var(--mono); font-size: 11.5px; color: var(--text2); min-height: 40px; line-height: 1.6; word-break: break-word; }
+.tester-output .to-label { color: var(--text3); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; }
+.tester-output .to-result { color: var(--text); font-weight: 600; }
+.tester-output .to-empty { color: rgba(167,139,250,0.6); font-style: italic; }
+.tester-output .to-null { color: var(--text3); font-style: italic; }
+.tester-output .to-reason { color: var(--text3); font-size: 9.5px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.tester-preset { display: inline-flex; align-items: center; gap: 4px; background: rgba(91,156,246,0.08); border: 1px solid rgba(91,156,246,0.25); color: rgba(91,156,246,0.85); font-family: var(--mono); font-size: 9px; padding: 3px 8px; border-radius: 8px; cursor: pointer; letter-spacing: .04em; transition: background .15s; }
+.tester-preset:hover { background: rgba(91,156,246,0.15); }
+.tester-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.tester-presets-label { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: .08em; margin-right: 4px; align-self: center; }
+
+/* ── DIFF MODE (#19) ── */
+.diff-intro { font-family: var(--mono); font-size: 10.5px; color: var(--text3); margin-bottom: 12px; line-height: 1.6; }
+.diff-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.diff-slot { background: var(--surface); border: 1.5px dashed var(--border); border-radius: 12px; padding: 1rem 1.1rem; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+.diff-slot:hover, .diff-slot.drag { border-color: rgba(52,211,153,0.35); background: rgba(52,211,153,0.04); }
+.diff-slot.loaded { border-color: rgba(52,211,153,0.5); background: rgba(52,211,153,0.05); border-style: solid; }
+.diff-slot-label { font-family: var(--cinzel); font-size: 9.5px; color: var(--text3); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 6px; }
+.diff-slot-name { font-family: var(--mono); font-size: 10.5px; color: var(--text2); word-break: break-all; }
+.diff-slot.loaded .diff-slot-name { color: var(--accent); }
+.diff-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.diff-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .7rem .8rem; text-align: center; }
+.diff-stat-n { font-family: var(--cinzel); font-size: 18px; font-weight: 900; color: var(--text); }
+.diff-stat-l { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 2px; letter-spacing: .04em; }
+.diff-stat.added .diff-stat-n { color: var(--accent); }
+.diff-stat.removed .diff-stat-n { color: var(--danger); }
+.diff-stat.changed .diff-stat-n { color: #fbbf24; }
+.diff-table-wrap { max-height: 380px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
+.diff-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 10px; }
+.diff-table thead { position: sticky; top: 0; background: #08081a; z-index: 1; }
+body.theme-light .diff-table thead { background: #fcf6e8; }
+.diff-table th { font-family: var(--cinzel); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text3); text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.diff-table td { padding: 5px 10px; border-bottom: 1px solid rgba(212,175,100,0.05); color: var(--text2); vertical-align: top; line-height: 1.5; }
+body.theme-light .diff-table td { border-bottom-color: rgba(80,55,20,0.05); }
+.diff-table tr.df-added td { background: rgba(52,211,153,0.05); }
+.diff-table tr.df-removed td { background: rgba(248,113,113,0.05); }
+.diff-table tr.df-changed td { background: rgba(251,191,36,0.04); }
+.diff-table .df-before { color: var(--danger); text-decoration: line-through; opacity: 0.75; }
+.diff-table .df-after { color: var(--accent); }
+.diff-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 8px; }
+.diff-empty { font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; padding: 20px 0; }
+
+/* ── CHANGELOG MODAL (#24) ── */
+#cl-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 600; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(8px); }
+body.theme-light #cl-overlay { background: rgba(244,239,227,0.82); }
+#cl-overlay.open { display: flex; }
+.cl-box { background: #08081a; border: 1px solid rgba(212,175,100,0.35); border-radius: 20px; padding: 2rem 1.8rem 1.8rem; width: min(520px, 100%); max-height: 80vh; display: flex; flex-direction: column; position: relative; }
+body.theme-light .cl-box { background: #fcf6e8; }
+.cl-box::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,100,0.6), transparent); }
+.cl-title { font-family: var(--cinzel); font-size: 18px; font-weight: 900; letter-spacing: .06em; color: var(--text); margin-bottom: .4rem; }
+.cl-title .grad { background: linear-gradient(120deg, #34d399 0%, #5b9cf6 55%, #d4af64 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.cl-sub { font-family: var(--mono); font-size: 10.5px; color: var(--text3); margin-bottom: 1.2rem; letter-spacing: .06em; }
+.cl-list { overflow-y: auto; flex: 1; padding-right: 4px; }
+.cl-entry { margin-bottom: 1.1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.cl-entry:last-child { border-bottom: none; }
+.cl-ver { display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--accent); background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.25); padding: 2px 10px; border-radius: 10px; letter-spacing: .06em; margin-right: 8px; }
+.cl-date { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.cl-items { margin-top: 8px; list-style: none; padding: 0; }
+.cl-items li { font-family: var(--mono); font-size: 11px; color: var(--text2); padding: 4px 0 4px 18px; line-height: 1.55; position: relative; }
+.cl-items li::before { content: '✦'; position: absolute; left: 0; top: 4px; color: rgba(52,211,153,0.5); font-size: 10px; }
+.cl-close { position: absolute; top: 14px; right: 14px; background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10px; padding: 3px 10px; border-radius: 12px; cursor: pointer; letter-spacing: .06em; }
+.cl-close:hover { color: var(--text2); border-color: var(--border2); }
 </style>
 </head>
 <body>
@@ -270,6 +472,20 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 <header>
   <a href="index.html" class="nav-back">← Grimoire</a>
   <div class="header-spacer"></div>
+  <span class="ver-badge" id="verBadge" title="Current version">v0.0.0</span>
+  <button type="button" class="hdr-btn" id="btnChangelog" onclick="openChangelog()" title="What's new" aria-label="What's new">
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3v2.8l1.6 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+    News
+  </button>
+  <button type="button" class="hdr-btn" id="btnTheme" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme" aria-pressed="false">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" id="themeIcon"><path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.5 2.5l.7.7M8.8 8.8l.7.7M2.5 9.5l.7-.7M8.8 3.2l.7-.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="6" r="2.3" stroke="currentColor" stroke-width="1.1"/></svg>
+    <span id="themeLabel">Dark</span>
+  </button>
+  <button type="button" class="hdr-btn" id="btnOffline" title="Download all Grimoire pages for offline use" aria-label="Download for offline use">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.5v6.3M3.3 5.3L6 8l2.7-2.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.8 9.2v.6c0 .4.3.7.7.7h7c.4 0 .7-.3.7-.7v-.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+    <span data-offline-label>Download for offline</span>
+    <span data-offline-progress style="opacity:.7;font-size:9.5px"></span>
+  </button>
   <span class="nav-badge">The Alchemist</span>
 </header>
 
@@ -279,21 +495,21 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   <div class="page-sub">Upload · select forwarder · transmute · download</div>
   <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᚦ ✦</div><div class="page-orn-line"></div></div>
 
-  <div class="section-label">I — Select Forwarder</div>
-  <div class="fw-grid">
-    <button class="fw-btn" data-fw="dachser" onclick="selectFW(this)">
+  <div class="section-label" id="fwLabel">I — Select Forwarder</div>
+  <div class="fw-grid" role="radiogroup" aria-labelledby="fwLabel" id="fwGroup">
+    <button class="fw-btn" data-fw="dachser" role="radio" aria-checked="false" tabindex="0" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">Dachser</div>
       <div class="fw-desc">CekKondisi_Freigabe · dynamic cols<br>ZZ·SAM·DGR·EXP·SNK·SBFU·FR·ZW·TZ<br>502·503·LG·AV</div>
     </button>
-    <button class="fw-btn" data-fw="kn" onclick="selectFW(this)">
+    <button class="fw-btn" data-fw="kn" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">K+N</div>
       <div class="fw-desc">FillAnmerkung · dynamic cols<br>Amazon tiers · bundling · SNK 5/9/18/34 · Kontierung</div>
     </button>
-    <button class="fw-btn" data-fw="dhl" onclick="selectFW(this)">
+    <button class="fw-btn" data-fw="dhl" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">DHL Express</div>
       <div class="fw-desc">YO ×15 · SNK 25/30/60<br>FR·PAL·OW blocker groups</div>
     </button>
-    <button class="fw-btn" data-fw="wackler" onclick="selectFW(this)">
+    <button class="fw-btn" data-fw="wackler" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">Wackler</div>
       <div class="fw-desc">Fremdnummer · AVIS 7.5/8.5/1 · SNK 38/−11.5<br>Gewichte · Bündelung · Return · Kontierung · TZ</div>
     </button>
@@ -310,9 +526,64 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
   <input type="file" id="fileInput" accept=".xlsx" style="display:none" onchange="onFileSelect(event)">
 
   <div class="section-label">III — Transmute &amp; Download</div>
+
+  <div class="opt-wrap">
+    <label class="opt-row" for="optReason">
+      <input type="checkbox" id="optReason">
+      <span class="opt-desc"><strong>Add "Why?" reason column</strong><span class="hint">Writes an extra <code>Anmerkung_Reason</code> column with the triggers that fired (e.g. <code>FR=+12.40 | SNK_DL=14</code>). Audit-friendly.</span></span>
+    </label>
+
+    <button type="button" class="adv-toggle" id="advToggle" onclick="toggleAdv()" aria-expanded="false" aria-controls="advPanel">
+      <span class="chev">›</span><span>Advanced — tolerance thresholds</span>
+    </button>
+    <div class="adv-panel" id="advPanel" role="region" aria-label="Advanced threshold settings">
+      <div class="adv-intro">Values below this absolute difference are treated as "no error" per forwarder. Saved locally in your browser.</div>
+      <div class="adv-grid">
+        <div class="adv-field">
+          <label for="thDachser">Dachser</label>
+          <input type="number" id="thDachser" step="0.01" min="0" inputmode="decimal">
+          <span class="default-hint">default 0.08</span>
+        </div>
+        <div class="adv-field">
+          <label for="thKN">K+N</label>
+          <input type="number" id="thKN" step="0.01" min="0" inputmode="decimal">
+          <span class="default-hint">default 0.09</span>
+        </div>
+        <div class="adv-field">
+          <label for="thDHL">DHL Express</label>
+          <input type="number" id="thDHL" step="0.01" min="0" inputmode="decimal">
+          <span class="default-hint">default 0.04</span>
+        </div>
+        <div class="adv-field">
+          <label for="thWackler">Wackler</label>
+          <input type="number" id="thWackler" step="0.01" min="0" inputmode="decimal">
+          <span class="default-hint">default 0.09</span>
+        </div>
+      </div>
+      <button type="button" class="adv-reset" onclick="resetThresholds()">↺ Reset to defaults</button>
+    </div>
+  </div>
+
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
+  <button class="btn-preview" id="btnPreview" disabled onclick="runPreview()">Preview — dry-run without writing</button>
   <button class="btn-run" id="btnRun" disabled onclick="openRunGate()">Invoke the Ritual</button>
   <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Transmuted Scroll ↓</button>
+
+  <div class="preview-wrap" id="previewWrap" role="region" aria-label="Preview of proposed annotations">
+    <div class="preview-head">
+      <div>
+        <div class="preview-title">Dry-run Preview</div>
+        <div class="preview-meta" id="previewMeta"></div>
+      </div>
+      <button type="button" class="preview-close" onclick="closePreview()">✕ Close</button>
+    </div>
+    <div class="preview-scroll">
+      <table class="preview-table" id="previewTable">
+        <thead><tr><th>Sheet</th><th>Row</th><th>Status</th><th>Proposed Anmerkung</th><th>Reason</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 
   <div id="stats-wrap">
     <div class="stats-grid">
@@ -320,35 +591,115 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
       <div class="stat"><div class="stat-n" id="sFilled">0</div><div class="stat-l">anmerkung filled</div></div>
       <div class="stat"><div class="stat-n" id="sSkipped">0</div><div class="stat-l">skipped (stat≠10)</div></div>
     </div>
+    <div class="stats-grid-ext">
+      <div class="stat mini"><div class="stat-n" id="sEmpty">0</div><div class="stat-l">no trigger (empty)</div></div>
+      <div class="stat mini"><div class="stat-n" id="sPreserved">0</div><div class="stat-l">preserved (protected)</div></div>
+    </div>
+    <div class="trig-wrap" id="trigWrap">
+      <div class="trig-title">Trigger Breakdown</div>
+      <div id="trigList"></div>
+    </div>
   </div>
-  <div class="log" id="log"></div>
+  <div class="log" id="log" role="status" aria-live="polite" aria-atomic="false"></div>
 
-  <!-- DOWNLOAD THE GRIMOIRE -->
-  <div class="sigil-div" style="margin-top:3.5rem">
-    <div class="sigil-line"></div>
-    <div class="sigil-sym">✦ ᛟ ✦</div>
-    <div class="sigil-line"></div>
-  </div>
-  <div class="dl-wrap">
-    <div class="dl-caption">Bind to your machine · Offline Codex</div>
-    <a href="https://drive.usercontent.google.com/download?id=1U0CSVUnPTPBOU_FmYDSeCG4c3uuvU9xO&export=download&authuser=0"
-       class="btn-grimoire" target="_blank" rel="noopener noreferrer">
-      <div class="btn-grimoire-bg"></div>
-      <div class="btn-grimoire-overlay"></div>
-      <div class="btn-grimoire-content">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path d="M7 1v7.5M7 8.5L4.5 6M7 8.5L9.5 6" stroke="#0a0818" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M1.5 10.5h11" stroke="#0a0818" stroke-width="1.5" stroke-linecap="round"/>
-          <path d="M2.5 10.5v1A1.5 1.5 0 004 13h6a1.5 1.5 0 001.5-1.5v-1" stroke="#0a0818" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        Download the Grimoire
+  <!-- ═══════════ BONUS: RULE TESTER (#18) ═══════════ -->
+  <div class="bonus-wrap">
+    <button type="button" class="bonus-toggle" id="testerToggle" onclick="toggleBonus('tester')" aria-expanded="false" aria-controls="testerPanel">
+      <span>IV — Rule Tester</span>
+      <span class="bonus-tag">Playground</span>
+      <span class="chev">›</span>
+    </button>
+    <div class="bonus-panel" id="testerPanel" role="region" aria-label="Rule tester playground">
+      <div class="tester-intro">Type values for the cells the selected forwarder reads, hit <strong>Evaluate</strong>, and see exactly what Anmerkung the rules would produce. No file needed — pure what-if.</div>
+
+      <div class="tester-presets" id="testerPresets">
+        <span class="tester-presets-label">// presets:</span>
       </div>
-    </a>
+
+      <div class="tester-grid" id="testerFields"></div>
+
+      <div class="tester-actions">
+        <button type="button" class="tester-btn primary" onclick="runTester()">✦ Evaluate</button>
+        <button type="button" class="tester-btn" onclick="clearTester()">Clear</button>
+      </div>
+
+      <div class="tester-output" id="testerOutput">
+        <div class="to-label">Result — select a forwarder above and fill in any fields to test</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ BONUS: DIFF MODE (#19) ═══════════ -->
+  <div class="bonus-wrap">
+    <button type="button" class="bonus-toggle" id="diffToggle" onclick="toggleBonus('diff')" aria-expanded="false" aria-controls="diffPanel">
+      <span>V — Diff Mode</span>
+      <span class="bonus-tag">Compare before/after</span>
+      <span class="chev">›</span>
+    </button>
+    <div class="bonus-panel" id="diffPanel" role="region" aria-label="Diff between before and after files">
+      <div class="diff-intro">Drop two processed workbooks to see every Anmerkung that was <span style="color:var(--accent)">added</span>, <span style="color:var(--danger)">removed</span>, or <span style="color:#fbbf24">changed</span>. Export a <strong>training set</strong> (CSV or JSONL) with <em>predicted vs. expected</em> values, the input cells the rules read, and the trigger trace &mdash; ideal for debugging rules or feeding an ML pipeline. Put your tool's output in <strong>A</strong>, the hand-corrected file in <strong>B</strong>.</div>
+
+      <div class="diff-slots">
+        <div class="diff-slot" id="diffSlotA" data-slot="a"
+          onclick="document.getElementById('diffInputA').click()"
+          ondragover="onDiffDrag(event,'a',true)" ondragleave="onDiffDrag(event,'a',false)" ondrop="onDiffDrop(event,'a')">
+          <div class="diff-slot-label">A — Before</div>
+          <div class="diff-slot-name" id="diffNameA">Click or drop an .xlsx</div>
+        </div>
+        <div class="diff-slot" id="diffSlotB" data-slot="b"
+          onclick="document.getElementById('diffInputB').click()"
+          ondragover="onDiffDrag(event,'b',true)" ondragleave="onDiffDrag(event,'b',false)" ondrop="onDiffDrop(event,'b')">
+          <div class="diff-slot-label">B — After</div>
+          <div class="diff-slot-name" id="diffNameB">Click or drop an .xlsx</div>
+        </div>
+      </div>
+      <input type="file" id="diffInputA" accept=".xlsx" style="display:none" onchange="onDiffFile(event,'a')">
+      <input type="file" id="diffInputB" accept=".xlsx" style="display:none" onchange="onDiffFile(event,'b')">
+
+      <div class="tester-actions">
+        <button type="button" class="tester-btn primary" id="btnDiffRun" disabled onclick="runDiff()">✦ Compare</button>
+        <button type="button" class="tester-btn" onclick="clearDiff()">Clear</button>
+        <button type="button" class="tester-btn" id="btnDiffCsv" style="display:none" onclick="downloadDiffCsv()">↓ Export CSV</button>
+        <button type="button" class="tester-btn" id="btnDiffTrainCsv" style="display:none" onclick="downloadTrainingSet('csv')" title="Export wrong/true pairs with input cells + trigger trace, one row per mismatch">↓ Training Set (CSV)</button>
+        <button type="button" class="tester-btn" id="btnDiffTrainJsonl" style="display:none" onclick="downloadTrainingSet('jsonl')" title="Same as CSV but JSONL — one JSON record per line, ML-friendly">↓ Training Set (JSONL)</button>
+      </div>
+      <label class="opt-row" id="diffIncludeMatchWrap" style="display:none;margin-top:6px;font-size:10.5px;padding:8px 12px" for="diffIncludeMatch">
+        <input type="checkbox" id="diffIncludeMatch">
+        <span class="opt-desc"><strong>Include matching rows in training set</strong><span class="hint">Adds rows where A and B agree, labeled <code>correct</code>. Useful as positive examples; increases file size.</span></span>
+      </label>
+
+      <div id="diffResults" style="display:none">
+        <div class="diff-meta" id="diffMeta"></div>
+        <div class="diff-summary">
+          <div class="diff-stat"><div class="diff-stat-n" id="dCount">0</div><div class="diff-stat-l">total rows</div></div>
+          <div class="diff-stat added"><div class="diff-stat-n" id="dAdded">0</div><div class="diff-stat-l">added</div></div>
+          <div class="diff-stat removed"><div class="diff-stat-n" id="dRemoved">0</div><div class="diff-stat-l">removed</div></div>
+          <div class="diff-stat changed"><div class="diff-stat-n" id="dChanged">0</div><div class="diff-stat-l">changed</div></div>
+        </div>
+        <div class="diff-table-wrap">
+          <table class="diff-table" id="diffTable">
+            <thead><tr><th>Sheet</th><th>Row</th><th>Change</th><th>Before (A)</th><th>After (B)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="diff-empty" id="diffEmpty" style="display:none">No differences found — the two files match.</div>
+    </div>
   </div>
 
   <div class="footer">
     codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
     <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a>
+  </div>
+</div>
+
+<!-- Changelog Modal (#24) -->
+<div id="cl-overlay" onclick="handleClBgClick(event)" role="dialog" aria-modal="true" aria-labelledby="clTitle">
+  <div class="cl-box" onclick="event.stopPropagation()">
+    <button type="button" class="cl-close" onclick="closeChangelog()" aria-label="Close changelog">✕ Close</button>
+    <div class="cl-title" id="clTitle">What's <span class="grad">new</span></div>
+    <div class="cl-sub" id="clSub">// The Alchemist · v0.0.0</div>
+    <div class="cl-list" id="clList"></div>
   </div>
 </div>
 
@@ -446,15 +797,270 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSubModa
    STATE
 ══════════════════════════════════════════════════════════ */
 let selectedFW=null,rawFileBytes=null,workbook=null,resultBlob=null,originalFileName='';
-const T_DACHSER=0.08,T_KN=0.09,T_DHL=0.04,T_WACKLER=0.09;
+/* Thresholds are mutable + persisted (feature #8). Defaults chosen to preserve original behavior. */
+const TH_DEFAULTS={dachser:0.08,kn:0.09,dhl:0.04,wackler:0.09};
+const TH_KEY='anmerkung.thresholds.v1';
+let TH={...TH_DEFAULTS};
+(function loadTh(){try{const saved=JSON.parse(localStorage.getItem(TH_KEY)||'null');if(saved&&typeof saved==='object')TH={...TH_DEFAULTS,...saved};}catch(_){}})();
+/* Dynamic threshold accessors — used everywhere the old constants were used. */
+let T_DACHSER=TH.dachser,T_KN=TH.kn,T_DHL=TH.dhl,T_WACKLER=TH.wackler;
+function applyThresholds(){T_DACHSER=TH.dachser;T_KN=TH.kn;T_DHL=TH.dhl;T_WACKLER=TH.wackler;}
+function saveThresholds(){try{localStorage.setItem(TH_KEY,JSON.stringify(TH));}catch(_){}}
+function syncThFields(){document.getElementById('thDachser').value=TH.dachser;document.getElementById('thKN').value=TH.kn;document.getElementById('thDHL').value=TH.dhl;document.getElementById('thWackler').value=TH.wackler;}
+function onThInput(key,el){const n=parseFloat(el.value);if(!isNaN(n)&&n>=0){TH[key]=n;applyThresholds();saveThresholds();}}
+function resetThresholds(){TH={...TH_DEFAULTS};applyThresholds();saveThresholds();syncThFields();}
+function toggleAdv(){const t=document.getElementById('advToggle'),p=document.getElementById('advPanel');const open=!p.classList.contains('open');p.classList.toggle('open',open);t.classList.toggle('open',open);t.setAttribute('aria-expanded',open?'true':'false');}
+document.addEventListener('DOMContentLoaded',()=>{
+  syncThFields();
+  [['thDachser','dachser'],['thKN','kn'],['thDHL','dhl'],['thWackler','wackler']].forEach(([id,key])=>{
+    const el=document.getElementById(id);
+    el.addEventListener('input',()=>onThInput(key,el));
+    el.addEventListener('change',()=>onThInput(key,el));
+  });
+  setVersionBadge();
+  loadChangelog();
+});
+
+/* Changelog Escape key handling (separate because theme modal uses same key). */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    const cl=document.getElementById('cl-overlay');
+    if(cl&&cl.classList.contains('open'))closeChangelog();
+  }
+});
+
+/* ══════════════════════════════════════════════════════════
+   VERSION + CHANGELOG (#24)
+   Data lives in assets/anmerkung-changelog.json so the release
+   notes can be edited without touching the app shell. The file
+   is precached by the service worker so offline mode still has
+   the full history.
+══════════════════════════════════════════════════════════ */
+const CHANGELOG_URL='assets/anmerkung-changelog.json';
+let VERSION='0.0.0';
+let CHANGELOG=[];
+async function loadChangelog(){
+  try{
+    const r=await fetch(CHANGELOG_URL,{cache:'no-cache'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    VERSION=String(d.version||'0.0.0');
+    CHANGELOG=Array.isArray(d.entries)?d.entries:[];
+  }catch(err){
+    /* Leave defaults; render an explanatory empty state. */
+    console.warn('[changelog] load failed:',err);
+  }
+  setVersionBadge();
+  renderChangelog();
+}
+function setVersionBadge(){const b=document.getElementById('verBadge');if(b)b.textContent='v'+VERSION;const sub=document.getElementById('clSub');if(sub)sub.textContent='// The Alchemist \u00b7 v'+VERSION;}
+function renderChangelog(){
+  const list=document.getElementById('clList');if(!list)return;
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  if(!CHANGELOG.length){
+    list.innerHTML='<div class="cl-entry" style="opacity:.6"><span class="cl-ver">—</span><span class="cl-date">offline</span><ul class="cl-items"><li>Changelog data could not be loaded.</li></ul></div>';
+    return;
+  }
+  list.innerHTML=CHANGELOG.map(e=>
+    `<div class="cl-entry"><span class="cl-ver">v${esc(e.ver)}</span><span class="cl-date">${esc(e.date)}</span>`+
+    `<ul class="cl-items">${(e.items||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`
+  ).join('');
+}
+function openChangelog(){document.getElementById('cl-overlay').classList.add('open');}
+function closeChangelog(){document.getElementById('cl-overlay').classList.remove('open');}
+function handleClBgClick(e){if(e.target===document.getElementById('cl-overlay'))closeChangelog();}
+
+/* ══════════════════════════════════════════════════════════
+   THEME TOGGLE — "Scriptorium" light (#13)
+══════════════════════════════════════════════════════════ */
+const THEME_KEY='anmerkung.theme.v1';
+function applyTheme(t){
+  const light=t==='light';
+  document.body.classList.toggle('theme-light',light);
+  const btn=document.getElementById('btnTheme'),lbl=document.getElementById('themeLabel');
+  if(btn)btn.setAttribute('aria-pressed',light?'true':'false');
+  if(lbl)lbl.textContent=light?'Light':'Dark';
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute('content',light?'#f4efe3':'#02020a');
+}
+function toggleTheme(){
+  const cur=document.body.classList.contains('theme-light')?'light':'dark';
+  const next=cur==='light'?'dark':'light';
+  applyTheme(next);
+  try{localStorage.setItem(THEME_KEY,next);}catch(_){}
+}
+(function loadTheme(){try{const saved=localStorage.getItem(THEME_KEY);if(saved==='light'||saved==='dark')applyTheme(saved);}catch(_){}})();
+
+/* ══════════════════════════════════════════════════════════
+   PHRASE CATALOG (#11 partial) — single source of truth for all
+   rule output strings. Rule engine imports from here; Rule Tester
+   uses the same catalog. Changing wording is now a 1-line edit.
+══════════════════════════════════════════════════════════ */
+const PHRASES={
+  // Dachser
+  ausfallfracht:              'AUSFALLFRACHT',
+  standgeld:                  'Standgeld',
+  speditionskostenGemText:    'Speditionskosten gem. Text',
+  ausfallfrachtSchadensersatz:'Ausfallfracht/Schadensersatz',
+  snkTelAnk:                  'Differenz Telefonische Zustellankündigung - Laderaumzuschlag',
+  snkAutoZustell:             'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag',
+  snkLaderaumEntw:            'Differenz Laderaumkostenentwicklung',
+  adminZeitfenster:           'Admin Zeitfensterbuchung Handel',
+  adminZeitfensterDiff:       'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag',
+  snkTelZustell:              'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag',
+  terminZuschlag:             'Termin-zuschlag',
+  produktZuschlag:            'Produktzuschlag',
+  einlagern:                  'Einlagern',
+  auslagern:                  'Auslagern',
+  lagergeld:                  'Lagergeld',
+  gebuehrVergeblich:          'Gebühr für vergeblichen Abholversuch',
+  zustell2:                   '2. Zustellung',
+  samstag:                    'Samstagzustellung',
+  gefahrgut:                  'Gefahrgut-Zuschlag',
+  mautDiff:                   'Mautdifferenz',
+  sbfu:                       'SBfU-Bescheinigung f. Umsatzsteuerzwecke',
+  vorholung:                  'VORHOLUNG',
+  sonderfahrt:                'Sonderfahrt',
+  buendelKoennen:             'hätte gebündelt werden können?',
+  abweichGewicht:             'Differenz aufgrund von abweichendem Gewicht',
+  abholtermin:                'Abholterminvereinbarung',
+  treibstof:                  'Differenz treibstof',
+  zwPrefix:                   'Differenz aufgrund abweichender Zwischenempfänger',
+  // K+N
+  buendelMuessenOk:           'hätte gebündelt werden müssen, ok?',
+  amazonMuessen:              'hätte nach Amazon Tarif abrechnen müssen',
+  amazonDuerfen:              'hätte nach Amazon Tarif abrechnen dürfen',
+  abweichGewichte:            'Differenz aufgrund abweichender Gewichte',
+  fixtermin:                  'FIXTERMIN',
+  portalavisOk:               'Portalavisierung, ok?',
+  avisOk:                     'Avis, ok?',
+  snkDifferenz:               'SNK Differenz',
+  treibstoff:                 'Differenz treibstoff',
+  kontierungQ:                'Kontierung?',
+  // DHL
+  fremdnummerDotPunkt:        'Fremdnummer doppelt berechnet.',
+  kontierungLower:            'kontierung?',
+  abweichGewichtVolumen:      'Differenz aufgrund von abweichendem Gewicht/Volumen',
+  nichtStapelbar:             'nicht stapelbar ok?',
+  overweight:                 'overweight ok?',
+  nonConvWeight:              'Non conveyable piece-weight ok?',
+  nonConvPiece:               'non conveyable piece ok?',
+  nonConvIrregular:           'Non-conveyable piece irregular ok?',
+  neutralDelivery:            'Neutral delivery ok?',
+  directSignature:            'Direct signature ok?',
+  limitedQuantities:          'Limited quantities ok?',
+  elevatedRisk:               'Elevated Risk, ok?',
+  elevatedRestricted:         'Eelevated risk ok? // Restricted destination ok?',
+  addressCorrectionOk:        'Addres Correction, ok?',
+  addressCorrectionQ:         'Address Correction ok?',
+  demandSurcharge:            'demand surcharge ok?',
+  oversizePiece:              'Oversize piece ok?',
+  // Wackler
+  fremdnummer:                'Fremdnummer Doppelt berechnet',
+  nlFix:                      'NL-FIX',
+  b2cLine:                    'hätte B2C-Line abrechnen dürfen',
+  buendelMuessen:             'hätte gebündelt werden müssen',
+  differenzAvisOk:            'Differenz avis, ok?',
+  returnOk:                   'Return, ok?',
+  frachtDiff:                 'Frachtdifferenz',
+};
+/* Expose under shorter alias for compactness inside processors. */
+const P=PHRASES;
+
+/* ══════════════════════════════════════════════════════════
+   TIMESTAMPED STREAMING LOG (#16) — replaces original showLog
+   with an append-only stream. Kept the same public signature
+   so all existing call sites work unchanged.
+══════════════════════════════════════════════════════════ */
+function pad2(n){return n<10?'0'+n:''+n;}
+function nowTs(){const d=new Date();return pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds());}
+let _logHasClear=false;
+function ensureLogClear(el){
+  if(_logHasClear)return;
+  _logHasClear=true;
+  const btn=document.createElement('button');
+  btn.type='button';btn.className='log-clear';btn.textContent='clear';
+  btn.onclick=clearLog;
+  el.parentNode.insertBefore(btn,el);
+}
+function clearLog(){const el=document.getElementById('log');el.innerHTML='';el.style.display='none';}
+/* Override showLog. Previous behavior: replace content each call.
+   New behavior: append timestamped line; 'err' / 'ok' color the line.
+   Signature preserved: showLog(msg, type). */
+function showLog(msg,type){
+  const el=document.getElementById('log');
+  el.style.display='block';
+  el.className='log'; /* clear any legacy single-line coloring */
+  ensureLogClear(el);
+  const lines=String(msg==null?'':msg).split('\n');
+  for(const line of lines){
+    const div=document.createElement('div');
+    div.className='log-line '+(type==='err'?'err-line':(type==='ok'?'ok-line':'info-line'));
+    const ts=document.createElement('span');ts.className='ts';ts.textContent=nowTs();
+    div.appendChild(ts);
+    div.appendChild(document.createTextNode(line));
+    el.appendChild(div);
+  }
+  el.scrollTop=el.scrollHeight;
+}
+
+/* ══════════════════════════════════════════════════════════
+   A11Y: forwarder radiogroup keyboard nav (#17)
+══════════════════════════════════════════════════════════ */
+function fwKeydown(e){
+  const btns=[...document.querySelectorAll('#fwGroup .fw-btn')];
+  const i=btns.indexOf(e.currentTarget);if(i<0)return;
+  let next=null;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')next=btns[(i+1)%btns.length];
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')next=btns[(i-1+btns.length)%btns.length];
+  else if(e.key==='Home')next=btns[0];
+  else if(e.key==='End')next=btns[btns.length-1];
+  else if(e.key===' '||e.key==='Enter'){e.preventDefault();e.currentTarget.click();return;}
+  if(next){e.preventDefault();btns.forEach(b=>b.tabIndex=-1);next.tabIndex=0;next.focus();next.click();}
+}
+
+/* ══════════════════════════════════════════════════════════
+   PWA REGISTRATION + OFFLINE DOWNLOAD BUTTON (#21)
+   Uses Grimoire.Offline (see assets/grimoire-core.js) which:
+     • registers sw.js
+     • posts { type:'PRECACHE', urls:[…] } to the active SW
+     • reports progress back via a MessageChannel
+     • reflects state on the button via data-offline-state
+══════════════════════════════════════════════════════════ */
+(function setupOffline(){
+  if(!window.Grimoire || !window.Grimoire.Offline) return; /* core failed to load */
+  /* Register first so the SW is ready by the time a user clicks. */
+  window.Grimoire.Offline.register();
+  /* Wait until DOM is parsed — this script runs at end of body, so it is. */
+  window.Grimoire.Offline.mount('#btnOffline', {
+    urls: window.Grimoire.Offline.defaultUrls().concat(['./assets/anmerkung-changelog.json']),
+    idleLabel:    'Download for offline',
+    readyLabel:   'Available offline',
+    workingLabel: 'Downloading…',
+    failLabel:    'Retry download'
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════
+   BONUS PANEL TOGGLES (Tester + Diff)
+══════════════════════════════════════════════════════════ */
+function toggleBonus(which){
+  const m={tester:['testerToggle','testerPanel'],diff:['diffToggle','diffPanel']};
+  const [tId,pId]=m[which];
+  const t=document.getElementById(tId),p=document.getElementById(pId);
+  const open=!p.classList.contains('open');
+  p.classList.toggle('open',open);t.classList.toggle('open',open);
+  t.setAttribute('aria-expanded',open?'true':'false');
+  if(open&&which==='tester')renderTesterFields();
+}
 
 /* ── UI HELPERS ── */
-function selectFW(btn){document.querySelectorAll('.fw-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');selectedFW=btn.dataset.fw;checkReady();}
+function selectFW(btn){document.querySelectorAll('.fw-btn').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-checked','false');b.tabIndex=-1;});btn.classList.add('selected');btn.setAttribute('aria-checked','true');btn.tabIndex=0;selectedFW=btn.dataset.fw;checkReady();renderTesterFields();}
 function onDrag(e,over){e.preventDefault();document.getElementById('dropArea').classList.toggle('drag',over);}
 function onDrop(e){e.preventDefault();onDrag(e,false);if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);}
 function onFileSelect(e){if(e.target.files[0])loadFile(e.target.files[0]);}
 function loadFile(file){originalFileName=file.name;const reader=new FileReader();reader.onload=ev=>{try{rawFileBytes=ev.target.result;workbook=XLSX.read(rawFileBytes,{type:'array',cellNF:true});const fn=document.getElementById('fileName');fn.textContent=file.name+' — '+workbook.SheetNames.length+' sheet(s)';fn.style.display='block';showLog('Scroll loaded: '+file.name,'ok');checkReady();}catch(err){showLog('Could not read scroll: '+err.message,'err');}};reader.readAsArrayBuffer(file);}
-function checkReady(){document.getElementById('btnRun').disabled=!(selectedFW&&workbook);}
+function checkReady(){const ok=!!(selectedFW&&workbook);document.getElementById('btnRun').disabled=!ok;document.getElementById('btnPreview').disabled=!ok;}
 function showLog(msg,type){const el=document.getElementById('log');el.style.display='block';el.className='log '+(type||'');el.textContent=msg;}
 function setProgress(pct){document.getElementById('progressWrap').style.display='block';document.getElementById('progressFill').style.width=pct+'%';}
 
@@ -630,23 +1236,153 @@ function ensureSharedStringsRel(relXml){if(relXml.includes('sharedStrings'))retu
 function patchSheet(sheetXml,targetCol,rowResults,strings){const tIdx=colToIdx(targetCol);for(const[rowNum,value]of rowResults){if(value===null)continue;const cellRef=targetCol+rowNum,ssIdx=getOrAdd(strings,value);const existRe=new RegExp(`<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`);const existMatch=existRe.exec(sheetXml);if(existMatch){const rawAttrs=(existMatch[1]+' '+(existMatch[2]||'')).replace(/\s*\bt="[^"]*"/g,'').replace(/\s+/g,' ').trim();const attrStr=rawAttrs?' '+rawAttrs:'';sheetXml=sheetXml.slice(0,existMatch.index)+`<c r="${cellRef}"${attrStr} t="s"><v>${ssIdx}</v></c>`+sheetXml.slice(existMatch.index+existMatch[0].length);continue;}const rowOpenRe=new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^/][^>]*>`);const rowOpenMatch=rowOpenRe.exec(sheetXml);if(!rowOpenMatch)continue;const afterOpen=rowOpenMatch.index+rowOpenMatch[0].length;const closeTag='</row>';const closeIdx=sheetXml.indexOf(closeTag,afterOpen);if(closeIdx<0)continue;const rowContent=sheetXml.slice(afterOpen,closeIdx);const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);const freq={};sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});const styleIdx=sVals.length?Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]:'0';const newCell=`<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;let insertAt=rowContent.length;for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)){if(colToIdx(m[1])>tIdx){insertAt=m.index;break;}}const newContent=rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);sheetXml=sheetXml.slice(0,afterOpen)+newContent+sheetXml.slice(closeIdx);}return sheetXml;}
 
 /* ── MAIN RUNNER ── */
+/* Split a processor result into distinct triggers (they're joined with ' // '). */
+function splitTriggers(s){if(!s)return[];return s.split(/\s*\/\/\s*/).map(x=>x.trim()).filter(Boolean);}
+/* Build a compact "why" string for the reason column. Captures raw values of the cells
+   the processor actually reads, per-forwarder. Purely diagnostic — never affects rules. */
+function buildReason(fw,ws,r,cols){
+  const parts=[];const push=(k,v)=>{if(v!==''&&v!=null&&v!=='0'&&v!=='-')parts.push(k+'='+v);};
+  const num=c=>c>=0?cellStr(ws,r,c):'';
+  if(fw==='dachser'){
+    push('STAT',num(cols.stat));push('TARIF',num(cols.tarif));
+    push('FR',num(cols.fr));push('SNK_DL',num(cols.snk_dl));push('SNK_DIFF',num(cols.snk_diff));
+    push('ZZ',num(cols.zz));push('SAM',num(cols.sam));push('DGR',num(cols.dgr));
+    push('EXP',num(cols.exp));push('EXP_DL',num(cols.exp_dl));push('MAUT',num(cols.maut));
+    push('LG',num(cols.lg_diff));push('AV',num(cols.av_diff));push('TZ',num(cols.tz));
+    const ref3=cellStr(ws,r,DA_COL_REFERENZ3);if(ref3)parts.push('REF3='+ref3);
+    const sa=cellStr(ws,r,DA_COL_SERV_ART);if(sa)parts.push('SERV='+sa);
+    const sk=cellStr(ws,r,DA_COL_SACHKONTO);if(sk)parts.push('SACH='+sk);
+  } else if(fw==='kn'){
+    push('STAT',num(cols.stat));push('FR',num(cols.fr));
+    push('SNK_DL',num(cols.snk_dl));push('SNK_DIFF',num(cols.snk_diff));
+    push('EXP',num(cols.exp));push('MT',num(cols.toll));push('TZ',num(cols.fuel));
+    const ref=cellStr(ws,r,cols.referenz);if(ref)parts.push('REF='+ref);
+    const rc=cellStr(ws,r,cols.recip);if(rc)parts.push('RECIP='+rc);
+    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
+    push('KOST',cellStr(ws,r,cols.kost));push('SACH',cellStr(ws,r,cols.sach));
+  } else if(fw==='dhl'){
+    push('STAT',num(cols.stat));push('TARIF',num(cols.tarif));
+    push('FR',num(cols.addr));push('PAL',num(cols.stack));push('OW',num(cols.weight));
+    push('YO',num(cols.conv));push('YL',num(cols.irr));push('ND',num(cols.neut));push('SF',num(cols.sign));
+    push('SNK',num(cols.snk));push('AC',num(cols.diff));push('MT',num(cols.maut));
+    push('NX',num(cols.surc));push('OS',num(cols.over));push('TZ',num(cols.tz));
+    push('KOST',cellStr(ws,r,cols.kost));push('SACH',cellStr(ws,r,cols.sach));
+  } else if(fw==='wackler'){
+    push('STAT',num(cols.stat));push('TARIF',num(cols.tarif));
+    push('AVIS',num(cols.avis_diff));push('SNK',num(cols.snk_diff));push('FR',num(cols.fr));
+    push('MT',num(cols.maut));push('TZ',num(cols.tz));
+    const ref=cellStr(ws,r,cols.referenz);if(ref)parts.push('REF='+ref);
+    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
+    const plz=cellStr(ws,r,cols.empf_plz),ort=cellStr(ws,r,cols.empf_ort);
+    if(plz||ort)parts.push('DEST='+[plz,ort].filter(Boolean).join(' '));
+    push('KOST',cellStr(ws,r,cols.kostenstelle));push('SACH',cellStr(ws,r,cols.sachkonto));
+  }
+  return parts.join(' | ');
+}
+
+/* Run rules across the workbook without mutating files. Returns in-memory results + stats. */
+function runRules(){
+  let total=0,filled=0,skipped=0,empty=0,preserved=0,unreachable=0;
+  const allResults={};
+  const trigCounts=new Map();
+  const previewRows=[];
+  for(const name of workbook.SheetNames){
+    const ws=workbook.Sheets[name],range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+    let cols,fn;
+    if(selectedFW==='dachser'){cols=resolveDachser(ws,range);fn=processDachser;}
+    else if(selectedFW==='kn'){cols=resolveKN(ws,range);fn=processKN;}
+    else if(selectedFW==='dhl'){cols=resolveDHL(ws,range);fn=processDHL;}
+    else{cols=resolveWackler(ws,range);fn=processWackler;}
+    if(cols.target<0){showLog(`Sheet "${name}": Anmerkung column not found.`,'err');unreachable++;continue;}
+    const targetCol=idxToCol(cols.target),rowMap=new Map(),reasonMap=new Map();
+    for(let r=3;r<=range.e.r;r++){
+      total++;
+      const excelRow=r+1;
+      const result=fn(ws,r,cols);
+      if(result===null){
+        let isPreserved=false;
+        /* For Wackler, processor returns null for both stat≠10 and protected existing value.
+           Distinguish via current Stat_Freigabe. */
+        if(selectedFW==='wackler'){
+          const statOk=cols.stat<0||cellNum(ws,r,cols.stat)===10;
+          if(statOk){isPreserved=true;preserved++;}
+          else{skipped++;}
+        } else {
+          skipped++;
+        }
+        previewRows.push({sheet:name,row:excelRow,status:isPreserved?'preserved':'skipped',value:'',reason:''});
+        continue;
+      }
+      rowMap.set(excelRow,result);
+      const trigs=splitTriggers(result);
+      trigs.forEach(t=>trigCounts.set(t,(trigCounts.get(t)||0)+1));
+      if(result){filled++;}else{empty++;}
+      const reason=buildReason(selectedFW,ws,r,cols);
+      reasonMap.set(excelRow,reason);
+      previewRows.push({sheet:name,row:excelRow,status:result?'filled':'empty',value:result,reason});
+    }
+    allResults[name]={targetCol,rowMap,reasonMap,targetIdx:cols.target};
+  }
+  /* previewRows already has status flags set inline above (filled/empty/skipped/preserved). */
+  return{total,filled,skipped,empty,preserved,unreachable,allResults,trigCounts,previewRows};
+}
+
+/* ── PREVIEW (#1) ── */
+function runPreview(){
+  const btn=document.getElementById('btnPreview');btn.disabled=true;btn.textContent='Computing dry-run...';
+  document.getElementById('stats-wrap').style.display='none';
+  document.getElementById('btnDl').style.display='none';
+  try{
+    const rep=runRules();
+    renderStats(rep);
+    renderPreview(rep);
+    showLog(`Dry-run — ${rep.filled} would be filled, ${rep.skipped} skipped, ${rep.empty} empty, ${rep.preserved} preserved.`,'ok');
+  }catch(e){showLog('Preview failed: '+e.message,'err');console.error(e);}
+  btn.disabled=false;btn.textContent='Preview — dry-run without writing';
+}
+function renderPreview(rep){
+  const wrap=document.getElementById('previewWrap'),tbody=document.querySelector('#previewTable tbody');
+  const MAX=200;const rows=rep.previewRows.slice(0,MAX);
+  tbody.innerHTML=rows.map(r=>{
+    const cls=r.status==='filled'?'pr-filled':(r.status==='empty'?'pr-empty':'pr-skipped');
+    const dot=`<span class="pr-dot ${r.status}"></span>`;
+    const label=r.status==='filled'?'filled':r.status==='empty'?'empty':'skipped';
+    const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<tr class="${cls}"><td>${esc(r.sheet)}</td><td>${r.row}</td><td>${dot}${label}</td><td class="pr-value">${esc(r.value)}</td><td class="pr-reason">${esc(r.reason)}</td></tr>`;
+  }).join('');
+  document.getElementById('previewMeta').textContent=`showing ${rows.length} of ${rep.previewRows.length} rows · ${rep.filled} filled · ${rep.empty} empty · ${rep.skipped} skipped`;
+  wrap.style.display='block';
+}
+function closePreview(){document.getElementById('previewWrap').style.display='none';}
+
+/* ── STATS + TRIGGER BREAKDOWN (#12) ── */
+function renderStats(rep){
+  document.getElementById('sTotal').textContent=rep.total;
+  document.getElementById('sFilled').textContent=rep.filled;
+  document.getElementById('sSkipped').textContent=rep.skipped;
+  document.getElementById('sEmpty').textContent=rep.empty;
+  document.getElementById('sPreserved').textContent=rep.preserved;
+  const list=document.getElementById('trigList');
+  const entries=[...rep.trigCounts.entries()].sort((a,b)=>b[1]-a[1]);
+  if(!entries.length){list.innerHTML='<div class="trig-empty">No triggers fired — all clean.</div>';}
+  else{
+    const max=entries[0][1];
+    const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    list.innerHTML=entries.map(([name,count])=>{
+      const pct=Math.max(4,Math.round(count/max*100));
+      return `<div class="trig-row"><div class="trig-label" title="${esc(name)}">${esc(name)}</div><div class="trig-count">${count}</div><div class="trig-bar-bg"><div class="trig-bar-fill" style="width:${pct}%"></div></div></div>`;
+    }).join('');
+  }
+  document.getElementById('stats-wrap').style.display='block';
+}
+
 async function runProcess(){
   const btn=document.getElementById('btnRun');btn.disabled=true;btn.textContent='Invoking ritual...';
   document.getElementById('btnDl').style.display='none';document.getElementById('stats-wrap').style.display='none';setProgress(5);
   try{
-    let total=0,filled=0,skipped=0;const allResults={};
-    for(const name of workbook.SheetNames){
-      const ws=workbook.Sheets[name],range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
-      let cols,fn;
-      if(selectedFW==='dachser'){cols=resolveDachser(ws,range);fn=processDachser;}
-      else if(selectedFW==='kn'){cols=resolveKN(ws,range);fn=processKN;}
-      else if(selectedFW==='dhl'){cols=resolveDHL(ws,range);fn=processDHL;}
-      else{cols=resolveWackler(ws,range);fn=processWackler;}
-      if(cols.target<0){showLog(`Sheet "${name}": Anmerkung column not found.`,'err');continue;}
-      const targetCol=idxToCol(cols.target),rowMap=new Map();
-      for(let r=3;r<=range.e.r;r++){total++;const result=fn(ws,r,cols),excelRow=r+1;if(result===null){skipped++;}else{rowMap.set(excelRow,result);if(result)filled++;}}
-      allResults[name]={targetCol,rowMap};
-    }
+    const rep=runRules();
+    const allResults=rep.allResults;
+    const wantReason=document.getElementById('optReason').checked;
     setProgress(25);
     const zip=await JSZip.loadAsync(rawFileBytes);setProgress(40);
     const ssFile=zip.file('xl/sharedStrings.xml');let ssXml=ssFile?await ssFile.async('string'):'';const strings=ssXml?parseSharedStrings(ssXml):[];
@@ -654,16 +1390,33 @@ async function runProcess(){
     const sheetRids={};for(const m of wbXml.matchAll(/<sheet\b[^>]+\bname="([^"]+)"[^>]+\br:id="(rId\d+)"/g))sheetRids[m[1]]=m[2];
     const ridPaths={};for(const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g))ridPaths[m[1]]=m[2];
     const sheetNames=Object.keys(allResults);
-    for(let si=0;si<sheetNames.length;si++){const name=sheetNames[si],{targetCol,rowMap}=allResults[name];if(!rowMap.size)continue;const rId=sheetRids[name];if(!rId)continue;let rel=ridPaths[rId]||'';rel=rel.replace(/^\/+/,'');if(!rel.startsWith('xl/'))rel='xl/'+rel;let sheetXml=await zip.file(rel).async('string');sheetXml=patchSheet(sheetXml,targetCol,rowMap,strings);zip.file(rel,sheetXml);setProgress(40+Math.round(40*(si+1)/sheetNames.length));}
+    for(let si=0;si<sheetNames.length;si++){
+      const name=sheetNames[si],{targetCol,rowMap,reasonMap,targetIdx}=allResults[name];
+      if(!rowMap.size&&!(wantReason&&reasonMap&&reasonMap.size)){continue;}
+      const rId=sheetRids[name];if(!rId)continue;
+      let rel=ridPaths[rId]||'';rel=rel.replace(/^\/+/,'');if(!rel.startsWith('xl/'))rel='xl/'+rel;
+      let sheetXml=await zip.file(rel).async('string');
+      sheetXml=patchSheet(sheetXml,targetCol,rowMap,strings);
+      if(wantReason){
+        /* Reason column is placed one column to the right of Anmerkung. Header goes in row 3 (the
+           header row used by the processors' findCol). */
+        const reasonColIdx=targetIdx+1;
+        const reasonCol=idxToCol(reasonColIdx);
+        const headerMap=new Map([[3,'Anmerkung_Reason']]);
+        sheetXml=patchSheet(sheetXml,reasonCol,headerMap,strings);
+        sheetXml=patchSheet(sheetXml,reasonCol,reasonMap,strings);
+      }
+      zip.file(rel,sheetXml);
+      setProgress(40+Math.round(40*(si+1)/sheetNames.length));
+    }
     zip.file('xl/sharedStrings.xml',rebuildSharedStrings(strings));
     const ctFile=zip.file('[Content_Types].xml');if(ctFile){let ctXml=await ctFile.async('string');ctXml=ensureSharedStringsContentType(ctXml);zip.file('[Content_Types].xml',ctXml);}
     const wbRelFile=zip.file('xl/_rels/workbook.xml.rels');if(wbRelFile){let wbRel=await wbRelFile.async('string');wbRel=ensureSharedStringsRel(wbRel);zip.file('xl/_rels/workbook.xml.rels',wbRel);}
     setProgress(85);
     resultBlob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE',compressionOptions:{level:6}});
     setProgress(100);
-    document.getElementById('sTotal').textContent=total;document.getElementById('sFilled').textContent=filled;document.getElementById('sSkipped').textContent=skipped;
-    document.getElementById('stats-wrap').style.display='block';
-    showLog(`Ritual complete — ${filled} rows transmuted, ${skipped} skipped (Stat_Freigabe ≠ 10).`,'ok');
+    renderStats(rep);
+    showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (Stat_Freigabe ≠ 10)${rep.preserved?`, ${rep.preserved} preserved`:''}${wantReason?' · reason column written':''}.`,'ok');
     document.getElementById('btnDl').style.display='block';
   }catch(e){showLog('Ritual failed: '+e.message+'\n'+e.stack,'err');console.error(e);}
   btn.disabled=false;btn.textContent='Invoke the Ritual';
@@ -671,6 +1424,523 @@ async function runProcess(){
 
 /* ── DOWNLOAD ── */
 function downloadResult(){if(!resultBlob)return;const url=URL.createObjectURL(resultBlob),a=document.createElement('a');a.href=url;a.download=originalFileName||'anmerkung_processed.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+/* ══════════════════════════════════════════════════════════
+   RULE TESTER (#18) — builds a synthetic worksheet + cols from
+   user-entered values and runs the actual processor. Guarantees
+   identical behavior to the production engine, not a mock.
+══════════════════════════════════════════════════════════ */
+
+/* Per-forwarder field catalog — [key, label, type] where key matches
+   the cols.* property the resolver returns. The tester writes values
+   into a synthetic ws at stable column indices. */
+const TESTER_FIELDS={
+  dachser:[
+    ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],
+    ['fr','FR Differenz','num'],['snk_diff','SNK Differenz','num'],['snk_dl','SNK Kosten DL','num'],['snk_tar','SNK Kosten lt.Tarif','num'],
+    ['zz','ZZ Differenz','num'],['sam','SAM Differenz','num'],['dgr','DGR Differenz','num'],
+    ['exp','EXP Differenz','num'],['exp_dl','EXP Kosten DL','num'],
+    ['maut','MT Differenz','num'],['sbfu','SBFU Differenz','num'],['tz','TZ Differenz','num'],
+    ['lg_diff','LG Differenz','num'],['av_diff','AV Differenz','num'],
+    ['c502_dl','502 Kosten DL','str'],['c503_dl','503 Kosten DL','str'],
+    ['_referenz3','ReferenzNr3','str'],['_serv','Serv.-Art','str'],['_sach','Sachkonto','str'],
+    ['_plz','Empf.-PLZ','str'],['_ort','Empf.-Ort','str'],['_anzSdg','Anz.Sdg','str'],
+  ],
+  kn:[
+    ['stat','Stat_Freigabe','num'],
+    ['fr','FR Differenz','num'],['snk_diff','SNK Differenz','num'],['snk_dl','SNK Kosten DL','num'],
+    ['exp','EXP Differenz','num'],['toll','MT Differenz','num'],['fuel','TZ Differenz','num'],
+    ['referenz','ReferenzNr','str'],['recip','Empf.-Name','str'],
+    ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
+    ['kost','Kostenstelle','str'],['sach','Sachkonto','str'],
+  ],
+  dhl:[
+    ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],
+    ['addr','FR Differenz','num'],['stack','PAL Differenz','num'],['weight','OW Differenz','num'],
+    ['conv','YO Differenz','num'],['irr','YL Differenz','num'],['neut','ND Differenz','num'],['sign','SF Differenz','num'],
+    ['snk','SNK Differenz','num'],['diff','AC Differenz','num'],['maut','MT Differenz','num'],
+    ['surc','NX Differenz','num'],['over','OS Differenz','num'],['tz','TZ Differenz','num'],
+    ['kost','KOSTENSTELLE','str'],['sach','SACHKONTO','str'],
+  ],
+  wackler:[
+    ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],['target','Existing Anmerkung','str'],
+    ['avis_diff','AVIS Differenz','num'],['snk_diff','SNK Differenz','num'],['fr','FR Differenz','num'],
+    ['maut','MT Differenz','num'],['tz','TZ Differenz','num'],
+    ['referenz','ReferenzNr','str'],
+    ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
+    ['empf_plz','Empf.-PLZ','str'],['empf_ort','Empf.-Ort','str'],
+    ['kostenstelle','KOSTENSTELLE','str'],['sachkonto','SACHKONTO','str'],
+  ],
+};
+
+/* Presets that exercise common rule branches — great smoke tests. */
+const TESTER_PRESETS={
+  dachser:[
+    {name:'AUSFALLFRACHT 190',values:{stat:10,snk_dl:190,snk_diff:0}},
+    {name:'Saturday delivery',values:{stat:10,sam:25,tarif:'150,00'}},
+    {name:'ZW intermediary',values:{stat:10,fr:15,_referenz3:'ZW',_plz:'88499',_ort:'Riedlingen',tarif:'200,00'}},
+    {name:'K1AV zeitfenster',values:{stat:10,snk_dl:5,snk_diff:12,_serv:'K1AV',tarif:'100,00'}},
+  ],
+  kn:[
+    {name:'Bundled, should be',values:{stat:10,fr:15,referenz:'123,456'}},
+    {name:'Amazon tariff miss',values:{stat:10,fr:12,recip:'Amazon Logistics',referenz:'single'}},
+    {name:'Portal avis 5',values:{stat:10,snk_diff:5,snk_dl:5}},
+    {name:'Clean row',values:{stat:10,kost:'1234',sach:'5678'}},
+  ],
+  dhl:[
+    {name:'Overweight trigger',values:{stat:10,weight:20,tarif:'120,00'}},
+    {name:'Non-conv ×15',values:{stat:10,conv:30,tarif:'100,00'}},
+    {name:'Elevated risk 60',values:{stat:10,snk:60,tarif:'80,00'}},
+    {name:'Fremdnummer dup',values:{stat:10,tarif:'0'}},
+  ],
+  wackler:[
+    {name:'Protected existing',values:{stat:10,target:'Return, ok?'}},
+    {name:'AVIS 7.5',values:{stat:10,avis_diff:7.5,tarif:'60,00'}},
+    {name:'Riedlingen return',values:{stat:10,fr:10,empf_plz:'88499',empf_ort:'Riedlingen',tarif:'70,00'}},
+    {name:'NL-FIX SNK 38',values:{stat:10,snk_diff:38,tarif:'80,00'}},
+  ],
+};
+
+function renderTesterFields(){
+  const fw=selectedFW,wrap=document.getElementById('testerFields'),presetsWrap=document.getElementById('testerPresets'),out=document.getElementById('testerOutput');
+  if(!wrap)return;
+  if(!fw){
+    wrap.innerHTML='';
+    presetsWrap.innerHTML='<span class="tester-presets-label">// select a forwarder above to begin</span>';
+    if(out)out.innerHTML='<div class="to-label">Result — select a forwarder above and fill in any fields to test</div>';
+    return;
+  }
+  const fields=TESTER_FIELDS[fw]||[];
+  wrap.innerHTML=fields.map(([k,l,t])=>
+    `<div class="tester-field"><label for="t_${k}">${l}</label><input type="${t==='num'?'text':'text'}" id="t_${k}" data-k="${k}" inputmode="${t==='num'?'decimal':'text'}" autocomplete="off"></div>`
+  ).join('');
+  const presets=TESTER_PRESETS[fw]||[];
+  presetsWrap.innerHTML='<span class="tester-presets-label">// presets:</span>'+
+    presets.map((p,i)=>`<button type="button" class="tester-preset" data-i="${i}" onclick="applyTesterPreset(${i})">${p.name}</button>`).join('');
+}
+
+function applyTesterPreset(idx){
+  const fw=selectedFW;if(!fw)return;
+  const preset=(TESTER_PRESETS[fw]||[])[idx];if(!preset)return;
+  clearTester();
+  Object.entries(preset.values).forEach(([k,v])=>{
+    const el=document.getElementById('t_'+k);if(el)el.value=String(v);
+  });
+  runTester();
+}
+
+function clearTester(){
+  document.querySelectorAll('#testerFields input').forEach(el=>el.value='');
+  const out=document.getElementById('testerOutput');
+  if(out)out.innerHTML='<div class="to-label">Result — fill in any fields to test</div>';
+}
+
+/* Build a synthetic ws that maps column index -> {v}. Keep column
+   indices assigned in a Map keyed by the cols.* property name. */
+function buildSyntheticWs(fw,userVals){
+  const ws={};
+  const cols={};
+  let nextCol=1; /* column 0 reserved, anything starting >=1 is fine */
+  /* cols.target has special meaning — only assign if user provided value
+     or if wackler (so it can exist and be empty for rules that read it). */
+  const realFields=(TESTER_FIELDS[fw]||[]).filter(([k])=>!k.startsWith('_'));
+  for(const [k] of realFields){
+    const col=nextCol++;
+    cols[k]=col;
+    const v=userVals[k];
+    if(v!==undefined&&v!==''){
+      ws[XLSX.utils.encode_cell({r:3,c:col})]={v};
+    }
+  }
+  /* Dachser reads a handful of values from hard-coded indices — we need
+     to place them at those exact DA_COL_* indices for the processor to find. */
+  if(fw==='dachser'){
+    const placeAt=(idx,v)=>{if(v!==undefined&&v!=='')ws[XLSX.utils.encode_cell({r:3,c:idx})]={v};};
+    placeAt(DA_COL_REFERENZ3,userVals._referenz3);
+    placeAt(DA_COL_SERV_ART,userVals._serv);
+    placeAt(DA_COL_SACHKONTO,userVals._sach);
+    placeAt(DA_COL_EMPF_PLZ,userVals._plz);
+    placeAt(DA_COL_EMPF_ORT,userVals._ort);
+    placeAt(DA_COL_ANZ_SDG,userVals._anzSdg);
+  }
+  /* Fill missing cols with -1 so processors know the field is absent. */
+  const allKeys={
+    dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','c502_dl','c503_dl','lg_diff','av_diff'],
+    kn:['target','stat','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
+    dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
+    wackler:['target','stat','tarif','avis_diff','snk_diff','fr','maut','tz','referenz','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
+  }[fw]||[];
+  for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
+  return{ws,cols};
+}
+
+function runTester(){
+  const fw=selectedFW,out=document.getElementById('testerOutput');
+  if(!fw){out.innerHTML='<div class="to-label">Result</div><div class="to-null">Select a forwarder first.</div>';return;}
+  const userVals={};
+  document.querySelectorAll('#testerFields input').forEach(el=>{
+    const v=el.value.trim();if(v!=='')userVals[el.dataset.k]=v;
+  });
+  const{ws,cols}=buildSyntheticWs(fw,userVals);
+  let result;
+  try{
+    if(fw==='dachser')result=processDachser(ws,3,cols);
+    else if(fw==='kn')result=processKN(ws,3,cols);
+    else if(fw==='dhl')result=processDHL(ws,3,cols);
+    else result=processWackler(ws,3,cols);
+  }catch(e){
+    out.innerHTML='<div class="to-label">Error</div><div class="to-null">'+String(e.message||e)+'</div>';
+    return;
+  }
+  const reason=buildReason(fw,ws,3,cols);
+  const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let body;
+  if(result===null){
+    body='<div class="to-null">null — row would be skipped (Stat_Freigabe ≠ 10 or protected existing value).</div>';
+  } else if(result===''){
+    body='<div class="to-empty">empty — no trigger fired, row would be filled with blank.</div>';
+  } else {
+    body='<div class="to-result">'+esc(result)+'</div>';
+  }
+  out.innerHTML=
+    '<div class="to-label">Result — '+fw+'</div>'+body+
+    (reason?'<div class="to-reason">Reason trace: '+esc(reason)+'</div>':'');
+}
+
+/* ══════════════════════════════════════════════════════════
+   DIFF MODE (#19) — compare two processed xlsx files on the
+   Anmerkung column per sheet/row. Purely client-side.
+══════════════════════════════════════════════════════════ */
+const diffState={a:null,b:null,results:null};
+
+function onDiffDrag(e,slot,over){e.preventDefault();const el=document.getElementById('diffSlot'+slot.toUpperCase());if(el)el.classList.toggle('drag',over);}
+function onDiffDrop(e,slot){e.preventDefault();onDiffDrag(e,slot,false);const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)loadDiffFile(slot,f);}
+function onDiffFile(e,slot){const f=e.target.files&&e.target.files[0];if(f)loadDiffFile(slot,f);}
+function loadDiffFile(slot,file){
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array',cellNF:true});
+      diffState[slot]={name:file.name,wb};
+      const el=document.getElementById('diffSlot'+slot.toUpperCase());el.classList.add('loaded');
+      document.getElementById('diffName'+slot.toUpperCase()).textContent=file.name+' \u00b7 '+wb.SheetNames.length+' sheet(s)';
+      document.getElementById('btnDiffRun').disabled=!(diffState.a&&diffState.b);
+      showLog('Diff — loaded '+slot.toUpperCase()+': '+file.name,'ok');
+    }catch(err){showLog('Diff — could not read '+slot.toUpperCase()+': '+err.message,'err');}
+  };
+  r.readAsArrayBuffer(file);
+}
+function clearDiff(){
+  diffState.a=null;diffState.b=null;diffState.results=null;
+  ['a','b'].forEach(s=>{
+    const el=document.getElementById('diffSlot'+s.toUpperCase());el.classList.remove('loaded','drag');
+    document.getElementById('diffName'+s.toUpperCase()).textContent='Click or drop an .xlsx';
+    document.getElementById('diffInput'+s.toUpperCase()).value='';
+  });
+  document.getElementById('btnDiffRun').disabled=true;
+  document.getElementById('btnDiffCsv').style.display='none';
+  const tCsv=document.getElementById('btnDiffTrainCsv');if(tCsv)tCsv.style.display='none';
+  const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='none';
+  const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='none';
+  const incCb=document.getElementById('diffIncludeMatch');if(incCb)incCb.checked=false;
+  document.getElementById('diffResults').style.display='none';
+  document.getElementById('diffEmpty').style.display='none';
+}
+
+/* Locate the Anmerkung column by scanning row 3 (and row 2 as a fallback). */
+function findAnmerkungCol(ws,range){
+  for(let c=0;c<=range.e.c;c++){
+    const v3=(ws[XLSX.utils.encode_cell({r:2,c})]||{v:''}).v;
+    if(String(v3||'').trim().toLowerCase()==='anmerkung')return c;
+  }
+  for(let c=0;c<=range.e.c;c++){
+    const v2=(ws[XLSX.utils.encode_cell({r:1,c})]||{v:''}).v;
+    if(String(v2||'').trim().toLowerCase()==='anmerkung')return c;
+  }
+  return -1;
+}
+
+function runDiff(){
+  if(!diffState.a||!diffState.b){showLog('Diff — load both files first.','err');return;}
+  const rows=[];
+  let added=0,removed=0,changed=0,total=0;
+  const sheetsA=diffState.a.wb.SheetNames,sheetsB=diffState.b.wb.SheetNames;
+  const allSheets=[...new Set([...sheetsA,...sheetsB])];
+  for(const name of allSheets){
+    const wsA=diffState.a.wb.Sheets[name],wsB=diffState.b.wb.Sheets[name];
+    if(!wsA||!wsB){
+      rows.push({sheet:name,row:'—',change:'sheet',before:wsA?'(present)':'(missing in A)',after:wsB?'(present)':'(missing in B)'});
+      continue;
+    }
+    const rA=XLSX.utils.decode_range(wsA['!ref']||'A1:A1'),rB=XLSX.utils.decode_range(wsB['!ref']||'A1:A1');
+    const cA=findAnmerkungCol(wsA,rA),cB=findAnmerkungCol(wsB,rB);
+    if(cA<0||cB<0){
+      rows.push({sheet:name,row:'—',change:'sheet',before:cA<0?'(no Anmerkung col)':'(ok)',after:cB<0?'(no Anmerkung col)':'(ok)'});
+      continue;
+    }
+    const lastRow=Math.max(rA.e.r,rB.e.r);
+    for(let r=3;r<=lastRow;r++){
+      total++;
+      const vA=cellStr(wsA,r,cA),vB=cellStr(wsB,r,cB);
+      if(vA===vB)continue;
+      let change;
+      if(!vA&&vB){change='added';added++;}
+      else if(vA&&!vB){change='removed';removed++;}
+      else{change='changed';changed++;}
+      rows.push({sheet:name,row:r+1,change,before:vA,after:vB});
+    }
+  }
+  diffState.results={rows,total,added,removed,changed};
+  renderDiff();
+}
+
+function renderDiff(){
+  const{rows,total,added,removed,changed}=diffState.results;
+  document.getElementById('dCount').textContent=total;
+  document.getElementById('dAdded').textContent=added;
+  document.getElementById('dRemoved').textContent=removed;
+  document.getElementById('dChanged').textContent=changed;
+  document.getElementById('diffMeta').textContent=`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}  \u00b7  showing ${Math.min(rows.length,500)} of ${rows.length} differences`;
+  const tbody=document.querySelector('#diffTable tbody');
+  const MAX=500;
+  const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  tbody.innerHTML=rows.slice(0,MAX).map(r=>
+    `<tr class="df-${r.change}"><td>${esc(r.sheet)}</td><td>${r.row}</td><td>${r.change}</td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td></tr>`
+  ).join('');
+  if(!rows.length){
+    document.getElementById('diffResults').style.display='none';
+    document.getElementById('diffEmpty').style.display='block';
+    document.getElementById('btnDiffCsv').style.display='none';
+    const tCsv=document.getElementById('btnDiffTrainCsv');if(tCsv)tCsv.style.display='none';
+    const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='none';
+    const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='none';
+  } else {
+    document.getElementById('diffResults').style.display='block';
+    document.getElementById('diffEmpty').style.display='none';
+    document.getElementById('btnDiffCsv').style.display='inline-block';
+    const tCsv=document.getElementById('btnDiffTrainCsv');if(tCsv)tCsv.style.display='inline-block';
+    const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='inline-block';
+    const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='flex';
+  }
+  showLog(`Diff \u2014 ${added} added, ${removed} removed, ${changed} changed (${total} rows scanned).`,'ok');
+}
+
+function downloadDiffCsv(){
+  if(!diffState.results||!diffState.results.rows.length)return;
+  const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const lines=['sheet,row,change,before,after'];
+  for(const r of diffState.results.rows){
+    lines.push([r.sheet,r.row,r.change,r.before,r.after].map(esc).join(','));
+  }
+  const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  a.href=url;a.download='anmerkung_diff_'+stamp+'.csv';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* ══════════════════════════════════════════════════════════
+   TRAINING SET EXPORT (#20) — build (predicted, expected) pairs
+   from the diff, enriched with the input cells each forwarder's
+   rules actually read + the trigger trace (reason).
+
+   A = your tool's output (predicted)
+   B = hand-corrected truth (expected)
+
+   Row label:
+     • "wrong"     — both non-empty, disagree
+     • "missed"    — A empty, B non-empty (rule should have fired)
+     • "overfired" — A non-empty, B empty (rule fired when it shouldn't have)
+     • "correct"   — A === B (only exported when the "Include matching rows" checkbox is ticked)
+
+   Forwarder is auto-detected per sheet by scanning which resolver finds
+   the most known columns; falls back to the currently-selected forwarder.
+══════════════════════════════════════════════════════════ */
+
+const FW_RESOLVERS={dachser:resolveDachser,kn:resolveKN,dhl:resolveDHL,wackler:resolveWackler};
+
+/* Count how many known columns a resolver finds for a given sheet.
+   More matches = better confidence that this is the right forwarder. */
+function tsResolverScore(resolveFn,ws,range){
+  try{
+    const cols=resolveFn(ws,range);
+    let score=0;
+    for(const k of Object.keys(cols))if(cols[k]>=0)score++;
+    return score;
+  }catch(_){return 0;}
+}
+
+/* Pick the best forwarder for a sheet. Requires target (Anmerkung) col present.
+   Ties broken in this order: dachser, kn, dhl, wackler (most-specific first). */
+function tsDetectForwarder(ws,range){
+  const order=['dachser','kn','dhl','wackler'];
+  let best=null,bestScore=-1;
+  for(const fw of order){
+    const cols=FW_RESOLVERS[fw](ws,range);
+    if(cols.target<0)continue;
+    const score=tsResolverScore(FW_RESOLVERS[fw],ws,range);
+    if(score>bestScore){bestScore=score;best=fw;}
+  }
+  if(best)return best;
+  return selectedFW||'unknown';
+}
+
+/* Classify a mismatch — see comment block above for the label taxonomy. */
+function tsLabelFor(before,after){
+  const a=(before||'').trim(),b=(after||'').trim();
+  if(a===b)return 'correct';
+  if(!a&&b)return 'missed';
+  if(a&&!b)return 'overfired';
+  return 'wrong';
+}
+
+/* Collect structured (key -> value) input features for a single row,
+   joined by forwarder. Returns an ordered array of {key,value} pairs
+   so column order is stable in CSV output. */
+function tsCollectInputs(fw,ws,r,cols){
+  const pairs=[];
+  const push=(k,c)=>{
+    if(c===undefined||c<0)return;
+    const v=cellStr(ws,r,c);
+    pairs.push({key:k,value:v});
+  };
+  if(fw==='dachser'){
+    push('stat',cols.stat);push('tarif',cols.tarif);
+    push('fr_diff',cols.fr);
+    push('snk_dl',cols.snk_dl);push('snk_diff',cols.snk_diff);push('snk_tarif',cols.snk_tar);
+    push('zz_diff',cols.zz);push('sam_diff',cols.sam);push('dgr_diff',cols.dgr);
+    push('exp_diff',cols.exp);push('exp_dl',cols.exp_dl);
+    push('maut_diff',cols.maut);push('sbfu_diff',cols.sbfu);push('tz_diff',cols.tz);
+    push('lg_diff',cols.lg_diff);push('av_diff',cols.av_diff);
+    /* Hard-coded Dachser columns (position-based, same as processor). */
+    pairs.push({key:'referenz3',value:cellStr(ws,r,DA_COL_REFERENZ3)});
+    pairs.push({key:'empf_plz', value:cellStr(ws,r,DA_COL_EMPF_PLZ)});
+    pairs.push({key:'empf_ort', value:cellStr(ws,r,DA_COL_EMPF_ORT)});
+    pairs.push({key:'anz_sdg',  value:cellStr(ws,r,DA_COL_ANZ_SDG)});
+    pairs.push({key:'serv_art', value:cellStr(ws,r,DA_COL_SERV_ART)});
+    pairs.push({key:'sachkonto',value:cellStr(ws,r,DA_COL_SACHKONTO)});
+  } else if(fw==='kn'){
+    push('stat',cols.stat);
+    push('fr_diff',cols.fr);push('exp_diff',cols.exp);push('mt_diff',cols.toll);push('tz_diff',cols.fuel);
+    push('snk_dl',cols.snk_dl);push('snk_diff',cols.snk_diff);
+    push('referenz',cols.referenz);push('recip',cols.recip);
+    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
+    push('kostenstelle',cols.kost);push('sachkonto',cols.sach);
+  } else if(fw==='dhl'){
+    push('stat',cols.stat);push('tarif',cols.tarif);
+    push('fr_diff',cols.addr);push('pal_diff',cols.stack);push('ow_diff',cols.weight);
+    push('yo_diff',cols.conv);push('yl_diff',cols.irr);push('nd_diff',cols.neut);push('sf_diff',cols.sign);
+    push('snk_diff',cols.snk);push('ac_diff',cols.diff);push('mt_diff',cols.maut);
+    push('nx_diff',cols.surc);push('os_diff',cols.over);push('tz_diff',cols.tz);
+    push('kostenstelle',cols.kost);push('sachkonto',cols.sach);
+  } else if(fw==='wackler'){
+    push('stat',cols.stat);push('tarif',cols.tarif);push('existing_anmerkung',cols.target);
+    push('avis_diff',cols.avis_diff);push('snk_diff',cols.snk_diff);push('fr_diff',cols.fr);
+    push('mt_diff',cols.maut);push('tz_diff',cols.tz);
+    push('referenz',cols.referenz);
+    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
+    push('empf_plz',cols.empf_plz);push('empf_ort',cols.empf_ort);
+    push('kostenstelle',cols.kostenstelle);push('sachkonto',cols.sachkonto);
+  }
+  return pairs;
+}
+
+/* Re-run the actual production processor on slot-A's row to capture
+   the trigger trace + verify what the rule engine would produce right
+   now. This is how we recover the "reason" / "why" for training data. */
+function tsRunRule(fw,ws,r,cols){
+  try{
+    let predicted=null;
+    if(fw==='dachser')predicted=processDachser(ws,r,cols);
+    else if(fw==='kn')predicted=processKN(ws,r,cols);
+    else if(fw==='dhl')predicted=processDHL(ws,r,cols);
+    else if(fw==='wackler')predicted=processWackler(ws,r,cols);
+    const reason=buildReason(fw,ws,r,cols);
+    return{predicted,reason};
+  }catch(e){return{predicted:null,reason:'error: '+(e.message||e)};}
+}
+
+/* Build the training-set records. One per mismatch (and optionally per match). */
+function buildTrainingSet(){
+  if(!diffState.a||!diffState.b)return{records:[],inputKeys:[]};
+  const includeMatches=!!document.getElementById('diffIncludeMatch')?.checked;
+  const wbA=diffState.a.wb,wbB=diffState.b.wb;
+  /* Per-sheet: detect forwarder, resolve cols, walk rows. */
+  const sheetsA=wbA.SheetNames,sheetsB=wbB.SheetNames;
+  const commonSheets=sheetsA.filter(n=>sheetsB.includes(n));
+  const records=[];
+  const allKeys=new Set();
+  for(const name of commonSheets){
+    const wsA=wbA.Sheets[name],wsB=wbB.Sheets[name];
+    if(!wsA||!wsB)continue;
+    const rA=XLSX.utils.decode_range(wsA['!ref']||'A1:A1');
+    const rB=XLSX.utils.decode_range(wsB['!ref']||'A1:A1');
+    const fw=tsDetectForwarder(wsA,rA);
+    if(fw==='unknown')continue;
+    const resolver=FW_RESOLVERS[fw];
+    const colsA=resolver(wsA,rA);
+    const colsB=resolver(wsB,rB);
+    if(colsA.target<0||colsB.target<0)continue;
+    const lastRow=Math.max(rA.e.r,rB.e.r);
+    for(let r=3;r<=lastRow;r++){
+      const predicted=cellStr(wsA,r,colsA.target);
+      const expected=cellStr(wsB,r,colsB.target);
+      const label=tsLabelFor(predicted,expected);
+      if(label==='correct'&&!includeMatches)continue;
+      const{predicted:rulePredicted,reason}=tsRunRule(fw,wsA,r,colsA);
+      const inputs=tsCollectInputs(fw,wsA,r,colsA);
+      inputs.forEach(p=>allKeys.add(p.key));
+      const inputObj={};
+      for(const p of inputs)inputObj[p.key]=p.value;
+      records.push({
+        sheet:name,
+        row:r+1,
+        forwarder:fw,
+        label,
+        predicted,                                   /* what slot A says */
+        expected,                                    /* what slot B says */
+        rule_engine_now:rulePredicted==null?'':rulePredicted, /* what engine would say today */
+        engine_matches_a:(rulePredicted==null?'':rulePredicted)===predicted,
+        reason,                                      /* trigger trace */
+        inputs:inputObj,
+      });
+    }
+  }
+  /* Stable ordering of input keys: keep first-seen order from Set iteration. */
+  const inputKeys=[...allKeys];
+  return{records,inputKeys};
+}
+
+function downloadTrainingSet(format){
+  const{records,inputKeys}=buildTrainingSet();
+  if(!records.length){showLog('Training set \u2014 no rows to export (maybe all rows matched; try "Include matching rows").','err');return;}
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  let blob,ext;
+  if(format==='jsonl'){
+    const lines=records.map(r=>JSON.stringify(r));
+    blob=new Blob([lines.join('\n')+'\n'],{type:'application/x-ndjson;charset=utf-8'});
+    ext='jsonl';
+  } else {
+    /* CSV: flatten inputs to one column per key. */
+    const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    const header=['sheet','row','forwarder','label','predicted','expected','rule_engine_now','engine_matches_a','reason',...inputKeys.map(k=>'in_'+k)];
+    const lines=[header.join(',')];
+    for(const r of records){
+      const row=[r.sheet,r.row,r.forwarder,r.label,r.predicted,r.expected,r.rule_engine_now,r.engine_matches_a?'true':'false',r.reason];
+      for(const k of inputKeys)row.push(r.inputs[k]==null?'':r.inputs[k]);
+      lines.push(row.map(esc).join(','));
+    }
+    blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+    ext='csv';
+  }
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='anmerkung_training_'+stamp+'.'+ext;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  /* Quick summary in the log so users know what they got. */
+  const by={};for(const r of records)by[r.label]=(by[r.label]||0)+1;
+  const parts=Object.keys(by).sort().map(k=>k+'='+by[k]);
+  showLog('Training set exported \u2014 '+records.length+' row(s) as '+ext.toUpperCase()+' ('+parts.join(', ')+').','ok');
+}
 </script>
 </body>
 </html>
