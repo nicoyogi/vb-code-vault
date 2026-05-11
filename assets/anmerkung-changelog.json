@@ -1,6 +1,16 @@
 {
-  "version": "1.3.1",
+  "version": "1.3.2",
   "entries": [
+    {
+      "ver": "1.3.2",
+      "date": "2026-05-11",
+      "items": [
+        "Wackler — AVIS 8.7 added to the \"Avis, ok?\" trigger set (joins 7.5 / 8.5 / 6.5).",
+        "Wackler — new SNK rule: SNK diff = 22 → \"2. Zustellung ok?\" (second-delivery fee check).",
+        "Wackler — bundling now suppresses the generic \"SNK Differenz\" fallback. When \"hätte gebündelt werden müssen\" fires, small residual SNK diffs are treated as part of the bundling gap rather than a separate SNK classification.",
+        "Wackler — STAT gate refined. On STAT ≠ 10, only the Kontierung check runs (previously the whole engine short-circuited to null). This lets Kontierung fire on STAT 30 etc. while keeping other classifications — Avis, Return, SNK Differenz, Fracht, Maut, TZ — silent for non-approved rows."
+      ]
+    },
     {
       "ver": "1.3.1",
       "date": "2026-05-11",
