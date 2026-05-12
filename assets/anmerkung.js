@@ -8,17 +8,33 @@
   function mkpt(){const c=PAL[Math.floor(Math.random()*PAL.length)];return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.13,r:Math.random()*1.8+.5,a:Math.random()*.35+.05,da:(Math.random()*.0006+.0002)*(Math.random()<.5?1:-1),c,ph:Math.random()*Math.PI*2}}
   function init(){resize();pts=Array.from({length:Math.min(Math.floor(W*H/11000),100)},mkpt)}
   let last=0;
-  function frame(ts){const dt=Math.min((ts-last)/16.67,2.5);last=ts;t+=.003*dt;cx.clearRect(0,0,W,H);
+  /* A `running` flag guards against concurrent RAF chains. Without it, a rapid
+     hide/show sequence could queue one RAF from the visibilitychange handler
+     AND from inside a completing frame, leaving two animation loops running
+     in parallel (particles moving at 2× speed, CPU doubled). The guard
+     ensures at most one frame is ever in flight. */
+  let running=false;
+  function scheduleFrame(){
+    if (running) return;
+    if (document.hidden) return;
+    if (window.Grimoire && window.Grimoire.reducedMotion) return;
+    running=true;
+    requestAnimationFrame(frame);
+  }
+  function frame(ts){
+    running=false;
+    const dt=Math.min((ts-last)/16.67,2.5);last=ts;t+=.003*dt;cx.clearRect(0,0,W,H);
     [{x:W*.15,y:H*-.08,rx:W*.55,ry:H*.35,c:[52,211,153],a:.022},{x:W*.8,y:H*-.1,rx:W*.45,ry:H*.3,c:[91,156,246],a:.02},{x:W*.5,y:H*1.05,rx:W*.55,ry:H*.35,c:[212,175,100],a:.014}].forEach(a=>{
       const p=a.a+.007*Math.sin(t*1.3+a.x*.004);const g=cx.createRadialGradient(a.x,a.y,0,a.x,a.y,Math.hypot(a.rx,a.ry)*.62);g.addColorStop(0,`rgba(${a.c},${p})`);g.addColorStop(.5,`rgba(${a.c},${p*.25})`);g.addColorStop(1,'transparent');cx.save();cx.translate(a.x,a.y);cx.scale(a.rx/a.ry,1);cx.translate(-a.x,-a.y);cx.fillStyle=g;cx.beginPath();cx.arc(a.x,a.y,a.ry,0,Math.PI*2);cx.fill();cx.restore();
     });
     for(let i=0;i<pts.length;i++){const p=pts[i];for(let j=i+1;j<pts.length;j++){const q=pts[j];const d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){cx.strokeStyle=`rgba(${p.c},${(1-d/120)*.045})`;cx.lineWidth=.4;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(q.x,q.y);cx.stroke()}}const md=Math.hypot(p.x-mouse.x,p.y-mouse.y);if(md<160){cx.strokeStyle=`rgba(${p.c},${(1-md/160)*.22})`;cx.lineWidth=.6;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(mouse.x,mouse.y);cx.stroke()}}
     pts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.da*dt;if(p.a<.04||p.a>.48)p.da*=-1;if(p.x<-15)p.x=W+15;if(p.x>W+15)p.x=-15;if(p.y<-15)p.y=H+15;if(p.y>H+15)p.y=-15;const rdx=p.x-mouse.x,rdy=p.y-mouse.y,rd=Math.sqrt(rdx*rdx+rdy*rdy);if(rd<100&&rd>0){const f=(1-rd/100)*.4;p.vx+=(rdx/rd)*f*.035;p.vy+=(rdy/rd)*f*.035}const sp=Math.hypot(p.vx,p.vy);if(sp>.45){p.vx*=.45/sp;p.vy*=.45/sp}const bx=.5*Math.sin(t*1.1+p.ph),by=.5*Math.cos(t*.88+p.ph*1.3);cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a})`;cx.fill()});
-    if (!document.hidden && !(window.Grimoire && window.Grimoire.reducedMotion)) requestAnimationFrame(frame)}
+    scheduleFrame();
+  }
   window.addEventListener('resize',init);window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
   init();
   if (window.Grimoire && window.Grimoire.reducedMotion) { frame(0); }
-  else { requestAnimationFrame(frame); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) requestAnimationFrame(frame); }); }
+  else { scheduleFrame(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) scheduleFrame(); }); }
 })();
 
 /* ══════════════════════════════════════════════════════════
@@ -332,7 +348,41 @@ function checkReady(){const ok=!!(selectedFW&&workbook);document.getElementById(
 function setProgress(pct){document.getElementById('progressWrap').style.display='block';document.getElementById('progressFill').style.width=pct+'%';}
 
 /* ── CELL READING HELPERS ── */
-function findCol(ws,range,h2,h3){for(let c=0;c<=range.e.c;c++){const v2=(ws[XLSX.utils.encode_cell({r:1,c})]||{v:''}).v;const v3=(ws[XLSX.utils.encode_cell({r:2,c})]||{v:''}).v;const s2=String(v2||'').toLowerCase(),s3=String(v3||'').toLowerCase();if((h2===''||s2.includes(h2.toLowerCase()))&&s3.includes(h3.toLowerCase()))return c;}return -1;}
+/* Header-row cache: row 2 and row 3 are the lookup rows `findCol` scans.
+   Pre-compute them once per (worksheet, range) pair as lowercased string
+   arrays so every subsequent `findCol` call is a plain array walk with
+   no object lookups or case-folding per column. WeakMap keyed on the ws
+   object so it's GC'd automatically when the workbook is released.
+
+   Each processor invokes `findCol` 10-20 times per sheet; without the cache
+   that's 20 × range.e.c × 2 object lookups + 2 `toLowerCase` calls per cell.
+   With the cache, the expensive part happens once per sheet. */
+const _hdrCache = new WeakMap();
+function _getHeaders(ws, range){
+  let cached = _hdrCache.get(ws);
+  if (cached && cached.lastCol === range.e.c) return cached;
+  const lastCol = range.e.c;
+  const row2 = new Array(lastCol + 1);
+  const row3 = new Array(lastCol + 1);
+  for (let c = 0; c <= lastCol; c++){
+    const cell2 = ws[XLSX.utils.encode_cell({r:1,c})];
+    const cell3 = ws[XLSX.utils.encode_cell({r:2,c})];
+    row2[c] = cell2 && cell2.v != null ? String(cell2.v).toLowerCase() : '';
+    row3[c] = cell3 && cell3.v != null ? String(cell3.v).toLowerCase() : '';
+  }
+  cached = { lastCol, row2, row3 };
+  _hdrCache.set(ws, cached);
+  return cached;
+}
+function findCol(ws,range,h2,h3){
+  const {row2, row3, lastCol} = _getHeaders(ws, range);
+  const needle2 = h2.toLowerCase();
+  const needle3 = h3.toLowerCase();
+  for (let c = 0; c <= lastCol; c++){
+    if ((h2 === '' || row2[c].includes(needle2)) && row3[c].includes(needle3)) return c;
+  }
+  return -1;
+}
 function cellNum(ws,r,c){if(c<0)return 0;const cell=ws[XLSX.utils.encode_cell({r,c})];if(!cell||cell.v==null)return 0;let s=String(cell.v).trim().replace(/,(?=[^.]*$)/,'.').replace(/[^0-9.\-]/g,'');const n=parseFloat(s);return isNaN(n)?0:n;}
 function cellStr(ws,r,c){if(c<0)return'';const cell=ws[XLSX.utils.encode_cell({r,c})];return cell?String(cell.v||'').trim():'';}
 function hasErr(v,t){return Math.abs(v)>t;}
