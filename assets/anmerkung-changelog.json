@@ -1,6 +1,16 @@
 {
-  "version": "1.4.1",
+  "version": "1.4.2",
   "entries": [
+    {
+      "ver": "1.4.2",
+      "date": "2026-05-12",
+      "items": [
+        "K+N — Amazon tariff branch now defers to weight-tier evidence. When the Empf.-Name is Amazon and ReferenzNr is a single doc, the engine inspects Volumen kg vs Volumen kg DL first: same tier (or missing weights) → \"hätte nach Amazon Tarif abrechnen müssen\" as before; crossing a KN_BP tier → \"Differenz aufgrund abweichender Gewichte\". Previously Amazon always won, which mislabeled genuine tier miscalcs (e.g. 434.336 kg vs 494.6 kg crossing the 450/500 boundary) as an Amazon pricing miss.",
+        "K+N — mirrors the Wackler same-tier/cross-tier precedence: the generic Gewichte vs Amazon decision is now consistent across engines.",
+        "K+N — new Rule Tester preset \"Amazon cross-tier Gewichte\" exercises the fixed branch directly from the UI (434.336 → 494.6 kg, FR=22.77, SNK_DIFF=25, Amazon recipient).",
+        "Bundling (ReferenzNr with comma) still wins over everything; Pauschalfracht (empty Tarif) still wins over the Amazon branch — only the tier-vs-Amazon priority changed."
+      ]
+    },
     {
       "ver": "1.4.1",
       "date": "2026-05-12",
