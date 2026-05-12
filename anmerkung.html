@@ -116,6 +116,70 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 }
 .btn-dl:hover { background: rgba(52,211,153,0.18); box-shadow: 0 0 30px rgba(52,211,153,0.18); }
 
+/* BULK PROCESSING */
+.bulk-wrap { margin-top: 2.5rem; }
+.bulk-upload-area {
+  background: var(--surface); border: 1.5px dashed rgba(167,139,250,0.25);
+  border-radius: 18px; padding: 2.2rem 1.5rem; text-align: center;
+  cursor: pointer; transition: border-color .2s, background .2s;
+  margin-bottom: 1rem; backdrop-filter: blur(12px);
+}
+.bulk-upload-area:hover, .bulk-upload-area.drag { border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.04); }
+.bulk-upload-area .upload-icon { color: rgba(167,139,250,0.6); }
+.bulk-file-count { font-family: var(--mono); font-size: 11px; color: rgba(167,139,250,0.7); margin-top: 10px; display: none; }
+.bulk-list { list-style: none; margin: 0 0 1rem; padding: 0; display: none; }
+.bulk-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 14px; margin-bottom: 8px;
+  transition: border-color .2s;
+}
+.bulk-item:hover { border-color: var(--border2); }
+.bulk-item-name { flex: 1; font-family: var(--mono); font-size: 11.5px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulk-item-status { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: .06em; min-width: 60px; text-align: right; }
+.bulk-item-status.done { color: var(--accent); }
+.bulk-item-status.err { color: var(--danger); }
+.bulk-item-status.processing { color: rgba(167,139,250,0.8); }
+.bulk-item-dl {
+  background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3);
+  border-radius: 10px; padding: 6px 14px;
+  font-family: var(--cinzel); font-size: 10px; font-weight: 600;
+  letter-spacing: .08em; color: var(--accent);
+  cursor: pointer; transition: background .2s, box-shadow .2s;
+  text-transform: uppercase; white-space: nowrap;
+  display: none;
+}
+.bulk-item-dl:hover { background: rgba(52,211,153,0.22); box-shadow: 0 0 16px rgba(52,211,153,0.15); }
+.bulk-item-dl.visible { display: inline-block; }
+.bulk-item-remove {
+  background: none; border: 1px solid var(--border); color: var(--text3);
+  font-family: var(--mono); font-size: 11px; width: 22px; height: 22px;
+  border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: color .15s, border-color .15s;
+}
+.bulk-item-remove:hover { color: var(--danger); border-color: rgba(248,113,113,0.4); }
+.btn-bulk-run {
+  width: 100%; padding: 14px; background: transparent;
+  border: 1px solid rgba(167,139,250,0.35); border-radius: 14px;
+  font-family: var(--cinzel); font-size: 13px; font-weight: 600;
+  letter-spacing: .1em; color: rgba(167,139,250,0.75);
+  cursor: pointer; transition: color .2s, border-color .2s, background .2s, box-shadow .2s;
+  margin-bottom: 10px; text-transform: uppercase;
+}
+.btn-bulk-run:hover:not(:disabled) { color: #c4b5fd; border-color: rgba(167,139,250,0.55); background: rgba(167,139,250,0.04); box-shadow: 0 0 24px rgba(167,139,250,0.12); }
+.btn-bulk-run:disabled { opacity: .3; cursor: not-allowed; }
+.btn-bulk-dl-all {
+  width: 100%; padding: 14px;
+  background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.3);
+  border-radius: 14px; font-family: var(--cinzel); font-size: 13px; font-weight: 600;
+  letter-spacing: .1em; color: rgba(167,139,250,0.8);
+  cursor: pointer; transition: background .2s, box-shadow .2s;
+  display: none; margin-bottom: 10px; text-transform: uppercase;
+}
+.btn-bulk-dl-all:hover { background: rgba(167,139,250,0.16); box-shadow: 0 0 28px rgba(167,139,250,0.15); }
+.bulk-progress { height: 2px; background: rgba(255,255,255,0.04); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; display: none; }
+.bulk-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #a78bfa, #5b9cf6); border-radius: 2px; transition: width .25s; }
+
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem; }
 .stat {
@@ -602,6 +666,33 @@ body.theme-light .cl-box { background: #fcf6e8; }
   </div>
   <div class="log" id="log" role="status" aria-live="polite" aria-atomic="false"></div>
 
+  <!-- ═══════════ BULK PROCESSING ═══════════ -->
+  <div class="bulk-wrap">
+    <button type="button" class="bonus-toggle" id="bulkToggle" onclick="toggleBonus('bulk')" aria-expanded="false" aria-controls="bulkPanel">
+      <span>VI — Bulk Process</span>
+      <span class="bonus-tag">Multi-file</span>
+      <span class="chev">›</span>
+    </button>
+    <div class="bonus-panel" id="bulkPanel" role="region" aria-label="Bulk process multiple files">
+      <div class="tester-intro">Upload multiple .xlsx files and process them all at once with the selected forwarder. Each document gets its own download button, or download all as a ZIP.</div>
+
+      <div class="bulk-upload-area" id="bulkDropArea"
+        onclick="document.getElementById('bulkFileInput').click()"
+        ondragover="onBulkDrag(event,true)" ondragleave="onBulkDrag(event,false)" ondrop="onBulkDrop(event)">
+        <div class="upload-icon">⬆</div>
+        <div class="upload-text"><strong>Click to browse</strong> or drag &amp; drop multiple .xlsx files</div>
+        <div class="bulk-file-count" id="bulkFileCount"></div>
+      </div>
+      <input type="file" id="bulkFileInput" accept=".xlsx" multiple style="display:none" onchange="onBulkFileSelect(event)">
+
+      <ul class="bulk-list" id="bulkList"></ul>
+
+      <div class="bulk-progress" id="bulkProgress"><div class="bulk-progress-fill" id="bulkProgressFill"></div></div>
+      <button class="btn-bulk-run" id="btnBulkRun" disabled onclick="runBulkProcess()">Transmute All Scrolls</button>
+      <button class="btn-bulk-dl-all" id="btnBulkDlAll" onclick="downloadAllBulk()">Download All as ZIP ↓</button>
+    </div>
+  </div>
+
   <!-- ═══════════ BONUS: RULE TESTER (#18) ═══════════ -->
   <div class="bonus-wrap">
     <button type="button" class="bonus-toggle" id="testerToggle" onclick="toggleBonus('tester')" aria-expanded="false" aria-controls="testerPanel">
@@ -1045,7 +1136,7 @@ function fwKeydown(e){
    BONUS PANEL TOGGLES (Tester + Diff)
 ══════════════════════════════════════════════════════════ */
 function toggleBonus(which){
-  const m={tester:['testerToggle','testerPanel'],diff:['diffToggle','diffPanel']};
+  const m={tester:['testerToggle','testerPanel'],diff:['diffToggle','diffPanel'],bulk:['bulkToggle','bulkPanel']};
   const [tId,pId]=m[which];
   const t=document.getElementById(tId),p=document.getElementById(pId);
   const open=!p.classList.contains('open');
@@ -1955,6 +2046,197 @@ function downloadTrainingSet(format){
   const parts=Object.keys(by).sort().map(k=>k+'='+by[k]);
   showLog('Training set exported \u2014 '+records.length+' row(s) as '+ext.toUpperCase()+' ('+parts.join(', ')+').','ok');
 }
+
+/* ══════════════════════════════════════════════════════════
+   BULK PROCESSING — process multiple files at once,
+   each with its own download button + download-all ZIP.
+══════════════════════════════════════════════════════════ */
+const bulkFiles = []; /* Array of { id, name, file, rawBytes, workbook, resultBlob, status } */
+let bulkIdCounter = 0;
+
+function onBulkDrag(e, over) { e.preventDefault(); document.getElementById('bulkDropArea').classList.toggle('drag', over); }
+function onBulkDrop(e) { e.preventDefault(); onBulkDrag(e, false); if (e.dataTransfer.files.length) addBulkFiles(e.dataTransfer.files); }
+function onBulkFileSelect(e) { if (e.target.files.length) addBulkFiles(e.target.files); e.target.value = ''; }
+
+function addBulkFiles(fileList) {
+  for (const file of fileList) {
+    if (!file.name.toLowerCase().endsWith('.xlsx')) { showLog('Bulk — skipped non-xlsx: ' + file.name, 'err'); continue; }
+    bulkFiles.push({ id: ++bulkIdCounter, name: file.name, file, rawBytes: null, workbook: null, resultBlob: null, status: 'pending' });
+  }
+  renderBulkList();
+  checkBulkReady();
+  const fc = document.getElementById('bulkFileCount');
+  fc.textContent = bulkFiles.length + ' file(s) queued';
+  fc.style.display = bulkFiles.length ? 'block' : 'none';
+  showLog('Bulk — ' + bulkFiles.length + ' file(s) queued.', 'ok');
+}
+
+function removeBulkFile(id) {
+  const idx = bulkFiles.findIndex(f => f.id === id);
+  if (idx >= 0) bulkFiles.splice(idx, 1);
+  renderBulkList();
+  checkBulkReady();
+  const fc = document.getElementById('bulkFileCount');
+  fc.textContent = bulkFiles.length + ' file(s) queued';
+  fc.style.display = bulkFiles.length ? 'block' : 'none';
+}
+
+function renderBulkList() {
+  const ul = document.getElementById('bulkList');
+  if (!bulkFiles.length) { ul.style.display = 'none'; ul.innerHTML = ''; return; }
+  ul.style.display = 'block';
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  ul.innerHTML = bulkFiles.map(f => {
+    const statusCls = f.status === 'done' ? 'done' : (f.status === 'error' ? 'err' : (f.status === 'processing' ? 'processing' : ''));
+    const statusText = f.status === 'done' ? '✓ done' : (f.status === 'error' ? '✗ error' : (f.status === 'processing' ? '⟳ ...' : 'pending'));
+    const dlVisible = f.status === 'done' ? 'visible' : '';
+    return `<li class="bulk-item" data-id="${f.id}">
+      <span class="bulk-item-name" title="${esc(f.name)}">${esc(f.name)}</span>
+      <span class="bulk-item-status ${statusCls}">${statusText}</span>
+      <button type="button" class="bulk-item-dl ${dlVisible}" onclick="downloadBulkFile(${f.id})">↓ Download</button>
+      <button type="button" class="bulk-item-remove" onclick="removeBulkFile(${f.id})" title="Remove">✕</button>
+    </li>`;
+  }).join('');
+}
+
+function checkBulkReady() {
+  const btn = document.getElementById('btnBulkRun');
+  btn.disabled = !(selectedFW && bulkFiles.length > 0);
+}
+
+function setBulkProgress(pct) {
+  const wrap = document.getElementById('bulkProgress');
+  wrap.style.display = 'block';
+  document.getElementById('bulkProgressFill').style.width = pct + '%';
+}
+
+async function runBulkProcess() {
+  if (!selectedFW) { showLog('Bulk — select a forwarder first.', 'err'); return; }
+  if (!bulkFiles.length) { showLog('Bulk — no files queued.', 'err'); return; }
+
+  const btn = document.getElementById('btnBulkRun');
+  btn.disabled = true; btn.textContent = 'Processing...';
+  document.getElementById('btnBulkDlAll').style.display = 'none';
+  setBulkProgress(2);
+
+  const wantReason = document.getElementById('optReason').checked;
+  let doneCount = 0;
+
+  for (let i = 0; i < bulkFiles.length; i++) {
+    const entry = bulkFiles[i];
+    entry.status = 'processing';
+    renderBulkList();
+
+    try {
+      /* Read file */
+      if (!entry.rawBytes) {
+        const buf = await readFileAsArrayBuffer(entry.file);
+        entry.rawBytes = buf;
+        entry.workbook = XLSX.read(buf, { type: 'array', cellNF: true });
+      }
+
+      /* Process using the same engine as single-file mode */
+      const savedWb = workbook;
+      workbook = entry.workbook;
+      const rep = runRules();
+      workbook = savedWb;
+
+      const allResults = rep.allResults;
+      const zip = await JSZip.loadAsync(entry.rawBytes);
+      const ssFile = zip.file('xl/sharedStrings.xml');
+      let ssXml = ssFile ? await ssFile.async('string') : '';
+      const strings = ssXml ? parseSharedStrings(ssXml) : [];
+      const wbXml = await zip.file('xl/workbook.xml').async('string');
+      const wbRelXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+
+      const sheetRids = {};
+      for (const m of wbXml.matchAll(/<sheet\b[^>]+\bname="([^"]+)"[^>]+\br:id="(rId\d+)"/g)) sheetRids[m[1]] = m[2];
+      const ridPaths = {};
+      for (const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g)) ridPaths[m[1]] = m[2];
+
+      const sheetNames = Object.keys(allResults);
+      for (const name of sheetNames) {
+        const { targetCol, rowMap, reasonMap, targetIdx } = allResults[name];
+        if (!rowMap.size && !(wantReason && reasonMap && reasonMap.size)) continue;
+        const rId = sheetRids[name]; if (!rId) continue;
+        let rel = ridPaths[rId] || '';
+        rel = rel.replace(/^\/+/, ''); if (!rel.startsWith('xl/')) rel = 'xl/' + rel;
+        let sheetXml = await zip.file(rel).async('string');
+        sheetXml = patchSheet(sheetXml, targetCol, rowMap, strings);
+        if (wantReason) {
+          const reasonColIdx = targetIdx + 1;
+          const reasonCol = idxToCol(reasonColIdx);
+          const headerMap = new Map([[3, 'Anmerkung_Reason']]);
+          sheetXml = patchSheet(sheetXml, reasonCol, headerMap, strings);
+          sheetXml = patchSheet(sheetXml, reasonCol, reasonMap, strings);
+        }
+        zip.file(rel, sheetXml);
+      }
+
+      zip.file('xl/sharedStrings.xml', rebuildSharedStrings(strings));
+      const ctFile = zip.file('[Content_Types].xml');
+      if (ctFile) { let ctXml = await ctFile.async('string'); ctXml = ensureSharedStringsContentType(ctXml); zip.file('[Content_Types].xml', ctXml); }
+      const wbRelFile = zip.file('xl/_rels/workbook.xml.rels');
+      if (wbRelFile) { let wbRel = await wbRelFile.async('string'); wbRel = ensureSharedStringsRel(wbRel); zip.file('xl/_rels/workbook.xml.rels', wbRel); }
+
+      entry.resultBlob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+      entry.status = 'done';
+      doneCount++;
+      showLog('Bulk — ✓ ' + entry.name + ' (' + rep.filled + ' filled, ' + rep.skipped + ' skipped)', 'ok');
+    } catch (e) {
+      entry.status = 'error';
+      showLog('Bulk — ✗ ' + entry.name + ': ' + e.message, 'err');
+      console.error('Bulk error for', entry.name, e);
+    }
+
+    setBulkProgress(Math.round(((i + 1) / bulkFiles.length) * 100));
+    renderBulkList();
+  }
+
+  btn.disabled = false; btn.textContent = 'Transmute All Scrolls';
+  if (doneCount > 0) {
+    document.getElementById('btnBulkDlAll').style.display = 'block';
+    showLog('Bulk — complete: ' + doneCount + '/' + bulkFiles.length + ' files processed successfully.', 'ok');
+  }
+}
+
+function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => resolve(ev.target.result);
+    reader.onerror = () => reject(new Error('File read failed'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function downloadBulkFile(id) {
+  const entry = bulkFiles.find(f => f.id === id);
+  if (!entry || !entry.resultBlob) return;
+  const url = URL.createObjectURL(entry.resultBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = entry.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function downloadAllBulk() {
+  const done = bulkFiles.filter(f => f.status === 'done' && f.resultBlob);
+  if (!done.length) { showLog('Bulk — no processed files to download.', 'err'); return; }
+  const zip = new JSZip();
+  for (const entry of done) {
+    zip.file(entry.name, entry.resultBlob);
+  }
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  a.href = url; a.download = 'anmerkung_bulk_' + stamp + '.zip'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showLog('Bulk — ZIP downloaded with ' + done.length + ' file(s).', 'ok');
+}
+
+/* Re-check bulk ready state when forwarder changes */
+const _origSelectFW = selectFW;
+selectFW = function(btn) { _origSelectFW(btn); checkBulkReady(); };
 </script>
 </body>
 </html>
