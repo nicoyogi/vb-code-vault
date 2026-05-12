@@ -1,6 +1,21 @@
 {
-  "version": "1.4.2",
+  "version": "1.5.0",
   "entries": [
+    {
+      "ver": "1.5.0",
+      "date": "2026-05-12",
+      "items": [
+        "Diff Mode — reworked into a proper Rule Training console. The A/B slots are now labeled Predicted / Expected, and the primary action is \"Train & Compare\" (click once, get labeled training cases back).",
+        "Training breakdown panel — click-to-filter chips for wrong / missed / overfired / engine drift / correct. Chips show live counts; the visible table and all export buttons honor whichever chip is active.",
+        "Filter bar — Forwarder, Sheet, free-text search (scans before / after / reason / engine-now). Export buttons carry live \"· N\" counters so you always know what's going to ship.",
+        "Per-row expansion — every diff row has a chevron that reveals the exact input cells the rule engine read + the full trigger trace in a structured kv grid. No more blind CSV exports.",
+        "Send to Tester — from any expanded row, one click switches the forwarder tile, opens the Rule Tester, pre-fills every matching field with that row's inputs, auto-evaluates, and scrolls you to the result. Tighten the rule, click Evaluate again, re-run Train & Compare.",
+        "Engine-drift column — the new \"Engine now\" column shows what the current rule engine would output for slot A's inputs. A blue dot + the drift chip surface cases where rules changed since slot A was generated.",
+        "Training set export is now filter-scoped — export just the 12 \"missed\" Wackler rows, or all 200 wrongs across forwarders. CSV/JSONL schema unchanged so downstream ML pipelines keep working.",
+        "Diff CSV export upgraded — now also includes forwarder, label (wrong/missed/overfired/correct), engine_now, engine_matches_a, and the trigger trace alongside the classic before/after columns.",
+        "Single-pass sheet walk — Train & Compare runs once per row to compute label + engine prediction + inputs, reused by table rendering and both export paths. Faster on large workbooks, no more second walk when you click Download."
+      ]
+    },
     {
       "ver": "1.4.2",
       "date": "2026-05-12",

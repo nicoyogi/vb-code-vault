@@ -1006,6 +1006,15 @@ function clearDiff(){
   const incCb=document.getElementById('diffIncludeMatch');if(incCb)incCb.checked=false;
   document.getElementById('diffResults').style.display='none';
   document.getElementById('diffEmpty').style.display='none';
+  /* Reset filter state + counters */
+  diffFilter.label='all';diffFilter.fw='all';diffFilter.sheet='all';diffFilter.q='';
+  const setCt=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  ['tcAll','tcWrong','tcMissed','tcOverfired','tcDrift','tcCorrect'].forEach(id=>setCt(id,'0'));
+  ['ctDiffCsv','ctTrainCsv','ctTrainJsonl'].forEach(id=>setCt(id,''));
+  document.querySelectorAll('#trainChips .train-chip').forEach(b=>b.classList.toggle('active',b.dataset.label==='all'));
+  const fwSel=document.getElementById('diffFwFilter');if(fwSel)fwSel.innerHTML='<option value="all">all</option>';
+  const shSel=document.getElementById('diffSheetFilter');if(shSel)shSel.innerHTML='<option value="all">all</option>';
+  const q=document.getElementById('diffSearch');if(q)q.value='';
 }
 
 /* Locate the Anmerkung column by scanning row 3 (and row 2 as a fallback). */
@@ -1021,54 +1030,232 @@ function findAnmerkungCol(ws,range){
   return -1;
 }
 
+/* ──────────────────────────────────────────────────────────
+   TRAINING CONSOLE STATE + HELPERS
+   Every diff row is enriched with forwarder / label /
+   engine-now prediction / trigger trace / input cells so both
+   the table and the training-set export can consume the same
+   records — no second sheet walk.
+────────────────────────────────────────────────────────── */
+const diffFilter={label:'all',fw:'all',sheet:'all',q:''};
+const LABEL_CLASS={wrong:'df-wrong',missed:'df-missed',overfired:'df-overfired',correct:'df-correct'};
+function _resolverFor(fw){
+  if(fw==='dachser')return resolveDachser;
+  if(fw==='kn')return resolveKN;
+  if(fw==='dhl')return resolveDHL;
+  if(fw==='wackler')return resolveWackler;
+  return null;
+}
+function _processorFor(fw){
+  if(fw==='dachser')return processDachser;
+  if(fw==='kn')return processKN;
+  if(fw==='dhl')return processDHL;
+  if(fw==='wackler')return processWackler;
+  return null;
+}
+/* Pick the forwarder whose resolver finds the most known columns on
+   the sheet. Tie-break: dachser → kn → dhl → wackler. Falls back to
+   the currently-selected forwarder, then 'unknown'. */
+function detectForwarderForSheet(ws,range){
+  const order=['dachser','kn','dhl','wackler'];
+  let best=null,bestScore=-1;
+  for(const fw of order){
+    const fn=_resolverFor(fw);if(!fn)continue;
+    let cols;try{cols=fn(ws,range);}catch(_){continue;}
+    if(cols.target<0)continue;
+    let score=0;for(const k of Object.keys(cols))if(cols[k]>=0)score++;
+    if(score>bestScore){bestScore=score;best=fw;}
+  }
+  return best||selectedFW||'unknown';
+}
+function classifyDiff(vA,vB){
+  const a=(vA||'').trim(),b=(vB||'').trim();
+  if(a===b)return 'correct';
+  if(!a&&b)return 'missed';
+  if(a&&!b)return 'overfired';
+  return 'wrong';
+}
+
 function runDiff(){
   if(!diffState.a||!diffState.b){showLog('Diff — load both files first.','err');return;}
   const rows=[];
   let added=0,removed=0,changed=0,total=0;
+  let wrong=0,missed=0,overfired=0,correct=0,drift=0;
+  const fwSet=new Set(),sheetSet=new Set();
   const sheetsA=diffState.a.wb.SheetNames,sheetsB=diffState.b.wb.SheetNames;
   const allSheets=[...new Set([...sheetsA,...sheetsB])];
+
   for(const name of allSheets){
     const wsA=diffState.a.wb.Sheets[name],wsB=diffState.b.wb.Sheets[name];
     if(!wsA||!wsB){
-      rows.push({sheet:name,row:'—',change:'sheet',before:wsA?'(present)':'(missing in A)',after:wsB?'(present)':'(missing in B)'});
+      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw:'-',before:wsA?'(present)':'(missing in A)',after:wsB?'(present)':'(missing in B)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false});
+      sheetSet.add(name);
       continue;
     }
     const rA=XLSX.utils.decode_range(wsA['!ref']||'A1:A1'),rB=XLSX.utils.decode_range(wsB['!ref']||'A1:A1');
-    const cA=findAnmerkungCol(wsA,rA),cB=findAnmerkungCol(wsB,rB);
+    const fw=detectForwarderForSheet(wsA,rA);
+    const resolver=_resolverFor(fw),processor=_processorFor(fw);
+    const colsA=resolver?resolver(wsA,rA):null,colsB=resolver?resolver(wsB,rB):null;
+    const cA=colsA&&colsA.target>=0?colsA.target:findAnmerkungCol(wsA,rA);
+    const cB=colsB&&colsB.target>=0?colsB.target:findAnmerkungCol(wsB,rB);
     if(cA<0||cB<0){
-      rows.push({sheet:name,row:'—',change:'sheet',before:cA<0?'(no Anmerkung col)':'(ok)',after:cB<0?'(no Anmerkung col)':'(ok)'});
+      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw,before:cA<0?'(no Anmerkung col)':'(ok)',after:cB<0?'(no Anmerkung col)':'(ok)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false});
+      sheetSet.add(name);
       continue;
     }
+    sheetSet.add(name);
+    fwSet.add(fw);
+
     const lastRow=Math.max(rA.e.r,rB.e.r);
     for(let r=3;r<=lastRow;r++){
       total++;
       const vA=cellStr(wsA,r,cA),vB=cellStr(wsB,r,cB);
-      if(vA===vB)continue;
-      let change;
-      if(!vA&&vB){change='added';added++;}
-      else if(vA&&!vB){change='removed';removed++;}
-      else{change='changed';changed++;}
-      rows.push({sheet:name,row:r+1,change,before:vA,after:vB});
+      const label=classifyDiff(vA,vB);
+
+      /* Training labels — the top 4 classic tiles are derived from these
+         afterward (added = missed, removed = overfired, changed = wrong). */
+      if(label==='correct'){correct++;}
+      else if(label==='wrong'){wrong++;}
+      else if(label==='missed'){missed++;}
+      else if(label==='overfired'){overfired++;}
+
+      /* Engine-now prediction + trigger trace: only meaningful when we
+         have a resolver AND the row isn't a null-sheet error entry. */
+      let engineNow='',engineMatchesA=true,reason='',inputs={};
+      if(processor&&colsA){
+        try{
+          const p=processor(wsA,r,colsA);
+          engineNow=(p==null?'':String(p));
+          engineMatchesA=engineNow===(vA||'');
+          if(!engineMatchesA)drift++;
+          try{reason=buildReason(fw,wsA,r,colsA)||'';}catch(_){reason='';}
+          inputs=collectInputsForRow(fw,wsA,r,colsA);
+        }catch(e){engineNow='';reason='engine error: '+(e.message||e);}
+      }
+
+      /* Only keep mismatches in the row set by default; 'correct' rows
+         are kept too so the chip filter can reveal them when the user
+         ticks "Include matching rows". They're hidden in the default
+         table view via filterDiffRows(). */
+      rows.push({sheet:name,row:r+1,label,change:label==='missed'?'added':(label==='overfired'?'removed':(label==='wrong'?'changed':'correct')),fw,before:vA,after:vB,engineNow,engineMatchesA,hasDrift:!engineMatchesA,reason,inputs});
     }
   }
-  diffState.results={rows,total,added,removed,changed};
+
+  /* Keep classic tile semantics: "added" = missed (B filled, A empty),
+     "removed" = overfired (A filled, B empty), "changed" = wrong. */
+  added=missed;removed=overfired;changed=wrong;
+
+  diffState.results={rows,total,added,removed,changed,wrong,missed,overfired,correct,drift,
+    forwarders:[...fwSet].sort(),sheets:[...sheetSet].sort()};
   renderDiff();
 }
 
+/* Collect the structured input cells the rules actually read. Mirrors
+   tsCollectInputs but keyed directly by forwarder for the runDiff pass. */
+function collectInputsForRow(fw,ws,r,cols){
+  const o={};
+  const get=(k,c)=>{if(c===undefined||c<0)return;const v=cellStr(ws,r,c);if(v!=='')o[k]=v;};
+  if(fw==='dachser'){
+    get('stat',cols.stat);get('tarif',cols.tarif);get('fr_diff',cols.fr);
+    get('snk_dl',cols.snk_dl);get('snk_diff',cols.snk_diff);get('snk_tarif',cols.snk_tar);
+    get('zz_diff',cols.zz);get('sam_diff',cols.sam);get('dgr_diff',cols.dgr);
+    get('exp_diff',cols.exp);get('exp_dl',cols.exp_dl);
+    get('maut_diff',cols.maut);get('sbfu_diff',cols.sbfu);get('tz_diff',cols.tz);
+    get('lg_diff',cols.lg_diff);get('av_diff',cols.av_diff);
+    const placeIf=(k,idx)=>{const v=cellStr(ws,r,idx);if(v)o[k]=v;};
+    placeIf('referenz3',DA_COL_REFERENZ3);placeIf('empf_plz',DA_COL_EMPF_PLZ);
+    placeIf('empf_ort',DA_COL_EMPF_ORT);placeIf('anz_sdg',DA_COL_ANZ_SDG);
+    placeIf('serv_art',DA_COL_SERV_ART);placeIf('sachkonto',DA_COL_SACHKONTO);
+  } else if(fw==='kn'){
+    get('stat',cols.stat);get('tarif',cols.tarif);
+    get('fr_diff',cols.fr);get('exp_diff',cols.exp);get('mt_diff',cols.toll);get('tz_diff',cols.fuel);
+    get('snk_dl',cols.snk_dl);get('snk_diff',cols.snk_diff);
+    get('referenz',cols.referenz);get('recip',cols.recip);
+    get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
+    get('kostenstelle',cols.kost);get('sachkonto',cols.sach);
+  } else if(fw==='dhl'){
+    get('stat',cols.stat);get('tarif',cols.tarif);
+    get('fr_diff',cols.addr);get('pal_diff',cols.stack);get('ow_diff',cols.weight);
+    get('yo_diff',cols.conv);get('yl_diff',cols.irr);get('nd_diff',cols.neut);get('sf_diff',cols.sign);
+    get('snk_diff',cols.snk);get('ac_diff',cols.diff);get('mt_diff',cols.maut);
+    get('nx_diff',cols.surc);get('os_diff',cols.over);get('tz_diff',cols.tz);
+    get('kostenstelle',cols.kost);get('sachkonto',cols.sach);
+  } else if(fw==='wackler'){
+    get('stat',cols.stat);get('tarif',cols.tarif);get('existing_anmerkung',cols.target);
+    get('avis_diff',cols.avis_diff);get('snk_diff',cols.snk_diff);get('fr_diff',cols.fr);
+    get('mt_diff',cols.maut);get('tz_diff',cols.tz);
+    get('referenz',cols.referenz);
+    get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
+    get('empf_plz',cols.empf_plz);get('empf_ort',cols.empf_ort);
+    get('kostenstelle',cols.kostenstelle);get('sachkonto',cols.sachkonto);
+  }
+  return o;
+}
+
+/* Apply every active filter (label chip + forwarder + sheet + search)
+   to the enriched row set. 'drift' is pseudo-label — rows whose engine
+   disagrees with A, regardless of their wrong/missed/overfired label. */
+function filterDiffRows(){
+  if(!diffState.results)return [];
+  const{rows}=diffState.results;
+  const{label,fw,sheet,q}=diffFilter;
+  const includeMatches=!!document.getElementById('diffIncludeMatch')?.checked;
+  const needle=q.trim().toLowerCase();
+  return rows.filter(r=>{
+    if(r.change==='sheet')return label==='all'&&fw==='all'&&(sheet==='all'||sheet===r.sheet);
+    if(label==='drift'){if(!r.hasDrift)return false;}
+    else if(label!=='all'){if(r.label!==label)return false;}
+    else {if(r.label==='correct'&&!includeMatches)return false;}
+    if(fw!=='all'&&r.fw!==fw)return false;
+    if(sheet!=='all'&&r.sheet!==sheet)return false;
+    if(needle){
+      const hay=((r.before||'')+' '+(r.after||'')+' '+(r.reason||'')+' '+(r.engineNow||'')).toLowerCase();
+      if(!hay.includes(needle))return false;
+    }
+    return true;
+  });
+}
+
 function renderDiff(){
-  const{rows,total,added,removed,changed}=diffState.results;
+  if(!diffState.results)return;
+  const{total,added,removed,changed,wrong,missed,overfired,correct,drift,forwarders,sheets}=diffState.results;
+
+  /* Classic top-4 tiles */
   document.getElementById('dCount').textContent=total;
   document.getElementById('dAdded').textContent=added;
   document.getElementById('dRemoved').textContent=removed;
   document.getElementById('dChanged').textContent=changed;
-  document.getElementById('diffMeta').textContent=`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}  \u00b7  showing ${Math.min(rows.length,500)} of ${rows.length} differences`;
-  const tbody=document.querySelector('#diffTable tbody');
-  const MAX=500;
-  const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  tbody.innerHTML=rows.slice(0,MAX).map(r=>
-    `<tr class="df-${r.change}"><td>${esc(r.sheet)}</td><td>${r.row}</td><td>${r.change}</td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td></tr>`
-  ).join('');
-  if(!rows.length){
+
+  /* Training chips */
+  const totalNonSheet=wrong+missed+overfired+correct;
+  document.getElementById('tcAll').textContent=totalNonSheet;
+  document.getElementById('tcWrong').textContent=wrong;
+  document.getElementById('tcMissed').textContent=missed;
+  document.getElementById('tcOverfired').textContent=overfired;
+  document.getElementById('tcDrift').textContent=drift;
+  document.getElementById('tcCorrect').textContent=correct;
+
+  /* Forwarder filter dropdown */
+  const fwSel=document.getElementById('diffFwFilter');
+  if(fwSel){
+    const prev=diffFilter.fw;
+    fwSel.innerHTML='<option value="all">all</option>'+forwarders.map(f=>`<option value="${f}">${f}</option>`).join('');
+    fwSel.value=forwarders.includes(prev)?prev:'all';
+    diffFilter.fw=fwSel.value;
+  }
+  /* Sheet filter dropdown */
+  const shSel=document.getElementById('diffSheetFilter');
+  if(shSel){
+    const prev=diffFilter.sheet;
+    shSel.innerHTML='<option value="all">all</option>'+sheets.map(s=>`<option value="${s}">${s}</option>`).join('');
+    shSel.value=sheets.includes(prev)?prev:'all';
+    diffFilter.sheet=shSel.value;
+  }
+
+  /* Visibility of the results block */
+  const anyDiff=(wrong+missed+overfired)>0;
+  const hasSheetWarnings=diffState.results.rows.some(r=>r.change==='sheet');
+  if(!anyDiff&&!correct&&!hasSheetWarnings){
     document.getElementById('diffResults').style.display='none';
     document.getElementById('diffEmpty').style.display='block';
     document.getElementById('btnDiffCsv').style.display='none';
@@ -1083,21 +1270,176 @@ function renderDiff(){
     const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='inline-block';
     const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='flex';
   }
-  showLog(`Diff \u2014 ${added} added, ${removed} removed, ${changed} changed (${total} rows scanned).`,'ok');
+
+  refreshDiffView();
+  showLog(`Diff \u2014 ${wrong} wrong, ${missed} missed, ${overfired} overfired, ${drift} engine-drift (${total} rows scanned across ${forwarders.length||1} forwarder(s)).`,'ok');
 }
 
+/* Rebuild the visible table + meta line + export-button counters from
+   the current filter state. Called by runDiff, the chip buttons, the
+   filter inputs, and the include-matches checkbox. */
+function refreshDiffView(){
+  if(!diffState.results)return;
+  const filtered=filterDiffRows();
+  const{rows,total,forwarders}=diffState.results;
+  const MAX=500;
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  document.getElementById('diffMeta').textContent=
+    `A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}  \u00b7  ${total} rows scanned across ${forwarders.length||1} forwarder(s)`;
+
+  const tbody=document.querySelector('#diffTable tbody');
+  const slice=filtered.slice(0,MAX);
+  tbody.innerHTML=slice.map((r,i)=>renderDiffRow(r,i,esc)).join('');
+
+  const foot=document.getElementById('diffTableFoot');
+  if(foot){
+    if(!filtered.length){foot.textContent='// no rows match the current filter — loosen a chip or clear the search.';}
+    else if(filtered.length>MAX){foot.textContent=`// showing first ${MAX} of ${filtered.length} matching rows — use filters to narrow.`;}
+    else if(filtered.length<rows.length){foot.textContent=`// showing ${filtered.length} of ${rows.length} rows (filtered).`;}
+    else{foot.textContent=`// showing all ${filtered.length} rows.`;}
+  }
+
+  /* Export-button counters — all reflect the current filter */
+  const trainable=filtered.filter(r=>r.change!=='sheet').length;
+  document.getElementById('ctDiffCsv').textContent=filtered.length?`\u00b7 ${filtered.length}`:'';
+  document.getElementById('ctTrainCsv').textContent=trainable?`\u00b7 ${trainable}`:'';
+  document.getElementById('ctTrainJsonl').textContent=trainable?`\u00b7 ${trainable}`:'';
+
+  /* Active chip visual state */
+  document.querySelectorAll('#trainChips .train-chip').forEach(b=>
+    b.classList.toggle('active',b.dataset.label===diffFilter.label));
+
+  /* Keep select values in sync (handles programmatic changes). */
+  const fwSel=document.getElementById('diffFwFilter');if(fwSel&&fwSel.value!==diffFilter.fw)fwSel.value=diffFilter.fw;
+  const shSel=document.getElementById('diffSheetFilter');if(shSel&&shSel.value!==diffFilter.sheet)shSel.value=diffFilter.sheet;
+}
+
+function renderDiffRow(r,i,esc){
+  if(r.change==='sheet'){
+    return `<tr class="df-sheet"><td>${esc(r.sheet)}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-sheet">sheet</span></td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td><td class="df-engine"></td><td class="df-actions"></td></tr>`;
+  }
+  const labelCls=LABEL_CLASS[r.label]||'';
+  const engine=renderEngineCell(r,esc);
+  const actions=`<button type="button" class="df-expand-btn" aria-expanded="false" title="Show inputs + reason trace" onclick="toggleDiffDetail(${i})">›</button>`;
+  return `<tr class="${labelCls}" data-row-i="${i}"><td>${esc(r.sheet)}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-${r.label}">${r.label}</span></td><td class="df-before">${esc(r.before||'\u2014')}</td><td class="df-after">${esc(r.after||'\u2014')}</td>${engine}<td class="df-actions">${actions}</td></tr>`;
+}
+
+function renderEngineCell(r,esc){
+  if(!r.engineNow&&!r.reason){return '<td class="df-engine empty"><span class="df-engine-val">\u2014</span></td>';}
+  if(r.engineMatchesA){
+    return `<td class="df-engine match"><span class="match-dot"></span><span class="df-engine-val">${esc(r.engineNow||'\u2014')}</span></td>`;
+  }
+  return `<td class="df-engine drift" title="Engine disagrees with slot A"><span class="drift-dot"></span><span class="df-engine-val">${esc(r.engineNow||'(empty)')}</span></td>`;
+}
+
+/* Expand/collapse the detail drawer for a single row. Shows the
+   structured inputs the rule engine read + the trigger trace + a
+   "Send to Tester" button that pre-fills the Rule Tester with that
+   exact case and scrolls to it. */
+function toggleDiffDetail(i){
+  const btn=document.querySelector(`.diff-table tr[data-row-i="${i}"] .df-expand-btn`);
+  const mainTr=document.querySelector(`.diff-table tr[data-row-i="${i}"]`);
+  if(!mainTr||!btn)return;
+  const existing=document.querySelector(`.diff-table tr.df-detail[data-for="${i}"]`);
+  if(existing){existing.remove();btn.classList.remove('open');btn.setAttribute('aria-expanded','false');btn.textContent='›';return;}
+  const filtered=filterDiffRows();const r=filtered[i];if(!r)return;
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const keys=Object.keys(r.inputs||{});
+  const kv=keys.length
+    ? keys.map(k=>`<div class="df-detail-kv"><span class="kv-k">${esc(k)}</span><span class="kv-v" title="${esc(r.inputs[k])}">${esc(r.inputs[k])}</span></div>`).join('')
+    : '<div class="df-detail-kv empty"><span class="kv-k">inputs</span><span class="kv-v">(no rule-visible cells captured — unknown forwarder)</span></div>';
+  const reasonHtml=r.reason
+    ? `<div class="df-reason-block"><span class="rb-label">trigger trace</span>${esc(r.reason)}</div>`
+    : '<div class="df-reason-block empty"><span class="rb-label">trigger trace</span>(engine produced no reason — either no rule fired or forwarder unknown)</div>';
+  const canSend=r.fw&&r.fw!=='-'&&r.fw!=='unknown';
+  const sendBtn=canSend
+    ? `<button type="button" class="df-send-tester" onclick="sendDiffToTester(${i})" title="Open this case in the Rule Tester with every input pre-filled">✦ Send to Tester</button>`
+    : '';
+  const tr=document.createElement('tr');
+  tr.className='df-detail';tr.dataset.for=String(i);
+  tr.innerHTML=`<td colspan="8"><div class="df-detail-wrap"><div class="df-detail-grid">${kv}${reasonHtml}</div>${sendBtn?`<div>${sendBtn}</div>`:''}</div></td>`;
+  mainTr.after(tr);
+  btn.classList.add('open');btn.setAttribute('aria-expanded','true');btn.textContent='\u00b7';
+}
+
+/* Programmatically switch forwarder (mirrors selectFW's side effects),
+   open the tester panel if collapsed, pre-fill every matching field
+   from the diff row's captured inputs, and auto-evaluate. */
+function sendDiffToTester(i){
+  const filtered=filterDiffRows();const r=filtered[i];if(!r)return;
+  if(!r.fw||r.fw==='unknown'){showLog('Send to Tester \u2014 unknown forwarder, cannot pre-fill.','err');return;}
+  /* 1. Select forwarder tile */
+  const tile=document.querySelector(`.fw-btn[data-fw="${r.fw}"]`);
+  if(tile&&tile.getAttribute('aria-checked')!=='true')selectFW(tile);
+  /* 2. Open the Rule Tester panel if collapsed */
+  const testerPanel=document.getElementById('testerPanel');
+  if(testerPanel&&!testerPanel.classList.contains('open'))toggleBonus('tester');
+  else renderTesterFields();
+  /* 3. Map diff-input keys -> tester field ids (t_<key>). Keys already
+     match for almost everything; the handful that don't are remapped. */
+  const remap={referenz3:'_referenz3',empf_plz:'_plz',empf_ort:'_ort',anz_sdg:'_anzSdg',serv_art:'_serv',sachkonto:r.fw==='dachser'?'_sach':'sachkonto'};
+  clearTester();
+  const vals=r.inputs||{};
+  Object.entries(vals).forEach(([k,v])=>{
+    const tk=remap[k]||k;
+    const el=document.getElementById('t_'+tk);
+    if(el)el.value=String(v);
+  });
+  /* 4. Also inject the existing Anmerkung value so wackler's "protected"
+     branch can exercise when relevant. */
+  if(r.before){
+    const tgt=document.getElementById('t_target');if(tgt&&!tgt.value)tgt.value=r.before;
+  }
+  runTester();
+  /* 5. Scroll the tester into view so the user sees the result. */
+  document.getElementById('testerPanel').scrollIntoView({behavior:'smooth',block:'start'});
+  showLog(`Send to Tester \u2014 loaded ${r.fw} row ${r.row} (${r.label}). Tweak the rule, re-evaluate, then re-run Train & Compare.`,'ok');
+}
+
+/* Chip handler — 'drift' is a pseudo-label that bypasses the
+   label-match check and filters on hasDrift instead. */
+function setDiffLabelFilter(label){diffFilter.label=label;refreshDiffView();}
+
+function resetDiffFilters(){
+  diffFilter.label='all';diffFilter.fw='all';diffFilter.sheet='all';diffFilter.q='';
+  const fwSel=document.getElementById('diffFwFilter');if(fwSel)fwSel.value='all';
+  const shSel=document.getElementById('diffSheetFilter');if(shSel)shSel.value='all';
+  const q=document.getElementById('diffSearch');if(q)q.value='';
+  const inc=document.getElementById('diffIncludeMatch');if(inc)inc.checked=false;
+  refreshDiffView();
+}
+
+/* Keep the free-text search in sync with diffFilter (oninput handler
+   on #diffSearch calls refreshDiffView which reads this via
+   filterDiffRows — but we also mirror into diffFilter so the export
+   honors it even if the input is read late). */
+(function bindDiffSearch(){
+  document.addEventListener('DOMContentLoaded',()=>{
+    const q=document.getElementById('diffSearch');
+    if(q)q.addEventListener('input',()=>{diffFilter.q=q.value;});
+    const fwSel=document.getElementById('diffFwFilter');
+    if(fwSel)fwSel.addEventListener('change',()=>{diffFilter.fw=fwSel.value;});
+    const shSel=document.getElementById('diffSheetFilter');
+    if(shSel)shSel.addEventListener('change',()=>{diffFilter.sheet=shSel.value;});
+  });
+})();
+
 function downloadDiffCsv(){
-  if(!diffState.results||!diffState.results.rows.length)return;
+  if(!diffState.results)return;
+  const rows=filterDiffRows();
+  if(!rows.length){showLog('Diff CSV \u2014 nothing to export (filter scope is empty).','err');return;}
   const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  const lines=['sheet,row,change,before,after'];
-  for(const r of diffState.results.rows){
-    lines.push([r.sheet,r.row,r.change,r.before,r.after].map(esc).join(','));
+  const lines=['sheet,row,forwarder,label,change,before,after,engine_now,engine_matches_a,reason'];
+  for(const r of rows){
+    lines.push([r.sheet,r.row,r.fw,r.label,r.change,r.before,r.after,r.engineNow||'',r.engineMatchesA?'true':'false',r.reason||''].map(esc).join(','));
   }
   const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   a.href=url;a.download='anmerkung_diff_'+stamp+'.csv';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showLog(`Diff CSV exported \u2014 ${rows.length} row(s).`,'ok');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1221,51 +1563,32 @@ function tsRunRule(fw,ws,r,cols){
   }catch(e){return{predicted:null,reason:'error: '+(e.message||e)};}
 }
 
-/* Build the training-set records. One per mismatch (and optionally per match). */
+/* Build the training-set records directly from the enriched rows
+   produced by runDiff — no second sheet walk. Honors the current
+   filter scope (chip + forwarder + sheet + search) so the user can
+   e.g. export only the "missed" rows for one forwarder. */
 function buildTrainingSet(){
-  if(!diffState.a||!diffState.b)return{records:[],inputKeys:[]};
+  if(!diffState.results||!diffState.results.rows.length)return{records:[],inputKeys:[]};
   const includeMatches=!!document.getElementById('diffIncludeMatch')?.checked;
-  const wbA=diffState.a.wb,wbB=diffState.b.wb;
-  /* Per-sheet: detect forwarder, resolve cols, walk rows. */
-  const sheetsA=wbA.SheetNames,sheetsB=wbB.SheetNames;
-  const commonSheets=sheetsA.filter(n=>sheetsB.includes(n));
+  const scope=filterDiffRows();
   const records=[];
   const allKeys=new Set();
-  for(const name of commonSheets){
-    const wsA=wbA.Sheets[name],wsB=wbB.Sheets[name];
-    if(!wsA||!wsB)continue;
-    const rA=XLSX.utils.decode_range(wsA['!ref']||'A1:A1');
-    const rB=XLSX.utils.decode_range(wsB['!ref']||'A1:A1');
-    const fw=tsDetectForwarder(wsA,rA);
-    if(fw==='unknown')continue;
-    const resolver=FW_RESOLVERS[fw];
-    const colsA=resolver(wsA,rA);
-    const colsB=resolver(wsB,rB);
-    if(colsA.target<0||colsB.target<0)continue;
-    const lastRow=Math.max(rA.e.r,rB.e.r);
-    for(let r=3;r<=lastRow;r++){
-      const predicted=cellStr(wsA,r,colsA.target);
-      const expected=cellStr(wsB,r,colsB.target);
-      const label=tsLabelFor(predicted,expected);
-      if(label==='correct'&&!includeMatches)continue;
-      const{predicted:rulePredicted,reason}=tsRunRule(fw,wsA,r,colsA);
-      const inputs=tsCollectInputs(fw,wsA,r,colsA);
-      inputs.forEach(p=>allKeys.add(p.key));
-      const inputObj={};
-      for(const p of inputs)inputObj[p.key]=p.value;
-      records.push({
-        sheet:name,
-        row:r+1,
-        forwarder:fw,
-        label,
-        predicted,                                   /* what slot A says */
-        expected,                                    /* what slot B says */
-        rule_engine_now:rulePredicted==null?'':rulePredicted, /* what engine would say today */
-        engine_matches_a:(rulePredicted==null?'':rulePredicted)===predicted,
-        reason,                                      /* trigger trace */
-        inputs:inputObj,
-      });
-    }
+  for(const r of scope){
+    if(r.change==='sheet')continue;
+    if(r.label==='correct'&&!includeMatches)continue;
+    Object.keys(r.inputs||{}).forEach(k=>allKeys.add(k));
+    records.push({
+      sheet:r.sheet,
+      row:r.row,
+      forwarder:r.fw,
+      label:r.label,
+      predicted:r.before,                     /* what slot A (tool) says */
+      expected:r.after,                       /* what slot B (truth) says */
+      rule_engine_now:r.engineNow||'',        /* what the current engine would say today */
+      engine_matches_a:!!r.engineMatchesA,
+      reason:r.reason||'',                    /* trigger trace */
+      inputs:r.inputs||{},
+    });
   }
   /* Stable ordering of input keys: keep first-seen order from Set iteration. */
   const inputKeys=[...allKeys];
@@ -1300,7 +1623,8 @@ function downloadTrainingSet(format){
   /* Quick summary in the log so users know what they got. */
   const by={};for(const r of records)by[r.label]=(by[r.label]||0)+1;
   const parts=Object.keys(by).sort().map(k=>k+'='+by[k]);
-  showLog('Training set exported \u2014 '+records.length+' row(s) as '+ext.toUpperCase()+' ('+parts.join(', ')+').','ok');
+  const scopeNote=(diffFilter.label!=='all'||diffFilter.fw!=='all'||diffFilter.sheet!=='all'||(diffFilter.q&&diffFilter.q.trim()))?' (filter-scoped)':'';
+  showLog('Training set exported \u2014 '+records.length+' row(s) as '+ext.toUpperCase()+' ('+parts.join(', ')+')'+scopeNote+'.','ok');
 }
 
 /* ══════════════════════════════════════════════════════════
