@@ -1,6 +1,17 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "entries": [
+    {
+      "ver": "1.4.1",
+      "date": "2026-05-12",
+      "items": [
+        "K+N — new Pauschalfracht rule. FR-difference on a row with no Tarif on record (empty or '-') is now classified as \"Pauschalfracht\" instead of the generic \"Differenz aufgrund abweichender Gewichte\" — a flat-rate freight charge is not a weight/tier miscalc.",
+        "K+N — new SNK rule: SNK_DIFF = −9 → \"Differenz avis\" (mirror of the existing +9 → \"Avis, ok?\"). Sign now decides the classification instead of collapsing to the generic SNK Differenz fallback.",
+        "K+N — |SNK_DIFF| = 25 now maps to \"Portalavisierung, ok?\" directly, matching the existing SNK_DL = 25 branch. Previously a 25 SNK diff without the matching DL tag fell into \"SNK Differenz\".",
+        "K+N — bundling precedence preserved: when ReferenzNr lists multiple docs and FR differs, \"hätte gebündelt werden müssen, ok?\" still wins over every other classification (including the new Pauschalfracht branch).",
+        "K+N — resolver now reads \"Total · Kosten lt. Tarif\"; rule tester gains a Tarif field and three new presets (Pauschalfracht, SNK-diff -9, SNK-diff 25) so the new branches are exercisable from the UI."
+      ]
+    },
     {
       "ver": "1.4.0",
       "date": "2026-05-12",

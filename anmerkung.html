@@ -567,7 +567,7 @@ body.theme-light .cl-box { background: #fcf6e8; }
     </button>
     <button class="fw-btn" data-fw="kn" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">K+N</div>
-      <div class="fw-desc">FillAnmerkung · dynamic cols<br>Amazon tiers · bundling · SNK 5/9/18/34 · Kontierung</div>
+      <div class="fw-desc">FillAnmerkung · dynamic cols<br>Amazon tiers · bundling · Pauschalfracht · SNK 5/9/18/25/34 · Kontierung</div>
     </button>
     <button class="fw-btn" data-fw="dhl" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">DHL Express</div>
@@ -1028,6 +1028,8 @@ const PHRASES={
   snkDifferenz:               'SNK Differenz',
   treibstoff:                 'Differenz treibstoff',
   kontierungQ:                'Kontierung?',
+  pauschalfracht:             'Pauschalfracht',
+  differenzAvis:              'Differenz avis',
   // DHL
   fremdnummerDotPunkt:        'Fremdnummer doppelt berechnet.',
   kontierungLower:            'kontierung?',
@@ -1274,22 +1276,37 @@ function processDachser(ws,r,cols){
 /* ── K+N ── */
 const KN_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8500,9500,99999];
 function knGetTier(kg){if(kg<=0)return 0;for(const b of KN_BP)if(kg<=b)return b;return 99999;}
-function resolveKN(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),recip:fc('','Empf.-Name'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),kost:fc('','Kostenstelle'),sach:fc('','Sachkonto'),fr:fc('FR','Differenz'),exp:fc('EXP','Differenz'),toll:fc('MT','Differenz'),snk_dl:fc('SNK','Kosten DL'),snk_diff:fc('SNK','Differenz'),fuel:fc('TZ','Differenz')};}
+function resolveKN(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),recip:fc('','Empf.-Name'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),kost:fc('','Kostenstelle'),sach:fc('','Sachkonto'),fr:fc('FR','Differenz'),exp:fc('EXP','Differenz'),toll:fc('MT','Differenz'),snk_dl:fc('SNK','Kosten DL'),snk_diff:fc('SNK','Differenz'),fuel:fc('TZ','Differenz')};}
 
 function processKN(ws,r,cols){
   const T=T_KN;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
   const frDiff=cellNum(ws,r,cols.fr),snkDl=cellNum(ws,r,cols.snk_dl),snkDiff=cellNum(ws,r,cols.snk_diff),expDiff=cellNum(ws,r,cols.exp),tollDiff=cellNum(ws,r,cols.toll),fuelDiff=cellNum(ws,r,cols.fuel),refNr=cellStr(ws,r,cols.referenz),recip=cellStr(ws,r,cols.recip).toLowerCase(),kost=cellStr(ws,r,cols.kost),sach=cellStr(ws,r,cols.sach);
+  /* Tarif is "empty" when the cell is blank or rendered as '-' (no tariff on record).
+     An FR difference on an empty-tarif row is a Pauschalfracht situation — the freight
+     is a flat-rate charge, not a tier/weight miscalc. Checked before the Amazon / Gewichte
+     cascade below so it wins out. */
+  const tarifRaw=cols.tarif>=0?cellStr(ws,r,cols.tarif):'';
+  const tarifEmpty=(tarifRaw===''||tarifRaw==='-');
   let res='';
   if(hasErr(frDiff,T)){
+    /* Bundling wins over everything — if ReferenzNr lists multiple docs, the
+       row represents an unbundled stack that should've been billed together.
+       Kept as an early return to match legacy behavior. */
     if(refNr&&refNr!=='-'&&refNr.includes(','))return'hätte gebündelt werden müssen, ok?';
-    if(recip.includes('amazon')&&(!refNr||refNr==='-'||!refNr.includes(','))){res=join(res,'hätte nach Amazon Tarif abrechnen müssen');}
+    if(tarifEmpty){res=join(res,'Pauschalfracht');}
+    else if(recip.includes('amazon')&&(!refNr||refNr==='-'||!refNr.includes(','))){res=join(res,'hätte nach Amazon Tarif abrechnen müssen');}
     else if(frDiff>0&&snkDl===5){const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);res=join(res,(knGetTier(v1)===knGetTier(v2))?'hätte nach Amazon Tarif abrechnen dürfen':'Differenz aufgrund abweichender Gewichte');}
     else{res=join(res,'Differenz aufgrund abweichender Gewichte');}
   }
   if(hasErr(expDiff,T))res=join(res,'FIXTERMIN');
   if(hasErr(tollDiff,T))res=join(res,'Mautdifferenz');
+  /* SNK classification. Values are small integers in the typical cases we
+     classify; the cascade below checks both SNK_DIFF exact matches first,
+     then SNK_DL exact matches, then the generic tolerance-based fallback. */
   if(Math.abs(snkDiff-9)<0.01){res=join(res,'Avis, ok?');}
+  else if(Math.abs(snkDiff+9)<0.01){res=join(res,'Differenz avis');}
+  else if(Math.abs(Math.abs(snkDiff)-25)<0.01){res=join(res,'Portalavisierung, ok?');}
   else if(hasErr(snkDiff,T)){
     if(snkDl===5||snkDl===25)res=join(res,'Portalavisierung, ok?');
     else if(snkDl===9)res=join(res,'Avis, ok?');
@@ -1358,7 +1375,7 @@ function buildReason(fw,ws,r,cols){
     const sa=cellStr(ws,r,DA_COL_SERV_ART);if(sa)parts.push('SERV='+sa);
     const sk=cellStr(ws,r,DA_COL_SACHKONTO);if(sk)parts.push('SACH='+sk);
   } else if(fw==='kn'){
-    push('STAT',num(cols.stat));push('FR',num(cols.fr));
+    push('STAT',num(cols.stat));push('TARIF',num(cols.tarif));push('FR',num(cols.fr));
     push('SNK_DL',num(cols.snk_dl));push('SNK_DIFF',num(cols.snk_diff));
     push('EXP',num(cols.exp));push('MT',num(cols.toll));push('TZ',num(cols.fuel));
     const ref=cellStr(ws,r,cols.referenz);if(ref)parts.push('REF='+ref);
@@ -1552,7 +1569,7 @@ const TESTER_FIELDS={
     ['_plz','Empf.-PLZ','str'],['_ort','Empf.-Ort','str'],['_anzSdg','Anz.Sdg','str'],
   ],
   kn:[
-    ['stat','Stat_Freigabe','num'],
+    ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],
     ['fr','FR Differenz','num'],['snk_diff','SNK Differenz','num'],['snk_dl','SNK Kosten DL','num'],
     ['exp','EXP Differenz','num'],['toll','MT Differenz','num'],['fuel','TZ Differenz','num'],
     ['referenz','ReferenzNr','str'],['recip','Empf.-Name','str'],
@@ -1587,9 +1604,12 @@ const TESTER_PRESETS={
     {name:'K1AV zeitfenster',values:{stat:10,snk_dl:5,snk_diff:12,_serv:'K1AV',tarif:'100,00'}},
   ],
   kn:[
-    {name:'Bundled, should be',values:{stat:10,fr:15,referenz:'123,456'}},
-    {name:'Amazon tariff miss',values:{stat:10,fr:12,recip:'Amazon Logistics',referenz:'single'}},
-    {name:'Portal avis 5',values:{stat:10,snk_diff:5,snk_dl:5}},
+    {name:'Bundled, should be',values:{stat:10,fr:15,referenz:'123,456',tarif:'200,00'}},
+    {name:'Amazon tariff miss',values:{stat:10,fr:12,recip:'Amazon Logistics',referenz:'single',tarif:'150,00'}},
+    {name:'Portal avis 5',values:{stat:10,snk_diff:5,snk_dl:5,tarif:'100,00'}},
+    {name:'Pauschalfracht',values:{stat:10,fr:3980,referenz:'2543011467'}},
+    {name:'Differenz avis (-9)',values:{stat:10,snk_diff:-9,tarif:'119,17'}},
+    {name:'Portal (SNK diff 25)',values:{stat:10,snk_diff:25,tarif:'223,13'}},
     {name:'Clean row',values:{stat:10,kost:'1234',sach:'5678'}},
   ],
   dhl:[
@@ -1671,7 +1691,7 @@ function buildSyntheticWs(fw,userVals){
   /* Fill missing cols with -1 so processors know the field is absent. */
   const allKeys={
     dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','c502_dl','c503_dl','lg_diff','av_diff'],
-    kn:['target','stat','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
+    kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
     wackler:['target','stat','tarif','avis_diff','snk_diff','fr','maut','tz','referenz','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
   }[fw]||[];
