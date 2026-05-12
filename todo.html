@@ -695,6 +695,7 @@ html.light .chronicle-metric{background:rgba(255,252,245,.85);border-color:rgba(
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
 <script>
 (function(){
 const cv=document.getElementById('bg'),cx=cv.getContext('2d');
@@ -738,8 +739,7 @@ Grimoire.Theme.init({
   onChange:function(m){document.body.style.color=m==='light'?'rgba(20,12,36,.9)':'#ede8ff';}
 });
 
-const firebaseConfig={apiKey:"AIzaSyABb63nTxq-DY0CsHDtdJsUF4NBF7Cnrxw",authDomain:"vb-code-vault.firebaseapp.com",projectId:"vb-code-vault",storageBucket:"vb-code-vault.firebasestorage.app",messagingSenderId:"773245175115",appId:"1:773245175115:web:0b6a4f27388f58f026d4ce"};
-if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+if(!firebase.apps.length)firebase.initializeApp(window.firebaseConfig);
 const db=firebase.firestore(),col=db.collection('wmf_tasks');
 const fwdCol=db.collection('wmf_forwarders');
 const scribeCol=db.collection('wmf_scribes');

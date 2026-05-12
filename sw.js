@@ -3,7 +3,7 @@
    next load), cache-first for external scripts & fonts. Keeps the app fully
    functional offline once the first online visit has primed the caches.
 */
-const VERSION = 'v1.4.1';
+const VERSION = 'v1.4.4';
 const CACHE = 'alchemist-' + VERSION;
 
 /* Core assets to pre-cache on install. Keep the list short and let
@@ -97,6 +97,23 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(req.url);
   const isHtml = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+  /* Network-first for small JSON config files (e.g. anmerkung-changelog.json)
+     so content edits surface on next load without waiting for a SW version bump.
+     Falls back to the cached copy when offline. */
+  const isChangelogJson = url.pathname.endsWith('/assets/anmerkung-changelog.json');
+
+  if (isChangelogJson) {
+    event.respondWith(
+      fetch(req).then(resp => {
+        if (resp && resp.ok) {
+          const copy = resp.clone();
+          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        }
+        return resp;
+      }).catch(() => caches.match(req))
+    );
+    return;
+  }
 
   /* Network-first for HTML so a fresh version wins when online. */
   if (isHtml) {

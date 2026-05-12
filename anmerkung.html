@@ -116,6 +116,70 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 }
 .btn-dl:hover { background: rgba(52,211,153,0.18); box-shadow: 0 0 30px rgba(52,211,153,0.18); }
 
+/* BULK PROCESSING */
+.bulk-wrap { margin-top: 2.5rem; }
+.bulk-upload-area {
+  background: var(--surface); border: 1.5px dashed rgba(167,139,250,0.25);
+  border-radius: 18px; padding: 2.2rem 1.5rem; text-align: center;
+  cursor: pointer; transition: border-color .2s, background .2s;
+  margin-bottom: 1rem; backdrop-filter: blur(12px);
+}
+.bulk-upload-area:hover, .bulk-upload-area.drag { border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.04); }
+.bulk-upload-area .upload-icon { color: rgba(167,139,250,0.6); }
+.bulk-file-count { font-family: var(--mono); font-size: 11px; color: rgba(167,139,250,0.7); margin-top: 10px; display: none; }
+.bulk-list { list-style: none; margin: 0 0 1rem; padding: 0; display: none; }
+.bulk-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 14px; margin-bottom: 8px;
+  transition: border-color .2s;
+}
+.bulk-item:hover { border-color: var(--border2); }
+.bulk-item-name { flex: 1; font-family: var(--mono); font-size: 11.5px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulk-item-status { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: .06em; min-width: 60px; text-align: right; }
+.bulk-item-status.done { color: var(--accent); }
+.bulk-item-status.err { color: var(--danger); }
+.bulk-item-status.processing { color: rgba(167,139,250,0.8); }
+.bulk-item-dl {
+  background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3);
+  border-radius: 10px; padding: 6px 14px;
+  font-family: var(--cinzel); font-size: 10px; font-weight: 600;
+  letter-spacing: .08em; color: var(--accent);
+  cursor: pointer; transition: background .2s, box-shadow .2s;
+  text-transform: uppercase; white-space: nowrap;
+  display: none;
+}
+.bulk-item-dl:hover { background: rgba(52,211,153,0.22); box-shadow: 0 0 16px rgba(52,211,153,0.15); }
+.bulk-item-dl.visible { display: inline-block; }
+.bulk-item-remove {
+  background: none; border: 1px solid var(--border); color: var(--text3);
+  font-family: var(--mono); font-size: 11px; width: 22px; height: 22px;
+  border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: color .15s, border-color .15s;
+}
+.bulk-item-remove:hover { color: var(--danger); border-color: rgba(248,113,113,0.4); }
+.btn-bulk-run {
+  width: 100%; padding: 14px; background: transparent;
+  border: 1px solid rgba(167,139,250,0.35); border-radius: 14px;
+  font-family: var(--cinzel); font-size: 13px; font-weight: 600;
+  letter-spacing: .1em; color: rgba(167,139,250,0.75);
+  cursor: pointer; transition: color .2s, border-color .2s, background .2s, box-shadow .2s;
+  margin-bottom: 10px; text-transform: uppercase;
+}
+.btn-bulk-run:hover:not(:disabled) { color: #c4b5fd; border-color: rgba(167,139,250,0.55); background: rgba(167,139,250,0.04); box-shadow: 0 0 24px rgba(167,139,250,0.12); }
+.btn-bulk-run:disabled { opacity: .3; cursor: not-allowed; }
+.btn-bulk-dl-all {
+  width: 100%; padding: 14px;
+  background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.3);
+  border-radius: 14px; font-family: var(--cinzel); font-size: 13px; font-weight: 600;
+  letter-spacing: .1em; color: rgba(167,139,250,0.8);
+  cursor: pointer; transition: background .2s, box-shadow .2s;
+  display: none; margin-bottom: 10px; text-transform: uppercase;
+}
+.btn-bulk-dl-all:hover { background: rgba(167,139,250,0.16); box-shadow: 0 0 28px rgba(167,139,250,0.15); }
+.bulk-progress { height: 2px; background: rgba(255,255,255,0.04); border-radius: 2px; margin-bottom: 1rem; overflow: hidden; display: none; }
+.bulk-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #a78bfa, #5b9cf6); border-radius: 2px; transition: width .25s; }
+
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem; }
 .stat {
@@ -503,7 +567,7 @@ body.theme-light .cl-box { background: #fcf6e8; }
     </button>
     <button class="fw-btn" data-fw="kn" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">K+N</div>
-      <div class="fw-desc">FillAnmerkung · dynamic cols<br>Amazon tiers · bundling · SNK 5/9/18/34 · Kontierung</div>
+      <div class="fw-desc">FillAnmerkung · dynamic cols<br>Amazon tiers · bundling · Pauschalfracht · SNK 5/9/18/25/34 · Kontierung</div>
     </button>
     <button class="fw-btn" data-fw="dhl" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">DHL Express</div>
@@ -511,7 +575,7 @@ body.theme-light .cl-box { background: #fcf6e8; }
     </button>
     <button class="fw-btn" data-fw="wackler" role="radio" aria-checked="false" tabindex="-1" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">Wackler</div>
-      <div class="fw-desc">Fremdnummer · AVIS 7.5/8.5/1 · SNK 38/−11.5<br>Gewichte · Bündelung · Return · Kontierung · TZ</div>
+      <div class="fw-desc">Fremdnummer · AVIS 7.5/8.5/6.5/8.7/1 · SNK 38/−11.5/22<br>Gewichte · Bündelung · Return · Kontierung · TZ</div>
     </button>
   </div>
 
@@ -601,6 +665,33 @@ body.theme-light .cl-box { background: #fcf6e8; }
     </div>
   </div>
   <div class="log" id="log" role="status" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ═══════════ BULK PROCESSING ═══════════ -->
+  <div class="bulk-wrap">
+    <button type="button" class="bonus-toggle" id="bulkToggle" onclick="toggleBonus('bulk')" aria-expanded="false" aria-controls="bulkPanel">
+      <span>VI — Bulk Process</span>
+      <span class="bonus-tag">Multi-file</span>
+      <span class="chev">›</span>
+    </button>
+    <div class="bonus-panel" id="bulkPanel" role="region" aria-label="Bulk process multiple files">
+      <div class="tester-intro">Upload multiple .xlsx files and process them all at once with the selected forwarder. Each document gets its own download button, or download all as a ZIP.</div>
+
+      <div class="bulk-upload-area" id="bulkDropArea"
+        onclick="document.getElementById('bulkFileInput').click()"
+        ondragover="onBulkDrag(event,true)" ondragleave="onBulkDrag(event,false)" ondrop="onBulkDrop(event)">
+        <div class="upload-icon">⬆</div>
+        <div class="upload-text"><strong>Click to browse</strong> or drag &amp; drop multiple .xlsx files</div>
+        <div class="bulk-file-count" id="bulkFileCount"></div>
+      </div>
+      <input type="file" id="bulkFileInput" accept=".xlsx" multiple style="display:none" onchange="onBulkFileSelect(event)">
+
+      <ul class="bulk-list" id="bulkList"></ul>
+
+      <div class="bulk-progress" id="bulkProgress"><div class="bulk-progress-fill" id="bulkProgressFill"></div></div>
+      <button class="btn-bulk-run" id="btnBulkRun" disabled onclick="runBulkProcess()">Transmute All Scrolls</button>
+      <button class="btn-bulk-dl-all" id="btnBulkDlAll" onclick="downloadAllBulk()">Download All as ZIP ↓</button>
+    </div>
+  </div>
 
   <!-- ═══════════ BONUS: RULE TESTER (#18) ═══════════ -->
   <div class="bonus-wrap">
@@ -937,6 +1028,8 @@ const PHRASES={
   snkDifferenz:               'SNK Differenz',
   treibstoff:                 'Differenz treibstoff',
   kontierungQ:                'Kontierung?',
+  pauschalfracht:             'Pauschalfracht',
+  differenzAvis:              'Differenz avis',
   // DHL
   fremdnummerDotPunkt:        'Fremdnummer doppelt berechnet.',
   kontierungLower:            'kontierung?',
@@ -1045,7 +1138,7 @@ function fwKeydown(e){
    BONUS PANEL TOGGLES (Tester + Diff)
 ══════════════════════════════════════════════════════════ */
 function toggleBonus(which){
-  const m={tester:['testerToggle','testerPanel'],diff:['diffToggle','diffPanel']};
+  const m={tester:['testerToggle','testerPanel'],diff:['diffToggle','diffPanel'],bulk:['bulkToggle','bulkPanel']};
   const [tId,pId]=m[which];
   const t=document.getElementById(tId),p=document.getElementById(pId);
   const open=!p.classList.contains('open');
@@ -1183,22 +1276,48 @@ function processDachser(ws,r,cols){
 /* ── K+N ── */
 const KN_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8500,9500,99999];
 function knGetTier(kg){if(kg<=0)return 0;for(const b of KN_BP)if(kg<=b)return b;return 99999;}
-function resolveKN(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),recip:fc('','Empf.-Name'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),kost:fc('','Kostenstelle'),sach:fc('','Sachkonto'),fr:fc('FR','Differenz'),exp:fc('EXP','Differenz'),toll:fc('MT','Differenz'),snk_dl:fc('SNK','Kosten DL'),snk_diff:fc('SNK','Differenz'),fuel:fc('TZ','Differenz')};}
+function resolveKN(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),recip:fc('','Empf.-Name'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),kost:fc('','Kostenstelle'),sach:fc('','Sachkonto'),fr:fc('FR','Differenz'),exp:fc('EXP','Differenz'),toll:fc('MT','Differenz'),snk_dl:fc('SNK','Kosten DL'),snk_diff:fc('SNK','Differenz'),fuel:fc('TZ','Differenz')};}
 
 function processKN(ws,r,cols){
   const T=T_KN;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
   const frDiff=cellNum(ws,r,cols.fr),snkDl=cellNum(ws,r,cols.snk_dl),snkDiff=cellNum(ws,r,cols.snk_diff),expDiff=cellNum(ws,r,cols.exp),tollDiff=cellNum(ws,r,cols.toll),fuelDiff=cellNum(ws,r,cols.fuel),refNr=cellStr(ws,r,cols.referenz),recip=cellStr(ws,r,cols.recip).toLowerCase(),kost=cellStr(ws,r,cols.kost),sach=cellStr(ws,r,cols.sach);
+  /* Tarif is "empty" when the cell is blank or rendered as '-' (no tariff on record).
+     An FR difference on an empty-tarif row is a Pauschalfracht situation — the freight
+     is a flat-rate charge, not a tier/weight miscalc. Checked before the Amazon / Gewichte
+     cascade below so it wins out. */
+  const tarifRaw=cols.tarif>=0?cellStr(ws,r,cols.tarif):'';
+  const tarifEmpty=(tarifRaw===''||tarifRaw==='-');
   let res='';
   if(hasErr(frDiff,T)){
+    /* Bundling wins over everything — if ReferenzNr lists multiple docs, the
+       row represents an unbundled stack that should've been billed together.
+       Kept as an early return to match legacy behavior. */
     if(refNr&&refNr!=='-'&&refNr.includes(','))return'hätte gebündelt werden müssen, ok?';
-    if(recip.includes('amazon')&&(!refNr||refNr==='-'||!refNr.includes(','))){res=join(res,'hätte nach Amazon Tarif abrechnen müssen');}
+    if(tarifEmpty){res=join(res,'Pauschalfracht');}
+    else if(recip.includes('amazon')&&(!refNr||refNr==='-'||!refNr.includes(','))){
+      /* Amazon row + single ReferenzNr. Previously this always attributed the FR
+         delta to "hätte nach Amazon Tarif abrechnen müssen", but when Volumen kg
+         vs Volumen kg DL cross a tariff tier the delta is actually a weight-tier
+         miscalc, not an Amazon pricing miss. Mirror the Wackler same-tier/cross-tier
+         precedence: same tier (or missing weights) → Amazon tarif branch;
+         different tier → Differenz aufgrund abweichender Gewichte. */
+      const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);
+      const tiersKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
+      const crossTier=tiersKnown&&(knGetTier(v1)!==knGetTier(v2));
+      res=join(res,crossTier?'Differenz aufgrund abweichender Gewichte':'hätte nach Amazon Tarif abrechnen müssen');
+    }
     else if(frDiff>0&&snkDl===5){const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);res=join(res,(knGetTier(v1)===knGetTier(v2))?'hätte nach Amazon Tarif abrechnen dürfen':'Differenz aufgrund abweichender Gewichte');}
     else{res=join(res,'Differenz aufgrund abweichender Gewichte');}
   }
   if(hasErr(expDiff,T))res=join(res,'FIXTERMIN');
   if(hasErr(tollDiff,T))res=join(res,'Mautdifferenz');
+  /* SNK classification. Values are small integers in the typical cases we
+     classify; the cascade below checks both SNK_DIFF exact matches first,
+     then SNK_DL exact matches, then the generic tolerance-based fallback. */
   if(Math.abs(snkDiff-9)<0.01){res=join(res,'Avis, ok?');}
+  else if(Math.abs(snkDiff+9)<0.01){res=join(res,'Differenz avis');}
+  else if(Math.abs(Math.abs(snkDiff)-25)<0.01){res=join(res,'Portalavisierung, ok?');}
   else if(hasErr(snkDiff,T)){
     if(snkDl===5||snkDl===25)res=join(res,'Portalavisierung, ok?');
     else if(snkDl===9)res=join(res,'Avis, ok?');
@@ -1216,9 +1335,23 @@ function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{t
 function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer doppelt berechnet.';}let res='';if(cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
 
 /* ── Wackler ── */
+/* Weight tier breakpoints (bis ... kg). Mirrors the idea of KN_BP but per Wackler's own range sheet.
+   Used to decide whether a Volumen kg vs Volumen kg DL mismatch still falls into the SAME tariff
+   bucket (→ "Wackler rechnet", systemic rounding) or crosses into a different bucket
+   (→ "Differenz aufgrund abweichender Gewichte", real classification discrepancy). */
+const WACKLER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,99999];
+function wacklerGetTier(kg){if(kg<=0)return 0;for(const b of WACKLER_BP)if(kg<=b)return b;return 99999;}
 function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO')};}
-const WACKLER_PROTECTED=['Fremdnummer Doppelt berechnet','hätte gebündelt werden müssen','Return, ok?','Differenz aufgrund abweichender Gewichte'];
-function processWackler(ws,r,cols){if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;const existing=cellStr(ws,r,cols.target);for(const p of WACKLER_PROTECTED){if(existing.toLowerCase().includes(p.toLowerCase()))return null;}if(cols.tarif>=0){const tarifRaw=cellStr(ws,r,cols.tarif),tarifNum=cellNum(ws,r,cols.tarif);if(tarifRaw&&(tarifRaw==='-'||(tarifNum===0&&tarifRaw!=='')))return'Fremdnummer Doppelt berechnet';}let res='';if(cols.avis_diff>=0){const avis=cellNum(ws,r,cols.avis_diff);if(avis===7.5||avis===8.5||avis===6.5)res=join(res,'Avis, ok?');}if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk===38)res=join(res,'NL-FIX');}if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk===-11.5)res=join(res,'hätte B2C-Line abrechnen dürfen');}let gewichteTriggered=false;if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0){const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl),frVal=cellNum(ws,r,cols.fr),vkgStr=cellStr(ws,r,cols.vkg),vkgDlStr=cellStr(ws,r,cols.vkg_dl),volDiff=(vkgStr!==vkgDlStr)&&(vkg!==vkgDl),frHasVal=Math.abs(frVal)>T_WACKLER;if(volDiff&&frHasVal){res=join(res,'Differenz aufgrund abweichender Gewichte');gewichteTriggered=true;}}if(!gewichteTriggered&&cols.referenz>=0&&cols.fr>=0){const refNr=cellStr(ws,r,cols.referenz),frVal=cellNum(ws,r,cols.fr);if(refNr.includes(',')&&Math.abs(frVal)>T_WACKLER)res=join(res,'hätte gebündelt werden müssen');}if(cols.avis_diff>=0){const avis=cellNum(ws,r,cols.avis_diff);if(avis===1)res=join(res,'Differenz avis, ok?');}if(cols.empf_plz>=0&&cols.empf_ort>=0){const plz=cellStr(ws,r,cols.empf_plz),ort=cellStr(ws,r,cols.empf_ort).toUpperCase();if(plz==='88499'&&ort==='RIEDLINGEN')res=join(res,'Return, ok?');}if(cols.fr>=0&&!gewichteTriggered){const frVal=cellNum(ws,r,cols.fr);if(hasErr(frVal,T_WACKLER)&&!res.toLowerCase().includes('gebündelt')&&!res.toLowerCase().includes('return'))res=join(res,'Frachtdifferenz');}if(cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T_WACKLER))res=join(res,'Mautdifferenz');if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk!==38&&snk!==-11.5&&hasErr(snk,T_WACKLER))res=join(res,'SNK Differenz');}if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T_WACKLER))res='Differenz treibstof';return res;}
+const WACKLER_PROTECTED=['Fremdnummer Doppelt berechnet','hätte gebündelt werden müssen','Return, ok?','Differenz aufgrund abweichender Gewichte','Wackler rechnet'];
+function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(const p of WACKLER_PROTECTED){if(existing.toLowerCase().includes(p.toLowerCase()))return null;}
+  /* STAT gate: on stat≠10 only the Kontierung check runs; all other rules are skipped.
+     If Kontierung fires, return that string; otherwise return null so the row is left alone. */
+  const statOk=(cols.stat<0)||(cellNum(ws,r,cols.stat)===10);
+  if(!statOk){
+    if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))return'Kontierung?';}
+    return null;
+  }
+  if(cols.tarif>=0){const tarifRaw=cellStr(ws,r,cols.tarif),tarifNum=cellNum(ws,r,cols.tarif);if(tarifRaw&&(tarifRaw==='-'||(tarifNum===0&&tarifRaw!=='')))return'Fremdnummer Doppelt berechnet';}let res='';if(cols.avis_diff>=0){const avis=cellNum(ws,r,cols.avis_diff);if(avis===7.5||avis===8.5||avis===6.5||avis===8.7)res=join(res,'Avis, ok?');}if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk===38)res=join(res,'NL-FIX');}if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk===-11.5)res=join(res,'hätte B2C-Line abrechnen dürfen');}if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk===22)res=join(res,'2. Zustellung ok?');}let gewichteTriggered=false;if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0){const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl),frVal=cellNum(ws,r,cols.fr),vkgStr=cellStr(ws,r,cols.vkg),vkgDlStr=cellStr(ws,r,cols.vkg_dl),volDiff=(vkgStr!==vkgDlStr)&&(vkg!==vkgDl),frHasVal=Math.abs(frVal)>T_WACKLER;if(volDiff&&frHasVal){const sameTier=wacklerGetTier(vkg)===wacklerGetTier(vkgDl);res=join(res,sameTier?'Wackler rechnet':'Differenz aufgrund abweichender Gewichte');gewichteTriggered=true;}}if(!gewichteTriggered&&cols.referenz>=0&&cols.fr>=0){const refNr=cellStr(ws,r,cols.referenz),frVal=cellNum(ws,r,cols.fr);if(refNr.includes(',')&&Math.abs(frVal)>T_WACKLER)res=join(res,'hätte gebündelt werden müssen');}if(cols.avis_diff>=0){const avis=cellNum(ws,r,cols.avis_diff);if(avis===1)res=join(res,'Differenz avis, ok?');}if(cols.empf_plz>=0&&cols.empf_ort>=0){const plz=cellStr(ws,r,cols.empf_plz),ort=cellStr(ws,r,cols.empf_ort).toUpperCase();if(plz==='88499'&&ort==='RIEDLINGEN')res=join(res,'Return, ok?');}if(cols.fr>=0&&!gewichteTriggered){const frVal=cellNum(ws,r,cols.fr);if(hasErr(frVal,T_WACKLER)&&!res.toLowerCase().includes('gebündelt')&&!res.toLowerCase().includes('return'))res=join(res,'Frachtdifferenz');}if(cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T_WACKLER))res=join(res,'Mautdifferenz');if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk!==38&&snk!==-11.5&&snk!==22&&hasErr(snk,T_WACKLER)&&!res.toLowerCase().includes('gebündelt'))res=join(res,'SNK Differenz');}if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T_WACKLER))res='Differenz treibstof';return res;}
 
 /* ── COLUMN HELPERS ── */
 function idxToCol(idx){let r='',n=idx+1;while(n>0){const rem=(n-1)%26;r=String.fromCharCode(65+rem)+r;n=Math.floor((n-1)/26);}return r;}
@@ -1253,7 +1386,7 @@ function buildReason(fw,ws,r,cols){
     const sa=cellStr(ws,r,DA_COL_SERV_ART);if(sa)parts.push('SERV='+sa);
     const sk=cellStr(ws,r,DA_COL_SACHKONTO);if(sk)parts.push('SACH='+sk);
   } else if(fw==='kn'){
-    push('STAT',num(cols.stat));push('FR',num(cols.fr));
+    push('STAT',num(cols.stat));push('TARIF',num(cols.tarif));push('FR',num(cols.fr));
     push('SNK_DL',num(cols.snk_dl));push('SNK_DIFF',num(cols.snk_diff));
     push('EXP',num(cols.exp));push('MT',num(cols.toll));push('TZ',num(cols.fuel));
     const ref=cellStr(ws,r,cols.referenz);if(ref)parts.push('REF='+ref);
@@ -1447,7 +1580,7 @@ const TESTER_FIELDS={
     ['_plz','Empf.-PLZ','str'],['_ort','Empf.-Ort','str'],['_anzSdg','Anz.Sdg','str'],
   ],
   kn:[
-    ['stat','Stat_Freigabe','num'],
+    ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],
     ['fr','FR Differenz','num'],['snk_diff','SNK Differenz','num'],['snk_dl','SNK Kosten DL','num'],
     ['exp','EXP Differenz','num'],['toll','MT Differenz','num'],['fuel','TZ Differenz','num'],
     ['referenz','ReferenzNr','str'],['recip','Empf.-Name','str'],
@@ -1482,9 +1615,13 @@ const TESTER_PRESETS={
     {name:'K1AV zeitfenster',values:{stat:10,snk_dl:5,snk_diff:12,_serv:'K1AV',tarif:'100,00'}},
   ],
   kn:[
-    {name:'Bundled, should be',values:{stat:10,fr:15,referenz:'123,456'}},
-    {name:'Amazon tariff miss',values:{stat:10,fr:12,recip:'Amazon Logistics',referenz:'single'}},
-    {name:'Portal avis 5',values:{stat:10,snk_diff:5,snk_dl:5}},
+    {name:'Bundled, should be',values:{stat:10,fr:15,referenz:'123,456',tarif:'200,00'}},
+    {name:'Amazon tariff miss',values:{stat:10,fr:12,recip:'Amazon Logistics',referenz:'single',tarif:'150,00'}},
+    {name:'Amazon cross-tier Gewichte',values:{stat:10,fr:22.77,snk_diff:25,recip:'Amazon - BRQ2',referenz:'2542943859',vkg:'434.336',vkg_dl:'494.6',tarif:'223,13',kost:'211FO012',sach:'612100'}},
+    {name:'Portal avis 5',values:{stat:10,snk_diff:5,snk_dl:5,tarif:'100,00'}},
+    {name:'Pauschalfracht',values:{stat:10,fr:3980,referenz:'2543011467'}},
+    {name:'Differenz avis (-9)',values:{stat:10,snk_diff:-9,tarif:'119,17'}},
+    {name:'Portal (SNK diff 25)',values:{stat:10,snk_diff:25,tarif:'223,13'}},
     {name:'Clean row',values:{stat:10,kost:'1234',sach:'5678'}},
   ],
   dhl:[
@@ -1566,7 +1703,7 @@ function buildSyntheticWs(fw,userVals){
   /* Fill missing cols with -1 so processors know the field is absent. */
   const allKeys={
     dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','c502_dl','c503_dl','lg_diff','av_diff'],
-    kn:['target','stat','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
+    kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
     wackler:['target','stat','tarif','avis_diff','snk_diff','fr','maut','tz','referenz','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
   }[fw]||[];
@@ -1941,6 +2078,197 @@ function downloadTrainingSet(format){
   const parts=Object.keys(by).sort().map(k=>k+'='+by[k]);
   showLog('Training set exported \u2014 '+records.length+' row(s) as '+ext.toUpperCase()+' ('+parts.join(', ')+').','ok');
 }
+
+/* ══════════════════════════════════════════════════════════
+   BULK PROCESSING — process multiple files at once,
+   each with its own download button + download-all ZIP.
+══════════════════════════════════════════════════════════ */
+const bulkFiles = []; /* Array of { id, name, file, rawBytes, workbook, resultBlob, status } */
+let bulkIdCounter = 0;
+
+function onBulkDrag(e, over) { e.preventDefault(); document.getElementById('bulkDropArea').classList.toggle('drag', over); }
+function onBulkDrop(e) { e.preventDefault(); onBulkDrag(e, false); if (e.dataTransfer.files.length) addBulkFiles(e.dataTransfer.files); }
+function onBulkFileSelect(e) { if (e.target.files.length) addBulkFiles(e.target.files); e.target.value = ''; }
+
+function addBulkFiles(fileList) {
+  for (const file of fileList) {
+    if (!file.name.toLowerCase().endsWith('.xlsx')) { showLog('Bulk — skipped non-xlsx: ' + file.name, 'err'); continue; }
+    bulkFiles.push({ id: ++bulkIdCounter, name: file.name, file, rawBytes: null, workbook: null, resultBlob: null, status: 'pending' });
+  }
+  renderBulkList();
+  checkBulkReady();
+  const fc = document.getElementById('bulkFileCount');
+  fc.textContent = bulkFiles.length + ' file(s) queued';
+  fc.style.display = bulkFiles.length ? 'block' : 'none';
+  showLog('Bulk — ' + bulkFiles.length + ' file(s) queued.', 'ok');
+}
+
+function removeBulkFile(id) {
+  const idx = bulkFiles.findIndex(f => f.id === id);
+  if (idx >= 0) bulkFiles.splice(idx, 1);
+  renderBulkList();
+  checkBulkReady();
+  const fc = document.getElementById('bulkFileCount');
+  fc.textContent = bulkFiles.length + ' file(s) queued';
+  fc.style.display = bulkFiles.length ? 'block' : 'none';
+}
+
+function renderBulkList() {
+  const ul = document.getElementById('bulkList');
+  if (!bulkFiles.length) { ul.style.display = 'none'; ul.innerHTML = ''; return; }
+  ul.style.display = 'block';
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  ul.innerHTML = bulkFiles.map(f => {
+    const statusCls = f.status === 'done' ? 'done' : (f.status === 'error' ? 'err' : (f.status === 'processing' ? 'processing' : ''));
+    const statusText = f.status === 'done' ? '✓ done' : (f.status === 'error' ? '✗ error' : (f.status === 'processing' ? '⟳ ...' : 'pending'));
+    const dlVisible = f.status === 'done' ? 'visible' : '';
+    return `<li class="bulk-item" data-id="${f.id}">
+      <span class="bulk-item-name" title="${esc(f.name)}">${esc(f.name)}</span>
+      <span class="bulk-item-status ${statusCls}">${statusText}</span>
+      <button type="button" class="bulk-item-dl ${dlVisible}" onclick="downloadBulkFile(${f.id})">↓ Download</button>
+      <button type="button" class="bulk-item-remove" onclick="removeBulkFile(${f.id})" title="Remove">✕</button>
+    </li>`;
+  }).join('');
+}
+
+function checkBulkReady() {
+  const btn = document.getElementById('btnBulkRun');
+  btn.disabled = !(selectedFW && bulkFiles.length > 0);
+}
+
+function setBulkProgress(pct) {
+  const wrap = document.getElementById('bulkProgress');
+  wrap.style.display = 'block';
+  document.getElementById('bulkProgressFill').style.width = pct + '%';
+}
+
+async function runBulkProcess() {
+  if (!selectedFW) { showLog('Bulk — select a forwarder first.', 'err'); return; }
+  if (!bulkFiles.length) { showLog('Bulk — no files queued.', 'err'); return; }
+
+  const btn = document.getElementById('btnBulkRun');
+  btn.disabled = true; btn.textContent = 'Processing...';
+  document.getElementById('btnBulkDlAll').style.display = 'none';
+  setBulkProgress(2);
+
+  const wantReason = document.getElementById('optReason').checked;
+  let doneCount = 0;
+
+  for (let i = 0; i < bulkFiles.length; i++) {
+    const entry = bulkFiles[i];
+    entry.status = 'processing';
+    renderBulkList();
+
+    try {
+      /* Read file */
+      if (!entry.rawBytes) {
+        const buf = await readFileAsArrayBuffer(entry.file);
+        entry.rawBytes = buf;
+        entry.workbook = XLSX.read(buf, { type: 'array', cellNF: true });
+      }
+
+      /* Process using the same engine as single-file mode */
+      const savedWb = workbook;
+      workbook = entry.workbook;
+      const rep = runRules();
+      workbook = savedWb;
+
+      const allResults = rep.allResults;
+      const zip = await JSZip.loadAsync(entry.rawBytes);
+      const ssFile = zip.file('xl/sharedStrings.xml');
+      let ssXml = ssFile ? await ssFile.async('string') : '';
+      const strings = ssXml ? parseSharedStrings(ssXml) : [];
+      const wbXml = await zip.file('xl/workbook.xml').async('string');
+      const wbRelXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+
+      const sheetRids = {};
+      for (const m of wbXml.matchAll(/<sheet\b[^>]+\bname="([^"]+)"[^>]+\br:id="(rId\d+)"/g)) sheetRids[m[1]] = m[2];
+      const ridPaths = {};
+      for (const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g)) ridPaths[m[1]] = m[2];
+
+      const sheetNames = Object.keys(allResults);
+      for (const name of sheetNames) {
+        const { targetCol, rowMap, reasonMap, targetIdx } = allResults[name];
+        if (!rowMap.size && !(wantReason && reasonMap && reasonMap.size)) continue;
+        const rId = sheetRids[name]; if (!rId) continue;
+        let rel = ridPaths[rId] || '';
+        rel = rel.replace(/^\/+/, ''); if (!rel.startsWith('xl/')) rel = 'xl/' + rel;
+        let sheetXml = await zip.file(rel).async('string');
+        sheetXml = patchSheet(sheetXml, targetCol, rowMap, strings);
+        if (wantReason) {
+          const reasonColIdx = targetIdx + 1;
+          const reasonCol = idxToCol(reasonColIdx);
+          const headerMap = new Map([[3, 'Anmerkung_Reason']]);
+          sheetXml = patchSheet(sheetXml, reasonCol, headerMap, strings);
+          sheetXml = patchSheet(sheetXml, reasonCol, reasonMap, strings);
+        }
+        zip.file(rel, sheetXml);
+      }
+
+      zip.file('xl/sharedStrings.xml', rebuildSharedStrings(strings));
+      const ctFile = zip.file('[Content_Types].xml');
+      if (ctFile) { let ctXml = await ctFile.async('string'); ctXml = ensureSharedStringsContentType(ctXml); zip.file('[Content_Types].xml', ctXml); }
+      const wbRelFile = zip.file('xl/_rels/workbook.xml.rels');
+      if (wbRelFile) { let wbRel = await wbRelFile.async('string'); wbRel = ensureSharedStringsRel(wbRel); zip.file('xl/_rels/workbook.xml.rels', wbRel); }
+
+      entry.resultBlob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+      entry.status = 'done';
+      doneCount++;
+      showLog('Bulk — ✓ ' + entry.name + ' (' + rep.filled + ' filled, ' + rep.skipped + ' skipped)', 'ok');
+    } catch (e) {
+      entry.status = 'error';
+      showLog('Bulk — ✗ ' + entry.name + ': ' + e.message, 'err');
+      console.error('Bulk error for', entry.name, e);
+    }
+
+    setBulkProgress(Math.round(((i + 1) / bulkFiles.length) * 100));
+    renderBulkList();
+  }
+
+  btn.disabled = false; btn.textContent = 'Transmute All Scrolls';
+  if (doneCount > 0) {
+    document.getElementById('btnBulkDlAll').style.display = 'block';
+    showLog('Bulk — complete: ' + doneCount + '/' + bulkFiles.length + ' files processed successfully.', 'ok');
+  }
+}
+
+function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => resolve(ev.target.result);
+    reader.onerror = () => reject(new Error('File read failed'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function downloadBulkFile(id) {
+  const entry = bulkFiles.find(f => f.id === id);
+  if (!entry || !entry.resultBlob) return;
+  const url = URL.createObjectURL(entry.resultBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = entry.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function downloadAllBulk() {
+  const done = bulkFiles.filter(f => f.status === 'done' && f.resultBlob);
+  if (!done.length) { showLog('Bulk — no processed files to download.', 'err'); return; }
+  const zip = new JSZip();
+  for (const entry of done) {
+    zip.file(entry.name, entry.resultBlob);
+  }
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  a.href = url; a.download = 'anmerkung_bulk_' + stamp + '.zip'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showLog('Bulk — ZIP downloaded with ' + done.length + ' file(s).', 'ok');
+}
+
+/* Re-check bulk ready state when forwarder changes */
+const _origSelectFW = selectFW;
+selectFW = function(btn) { _origSelectFW(btn); checkBulkReady(); };
 </script>
 </body>
 </html>
