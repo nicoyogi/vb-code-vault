@@ -1295,7 +1295,18 @@ function processKN(ws,r,cols){
        Kept as an early return to match legacy behavior. */
     if(refNr&&refNr!=='-'&&refNr.includes(','))return'hätte gebündelt werden müssen, ok?';
     if(tarifEmpty){res=join(res,'Pauschalfracht');}
-    else if(recip.includes('amazon')&&(!refNr||refNr==='-'||!refNr.includes(','))){res=join(res,'hätte nach Amazon Tarif abrechnen müssen');}
+    else if(recip.includes('amazon')&&(!refNr||refNr==='-'||!refNr.includes(','))){
+      /* Amazon row + single ReferenzNr. Previously this always attributed the FR
+         delta to "hätte nach Amazon Tarif abrechnen müssen", but when Volumen kg
+         vs Volumen kg DL cross a tariff tier the delta is actually a weight-tier
+         miscalc, not an Amazon pricing miss. Mirror the Wackler same-tier/cross-tier
+         precedence: same tier (or missing weights) → Amazon tarif branch;
+         different tier → Differenz aufgrund abweichender Gewichte. */
+      const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);
+      const tiersKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
+      const crossTier=tiersKnown&&(knGetTier(v1)!==knGetTier(v2));
+      res=join(res,crossTier?'Differenz aufgrund abweichender Gewichte':'hätte nach Amazon Tarif abrechnen müssen');
+    }
     else if(frDiff>0&&snkDl===5){const v1=cellNum(ws,r,cols.vkg),v2=cellNum(ws,r,cols.vkg_dl);res=join(res,(knGetTier(v1)===knGetTier(v2))?'hätte nach Amazon Tarif abrechnen dürfen':'Differenz aufgrund abweichender Gewichte');}
     else{res=join(res,'Differenz aufgrund abweichender Gewichte');}
   }
@@ -1606,6 +1617,7 @@ const TESTER_PRESETS={
   kn:[
     {name:'Bundled, should be',values:{stat:10,fr:15,referenz:'123,456',tarif:'200,00'}},
     {name:'Amazon tariff miss',values:{stat:10,fr:12,recip:'Amazon Logistics',referenz:'single',tarif:'150,00'}},
+    {name:'Amazon cross-tier Gewichte',values:{stat:10,fr:22.77,snk_diff:25,recip:'Amazon - BRQ2',referenz:'2542943859',vkg:'434.336',vkg_dl:'494.6',tarif:'223,13',kost:'211FO012',sach:'612100'}},
     {name:'Portal avis 5',values:{stat:10,snk_diff:5,snk_dl:5,tarif:'100,00'}},
     {name:'Pauschalfracht',values:{stat:10,fr:3980,referenz:'2543011467'}},
     {name:'Differenz avis (-9)',values:{stat:10,snk_diff:-9,tarif:'119,17'}},
