@@ -19,20 +19,20 @@ This document describes how **`anmerkung.html`** (The Alchemist) works, at two l
 
 ```mermaid
 flowchart TD
-  A([Open anmerkung.html]) --> B[I — Select forwarder<br/>Dachser · K+N · DHL · Wackler]
-  B --> C[II — Upload .xlsx<br/>click or drag-drop]
-  C --> D{III — Tweak knobs?}
-  D -- no --> E[Preview<br/>dry-run, no file written]
-  D -- reason col --> D1[Add 'Why?' column<br/>writes Anmerkung_Reason]
-  D -- tolerances --> D2[Advanced thresholds<br/>per-forwarder, persisted locally]
+  A(["Open anmerkung.html"]) --> B["I. Select forwarder<br/>Dachser / K+N / DHL / Wackler"]
+  B --> C["II. Upload .xlsx<br/>click or drag-drop"]
+  C --> D{"III. Tweak knobs?"}
+  D -- no --> E["Preview<br/>dry-run, no file written"]
+  D -- reason --> D1["Add Why reason column<br/>writes Anmerkung_Reason"]
+  D -- thresholds --> D2["Advanced thresholds<br/>per-forwarder, persisted locally"]
   D1 --> E
   D2 --> E
-  E --> F[Review stats + per-row table<br/>filled / empty / skipped / preserved]
-  F --> G{Happy?}
+  E --> F["Review stats + per-row table<br/>filled / empty / skipped / preserved"]
+  F --> G{"Happy?"}
   G -- no --> D
-  G -- yes --> H[Invoke the Ritual<br/>subscription gate]
-  H --> I[XLSX is patched in-browser]
-  I --> J([Download Transmuted Scroll<br/>keeps original filename])
+  G -- yes --> H["Invoke the Ritual<br/>subscription gate"]
+  H --> I["XLSX is patched in-browser"]
+  I --> J(["Download Transmuted Scroll<br/>keeps original filename"])
 ```
 
 ### Step 1 — Pick the forwarder
@@ -171,48 +171,48 @@ The target `Anmerkung` column is itself located via `findCol(ws, range, '', 'Anm
 
 ```mermaid
 flowchart TD
-  U([User clicks Preview or Ritual]) --> RR[runRules]
+  U(["User clicks Preview or Ritual"]) --> RR["runRules"]
 
-  subgraph RR_loop [runRules · per sheet · per row]
+  subgraph RR_loop ["runRules: per sheet, per row"]
     direction TB
-    S1[Pick resolver + processor<br/>by selectedFW]
-    S1 --> S2[resolver ws,range<br/>→ cols object]
-    S2 --> S3{target col found?}
-    S3 -- no --> S3b[log error, skip sheet]
-    S3 -- yes --> S4[for r = 3 .. last row]
-    S4 --> S5[processor ws, r, cols]
-    S5 --> S6{result}
-    S6 -- null --> S7[classify skipped or preserved]
-    S6 -- string --> S8[splitTriggers → bump trigCounts<br/>buildReason → reasonMap]
-    S7 --> S9[push to previewRows]
+    S1["Pick resolver + processor<br/>by selectedFW"]
+    S1 --> S2["resolver(ws, range)<br/>returns cols object"]
+    S2 --> S3{"target col found?"}
+    S3 -- no --> S3b["log error, skip sheet"]
+    S3 -- yes --> S4["for r = 3 to last row"]
+    S4 --> S5["processor(ws, r, cols)"]
+    S5 --> S6{"result"}
+    S6 -- null --> S7["classify skipped or preserved"]
+    S6 -- string --> S8["splitTriggers, bump trigCounts<br/>buildReason into reasonMap"]
+    S7 --> S9["push to previewRows"]
     S8 --> S9
   end
 
-  RR --> OUT{caller}
-  OUT -- Preview --> P1[renderStats + renderPreview<br/>no file touched]
-  OUT -- Ritual --> R1[JSZip.loadAsync rawFileBytes]
-  R1 --> R2[parse sharedStrings.xml]
-  R2 --> R3[for each sheet with results:<br/>load sheet XML]
-  R3 --> R4[patchSheet Anmerkung column<br/>reuse majority row style, write t='s' ref to shared string]
-  R4 --> R5{reason col toggle?}
-  R5 -- yes --> R6[patchSheet Anmerkung_Reason<br/>header in row 3 + reasons in data rows]
+  RR --> OUT{"caller"}
+  OUT -- Preview --> P1["renderStats + renderPreview<br/>no file touched"]
+  OUT -- Ritual --> R1["JSZip.loadAsync(rawFileBytes)"]
+  R1 --> R2["parse sharedStrings.xml"]
+  R2 --> R3["for each sheet with results:<br/>load sheet XML"]
+  R3 --> R4["patchSheet Anmerkung column<br/>reuse majority row style, write t=s ref to shared string"]
+  R4 --> R5{"reason col toggle?"}
+  R5 -- yes --> R6["patchSheet Anmerkung_Reason<br/>header in row 3 + reasons in data rows"]
   R5 -- no --> R7
-  R6 --> R7[rebuildSharedStrings + ensure ContentType/rels]
-  R7 --> R8[zip.generateAsync → Blob]
-  R8 --> R9([Download button appears])
+  R6 --> R7["rebuildSharedStrings + ensure ContentType/rels"]
+  R7 --> R8["zip.generateAsync, Blob"]
+  R8 --> R9(["Download button appears"])
 ```
 
 ### Column resolution (`findCol` + header cache)
 
 ```mermaid
 flowchart LR
-  A[cols = resolveXxx ws, range] --> B[findCol ws, range, 'SNK', 'Differenz']
-  B --> C{_hdrCache.get ws<br/>hit for this range?}
-  C -- yes --> E[walk cached<br/>row2 & row3 lowercased arrays]
-  C -- no --> D[walk all columns once:<br/>row2lc + row3lc → store in WeakMap]
+  A["cols = resolveXxx(ws, range)"] --> B["findCol(ws, range, 'SNK', 'Differenz')"]
+  B --> C{"_hdrCache.get(ws)<br/>hit for this range?"}
+  C -- yes --> E["walk cached<br/>row2 and row3 lowercased arrays"]
+  C -- no --> D["walk all columns once:<br/>row2lc + row3lc, store in WeakMap"]
   D --> E
-  E --> F[first col where row2 contains h2<br/>AND row3 contains h3 → return index]
-  F --> G[-1 if not found → cols key = -1]
+  E --> F["first col where row2 contains h2<br/>AND row3 contains h3, return index"]
+  F --> G["-1 if not found, cols key = -1"]
 ```
 
 - **WeakMap keyed on the worksheet object** so the cache is GC'd when the workbook is released.
@@ -263,52 +263,52 @@ Read inside processors as `T_DACHSER / T_KN / T_DHL / T_WACKLER` via `hasErr(v, 
 
 ```mermaid
 flowchart TD
-  S[Stat_Freigabe == 10?] -- no --> N([skip])
-  S -- yes --> A[compute isTarifZero, servArt,<br/>sachkonto, anzSdg, isZW]
+  S{"Stat_Freigabe == 10?"} -- no --> N(["skip"])
+  S -- yes --> A["compute isTarifZero, servArt,<br/>sachkonto, anzSdg, isZW"]
 
-  A --> B{502 Kosten DL non-empty/0?}
-  B -- yes --> B1[join Einlagern]
-  B --> C{503 Kosten DL non-empty/0?}
-  C -- yes --> C1[join Auslagern]
-  C --> D{LG Diff errs?}
-  D -- yes --> D1[join Lagergeld]
-  D --> E{AV Diff errs?}
-  E -- yes --> E1[join Gebühr für vergeblichen Abholversuch]
-  E --> F{ZZ Diff errs?}
-  F -- yes --> F1[join 2. Zustellung]
-  F --> G[daEvalSNK — switch on SNK_DL]
+  A --> B{"502 Kosten DL non-empty or non-zero?"}
+  B -- yes --> B1["join Einlagern"]
+  B --> C{"503 Kosten DL non-empty or non-zero?"}
+  C -- yes --> C1["join Auslagern"]
+  C --> D{"LG Diff errs?"}
+  D -- yes --> D1["join Lagergeld"]
+  D --> E{"AV Diff errs?"}
+  E -- yes --> E1["join Gebuehr fuer vergeblichen Abholversuch"]
+  E --> F{"ZZ Diff errs?"}
+  F -- yes --> F1["join 2. Zustellung"]
+  F --> G["daEvalSNK: switch on SNK_DL"]
 
-  G --> H{SAM Diff errs?}
-  H -- yes --> H1[join Samstagzustellung]
+  G --> H{"SAM Diff errs?"}
+  H -- yes --> H1["join Samstagzustellung"]
 
-  H --> I{isTarifZero?}
-  I -- yes --> RET([return partial])
-  I -- no --> J{DGR errs?}
-  J -- yes --> J1[join Gefahrgut-Zuschlag]
-  J --> K[daEvalEXP<br/>EXP_DL==95 → Termin-zuschlag<br/>else → Produktzuschlag]
-  K --> L{MAUT errs?}
-  L -- yes --> L1[join Mautdifferenz]
-  L --> M{SBFU errs?}
-  M -- yes --> M1[join SBfU-Bescheinigung f. Umsatzsteuerzwecke]
+  H --> I{"isTarifZero?"}
+  I -- yes --> RET(["return partial"])
+  I -- no --> J{"DGR errs?"}
+  J -- yes --> J1["join Gefahrgut-Zuschlag"]
+  J --> K["daEvalEXP<br/>EXP_DL==95, Termin-zuschlag<br/>else, Produktzuschlag"]
+  K --> L{"MAUT errs?"}
+  L -- yes --> L1["join Mautdifferenz"]
+  L --> M{"SBFU errs?"}
+  M -- yes --> M1["join SBfU-Bescheinigung"]
 
-  M --> Q{FR errs?}
-  Q -- no --> R
-  Q -- yes --> Q1{isZW?}
-  Q1 -- yes --> QA[join ZW-note w/ PLZ + Ort]
-  Q1 -- no --> Q2{sachkonto == X?}
-  Q2 -- yes --> QB[join VORHOLUNG]
-  Q2 -- no --> Q3{servArt == K1AS?}
-  Q3 -- yes --> QC[join Sonderfahrt]
-  Q3 -- no --> Q4{Anz.Sdg > 1?}
-  Q4 -- yes --> QD[join hätte gebündelt werden können?]
-  Q4 -- no --> QE[join Differenz aufgrund von abweichendem Gewicht]
+  M --> Q{"FR errs?"}
+  Q -- no --> R[" "]
+  Q -- yes --> Q1{"isZW?"}
+  Q1 -- yes --> QA["join ZW-note with PLZ + Ort"]
+  Q1 -- no --> Q2{"sachkonto == X?"}
+  Q2 -- yes --> QB["join VORHOLUNG"]
+  Q2 -- no --> Q3{"servArt == K1AS?"}
+  Q3 -- yes --> QC["join Sonderfahrt"]
+  Q3 -- no --> Q4{"Anz.Sdg > 1?"}
+  Q4 -- yes --> QD["join haette gebuendelt werden koennen"]
+  Q4 -- no --> QE["join Differenz aufgrund von abweichendem Gewicht"]
 
-  R --> S2{SNK_DL==14 and SNK_Diff errs?}
-  S2 -- yes --> S2a[join Abholterminvereinbarung]
+  R --> S2{"SNK_DL==14 AND SNK_Diff errs?"}
+  S2 -- yes --> S2a["join Abholterminvereinbarung"]
 
-  S2 --> T{res empty AND FR didn't fire AND TZ errs?}
-  T -- yes --> T1[res = Differenz treibstof]
-  T --> Z([return res])
+  S2 --> T{"res empty AND FR did not fire AND TZ errs?"}
+  T -- yes --> T1["res = Differenz treibstof"]
+  T --> Z(["return res"])
 ```
 
 **SNK sub-cascade (`daEvalSNK`)** — pure switch on `SNK_DL` literal:
@@ -436,18 +436,18 @@ Writing happens in the **Ritual** path only. Preview stops at `renderStats` / `r
 
 ```mermaid
 flowchart TD
-  A[rawFileBytes ArrayBuffer] --> B[JSZip.loadAsync]
-  B --> C[parseSharedStrings xl/sharedStrings.xml]
-  C --> D[For each sheet with results:<br/>read xl/worksheets/sheetN.xml]
-  D --> E[patchSheet sheetXml, Anmerkung col, rowMap, strings]
-  E --> F{reason col?}
-  F -- yes --> G[patchSheet headerMap row 3 = Anmerkung_Reason<br/>+ patchSheet reason map for data rows]
-  F -- no --> H
-  G --> H[zip.file rel, sheetXml]
-  H --> I[rebuildSharedStrings strings]
-  I --> J[ensureSharedStringsContentType<br/>ensureSharedStringsRel]
-  J --> K[zip.generateAsync Blob]
-  K --> L([resultBlob ready for download,<br/>originalFileName preserved])
+  A["rawFileBytes ArrayBuffer"] --> B["JSZip.loadAsync"]
+  B --> C["parseSharedStrings xl/sharedStrings.xml"]
+  C --> D["For each sheet with results:<br/>read xl/worksheets/sheetN.xml"]
+  D --> E["patchSheet(sheetXml, AnmerkungCol, rowMap, strings)"]
+  E --> F{"reason col toggle on?"}
+  F -- yes --> G["patchSheet header row 3 = Anmerkung_Reason<br/>+ patchSheet reason map for data rows"]
+  F -- no --> H["zip.file(rel, sheetXml)"]
+  G --> H
+  H --> I["rebuildSharedStrings(strings)"]
+  I --> J["ensureSharedStringsContentType<br/>ensureSharedStringsRel"]
+  J --> K["zip.generateAsync, Blob"]
+  K --> L(["resultBlob ready for download<br/>originalFileName preserved"])
 ```
 
 **`patchSheet` — how a single cell is written:**
