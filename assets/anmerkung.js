@@ -217,6 +217,7 @@ const PHRASES={
   kontierungQ:                'Kontierung?',
   pauschalfracht:             'Pauschalfracht',
   differenzAvis:              'Differenz avis',
+  b2cZuschlag:                'B2C-zuschlag, ok?',
   // DHL
   fremdnummerDotPunkt:        'Fremdnummer doppelt berechnet.',
   kontierungLower:            'kontierung?',
@@ -545,11 +546,19 @@ function processKN(ws,r,cols){
   else if(hasErr(snkDiff,T)){
     if(snkDl===5||snkDl===25)res=join(res,'Portalavisierung, ok?');
     else if(snkDl===9)res=join(res,'Avis, ok?');
+    else if(snkDl===12)res=join(res,'B2C-zuschlag, ok?');
     else if(snkDl===18){if(!res.toLowerCase().includes('avis, ok?'))res=join(res,'Avis, ok?');}
     else if(snkDl===34){res=join(res,'Portalavisierung, ok?');res=join(res,'Avis, ok?');}
     else res=join(res,'SNK Differenz');
   }
-  if(hasErr(fuelDiff,T)&&!res)res='Differenz treibstoff';
+  /* TZ (fuel surcharge) difference. Treibstoffzuschlag is calculated as a percentage of
+     freight, so when FR or MT are already classified as differing, the TZ gap is a
+     mathematical byproduct of the freight/toll recalc — not a separate classification.
+     Only emit "Differenz treibstoff" as an independent trigger when neither FR nor MT
+     fired. This additively coexists with SNK-only rows (e.g. Portalavisierung + real
+     standalone fuel gap), unlike the previous rule which suppressed treibstoff whenever
+     any other trigger fired and lost those cases. */
+  if(hasErr(fuelDiff,T)&&!hasErr(frDiff,T)&&!hasErr(tollDiff,T))res=join(res,'Differenz treibstoff');
   if(!kost||kost==='-'||!sach||sach==='-')res=join(res,'Kontierung?');
   return res;
 }
@@ -846,6 +855,8 @@ const TESTER_PRESETS={
     {name:'Pauschalfracht',values:{stat:10,fr:3980,referenz:'2543011467'}},
     {name:'Differenz avis (-9)',values:{stat:10,snk_diff:-9,tarif:'119,17'}},
     {name:'Portal (SNK diff 25)',values:{stat:10,snk_diff:25,tarif:'223,13'}},
+    {name:'SNK_DL=12 B2C-zuschlag',values:{stat:10,fr:7.5,snk_dl:12,snk_diff:3,toll:0.31,fuel:2.02,recip:'Tefal',referenz:'2543116871',vkg:'171,087',vkg_dl:'202,5',tarif:'69,32',kost:'211FO012',sach:'612100'}},
+    {name:'Portal + Treibstoff combo',values:{stat:10,snk_dl:5,snk_diff:5,fuel:-5.91,recip:'Amazon - DTM1',referenz:'2543101960,2543109101',vkg:'524,273',vkg_dl:'569,4',tarif:'123,61',kost:'211FO012',sach:'612100'}},
     {name:'Clean row',values:{stat:10,kost:'1234',sach:'5678'}},
   ],
   dhl:[
