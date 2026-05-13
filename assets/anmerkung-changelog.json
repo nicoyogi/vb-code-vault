@@ -1,6 +1,15 @@
 {
-  "version": "1.5.0",
+  "version": "1.5.1",
   "entries": [
+    {
+      "ver": "1.5.1",
+      "date": "2026-05-13",
+      "items": [
+        "Diff Mode — \"Send to Tester\" now pre-fills every numeric field. The diff captured keys like fr_diff, mt_diff, tz_diff, exp_diff, snk_diff (DHL), kostenstelle, sachkonto but the tester uses fr / maut / tz / exp / snk / kost / sach, and the old remap only covered 6 Dachser-specific keys — all other numeric inputs silently dropped into the tester and the tester result diverged from the engine.",
+        "Symptom fix — a K+N Amazon cross-tier row (FR=22.77, SNK_DIFF=25, VKG=434.336, VKG_DL=494.6, kost/sach present) that the engine classifies as \"Differenz aufgrund abweichender Gewichte // Portalavisierung, ok?\" was being shown in the tester as \"Portalavisierung, ok? // Kontierung?\" because FR, kost and sach never arrived. Tester now matches engine output.",
+        "Remap is now exhaustive per forwarder (dachser / kn / dhl / wackler) and lives in REMAP_BY_FW alongside sendDiffToTester, with a comment explaining the two key sets and why they drift."
+      ]
+    },
     {
       "ver": "1.5.0",
       "date": "2026-05-12",
