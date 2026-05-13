@@ -201,6 +201,7 @@ const PHRASES={
   sonderfahrt:                'Sonderfahrt',
   buendelKoennen:             'hätte gebündelt werden können?',
   abweichGewicht:             'Differenz aufgrund von abweichendem Gewicht',
+  frachtzuAbschlag:           'Differenz Frachtzu/ abschlag',
   abholtermin:                'Abholterminvereinbarung',
   treibstof:                  'Differenz treibstof',
   zwPrefix:                   'Differenz aufgrund abweichender Zwischenempfänger',
@@ -419,6 +420,22 @@ function resolveDachser(ws,range){
 
 function daIsTarifZero(ws,r,col){if(col<0)return false;const raw=cellStr(ws,r,col);if(!raw)return false;if(raw==='-')return true;return(cellNum(ws,r,col)===0&&raw.includes('0'));}
 function daIsNonInteger(n){return n!==Math.floor(n);}
+/* When SNK_DL has a non-integer tariff component (e.g. 14.72, 7.57), the "surcharge
+   code" (11/14/5/9 …) is not visible in SNK_DL directly — it lives in SNK_DIFF which
+   equals DL minus the tariff-derived base. Training rows 14/352/354 showed that
+   SNK_DIFF rounds to a clean surcharge value (9.01→9, 5.01→5) on these rows, so
+   classify by the rounded SNK_DIFF instead of letting the row fall through to the
+   generic "Laderaumkostenentwicklung" branch. Only kicks in when SNK_DL is non-integer
+   AND the difference is within 0.05 of a known surcharge code — a very narrow window
+   so we don't accidentally grab real Laderaum rows. */
+const DA_SNK_SURCHARGE_CODES=[5,9,11,14];
+function daDetectSurchargeFromDiff(snkDl,snkDiff){
+  if(!daIsNonInteger(snkDl))return 0;
+  const rounded=Math.round(snkDiff);
+  if(!DA_SNK_SURCHARGE_CODES.includes(rounded))return 0;
+  if(Math.abs(snkDiff-rounded)>0.05)return 0;
+  return rounded;
+}
 
 function daEvalSNK(ws,r,cols,isTarifZero,servArt){
   if(cols.snk_diff<0||cols.snk_dl<0)return'';
@@ -428,7 +445,13 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
         T=T_DACHSER;
   if(snkDl===0&&snkTar===0&&snkDiff===0)return'';
 
-  switch(snkDl){
+  /* Non-integer SNK_DL (tariff base with cents) — re-derive the surcharge code from
+     SNK_DIFF when it rounds cleanly to 5/9/11/14. Then fall through to the same
+     switch so the downstream phrase mapping stays the single source of truth. */
+  const derivedCode=daDetectSurchargeFromDiff(snkDl,snkDiff);
+  const effectiveDl=derivedCode||snkDl;
+
+  switch(effectiveDl){
     case 190:return'AUSFALLFRACHT';
     case 95:return'AUSFALLFRACHT';
     case 130:return'Standgeld';
@@ -486,10 +509,16 @@ function processDachser(ws,r,cols){
   if(cols.sbfu>=0&&hasErr(cellNum(ws,r,cols.sbfu),T))res=join(res,'SBfU-Bescheinigung f. Umsatzsteuerzwecke');
   if(cols.fr>=0&&hasErr(cellNum(ws,r,cols.fr),T)){
     hasFR=true;
+    const frVal=cellNum(ws,r,cols.fr);
     if(isZW)res=join(res,daZWNote(ws,r));
     else if(sachkonto.toUpperCase()==='X')res=join(res,'VORHOLUNG');
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
     else if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
+    /* Negative FR with no special flags (no ZW, no Vorholung, no Sonderfahrt, single
+       shipment) is a freight surcharge/credit line (Frachtzu/ abschlag), not a
+       weight-miscount. Training row 144: FR=-28.58, anz_sdg=1, no service flags →
+       expected "Differenz Frachtzu/ abschlag", not "abweichendem Gewicht". */
+    else if(frVal<0)res=join(res,'Differenz Frachtzu/ abschlag');
     else res=join(res,'Differenz aufgrund von abweichendem Gewicht');
   }
   if(cols.snk_dl>=0&&cellNum(ws,r,cols.snk_dl)===14&&cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))
@@ -846,6 +875,9 @@ const TESTER_PRESETS={
     {name:'Saturday delivery',values:{stat:10,sam:25,tarif:'150,00'}},
     {name:'ZW intermediary',values:{stat:10,fr:15,_referenz3:'ZW',_plz:'88499',_ort:'Riedlingen',tarif:'200,00'}},
     {name:'K1AV zeitfenster',values:{stat:10,snk_dl:5,snk_diff:12,_serv:'K1AV',tarif:'100,00'}},
+    {name:'SNK non-int → 9 (Tel. ZTV)',values:{stat:10,snk_dl:14.72,snk_diff:9.01,snk_tar:5.71,tarif:'156,88',maut:-6.23,_serv:'DA01',_sach:'612100'}},
+    {name:'SNK non-int → 5 (Auto ZTV)',values:{stat:10,snk_dl:7.57,snk_diff:5.01,snk_tar:2.56,tarif:'73,21',tz:0.01}},
+    {name:'Negative FR (Frachtzu/abschlag)',values:{stat:10,fr:-28.58,snk_dl:5,snk_diff:-4.52,tarif:'277,48',_anzSdg:'1',tz:-0.01}},
   ],
   kn:[
     {name:'Bundled, should be',values:{stat:10,fr:15,referenz:'123,456',tarif:'200,00'}},

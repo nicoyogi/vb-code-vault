@@ -1,6 +1,16 @@
 {
-  "version": "1.6.0",
+  "version": "1.7.0",
   "entries": [
+    {
+      "ver": "1.7.0",
+      "date": "2026-05-13",
+      "items": [
+        "Dachser — SNK surcharge detection now survives non-integer SNK_DL values. When SNK_DL carries a tariff base with cents (e.g. 14.72 = 5.71 tarif + 9 surcharge, 7.57 = 2.56 tarif + 5 surcharge), the engine re-derives the surcharge code from SNK_DIFF and dispatches to the correct branch (Telefonische Zustellterminvereinbarung / Automatische Zustellterminvereinbarung) instead of dumping the row into the generic \"Differenz Laderaumkostenentwicklung\" bucket.",
+        "Dachser — re-derivation is narrow on purpose: only fires when SNK_DL is non-integer AND SNK_DIFF rounds to within 0.05 of a known surcharge code (5/9/11/14), so real Laderaumkostenentwicklung rows are untouched. Integer-DL rows take the existing exact-match path unchanged.",
+        "Dachser — FR branch gains a Frachtzu/abschlag classification. A negative FR delta on a single-shipment row with no ZW / Vorholung / K1AS / bundling flags is now labeled \"Differenz Frachtzu/ abschlag\" instead of misclassified as \"Differenz aufgrund von abweichendem Gewicht\" — a single shipment can't have a weight miscount, and a negative FR is a freight credit line.",
+        "Dachser — three new Rule Tester presets exercise the fixed branches directly: \"SNK non-int → 9 (Tel. ZTV)\", \"SNK non-int → 5 (Auto ZTV)\", \"Negative FR (Frachtzu/abschlag)\"."
+      ]
+    },
     {
       "ver": "1.6.0",
       "date": "2026-05-13",
