@@ -214,19 +214,19 @@
       <span class="chev">›</span>
     </button>
     <div class="bonus-panel" id="diffPanel" role="region" aria-label="Diff between before and after files">
-      <div class="diff-intro">Drop two processed workbooks to see every Anmerkung that was <span style="color:var(--accent)">added</span>, <span style="color:var(--danger)">removed</span>, or <span style="color:#fbbf24">changed</span>. Export a <strong>training set</strong> (CSV or JSONL) with <em>predicted vs. expected</em> values, the input cells the rules read, and the trigger trace &mdash; ideal for debugging rules or feeding an ML pipeline. Put your tool's output in <strong>A</strong>, the hand-corrected file in <strong>B</strong>.</div>
+      <div class="diff-intro">Drop two processed workbooks and Kiro will <strong>train the engine</strong> against them. Put your tool's output in <strong>A</strong>, the hand-corrected ground truth in <strong>B</strong>. Every disagreement becomes a labeled training case — <span class="lbl-pill lbl-wrong">wrong</span> <span class="lbl-pill lbl-missed">missed</span> <span class="lbl-pill lbl-overfired">overfired</span> — with the input cells the rules read and the trigger trace. Ship it as CSV/JSONL, or click <strong>✦</strong> on any row to open it in the Rule Tester and iterate on the rule against that exact case.</div>
 
       <div class="diff-slots">
         <div class="diff-slot" id="diffSlotA" data-slot="a"
           onclick="document.getElementById('diffInputA').click()"
           ondragover="onDiffDrag(event,'a',true)" ondragleave="onDiffDrag(event,'a',false)" ondrop="onDiffDrop(event,'a')">
-          <div class="diff-slot-label">A — Before</div>
+          <div class="diff-slot-label">A — Predicted (tool output)</div>
           <div class="diff-slot-name" id="diffNameA">Click or drop an .xlsx</div>
         </div>
         <div class="diff-slot" id="diffSlotB" data-slot="b"
           onclick="document.getElementById('diffInputB').click()"
           ondragover="onDiffDrag(event,'b',true)" ondragleave="onDiffDrag(event,'b',false)" ondrop="onDiffDrop(event,'b')">
-          <div class="diff-slot-label">B — After</div>
+          <div class="diff-slot-label">B — Expected (ground truth)</div>
           <div class="diff-slot-name" id="diffNameB">Click or drop an .xlsx</div>
         </div>
       </div>
@@ -234,31 +234,81 @@
       <input type="file" id="diffInputB" accept=".xlsx" style="display:none" onchange="onDiffFile(event,'b')">
 
       <div class="tester-actions">
-        <button type="button" class="tester-btn primary" id="btnDiffRun" disabled onclick="runDiff()">✦ Compare</button>
+        <button type="button" class="tester-btn primary" id="btnDiffRun" disabled onclick="runDiff()">✦ Train &amp; Compare</button>
         <button type="button" class="tester-btn" onclick="clearDiff()">Clear</button>
-        <button type="button" class="tester-btn" id="btnDiffCsv" style="display:none" onclick="downloadDiffCsv()">↓ Export CSV</button>
-        <button type="button" class="tester-btn" id="btnDiffTrainCsv" style="display:none" onclick="downloadTrainingSet('csv')" title="Export wrong/true pairs with input cells + trigger trace, one row per mismatch">↓ Training Set (CSV)</button>
-        <button type="button" class="tester-btn" id="btnDiffTrainJsonl" style="display:none" onclick="downloadTrainingSet('jsonl')" title="Same as CSV but JSONL — one JSON record per line, ML-friendly">↓ Training Set (JSONL)</button>
+        <button type="button" class="tester-btn" id="btnDiffCsv" style="display:none" onclick="downloadDiffCsv()">↓ Diff CSV <span class="btn-ct" id="ctDiffCsv"></span></button>
+        <button type="button" class="tester-btn" id="btnDiffTrainCsv" style="display:none" onclick="downloadTrainingSet('csv')" title="Export wrong/missed/overfired pairs with input cells + trigger trace, one row per case">↓ Training Set (CSV) <span class="btn-ct" id="ctTrainCsv"></span></button>
+        <button type="button" class="tester-btn" id="btnDiffTrainJsonl" style="display:none" onclick="downloadTrainingSet('jsonl')" title="Same as CSV but JSONL — one JSON record per line, ML-friendly">↓ Training Set (JSONL) <span class="btn-ct" id="ctTrainJsonl"></span></button>
       </div>
       <label class="opt-row" id="diffIncludeMatchWrap" style="display:none;margin-top:6px;font-size:10.5px;padding:8px 12px" for="diffIncludeMatch">
-        <input type="checkbox" id="diffIncludeMatch">
+        <input type="checkbox" id="diffIncludeMatch" onchange="refreshDiffView()">
         <span class="opt-desc"><strong>Include matching rows in training set</strong><span class="hint">Adds rows where A and B agree, labeled <code>correct</code>. Useful as positive examples; increases file size.</span></span>
       </label>
 
       <div id="diffResults" style="display:none">
         <div class="diff-meta" id="diffMeta"></div>
+
+        <!-- Classic diff summary -->
         <div class="diff-summary">
           <div class="diff-stat"><div class="diff-stat-n" id="dCount">0</div><div class="diff-stat-l">total rows</div></div>
           <div class="diff-stat added"><div class="diff-stat-n" id="dAdded">0</div><div class="diff-stat-l">added</div></div>
           <div class="diff-stat removed"><div class="diff-stat-n" id="dRemoved">0</div><div class="diff-stat-l">removed</div></div>
           <div class="diff-stat changed"><div class="diff-stat-n" id="dChanged">0</div><div class="diff-stat-l">changed</div></div>
         </div>
+
+        <!-- Training-set summary (label chips — click to filter) -->
+        <div class="train-panel" id="trainPanel">
+          <div class="train-panel-title">Training breakdown <span class="train-hint">// click a chip to filter</span></div>
+          <div class="train-chips" id="trainChips" role="group" aria-label="Training label filter">
+            <button type="button" class="train-chip active" data-label="all" onclick="setDiffLabelFilter('all')">
+              <span class="chip-n" id="tcAll">0</span><span class="chip-l">all</span>
+            </button>
+            <button type="button" class="train-chip wrong" data-label="wrong" onclick="setDiffLabelFilter('wrong')" title="Both A and B non-empty but disagree">
+              <span class="chip-n" id="tcWrong">0</span><span class="chip-l">wrong</span>
+            </button>
+            <button type="button" class="train-chip missed" data-label="missed" onclick="setDiffLabelFilter('missed')" title="A empty, B filled — rule should have fired">
+              <span class="chip-n" id="tcMissed">0</span><span class="chip-l">missed</span>
+            </button>
+            <button type="button" class="train-chip overfired" data-label="overfired" onclick="setDiffLabelFilter('overfired')" title="A filled, B empty — rule fired when it shouldn't have">
+              <span class="chip-n" id="tcOverfired">0</span><span class="chip-l">overfired</span>
+            </button>
+            <button type="button" class="train-chip drift" data-label="drift" onclick="setDiffLabelFilter('drift')" title="Current engine would disagree with slot A — rules changed since A was generated">
+              <span class="chip-n" id="tcDrift">0</span><span class="chip-l">engine drift</span>
+            </button>
+            <button type="button" class="train-chip correct" data-label="correct" onclick="setDiffLabelFilter('correct')" title="A and B agree — positive example">
+              <span class="chip-n" id="tcCorrect">0</span><span class="chip-l">correct</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="diff-filters" id="diffFilters">
+          <div class="diff-filter">
+            <label for="diffFwFilter">Forwarder</label>
+            <select id="diffFwFilter" onchange="refreshDiffView()">
+              <option value="all">all</option>
+            </select>
+          </div>
+          <div class="diff-filter">
+            <label for="diffSheetFilter">Sheet</label>
+            <select id="diffSheetFilter" onchange="refreshDiffView()">
+              <option value="all">all</option>
+            </select>
+          </div>
+          <div class="diff-filter grow">
+            <label for="diffSearch">Search</label>
+            <input type="search" id="diffSearch" placeholder="before / after / reason..." oninput="refreshDiffView()" autocomplete="off">
+          </div>
+          <button type="button" class="diff-reset" onclick="resetDiffFilters()">↺ Reset</button>
+        </div>
+
         <div class="diff-table-wrap">
           <table class="diff-table" id="diffTable">
-            <thead><tr><th>Sheet</th><th>Row</th><th>Change</th><th>Before (A)</th><th>After (B)</th></tr></thead>
+            <thead><tr><th>Sheet</th><th>Row</th><th>Fw</th><th>Label</th><th>Before (A)</th><th>After (B)</th><th title="What the current rule engine would output for A's inputs">Engine now</th><th></th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
+        <div class="diff-table-foot" id="diffTableFoot"></div>
       </div>
       <div class="diff-empty" id="diffEmpty" style="display:none">No differences found — the two files match.</div>
     </div>
