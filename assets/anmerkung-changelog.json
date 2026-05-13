@@ -1,6 +1,15 @@
 {
-  "version": "1.5.1",
+  "version": "1.6.0",
   "entries": [
+    {
+      "ver": "1.6.0",
+      "date": "2026-05-13",
+      "items": [
+        "K+N — new SNK branch: SNK_DL = 12 now maps to \"B2C-zuschlag, ok?\". Mirrors the Wackler |SNK diff| = 11.5 → \"hätte B2C-Line abrechnen dürfen\" classification. Previously SNK_DL=12 rows fell into the generic \"SNK Differenz\" fallback.",
+        "K+N — TZ (treibstoff) is now an additive trigger instead of a fallback. A TZ delta coexists with SNK-only classifications (e.g. Portalavisierung + Differenz treibstoff), but stays suppressed when FR or MT fired — the fuel surcharge is a percentage of freight/toll, so a TZ gap on an FR/MT-delta row is a mathematical byproduct, not a separate classification.",
+        "K+N — rule tester gains two presets exercising the new branches: \"SNK_DL=12 → B2C-zuschlag\" and \"Portal + Treibstoff combo\" (SNK_DL=5 with TZ=-5.91)."
+      ]
+    },
     {
       "ver": "1.5.1",
       "date": "2026-05-13",
