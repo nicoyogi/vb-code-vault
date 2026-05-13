@@ -1376,9 +1376,38 @@ function sendDiffToTester(i){
   const testerPanel=document.getElementById('testerPanel');
   if(testerPanel&&!testerPanel.classList.contains('open'))toggleBonus('tester');
   else renderTesterFields();
-  /* 3. Map diff-input keys -> tester field ids (t_<key>). Keys already
-     match for almost everything; the handful that don't are remapped. */
-  const remap={referenz3:'_referenz3',empf_plz:'_plz',empf_ort:'_ort',anz_sdg:'_anzSdg',serv_art:'_serv',sachkonto:r.fw==='dachser'?'_sach':'sachkonto'};
+  /* 3. Map diff-input keys (collectInputsForRow) -> tester field ids
+     (TESTER_FIELDS[fw][*][0], rendered as `t_<key>`). The two key sets
+     were historically out of sync for every forwarder except wackler,
+     which silently dropped numeric inputs like fr/maut/tz/exp into the
+     tester and caused the tester's output to diverge from the engine
+     (classic symptom: "Portalavisierung, ok? // Kontierung?" instead
+     of "Differenz aufgrund abweichender Gewichte // …" because the FR
+     value and Kostenstelle/Sachkonto never made it across). This map
+     is exhaustive per forwarder. */
+  const REMAP_BY_FW={
+    dachser:{
+      fr_diff:'fr',snk_tarif:'snk_tar',zz_diff:'zz',sam_diff:'sam',dgr_diff:'dgr',
+      exp_diff:'exp',maut_diff:'maut',sbfu_diff:'sbfu',tz_diff:'tz',
+      referenz3:'_referenz3',empf_plz:'_plz',empf_ort:'_ort',anz_sdg:'_anzSdg',
+      serv_art:'_serv',sachkonto:'_sach',
+    },
+    kn:{
+      fr_diff:'fr',exp_diff:'exp',mt_diff:'toll',tz_diff:'fuel',
+      kostenstelle:'kost',sachkonto:'sach',
+    },
+    dhl:{
+      fr_diff:'addr',pal_diff:'stack',ow_diff:'weight',
+      yo_diff:'conv',yl_diff:'irr',nd_diff:'neut',sf_diff:'sign',
+      snk_diff:'snk',ac_diff:'diff',mt_diff:'maut',
+      nx_diff:'surc',os_diff:'over',tz_diff:'tz',
+      kostenstelle:'kost',sachkonto:'sach',
+    },
+    wackler:{
+      existing_anmerkung:'target',fr_diff:'fr',mt_diff:'maut',tz_diff:'tz',
+    },
+  };
+  const remap=REMAP_BY_FW[r.fw]||{};
   clearTester();
   const vals=r.inputs||{};
   Object.entries(vals).forEach(([k,v])=>{
