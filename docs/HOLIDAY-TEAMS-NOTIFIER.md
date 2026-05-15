@@ -44,18 +44,6 @@ your standard M365 account, no paid license required for this template).
    - Name: `TEAMS_WEBHOOK_URL`
    - Value: *(paste the URL)*
 
-### 2. `FIREBASE_SERVICE_ACCOUNT` — Firestore read access
-
-1. Open the [Firebase Console](https://console.firebase.google.com/) → project **vb-code-vault**.
-2. Gear icon → **Project settings** → **Service accounts** tab.
-3. Click **Generate new private key** → confirm. A JSON file downloads.
-4. Open the JSON file and copy its **entire contents**.
-5. In GitHub: **Settings → Secrets and variables → Actions → New repository secret**
-   - Name: `FIREBASE_SERVICE_ACCOUNT`
-   - Value: *(paste the full JSON, including the curly braces)*
-
-> Treat that JSON like a password. It grants Firestore access. Never commit it.
-
 ## Running it
 
 | When | How |
@@ -63,23 +51,6 @@ your standard M365 account, no paid license required for this template).
 | Automatic | Every day at 13:00 Asia/Bangkok (06:00 UTC) |
 | Manual    | GitHub → **Actions** → **Holiday Tracker · Notify Tomorrow** → **Run workflow** |
 | Dry run   | Manual run with **dry_run = true** — prints the Adaptive Card payload to the action log without posting to Teams |
-
-## Local testing
-
-```bash
-cd scripts
-npm install
-
-# Print the payload only:
-DRY_RUN=1 \
-FIREBASE_SERVICE_ACCOUNT="$(cat /path/to/serviceAccount.json)" \
-node notify-tomorrow.mjs
-
-# Send for real:
-TEAMS_WEBHOOK_URL='https://...' \
-FIREBASE_SERVICE_ACCOUNT="$(cat /path/to/serviceAccount.json)" \
-node notify-tomorrow.mjs
-```
 
 ## Behaviour notes
 
@@ -107,7 +78,6 @@ node notify-tomorrow.mjs
 
 | Symptom | Likely cause |
 |---------|--------------|
-| Action fails with `FIREBASE_SERVICE_ACCOUNT is not valid JSON` | Secret was pasted with extra characters or partial copy. Re-paste the full file. |
 | Action succeeds but no message in Teams | Wrong webhook URL, or the Workflow was deleted. Recreate the Workflow and update the secret. |
 | `Webhook POST failed: 400` | Adaptive Card schema rejected. Re-run with **dry_run = true** to inspect the payload. |
 | Action runs but lists no entries when you expect some | Run the dry-run, check `Querying leave for: YYYY-MM-DD` in the log — confirm date and that the holiday entry's `start`/`end` cover it. |
