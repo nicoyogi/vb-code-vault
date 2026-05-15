@@ -1,6 +1,49 @@
 {
-  "version": "1.4.2",
+  "version": "1.7.0",
   "entries": [
+    {
+      "ver": "1.7.0",
+      "date": "2026-05-13",
+      "items": [
+        "Dachser — SNK surcharge detection now survives non-integer SNK_DL values. When SNK_DL carries a tariff base with cents (e.g. 14.72 = 5.71 tarif + 9 surcharge, 7.57 = 2.56 tarif + 5 surcharge), the engine re-derives the surcharge code from SNK_DIFF and dispatches to the correct branch (Telefonische Zustellterminvereinbarung / Automatische Zustellterminvereinbarung) instead of dumping the row into the generic \"Differenz Laderaumkostenentwicklung\" bucket.",
+        "Dachser — re-derivation is narrow on purpose: only fires when SNK_DL is non-integer AND SNK_DIFF rounds to within 0.05 of a known surcharge code (5/9/11/14), so real Laderaumkostenentwicklung rows are untouched. Integer-DL rows take the existing exact-match path unchanged.",
+        "Dachser — FR branch gains a Frachtzu/abschlag classification. A negative FR delta on a single-shipment row with no ZW / Vorholung / K1AS / bundling flags is now labeled \"Differenz Frachtzu/ abschlag\" instead of misclassified as \"Differenz aufgrund von abweichendem Gewicht\" — a single shipment can't have a weight miscount, and a negative FR is a freight credit line.",
+        "Dachser — three new Rule Tester presets exercise the fixed branches directly: \"SNK non-int → 9 (Tel. ZTV)\", \"SNK non-int → 5 (Auto ZTV)\", \"Negative FR (Frachtzu/abschlag)\"."
+      ]
+    },
+    {
+      "ver": "1.6.0",
+      "date": "2026-05-13",
+      "items": [
+        "K+N — new SNK branch: SNK_DL = 12 now maps to \"B2C-zuschlag, ok?\". Mirrors the Wackler |SNK diff| = 11.5 → \"hätte B2C-Line abrechnen dürfen\" classification. Previously SNK_DL=12 rows fell into the generic \"SNK Differenz\" fallback.",
+        "K+N — TZ (treibstoff) is now an additive trigger instead of a fallback. A TZ delta coexists with SNK-only classifications (e.g. Portalavisierung + Differenz treibstoff), but stays suppressed when FR or MT fired — the fuel surcharge is a percentage of freight/toll, so a TZ gap on an FR/MT-delta row is a mathematical byproduct, not a separate classification.",
+        "K+N — rule tester gains two presets exercising the new branches: \"SNK_DL=12 → B2C-zuschlag\" and \"Portal + Treibstoff combo\" (SNK_DL=5 with TZ=-5.91)."
+      ]
+    },
+    {
+      "ver": "1.5.1",
+      "date": "2026-05-13",
+      "items": [
+        "Diff Mode — \"Send to Tester\" now pre-fills every numeric field. The diff captured keys like fr_diff, mt_diff, tz_diff, exp_diff, snk_diff (DHL), kostenstelle, sachkonto but the tester uses fr / maut / tz / exp / snk / kost / sach, and the old remap only covered 6 Dachser-specific keys — all other numeric inputs silently dropped into the tester and the tester result diverged from the engine.",
+        "Symptom fix — a K+N Amazon cross-tier row (FR=22.77, SNK_DIFF=25, VKG=434.336, VKG_DL=494.6, kost/sach present) that the engine classifies as \"Differenz aufgrund abweichender Gewichte // Portalavisierung, ok?\" was being shown in the tester as \"Portalavisierung, ok? // Kontierung?\" because FR, kost and sach never arrived. Tester now matches engine output.",
+        "Remap is now exhaustive per forwarder (dachser / kn / dhl / wackler) and lives in REMAP_BY_FW alongside sendDiffToTester, with a comment explaining the two key sets and why they drift."
+      ]
+    },
+    {
+      "ver": "1.5.0",
+      "date": "2026-05-12",
+      "items": [
+        "Diff Mode — reworked into a proper Rule Training console. The A/B slots are now labeled Predicted / Expected, and the primary action is \"Train & Compare\" (click once, get labeled training cases back).",
+        "Training breakdown panel — click-to-filter chips for wrong / missed / overfired / engine drift / correct. Chips show live counts; the visible table and all export buttons honor whichever chip is active.",
+        "Filter bar — Forwarder, Sheet, free-text search (scans before / after / reason / engine-now). Export buttons carry live \"· N\" counters so you always know what's going to ship.",
+        "Per-row expansion — every diff row has a chevron that reveals the exact input cells the rule engine read + the full trigger trace in a structured kv grid. No more blind CSV exports.",
+        "Send to Tester — from any expanded row, one click switches the forwarder tile, opens the Rule Tester, pre-fills every matching field with that row's inputs, auto-evaluates, and scrolls you to the result. Tighten the rule, click Evaluate again, re-run Train & Compare.",
+        "Engine-drift column — the new \"Engine now\" column shows what the current rule engine would output for slot A's inputs. A blue dot + the drift chip surface cases where rules changed since slot A was generated.",
+        "Training set export is now filter-scoped — export just the 12 \"missed\" Wackler rows, or all 200 wrongs across forwarders. CSV/JSONL schema unchanged so downstream ML pipelines keep working.",
+        "Diff CSV export upgraded — now also includes forwarder, label (wrong/missed/overfired/correct), engine_now, engine_matches_a, and the trigger trace alongside the classic before/after columns.",
+        "Single-pass sheet walk — Train & Compare runs once per row to compute label + engine prediction + inputs, reused by table rendering and both export paths. Faster on large workbooks, no more second walk when you click Download."
+      ]
+    },
     {
       "ver": "1.4.2",
       "date": "2026-05-12",
