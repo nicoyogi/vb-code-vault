@@ -6,6 +6,8 @@ This document describes how **`anmerkung.html`** (The Alchemist) works, at two l
 - **Part C — Engine workflow** — how the rule engine actually runs, per forwarder, under the hood.
 
 > Audience: Part A is for anyone audit-billing freight invoices. Part C is for anyone tweaking rules or debugging why a row got (or didn't get) a specific Anmerkung.
+>
+> Looking for the **system architecture** (layers, modules, persistence, PWA shell, extensibility recipes)? See [`ANMERKUNG-ARCHITECTURE.md`](ANMERKUNG-ARCHITECTURE.md).
 
 ---
 
