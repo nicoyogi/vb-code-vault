@@ -1,292 +1,483 @@
 # Anmerkung Processor — Architecture
 
-How `anmerkung.html` (The Alchemist) is built, in plain terms.
+This document describes the **system-level architecture** of `anmerkung.html` (The Alchemist) — the modules, contracts, runtime envelope, and persistence boundaries.
 
-> Companion to [`ANMERKUNG-WORKFLOW.md`](ANMERKUNG-WORKFLOW.md).
-> **This doc** = how the app is built (files, layers, state, deploy).
-> **Workflow doc** = what the app does (user steps, rule trees per forwarder).
+> Companion to [`ANMERKUNG-WORKFLOW.md`](ANMERKUNG-WORKFLOW.md). The workflow doc explains *what happens* (per-forwarder rule trees + user journey). This doc explains *how it's built* (layers, state, dependency boundaries, extensibility).
 
 ---
 
-## TL;DR — the 30-second mental model
+## 1. System context
 
-The Alchemist is a **single web page** that reads an Excel file in your browser, runs a set of forwarder-specific rules over each row, and writes the results back into a copy of the same file. Then you download it.
+| Property | Value |
+|---|---|
+| Type | Single-page web app (static, no build step) |
+| Runtime | Modern browser only — no server, no API |
+| Hosting | GitHub Pages (`codingkuh.my.id` → CNAME) |
+| Persistence | Browser only (`localStorage` + `Cache Storage`); no remote DB |
+| Trust boundary | Everything runs client-side; uploaded XLSX never leaves the browser |
+| Offline | Installable PWA via service worker `sw.js` |
 
-There is **no server, no database, and no API**. Your file never leaves the browser tab.
+The Alchemist's job: read an XLSX freight-audit workbook, run a per-forwarder rule engine over it, and produce a byte-level patched copy with the `Anmerkung` column filled in — entirely in-browser.
+
+---
+
+## 2. High-level component map
 
 ```mermaid
-flowchart LR
-  U(["You"]) --> P["anmerkung.html<br/>(one page)"]
-  P -- "1. read XLSX" --> M["In-memory<br/>workbook"]
-  M -- "2. run rules" --> M
-  M -- "3. patch XLSX bytes" --> O[(["Downloaded<br/>file"])]
-  P -. "PWA shell<br/>(works offline)" .-> SW["sw.js"]
+flowchart TB
+  subgraph Browser["Browser tab"]
+    direction TB
+
+    subgraph Shell["UI shell — anmerkung.html + anmerkung.css"]
+      A1["Hero · Forwarder grid · Upload · Buttons"]
+      A2["Stats · Trigger breakdown · Preview table"]
+      A3["Bulk panel · Rule Tester panel · Diff Mode panel"]
+      A4["Changelog modal · Subscription modal"]
+      A5["Header chrome — version badge, theme, offline button"]
+    end
+
+    subgraph Runtime["Client runtime — anmerkung.js"]
+      direction TB
+      R0["State container<br/>selectedFW · workbook · rawFileBytes · resultBlob · TH · diff slots · bulk queue"]
+      R1["Rule engine<br/>resolveXxx + processXxx (4 forwarders)<br/>+ PHRASES catalog"]
+      R2["runRules — single workbook walk"]
+      R3["XLSX patcher<br/>JSZip + sharedStrings + sheet XML rewrite"]
+      R4["Preview / Stats / Trigger renderer"]
+      R5["Bulk controller"]
+      R6["Rule Tester controller"]
+      R7["Diff / Training Set controller"]
+      R8["Changelog · Theme · Subscription gate · Logging"]
+    end
+
+    subgraph Core["Shared infra — grimoire-core.js"]
+      C1["Grimoire.Offline<br/>SW register · precache · status · button mount"]
+      C2["Grimoire.Theme<br/>cross-page theme key"]
+      C3["Grimoire.Nav<br/>page registry"]
+      C4["Grimoire.densityScale / visibleRAF"]
+    end
+
+    SW["Service worker — sw.js<br/>Cache 'alchemist-vX'<br/>install / activate / fetch / message"]
+    LS[("localStorage")]
+    CS[("Cache Storage")]
+  end
+
+  subgraph CDN["External CDN (one-time fetch, then cached by SW)"]
+    X1["SheetJS xlsx.full.min.js"]
+    X2["JSZip jszip.min.js"]
+    X3["Google Fonts — Cinzel · Syne · DM Mono"]
+  end
+
+  Static[("Static repo files<br/>assets/anmerkung-changelog.json<br/>manifest.webmanifest")]
+
+  Shell -- "DOM events" --> Runtime
+  Runtime -- "uses" --> Core
+  Runtime -- "loads on boot" --> Static
+  Runtime -- "requires" --> X1
+  Runtime -- "requires" --> X2
+  Core -- "register/postMessage" --> SW
+  SW <--> CS
+  Runtime <--> LS
+  SW -- "intercepts fetch" --> CDN
+  SW -- "intercepts fetch" --> Static
 ```
 
-Everything else in this doc is a zoom-in on one of those four boxes.
-
 ---
 
-## The whole app in five files
+## 3. Layer breakdown
 
-If you only learn five filenames, learn these:
+### 3.1 UI shell — `anmerkung.html` + `assets/anmerkung.css`
 
-| File | What it is | When you'd touch it |
+Pure declarative markup. Every interactive element is wired by `id`/`onclick`/`data-*` to a function in `anmerkung.js`. There are **no UI frameworks** — DOM is mutated directly via `getElementById` / `innerHTML`. The CSS uses CSS custom properties so the light theme is a single class swap on `<body>` (`theme-light`).
+
+Notable structural sections (the IDs are the integration contract with the runtime):
+
+| Section | Key DOM IDs |
+|---|---|
+| Forwarder picker | `#fwGroup`, `.fw-btn[data-fw]` |
+| Upload | `#dropArea`, `#fileInput`, `#fileName` |
+| Options | `#optReason`, `#advPanel`, `#thDachser` / `#thKN` / `#thDHL` / `#thWackler` |
+| Action | `#btnPreview`, `#btnRun`, `#btnDl` |
+| Output | `#previewWrap`, `#stats-wrap`, `#trigList`, `#log` |
+| Bulk | `#bulkPanel`, `#bulkFileInput`, `#bulkList`, `#btnBulkRun`, `#btnBulkDlAll` |
+| Tester | `#testerPanel`, `#testerFields`, `#testerOutput`, `#testerPresets` |
+| Diff / Training | `#diffPanel`, `#diffSlotA`/`#diffSlotB`, `#diffTable`, `#trainChips`, `#diffFwFilter` / `#diffSheetFilter` / `#diffSearch` |
+| Modals | `#cl-overlay` (changelog), `#sub-overlay` (subscription gate) |
+
+### 3.2 Client runtime — `assets/anmerkung.js`
+
+A single ~1900-line module organized into the following internal sub-systems (top to bottom in the file):
+
+```mermaid
+flowchart TB
+  BG["Background canvas<br/>particles + reduced-motion guard"]
+  GATE["Subscription gate<br/>cosmetic modal, no real auth"]
+  STATE["State + Thresholds (TH)<br/>localStorage 'anmerkung.thresholds.v1'"]
+  CL["Changelog loader<br/>fetch assets/anmerkung-changelog.json"]
+  TH["Theme controller<br/>localStorage 'anmerkung.theme.v1'"]
+  PHR["PHRASES catalog<br/>single source of truth for all output strings"]
+  LOG["Streaming log<br/>showLog/clearLog with timestamps"]
+  A11Y["Forwarder radiogroup keyboard nav"]
+  PWA["Offline button mount<br/>delegates to Grimoire.Offline"]
+  BONUS["Panel toggles — bulk / tester / diff"]
+  UPLOAD["Upload handlers<br/>FileReader → XLSX.read → workbook"]
+  CELL["Cell helpers<br/>findCol + _hdrCache (WeakMap), cellNum, cellStr, hasErr, join"]
+  FW1["Dachser engine<br/>resolveDachser + processDachser + daEvalSNK + daEvalEXP"]
+  FW2["K+N engine<br/>resolveKN + processKN + KN_BP tier table"]
+  FW3["DHL Express engine<br/>resolveDHL + processDHL"]
+  FW4["Wackler engine<br/>resolveWackler + processWackler + WACKLER_BP + protected phrases"]
+  XLSX["XLSX patcher<br/>idxToCol/colToIdx · sharedStrings parser/builder · patchSheet"]
+  RUN["runRules — main loop"]
+  PREV["Preview renderer"]
+  STATS["Stats + trigger breakdown renderer"]
+  PROC["runProcess<br/>JSZip.loadAsync → patchSheet → Blob"]
+  BULK["Bulk controller<br/>queue, per-file run, ZIP-all"]
+  TESTER["Rule Tester<br/>synthetic worksheet → same processors"]
+  DIFF["Diff Mode + Training Set exporter<br/>per-row label classifier"]
+
+  BG --> GATE --> STATE --> CL --> TH --> PHR --> LOG --> A11Y --> PWA --> BONUS --> UPLOAD --> CELL
+  CELL --> FW1 & FW2 & FW3 & FW4
+  FW1 & FW2 & FW3 & FW4 --> XLSX --> RUN --> PREV & STATS & PROC
+  PROC --> BULK
+  CELL --> TESTER
+  RUN --> DIFF
+```
+
+**Module-level invariants:**
+
+- The four `processXxx` functions are pure-ish: input is `(ws, r, cols)`, output is a string, `null`, or `''`. They never write to the DOM and never produce side-effects beyond reading worksheet cells.
+- `runRules()` is the *only* function that walks every sheet. Preview, Ritual, and Diff all consume its output.
+- `patchSheet()` is the *only* function that mutates XLSX bytes.
+- All output text comes from the `PHRASES` constant — change wording in one place, every code path picks it up.
+
+### 3.3 Shared infrastructure — `assets/grimoire-core.js`
+
+Used by every Grimoire page. Exposes a small global API:
+
+| Namespace | Purpose | Used by Alchemist? |
 |---|---|---|
-| `anmerkung.html` | The page markup. Buttons, panels, modals, IDs. | Adding a new UI panel or button |
-| `assets/anmerkung.css` | All the styling, themes, animations. | Visual changes only |
-| `assets/anmerkung.js` | **The brain.** State, rule engines, XLSX patcher, all UI wiring. | 90% of changes happen here |
-| `assets/grimoire-core.js` | Shared helpers (theme, offline button, animation hooks) used by every page on the site. | Cross-page concerns only |
-| `sw.js` | Service worker — the thing that makes the page work offline. | When you change the offline file list, or want to force a cache refresh |
+| `Grimoire.densityScale()` / `visibleRAF()` / `reducedMotion` | Animation density + RAF pause when tab hidden | Yes — background particles |
+| `Grimoire.Theme` | Cross-page light/dark with unified `localStorage` key | No — Alchemist uses its own key for historical reasons (`anmerkung.theme.v1`) |
+| `Grimoire.Nav` | Page registry used to compute footer links + the default offline bundle | Yes — indirectly via `Offline.defaultUrls()` |
+| `Grimoire.Offline` | SW registration, precache request, status check, button mount | Yes — drives `#btnOffline` |
 
-There are also two small data files: `assets/anmerkung-changelog.json` (release notes shown in the app) and `manifest.webmanifest` (PWA install metadata).
+`Grimoire.Offline.mount()` is the one extension point that ties UI to the SW: it writes `data-offline-state="idle|working|ready|error"` on the button and reads/writes the cache via `MessageChannel` to the SW.
 
-That's it. There is no `package.json`, no build step, no bundler. You edit a file, push it, GitHub Pages serves it.
+### 3.4 Service worker — `sw.js`
+
+A small offline shell — not a sync engine, not a queue, not a router.
+
+**Cache strategy (per request):**
+
+| Request kind | Strategy |
+|---|---|
+| Navigation / `text/html` | network-first, fall back to cache, ultimate fallback `./anmerkung.html` |
+| `assets/anmerkung-changelog.json` | network-first (so release notes update without a SW bump) |
+| Everything else | cache-first, populate on first hit, only cache `status==200 && type in {basic,cors}` |
+
+**Lifecycle:**
+
+- `install` — pre-cache the `CORE` array (page shell + assets + manifest), `skipWaiting`.
+- `activate` — delete every cache that isn't the current `alchemist-vX`, `clients.claim`.
+- `message` — accept `PRECACHE`, `CACHE_STATUS`, `SKIP_WAITING`. Replies use `event.ports[0]` so each request gets its own reply channel.
+
+The SW version (`VERSION` constant) is the cache-bust knob — bumping it deletes all old caches on activate.
+
+### 3.5 Static data
+
+| File | Role |
+|---|---|
+| `assets/anmerkung-changelog.json` | Versioned release notes; rendered into the changelog modal. Network-first cached so edits ship instantly. |
+| `manifest.webmanifest` | PWA manifest (referenced from the `<link rel="manifest">` in `anmerkung.html`). |
+| `data/Dachser-training.csv`, `data/K+N-training.csv` | Reference training corpora used to seed rule changes; not loaded by the app at runtime. |
 
 ---
 
-## The one diagram worth memorising
+## 4. External dependencies
 
-This is what happens when a user clicks **Invoke the Ritual** (the "do it for real" button):
+| Dep | Loaded from | Why |
+|---|---|---|
+| `xlsx.full.min.js` (SheetJS) | `cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5` | Read XLSX → in-memory workbook (`workbook.SheetNames`, `workbook.Sheets[name]`) |
+| `jszip.min.js` | `cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1` | Unpack the original XLSX, patch sheet XML, rezip without re-encoding styles |
+| Google Fonts (`Cinzel`, `Syne`, `DM Mono`) | `fonts.googleapis.com` / `fonts.gstatic.com` | Typography |
+
+Both libraries are loaded with `defer` from CDN. The SW caches them on first successful fetch (cache-first afterwards), so once a user has visited online the app works offline indefinitely.
+
+The choice to **not** bundle these locally is deliberate: zero build pipeline, lightweight repo, free CDN edge caching.
+
+---
+
+## 5. Data flow
+
+### 5.1 Single-file path (Preview + Ritual)
 
 ```mermaid
 sequenceDiagram
   autonumber
   participant U as User
-  participant JS as anmerkung.js
-  participant SJ as SheetJS<br/>(reads XLSX)
-  participant JZ as JSZip<br/>(rewrites XLSX)
+  participant DOM as anmerkung.html DOM
+  participant RT as anmerkung.js
+  participant FR as FileReader
+  participant SJ as SheetJS
+  participant JZ as JSZip
 
-  U->>JS: pick forwarder + drop .xlsx
-  JS->>SJ: parse the file
-  SJ-->>JS: workbook (sheets + cells)
-  Note over JS: keep the original raw bytes too
+  U->>DOM: pick forwarder + drop .xlsx
+  DOM->>RT: selectFW() / loadFile()
+  RT->>FR: readAsArrayBuffer
+  FR-->>RT: ArrayBuffer
+  RT->>SJ: XLSX.read(bytes, {cellNF:true})
+  SJ-->>RT: workbook (SheetNames + Sheets map)
+  Note over RT: rawFileBytes + workbook held in module-scope state
 
-  U->>JS: click Ritual
-  JS->>JS: walk every sheet, every row,<br/>run the chosen forwarder's rules
-  JS->>JZ: open the original file as a zip
-  JS->>JZ: patch only the Anmerkung column<br/>(byte-level surgery, styles preserved)
-  JZ-->>JS: new .xlsx blob
-  JS-->>U: download
+  U->>DOM: click Preview
+  DOM->>RT: runPreview()
+  RT->>RT: runRules() — pure walk, no mutations
+  RT-->>DOM: renderStats + renderPreview
+
+  U->>DOM: click Invoke the Ritual
+  DOM->>RT: openRunGate() → cosmetic modal → proceedAfterPurchase
+  RT->>RT: runRules() (again, fresh)
+  RT->>JZ: JSZip.loadAsync(rawFileBytes)
+  JZ-->>RT: zip
+  RT->>RT: parseSharedStrings → patchSheet per sheet → rebuildSharedStrings
+  RT->>JZ: zip.generateAsync({type:'blob'})
+  JZ-->>RT: resultBlob
+  RT-->>DOM: show #btnDl
+
+  U->>DOM: click Download
+  DOM->>RT: downloadResult() — anchor + click()
 ```
 
-**Why two libraries?** SheetJS is great at *reading* Excel into a friendly JS object, but it normalises styles and metadata when it writes. So we use SheetJS to read, and JSZip to surgically rewrite only the Anmerkung cells in the original file. The output is byte-for-byte identical to the input except for the cells we wrote.
+### 5.2 Bulk path
 
-Preview mode is the same flow up to step 6, then stops — it never touches the file, just renders the proposed changes in a table.
+Same as 5.1, looped over the `bulkQueue`. Per-file state lives on each queue entry (`{file, blob, status}`). `Download All as ZIP` builds an outer JSZip containing every successful per-file blob.
 
----
-
-## What lives in `anmerkung.js`
-
-This file is big (~1900 lines) but well-divided. From top to bottom you'll find:
+### 5.3 Diff Mode path
 
 ```mermaid
-flowchart TB
-  A["1. Background canvas<br/>(decorative particles)"]
-  B["2. Subscription modal<br/>(cosmetic gate, no real auth)"]
-  C["3. Settings<br/>(thresholds, theme, both saved in localStorage)"]
-  D["4. Phrases catalog<br/>every output string lives here"]
-  E["5. Helpers<br/>readCell, findCol, hasErr, join..."]
-  F["6. Four rule engines<br/>Dachser, K+N, DHL, Wackler"]
-  G["7. XLSX patcher<br/>cell-level rewriter"]
-  H["8. Main runner<br/>walks the workbook, calls engines"]
-  I["9. UI controllers<br/>preview, bulk, tester, diff mode"]
+sequenceDiagram
+  participant U as User
+  participant RT as anmerkung.js
+  participant SJ as SheetJS
 
-  A --> B --> C --> D --> E --> F --> G --> H --> I
+  U->>RT: drop A + drop B + click Train & Compare
+  RT->>SJ: XLSX.read(a) and XLSX.read(b)
+  SJ-->>RT: workbookA, workbookB
+
+  loop per shared sheet, per data row
+    RT->>RT: detectFwForSheet(sheet) — heuristics
+    RT->>RT: resolve+process A and B independently
+    RT->>RT: derive label (wrong/missed/overfired/correct)
+    RT->>RT: compute engineNow + drift overlay
+    RT->>RT: capture inputs (same payload as Why? reason)
+  end
+
+  RT-->>U: render chips + filter bar + paginated table
+  Note over U,RT: filter changes only re-render — no re-walk
+  U->>RT: click ✦ on a row → sendDiffToTester
+  RT->>RT: switch FW · open tester · pre-fill fields · runTester · scroll
 ```
 
-A few invariants worth knowing:
-
-- **All output strings live in one object** called `PHRASES`. Want to change wording? Edit one place. The engines, the rule tester, and the diff mode all read from it.
-- **The four `processXxx` functions are pure-ish.** Input: a worksheet, a row number, a column map. Output: a string, or `null` (skip), or `''` (empty). They don't touch the DOM, they don't call other engines.
-- **Only `runRules` walks the workbook.** Preview, Ritual, and Diff Mode all call it. There's exactly one loop over your data.
-- **Only `patchSheet` modifies XLSX bytes.** Everything before it is read-only.
-
 ---
 
-## How rules find their data
+## 6. Key data shapes (the internal contracts)
 
-Excel files have wildly different column layouts — Dachser puts SNK in column M, K+N puts it in column AC. So the engines never use absolute column letters. Instead they look up columns by **header text**:
+### `cols` — column index bag (per forwarder, per worksheet)
 
-```js
-// "find the column whose row-2 header contains 'SNK' AND row-3 header contains 'Differenz'"
-const snkDiff = findCol(ws, range, 'SNK', 'Differenz');
+Returned by `resolveDachser` / `resolveKN` / `resolveDHL` / `resolveWackler`. Always includes `target` (the `Anmerkung` column) and `stat`. Missing columns are `-1`. Every processor treats `-1` as "skip this trigger".
+
+### `rep` — output of `runRules()`
+
 ```
-
-The engine assumes:
-- **Row 1** is decorative (titles, logos)
-- **Row 2** has group labels like `SNK`, `FR`, `DGR`
-- **Row 3** has detailed labels like `Differenz`, `Kosten DL`, `Anmerkung`
-- **Rows 4+** are the actual data
-
-If a column can't be found, the engine just skips that rule (treats it as if the trigger didn't fire) instead of crashing. This makes the tool robust to slightly-different-but-still-valid invoice formats.
-
-A small `WeakMap` cache means each worksheet's headers are scanned exactly once, even when many `findCol` calls hit it.
-
----
-
-## How an Anmerkung gets written into the file
-
-When the user clicks Ritual, we do this for each cell that needs writing:
-
-1. Open the original `.xlsx` as a zip in memory (it's just a zip of XML files).
-2. Find the worksheet's XML and the `Anmerkung` column.
-3. For each row that the engine produced a result for:
-   - If the cell already exists in the XML, rewrite its content and mark it as a "shared string" reference.
-   - If it doesn't exist, insert a new `<c>` element — and copy the styling from a neighbouring cell so it visually fits in.
-4. Add the new strings to `xl/sharedStrings.xml` (Excel's de-duplicated string table).
-5. Re-zip. Done.
-
-We don't touch styles, formulas, merged cells, drawings, comments, or anything else. The output is intentionally a minimal byte-level diff of the input. This matters because invoice files often have manual formatting that the user wants preserved.
-
----
-
-## Where every piece of state lives
-
-There are only three places state can live in this app:
-
-```mermaid
-flowchart LR
-  subgraph Tab["1. Tab session<br/>(JS variables, gone on reload)"]
-    direction TB
-    s1[selectedFW]
-    s2[workbook]
-    s3[rawFileBytes]
-    s4[bulkQueue]
-    s5[diffRows]
-  end
-  subgraph LS["2. localStorage<br/>(persists per browser)"]
-    direction TB
-    l1["thresholds"]
-    l2["theme"]
-  end
-  subgraph CS["3. Cache Storage<br/>(persists, managed by sw.js)"]
-    direction TB
-    c1["page shell + assets<br/>(for offline)"]
-  end
-```
-
-- **Tab session** — anything tied to the file you currently have loaded. Drop a new file → it's replaced.
-- **localStorage** — your tolerance settings and theme preference. Survives reloads but lives only in this browser.
-- **Cache Storage** — the offline copy of the page itself (HTML, CSS, JS, fonts). Managed by the service worker, refreshed when you bump its version number.
-
-There is **no server-side state**. There are no cookies. There is no user account. The "subscription" modal is purely cosmetic — clicking *Buy* just dismisses it and proceeds. Calling that out so future maintainers don't go hunting for a missing backend.
-
----
-
-## Offline support (the PWA bit)
-
-`sw.js` is a service worker — a script that the browser keeps running between visits to handle network requests for the page.
-
-Its job is simple:
-
-- **First visit (online)**: cache the HTML, CSS, JS, fonts, manifest, and changelog.
-- **Subsequent visits**: serve everything from cache, fall back to network only when needed.
-- **HTML pages**: try the network first (so you get fresh content), fall back to cache if offline.
-- **Changelog JSON**: also network-first, so release notes update without a service-worker bump.
-- **Everything else** (CSS, JS, images, fonts): cache-first, populate from network on first miss.
-
-The cache is named `alchemist-vN`. To force everyone's browsers to refresh their cached copy, bump the `VERSION` constant inside `sw.js` and push. On their next visit, the new SW activates and deletes every cache that isn't the current version.
-
-The `Grimoire.Offline` namespace inside `grimoire-core.js` provides the small button and progress UI that drives all this.
-
----
-
-## External libraries
-
-Two big libraries are loaded from a CDN:
-
-| Library | What it does |
-|---|---|
-| [SheetJS](https://github.com/SheetJS/sheetjs) (xlsx) | Parses XLSX bytes into a JS workbook object |
-| [JSZip](https://stuk.github.io/jszip/) | Rewrites zip files (an XLSX *is* a zip) |
-
-Both are loaded with `defer` from cdnjs and then cached by the service worker, so after one online visit the app works fully offline.
-
-We don't bundle them locally on purpose — keeping the repo build-free is a feature.
-
-Google Fonts (Cinzel, Syne, DM Mono) are also CDN-loaded and SW-cached.
-
----
-
-## How to ship a change
-
-There is no build, no CI for the app itself, no deploy step.
-
-1. Edit files in `vb-code-vault/`.
-2. If you changed `sw.js` behaviour or the list of files it pre-caches, bump the `VERSION` constant.
-3. If you want users to see a release note, prepend an entry to `assets/anmerkung-changelog.json`.
-4. `git push` to `main`. GitHub Pages serves it directly at `codingkuh.my.id`.
-
-That's the whole release process.
-
-> The `.github/workflows/holiday-notify.yml` file is unrelated to the Alchemist — it powers the Holiday Tracker page only.
-
----
-
-## Recipes for common changes
-
-### "I want to change the wording of an Anmerkung"
-Edit the `PHRASES` object in `assets/anmerkung.js`. Every code path picks it up — engines, rule tester, diff mode.
-
-### "I want to change a tolerance default"
-Edit `TH_DEFAULTS` in `assets/anmerkung.js`. Existing users will keep their saved values until they hit *Reset to defaults* — if you need to force the new default for everyone, change the localStorage key (e.g. `anmerkung.thresholds.v1` → `v2`).
-
-### "I want to add a new rule to an existing forwarder"
-Open `processDachser` / `processKN` / `processDHL` / `processWackler` in `anmerkung.js` and add a new branch:
-
-```js
-if (hasErr(myValue, T_DACHSER)) {
-  res = join(res, P.myNewPhrase);
+{
+  total, filled, skipped, empty, preserved, unreachable,   // counters
+  allResults: { [sheetName]: { targetCol, rowMap, reasonMap, targetIdx } },
+  trigCounts: Map<phrase, count>,
+  previewRows: [ { sheet, row, status, value, reason } ]   // status: filled|empty|skipped|preserved
 }
 ```
 
-`join` handles deduplication and the `//` separator automatically. Add the phrase string to `PHRASES`.
+`rowMap` is a `Map<excelRowNumber, anmerkungString>`. `reasonMap` mirrors it for the Why? column.
 
-### "I want to add a fifth forwarder"
-1. Add a new `<button class="fw-btn" data-fw="rhenus">` tile in `anmerkung.html`.
-2. In `anmerkung.js`:
-   - Add a default tolerance to `TH_DEFAULTS` and a matching input in the advanced panel.
-   - Write `resolveRhenus(ws, range)` returning a column map (must include `target` and `stat`).
-   - Write `processRhenus(ws, r, cols)` that returns a string, `null`, or `''`.
-   - Wire both into `runRules` and `buildReason`.
-   - Add fields to the Rule Tester and (optional) presets.
-3. Add a changelog entry.
+### Diff row
 
-### "I want to force a cache refresh for everyone"
-Bump `VERSION` in `sw.js`, push to main. On next visit, every user's browser activates the new SW, which deletes the old cache.
+```
+{
+  sheet, row, fw,
+  before, after,                       // strings from A / B Anmerkung cells
+  engineNow, engineMatchesA,           // current rule engine prediction for A's inputs
+  inputs: { [key]: value },            // same payload as the Why? column
+  triggers: [phrase, ...],             // for engineNow
+  label: 'wrong'|'missed'|'overfired'|'correct'|'drift'
+}
+```
 
-### "I want a new page to also work offline"
-Add it to `Grimoire.Nav.pages` in `grimoire-core.js`. Then bump `VERSION` and add the URL to `CORE` in `sw.js`.
+### Service-worker message protocol
+
+```
+Page → SW
+  { type: 'PRECACHE',     urls: [...] }        + MessageChannel.port2
+  { type: 'CACHE_STATUS', urls: [...] }        + MessageChannel.port2
+  { type: 'SKIP_WAITING' }
+
+SW → Page (via port)
+  { type: 'PRECACHE_PROGRESS', done, total, url, ok }
+  { type: 'PRECACHE_DONE',     done, total, failed: [...] }
+  { type: 'CACHE_STATUS_RESULT', cached: [...], missing: [...] }
+```
 
 ---
 
-## Common questions
+## 7. State + persistence map
 
-**Q: Does my Excel file get uploaded somewhere?**
-No. It's parsed in the browser tab and never leaves it.
+| State | Where it lives | Lifetime | Notes |
+|---|---|---|---|
+| `selectedFW` | module-scope `let` in `anmerkung.js` | Tab session | Reset on reload |
+| `workbook`, `rawFileBytes`, `originalFileName` | module-scope | Tab session | Cleared when a new file is dropped |
+| `resultBlob` | module-scope | Tab session | Replaced on every Ritual run |
+| `bulkQueue` (file/blob/status array) | module-scope | Tab session | Removed item-by-item via UI |
+| Diff slots (`diffA`, `diffB`, `diffRows`) | module-scope | Tab session | Cleared by *Clear* button |
+| Thresholds `TH` | `localStorage['anmerkung.thresholds.v1']` | Persistent per origin | JSON `{dachser, kn, dhl, wackler}` |
+| Theme | `localStorage['anmerkung.theme.v1']` | Persistent per origin | `'light' \| 'dark'` |
+| Cross-page theme | `localStorage['grimoire_theme_v1']` (set by `Grimoire.Theme`) | Persistent | Not currently consumed by Alchemist |
+| Pre-cached page shell | `Cache Storage[alchemist-vX]` | Persistent until SW version bump | Managed by `sw.js` |
+| Header cache for `findCol` | `WeakMap<worksheet, headers>` | GC'd with workbook | Per-tab, not persisted |
 
-**Q: Why does the file get re-parsed when I click Ritual?**
-We re-run the rule engine on a fresh pass to make absolutely sure Preview and Ritual produce the same result. The performance cost is trivial vs. the safety guarantee.
+There is no remote state. There are no cookies. There is no auth.
 
-**Q: Why two libraries (SheetJS + JSZip) instead of just one?**
-SheetJS is a great reader but its writer normalises styles. We want to *preserve* the original file's exact formatting and only patch specific cells, so we bypass the writer entirely and use JSZip to rewrite the underlying XML directly.
+---
 
-**Q: Where's the auth / payment / subscription logic?**
-There isn't any. The "subscription" modal is decorative — it always proceeds when you click through. This was a stylistic choice consistent with the Grimoire theme.
+## 8. Cross-cutting concerns
 
-**Q: How do I debug "why did this row get this Anmerkung?"**
-Two ways:
-- Tick the *"Add Why? reason column"* option before running the Ritual — the output file will have an extra column showing the exact cell values the engine read.
-- Use **Diff Mode**, click the ✦ on the row, and the row's inputs auto-populate in the Rule Tester so you can step through the logic.
+### Logging
+`showLog(msg, type)` appends a timestamped `<div>` to `#log`. Three classes: `info-line`, `ok-line`, `err-line`. Has a click-to-clear button auto-injected on first message. `aria-live="polite"` so screen readers announce updates.
 
-**Q: Is there test coverage?**
-Not currently. The Rule Tester and Diff Mode are the manual safety nets — drop in a known-good file and a known-correct file, click Train & Compare, and any behaviour change shows up immediately as a `wrong` / `missed` / `overfired` / `drift` row.
+### Accessibility
+- Forwarder tiles are an ARIA `radiogroup` — arrow keys / Home / End cycle focus.
+- `:focus-visible` ring uses a brand-colored 2px outline (green on dark, deep-green on light).
+- Modals trap clicks via `event.stopPropagation()` on the inner box; Escape closes both the changelog and subscription overlays.
+- Skip link (`.skip-link`) jumps to `#main`.
+
+### Reduced motion
+`Grimoire.reducedMotion` (set from `prefers-reduced-motion`) gates the background canvas RAF loop entirely. The single static frame is rendered via `frame(0)` then no further animation runs.
+
+### Theme
+Single class on `<body>` (`theme-light`); CSS custom properties switch every color. The `<meta name="theme-color">` tag is updated on toggle for mobile chrome.
+
+### Subscription gate (cosmetic)
+`#sub-overlay` opens before `runProcess`. There is **no real auth, no payment, no entitlement check** — clicking *Buy* swaps the modal to a thank-you state and proceeds. This is a UI flourish consistent with the Grimoire theme; calling it out here so future devs don't think there's a missing backend.
+
+---
+
+## 9. Build & deploy
+
+There is no build step.
+
+```mermaid
+flowchart LR
+  REPO["GitHub repo<br/>nicoyogi/vb-code-vault"] -- "git push to main" --> GHP["GitHub Pages<br/>builds nothing, serves files"]
+  GHP -- "CNAME" --> DOM["codingkuh.my.id"]
+  DOM -- "first visit" --> SW["sw.js installs, precaches CORE"]
+  DOM -- "subsequent visits" --> CS[("Cache Storage<br/>alchemist-vX")]
+```
+
+To ship a change:
+
+1. Edit files in place.
+2. If service-worker behavior or `CORE` list changes, bump `VERSION` in `sw.js`.
+3. If release notes should appear in the in-app changelog modal, prepend an entry to `assets/anmerkung-changelog.json` (and bump its top-level `version`).
+4. Push to `main`. GitHub Pages serves directly. The SW will replace itself on the next visit (network-first HTML wins, then `activate` deletes old caches).
+
+The CI workflow `.github/workflows/holiday-notify.yml` is unrelated — it powers the Holiday Tracker page, not the Alchemist.
+
+---
+
+## 10. Extensibility recipes
+
+### Add a new forwarder
+
+1. Pick a stable id (e.g. `'rhenus'`). Add a new `<button class="fw-btn" data-fw="rhenus">` tile in `anmerkung.html`.
+2. In `anmerkung.js`:
+   - Add a default tolerance to `TH_DEFAULTS`.
+   - Add a new `<input>` to the advanced panel and wire it in the boot block alongside the existing four.
+   - Add `resolveRhenus(ws, range)` returning a `cols` bag (must include `target`, `stat`).
+   - Add `processRhenus(ws, r, cols)` that returns a string / `null` / `''`.
+   - Extend `runRules`'s dispatch and `buildReason`'s `fw === 'rhenus'` branch.
+   - Add the FW to the Rule Tester field map and (optionally) presets.
+3. Add new phrases to `PHRASES` if any are reused — but ad-hoc literals inside the processor are also fine.
+4. Add an entry to `anmerkung-changelog.json`, bump its `version`.
+
+### Add a new rule to an existing forwarder
+
+Single-line edits inside the `processXxx` function. The rule joins via `res = join(res, P.someNewPhrase)` so de-duplication is automatic. If the new phrase needs a tolerance check, gate with `hasErr(value, T_XXX)`.
+
+### Change phrasing without touching logic
+
+Edit `PHRASES` in `anmerkung.js`. Every code path — engine, tester, diff — picks it up.
+
+### Add a page to the offline bundle
+
+Either:
+
+- Add the page to `Grimoire.Nav.pages` in `grimoire-core.js` (then it ships in `defaultUrls()` for every page automatically), or
+- Pass an explicit `urls:` array to `Grimoire.Offline.mount()` for a one-off override (this is what `anmerkung.js` does to add its own CSS/JS/JSON).
+
+Then bump `VERSION` and `CORE` in `sw.js` to pre-cache on install.
+
+### Change a tolerance permanently for everyone
+
+Edit `TH_DEFAULTS` in `anmerkung.js`. Existing users keep their `localStorage` overrides until they hit *Reset to defaults* — version your defaults via the storage key (`anmerkung.thresholds.v2`) if the change must be forced.
+
+---
+
+## 11. Module dependency graph
+
+```mermaid
+flowchart LR
+  HTML["anmerkung.html"]
+  CSS1["assets/grimoire-core.css"]
+  CSS2["assets/anmerkung.css"]
+  JS0["assets/grimoire-core.js"]
+  JS1["assets/anmerkung.js"]
+  SW["sw.js"]
+  CL["assets/anmerkung-changelog.json"]
+  MAN["manifest.webmanifest"]
+
+  CDN1["SheetJS"]
+  CDN2["JSZip"]
+  CDN3["Google Fonts"]
+
+  HTML -- "<link>" --> CSS1
+  HTML -- "<link>" --> CSS2
+  HTML -- "<link rel=manifest>" --> MAN
+  HTML -- "<script>" --> JS0
+  HTML -- "<script>" --> JS1
+  HTML -- "<script defer>" --> CDN1
+  HTML -- "<script defer>" --> CDN2
+  HTML -- "<link>" --> CDN3
+  JS1 -- "fetch()" --> CL
+  JS1 -- "uses" --> JS0
+  JS0 -- "navigator.serviceWorker.register" --> SW
+  JS1 -- "XLSX.read / utils" --> CDN1
+  JS1 -- "JSZip.loadAsync / generateAsync" --> CDN2
+  SW -- "precache + intercept" --> HTML
+  SW -- "precache + intercept" --> CSS1
+  SW -- "precache + intercept" --> CSS2
+  SW -- "precache + intercept" --> JS0
+  SW -- "precache + intercept" --> JS1
+  SW -- "precache + intercept" --> MAN
+  SW -- "precache + intercept" --> CL
+  SW -- "runtime cache" --> CDN1
+  SW -- "runtime cache" --> CDN2
+  SW -- "runtime cache" --> CDN3
+```
+
+There are **no circular dependencies**: HTML wires CSS + JS, `anmerkung.js` consumes `grimoire-core.js`, the SW is registered by `grimoire-core.js` and operates independently of the runtime once installed.
 
 ---
 
 ## See also
 
-- [`ANMERKUNG-WORKFLOW.md`](ANMERKUNG-WORKFLOW.md) — the user journey and every per-forwarder rule, written out.
-- `assets/anmerkung-changelog.json` — release notes, also rendered in-app.
-- `assets/anmerkung.js` — the source of truth. Rule logic deliberately lives in one file so all of the above stays true.
+- [`ANMERKUNG-WORKFLOW.md`](ANMERKUNG-WORKFLOW.md) — user journey, per-forwarder decision trees, glossary of column codes.
+- [`HOLIDAY-TEAMS-NOTIFIER.md`](HOLIDAY-TEAMS-NOTIFIER.md) — unrelated companion page, useful as a reference for the same static-PWA pattern.
+- `assets/anmerkung-changelog.json` — release history.
+- `assets/anmerkung.js` — the source of truth; rule logic deliberately lives in one file.
