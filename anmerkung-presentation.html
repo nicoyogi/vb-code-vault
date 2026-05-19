@@ -3,442 +3,703 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#02020a">
+<meta name="theme-color" content="#0b0f1a">
 <title>Anmerkung Processor — Presentation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #02020a;
-    --surface: rgba(10,8,24,0.85);
-    --surface2: rgba(16,14,32,0.9);
-    --border: rgba(212,175,100,0.12);
-    --border2: rgba(212,175,100,0.28);
-    --text: #ede8ff;
-    --text2: rgba(212,175,100,0.62);
-    --text3: rgba(212,175,100,0.32);
-    --accent: #34d399;
-    --accent2: #5b9cf6;
-    --gold: #d4af64;
-    --purple: #a78bfa;
-    --danger: #f87171;
-    --cinzel: 'Cinzel', serif;
-    --syne: 'Syne', sans-serif;
-    --mono: 'DM Mono', monospace;
-  }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--syne); overflow: hidden; }
+    /* Surface */
+    --bg:        #0a0e1a;
+    --surface-1: #111726;
+    --surface-2: #161d30;
+    --surface-3: #1c2540;
+    --border:    #1f2942;
+    --border-strong: #2a3656;
 
-  /* subtle grid + radial vignette like the rest of the Grimoire */
-  body::before {
-    content:''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background-image:
-      linear-gradient(rgba(212,175,100,0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(212,175,100,0.02) 1px, transparent 1px);
-    background-size: 56px 56px;
-  }
-  body::after {
-    content:''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background:
-      radial-gradient(60% 60% at 50% 30%, rgba(52,211,153,0.06), transparent 70%),
-      radial-gradient(50% 50% at 80% 90%, rgba(91,156,246,0.05), transparent 70%);
+    /* Text */
+    --text:      #f1f5f9;
+    --text-2:    #cbd5e1;
+    --text-3:    #94a3b8;
+    --text-4:    #64748b;
+
+    /* Accent (single, restrained) */
+    --accent:    #60a5fa;   /* blue 400 */
+    --accent-2:  #3b82f6;   /* blue 500 */
+    --accent-soft: rgba(96,165,250,0.10);
+    --accent-line: rgba(96,165,250,0.28);
+
+    /* Status (used sparingly) */
+    --success:   #34d399;   /* emerald 400 */
+    --success-soft: rgba(52,211,153,0.08);
+    --warning:   #fbbf24;
+    --warning-soft: rgba(251,191,36,0.08);
+
+    --sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
   }
 
-  /* ─── Stage ─── */
-  .deck { position: relative; z-index: 1; height: 100%; width: 100%; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    line-height: 1.5;
+  }
+
+  /* ────────────── stage ────────────── */
+  .deck { position: relative; height: 100%; width: 100%; }
 
   .slide {
     position: absolute; inset: 0;
     display: none;
     flex-direction: column;
-    padding: clamp(1.5rem, 4vw, 4rem) clamp(1.25rem, 6vw, 6rem) clamp(4.5rem, 6vw, 5rem);
+    padding: clamp(4rem, 6vw, 5.5rem) clamp(1.5rem, 6vw, 6rem) clamp(4.5rem, 6vw, 5rem);
     overflow: auto;
-    animation: fade .35s ease;
+    animation: fadeIn .25s ease;
   }
   .slide.active { display: flex; }
-  @keyframes fade {
-    from { opacity: 0; transform: translateY(8px); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: none; }
   }
 
-  /* ─── Top chrome ─── */
+  /* ────────────── top chrome ────────────── */
   .top-bar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 5;
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 1rem;
     padding: 14px clamp(1rem, 3vw, 2rem);
-    background: linear-gradient(180deg, rgba(2,2,10,0.85), rgba(2,2,10,0));
+    background: linear-gradient(180deg, rgba(10,14,26,.95), rgba(10,14,26,.6) 70%, transparent);
+    backdrop-filter: blur(8px);
     pointer-events: none;
+    border-bottom: 1px solid transparent;
   }
   .top-bar > * { pointer-events: auto; }
-  .badge {
-    font-family: var(--mono); font-size: 10px;
-    padding: 5px 12px; border-radius: 20px;
-    border: 1px solid rgba(52,211,153,0.25);
-    color: var(--accent); background: rgba(52,211,153,0.06);
-    letter-spacing: .08em;
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; color: var(--text-2);
+    font-size: 13px; font-weight: 600; letter-spacing: -.005em;
   }
-  .breadcrumb {
-    font-family: var(--cinzel); font-size: 11px; letter-spacing: .22em;
-    color: var(--text3); text-transform: uppercase;
+  .brand-mark {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 11px; font-weight: 700; color: #0a0e1a;
   }
-  .breadcrumb a { color: var(--text3); text-decoration: none; border-bottom: 1px dashed transparent; transition: color .2s, border-color .2s; }
-  .breadcrumb a:hover { color: var(--text2); border-bottom-color: var(--border2); }
+  .brand:hover { color: var(--text); }
   .top-spacer { flex: 1; }
-  .hdr-btn {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--text2); font-family: var(--mono); font-size: 10.5px;
-    padding: 6px 12px; border-radius: 20px; cursor: pointer;
-    letter-spacing: .06em; transition: color .2s, border-color .2s, background .2s;
-  }
-  .hdr-btn:hover { color: var(--text); border-color: var(--border2); background: rgba(212,175,100,0.04); }
-  .hdr-btn[aria-pressed="true"] { color: var(--accent); border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.06); }
 
-  /* ─── Bottom chrome ─── */
+  .section-indicator {
+    display: flex; align-items: center; gap: 12px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-3);
+    letter-spacing: .03em;
+  }
+  .section-indicator .num { color: var(--accent); font-weight: 500; }
+  .section-indicator .sep { color: var(--text-4); }
+  .section-indicator .name { color: var(--text-2); }
+
+  .hdr-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-3);
+    font-family: var(--sans); font-size: 12px; font-weight: 500;
+    padding: 6px 12px; border-radius: var(--radius-sm); cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .hdr-btn:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface-1); }
+  .hdr-btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+
+  /* ────────────── bottom chrome ────────────── */
   .bottom-bar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
-    display: flex; align-items: center; gap: 14px;
-    padding: 16px clamp(1rem, 3vw, 2rem);
-    background: linear-gradient(0deg, rgba(2,2,10,0.9), rgba(2,2,10,0));
+    display: flex; align-items: center; gap: 1rem;
+    padding: 14px clamp(1rem, 3vw, 2rem);
+    background: linear-gradient(0deg, rgba(10,14,26,.95), rgba(10,14,26,.6) 70%, transparent);
+    backdrop-filter: blur(8px);
   }
   .nav-btn {
-    width: 38px; height: 38px; border-radius: 50%;
-    background: var(--surface); border: 1px solid var(--border);
-    color: var(--text2); font-size: 14px; cursor: pointer;
+    width: 32px; height: 32px; border-radius: var(--radius-sm);
+    background: var(--surface-1); border: 1px solid var(--border);
+    color: var(--text-3); font-size: 14px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    transition: color .2s, border-color .2s, background .2s, transform .2s;
+    transition: color .15s, border-color .15s, background .15s, transform .15s;
   }
-  .nav-btn:hover:not(:disabled) { color: var(--text); border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.06); transform: translateY(-1px); }
-  .nav-btn:disabled { opacity: .3; cursor: not-allowed; }
+  .nav-btn:hover:not(:disabled) {
+    color: var(--text); border-color: var(--accent-line); background: var(--surface-2);
+  }
+  .nav-btn:disabled { opacity: .35; cursor: not-allowed; }
 
-  .dots { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .dots {
+    flex: 1; display: flex; flex-wrap: wrap; gap: 4px;
+    justify-content: center; align-items: center;
+  }
   .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: rgba(212,175,100,0.18); border: 1px solid transparent;
-    cursor: pointer; transition: background .2s, transform .2s, border-color .2s;
-    padding: 0;
+    width: 18px; height: 3px; border-radius: 2px;
+    background: var(--border-strong); border: none;
+    cursor: pointer; padding: 0;
+    transition: background .2s, width .2s;
   }
-  .dot:hover { background: rgba(212,175,100,0.4); }
-  .dot.active { background: var(--accent); border-color: rgba(52,211,153,0.5); transform: scale(1.25); box-shadow: 0 0 12px rgba(52,211,153,0.4); }
+  .dot:hover { background: var(--text-4); }
+  .dot.active { background: var(--accent); width: 28px; }
 
-  .counter { font-family: var(--mono); font-size: 10.5px; color: var(--text3); letter-spacing: .08em; min-width: 60px; text-align: right; }
-
-  /* progress strip at very top */
-  .progress-strip { position: fixed; top: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.04); z-index: 6; }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width .35s ease; }
-
-  /* ─── Slide layouts ─── */
-  .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: .3em; text-transform: uppercase; color: var(--text3); margin-bottom: 1rem; }
-  .title {
-    font-family: var(--cinzel); font-weight: 900; line-height: 1.05; letter-spacing: -.01em;
-    font-size: clamp(2rem, 5.5vw, 4.2rem); margin-bottom: 1.2rem;
+  .counter {
+    font-family: var(--mono); font-size: 11px; color: var(--text-3);
+    min-width: 64px; text-align: right; letter-spacing: .03em;
   }
-  .title .grad {
-    background: linear-gradient(120deg, #34d399 0%, #5b9cf6 55%, #d4af64 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text;
+  .counter .cur { color: var(--text); }
+
+  /* progress bar at very top */
+  .progress-strip {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 2px; background: rgba(255,255,255,.04); z-index: 6;
   }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: var(--accent);
+    transition: width .35s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ────────────── typographic system ────────────── */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-4); letter-spacing: .04em;
+    margin-bottom: 1.25rem;
+  }
+  .eyebrow .num { color: var(--accent); font-weight: 500; }
+  .eyebrow .sep { color: var(--border-strong); }
+
+  h1.title, h2.title {
+    font-family: var(--sans);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -.025em;
+    line-height: 1.08;
+    font-size: clamp(2rem, 4.5vw, 3.5rem);
+    margin-bottom: 1.25rem;
+    max-width: 22ch;
+  }
+  .title .accent { color: var(--accent); }
+  .title-rule {
+    width: 40px; height: 3px; background: var(--accent);
+    border-radius: 2px; margin: 0 0 1.5rem;
+  }
+
   .lede {
-    font-family: var(--syne); font-size: clamp(1rem, 1.6vw, 1.25rem);
-    color: var(--text2); max-width: 60ch; line-height: 1.6;
+    font-size: clamp(1rem, 1.4vw, 1.125rem);
+    color: var(--text-2);
+    max-width: 62ch; line-height: 1.6; font-weight: 400;
   }
-  .ornament { display: flex; align-items: center; gap: 14px; margin: 1rem 0 1.6rem; max-width: 520px; }
-  .ornament .line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(52,211,153,.22), transparent); }
-  .ornament .sym { font-family: var(--cinzel); font-size: 13px; color: rgba(52,211,153,.45); }
 
-  /* cover */
-  .cover { justify-content: center; align-items: flex-start; }
-  .cover .title { font-size: clamp(2.4rem, 7vw, 5.5rem); }
-  .cover .meta { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 1.6rem; letter-spacing: .12em; }
-  .cover .hint-keys { margin-top: 2.2rem; display: flex; flex-wrap: wrap; gap: 8px; }
+  .footnote {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-4); letter-spacing: .02em;
+    margin-top: 1rem;
+  }
+
+  .code {
+    font-family: var(--mono); font-size: .875em;
+    color: var(--text); background: var(--surface-2);
+    padding: 1px 6px; border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* ────────────── slide body ────────────── */
+  .slide-body {
+    display: flex; flex-direction: column; gap: 1.5rem;
+    max-width: 1180px; margin: 0 auto; width: 100%;
+  }
+
+  /* ────────────── cover slide ────────────── */
+  .cover { justify-content: center; }
+  .cover-inner { max-width: 880px; margin: 0 auto; width: 100%; }
+  .cover .eyebrow { font-size: 12px; }
+  .cover .title {
+    font-size: clamp(2.6rem, 6vw, 4.75rem);
+    font-weight: 800; max-width: 16ch;
+    margin-bottom: 1.5rem;
+  }
+  .cover .lede { font-size: clamp(1.05rem, 1.6vw, 1.25rem); max-width: 50ch; }
+  .cover-meta {
+    display: flex; flex-wrap: wrap; gap: 28px 36px;
+    margin-top: 3.5rem;
+    padding-top: 1.75rem; border-top: 1px solid var(--border);
+  }
+  .meta-item { display: flex; flex-direction: column; gap: 4px; }
+  .meta-label {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--text-4); letter-spacing: .06em; text-transform: uppercase;
+  }
+  .meta-value { font-size: 13px; font-weight: 500; color: var(--text-2); }
+
+  /* keyboard hint footer */
+  .keys-hint {
+    margin-top: 3rem; display: flex; flex-wrap: wrap;
+    gap: 18px; align-items: center;
+    font-family: var(--mono); font-size: 11px; color: var(--text-4);
+  }
+  .keys-hint .group { display: flex; align-items: center; gap: 6px; }
   .kbd {
     font-family: var(--mono); font-size: 10.5px;
-    padding: 5px 10px; border: 1px solid var(--border2); border-bottom-width: 2px;
-    border-radius: 6px; color: var(--text2); background: rgba(212,175,100,0.04);
+    padding: 3px 7px; border: 1px solid var(--border-strong);
+    border-bottom-width: 2px; border-radius: 4px;
+    color: var(--text-2); background: var(--surface-1);
   }
 
-  /* generic content slide */
-  .slide-body { display: flex; flex-direction: column; gap: 1.4rem; max-width: 1100px; margin: 0 auto; width: 100%; }
+  /* ────────────── agenda slide ────────────── */
+  .agenda-list { display: flex; flex-direction: column; gap: 0; }
+  .agenda-row {
+    display: grid; grid-template-columns: 60px 1fr auto;
+    gap: 24px; align-items: baseline;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--border);
+    transition: background .2s, padding .2s;
+  }
+  .agenda-row:first-child { border-top: 1px solid var(--border); }
+  .agenda-row .num {
+    font-family: var(--mono); font-size: 13px; font-weight: 500;
+    color: var(--accent); letter-spacing: .03em;
+  }
+  .agenda-row .label {
+    font-size: clamp(1.1rem, 1.6vw, 1.4rem);
+    font-weight: 600; color: var(--text); letter-spacing: -.01em;
+  }
+  .agenda-row .desc {
+    font-size: 13px; color: var(--text-3);
+    font-family: var(--mono); letter-spacing: .01em;
+  }
 
-  /* card grids */
-  .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
-  @media (min-width: 900px) { .grid-4 { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+  /* ────────────── card system ────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 720px) {
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1000px) {
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  }
 
   .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 18px; padding: 1.2rem 1.4rem;
-    backdrop-filter: blur(12px); position: relative; overflow: hidden;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.4rem;
+    display: flex; flex-direction: column; gap: 8px;
   }
-  .card::before {
-    content:''; position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(52,211,153,.22), transparent);
+  .card-label {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--text-4); letter-spacing: .06em;
+    text-transform: uppercase; margin-bottom: 4px;
   }
-  .card-num {
-    font-family: var(--cinzel); font-size: 11px; color: var(--accent);
-    letter-spacing: .22em; margin-bottom: .4rem;
+  .card-title {
+    font-size: 16px; font-weight: 600; color: var(--text);
+    letter-spacing: -.01em; line-height: 1.35;
   }
-  .card-title { font-family: var(--cinzel); font-size: 17px; font-weight: 600; letter-spacing: .03em; margin-bottom: .5rem; }
-  .card-desc { font-family: var(--syne); font-size: 13.5px; color: var(--text2); line-height: 1.6; }
-  .card-tag { display: inline-block; font-family: var(--mono); font-size: 9.5px; padding: 3px 8px; margin-top: .8rem; border: 1px solid var(--border2); border-radius: 12px; color: var(--text3); letter-spacing: .08em; }
-
-  .card.purple { border-color: rgba(167,139,250,0.2); }
-  .card.purple .card-num { color: var(--purple); }
-  .card.purple::before { background: linear-gradient(90deg, transparent, rgba(167,139,250,.3), transparent); }
-
-  .card.blue { border-color: rgba(91,156,246,0.2); }
-  .card.blue .card-num { color: var(--accent2); }
-  .card.blue::before { background: linear-gradient(90deg, transparent, rgba(91,156,246,.3), transparent); }
-
-  .card.gold { border-color: rgba(212,175,100,0.25); }
-  .card.gold .card-num { color: var(--gold); }
-  .card.gold::before { background: linear-gradient(90deg, transparent, rgba(212,175,100,.35), transparent); }
-
-  /* big stat row */
-  .pillrow { display: flex; flex-wrap: wrap; gap: 10px; }
-  .pill {
-    font-family: var(--mono); font-size: 11px;
-    padding: 6px 12px; border-radius: 999px;
-    background: rgba(52,211,153,0.06); border: 1px solid rgba(52,211,153,0.25);
-    color: var(--accent); letter-spacing: .04em;
+  .card-desc {
+    font-size: 13.5px; color: var(--text-2);
+    line-height: 1.55;
   }
-  .pill.gold { background: rgba(212,175,100,0.05); border-color: rgba(212,175,100,0.25); color: var(--gold); }
-  .pill.purple { background: rgba(167,139,250,0.05); border-color: rgba(167,139,250,0.3); color: #c4b5fd; }
-  .pill.blue { background: rgba(91,156,246,0.05); border-color: rgba(91,156,246,0.3); color: #93c5fd; }
 
-  /* numbered steps */
-  .steps { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  /* ────────────── two-col layout ────────────── */
+  .two-col {
+    display: grid; grid-template-columns: 1fr;
+    gap: 2rem; align-items: start;
+  }
+  @media (min-width: 900px) {
+    .two-col { grid-template-columns: 1.1fr 1fr; gap: 3rem; }
+  }
+  .two-col.center { align-items: center; }
+
+  /* ────────────── numbered steps ────────────── */
+  .steps {
+    display: grid; grid-template-columns: 1fr;
+    gap: 12px; counter-reset: step;
+  }
   @media (min-width: 720px) { .steps { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 1040px) { .steps { grid-template-columns: repeat(4, 1fr); } }
+  @media (min-width: 1000px) { .steps { grid-template-columns: repeat(4, 1fr); } }
   .step {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
-    padding: 1.2rem 1.3rem; position: relative;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.4rem;
+    position: relative;
   }
-  .step-n {
-    font-family: var(--cinzel); font-size: 28px; font-weight: 900;
-    color: transparent; -webkit-text-stroke: 1px rgba(52,211,153,.55);
-    margin-bottom: .4rem; line-height: 1;
+  .step::before {
+    content: counter(step, decimal-leading-zero);
+    counter-increment: step;
+    position: absolute; top: 1.4rem; right: 1.4rem;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-4); letter-spacing: .04em;
   }
-  .step-t { font-family: var(--cinzel); font-size: 15px; font-weight: 600; margin-bottom: .35rem; }
-  .step-d { font-family: var(--syne); font-size: 13px; color: var(--text2); line-height: 1.55; }
-
-  /* visual mock — fake forwarder tile */
-  .mock-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 460px; }
-  .mock-tile {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-    padding: 1rem 1.1rem; position: relative;
+  .step .step-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--accent-soft); border: 1px solid var(--accent-line);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+    margin-bottom: 1rem;
   }
-  .mock-tile.selected { border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.06); box-shadow: 0 6px 24px rgba(52,211,153,0.12); }
-  .mock-tile.selected::before { content:'✦'; position: absolute; top: 8px; right: 12px; color: var(--accent); font-family: var(--cinzel); font-size: 11px; }
-  .mock-tile .n { font-family: var(--cinzel); font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-  .mock-tile .d { font-family: var(--mono); font-size: 9.5px; color: var(--text3); line-height: 1.6; }
-
-  .mock-upload {
-    background: var(--surface); border: 1.5px dashed rgba(52,211,153,0.35);
-    border-radius: 16px; padding: 1.6rem 1.2rem; text-align: center; max-width: 460px;
+  .step .step-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    margin-bottom: .35rem;
   }
-  .mock-upload .ic { font-size: 22px; color: var(--accent); margin-bottom: 8px; }
-  .mock-upload .t { font-family: var(--mono); font-size: 11px; color: var(--text2); }
-  .mock-upload .t strong { color: var(--text); }
-  .mock-upload .f { font-family: var(--mono); font-size: 10.5px; color: var(--accent); margin-top: 8px; }
-
-  .mock-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 460px; }
-  .mock-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: .9rem 1rem; }
-  .mock-stat .n { font-family: var(--cinzel); font-size: 22px; font-weight: 900; }
-  .mock-stat .l { font-family: var(--mono); font-size: 9.5px; color: var(--text3); margin-top: 2px; letter-spacing: .04em; }
-  .mock-stat.green .n { color: var(--accent); }
-  .mock-stat.gold .n { color: var(--gold); }
-  .mock-stat.gray .n { color: var(--text2); }
-
-  .mock-btn-row { display: flex; flex-wrap: wrap; gap: 10px; max-width: 460px; }
-  .mock-btn {
-    flex: 1; min-width: 160px;
-    padding: 12px 16px; border-radius: 12px; text-align: center;
-    font-family: var(--cinzel); font-size: 11.5px; font-weight: 600; letter-spacing: .12em;
-    text-transform: uppercase;
+  .step .step-desc {
+    font-size: 13px; color: var(--text-3); line-height: 1.55;
   }
-  .mock-btn.preview { border: 1px solid var(--border2); color: var(--text2); background: transparent; }
-  .mock-btn.run { border: 1px solid rgba(52,211,153,0.4); color: var(--text); background: rgba(52,211,153,0.06); }
-  .mock-btn.dl { border: 1px solid rgba(52,211,153,0.4); color: var(--accent); background: rgba(52,211,153,0.12); }
 
-  .two-col { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: center; }
-  @media (min-width: 900px) { .two-col { grid-template-columns: 1.05fr 1fr; gap: 2.4rem; } }
-
+  /* ────────────── checklist ────────────── */
   .checklist { display: flex; flex-direction: column; gap: 10px; }
   .check {
-    display: flex; gap: 12px; align-items: flex-start;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px; padding: .9rem 1.1rem;
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: .9rem 0;
+    border-bottom: 1px solid var(--border);
   }
+  .check:first-child { border-top: 1px solid var(--border); }
   .check .icn {
-    width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
-    background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.4);
+    width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    color: var(--accent);
     display: flex; align-items: center; justify-content: center;
-    color: var(--accent); font-size: 11px; font-weight: 700;
+    font-size: 10px;
   }
-  .check .body strong { font-family: var(--cinzel); font-size: 14px; letter-spacing: .03em; color: var(--text); display: block; margin-bottom: 2px; }
-  .check .body span { font-family: var(--syne); font-size: 13px; color: var(--text2); line-height: 1.55; }
+  .check .body strong {
+    font-weight: 600; font-size: 14px; color: var(--text);
+    display: block; margin-bottom: 2px;
+  }
+  .check .body span {
+    font-size: 13px; color: var(--text-3); line-height: 1.55;
+  }
 
-  /* code-ish chip */
-  .code {
+  /* ────────────── visual mocks ────────────── */
+  .mock-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-width: 460px; }
+  .mock-tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .9rem 1rem;
+  }
+  .mock-tile.selected {
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+  }
+  .mock-tile .n {
+    font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .mock-tile .n .badge { font-family: var(--mono); font-size: 9.5px; color: var(--accent); font-weight: 500; }
+  .mock-tile .d { font-family: var(--mono); font-size: 10px; color: var(--text-4); line-height: 1.6; }
+
+  .mock-upload {
+    background: var(--surface-1);
+    border: 1.5px dashed var(--border-strong);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem; text-align: center;
+    max-width: 460px;
+  }
+  .mock-upload.has-file { border-style: solid; border-color: var(--accent-line); background: var(--accent-soft); }
+  .mock-upload .ic {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--surface-2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent); font-size: 16px;
+    margin: 0 auto .75rem;
+  }
+  .mock-upload .t {
+    font-size: 13px; color: var(--text-2);
+  }
+  .mock-upload .t strong { color: var(--text); font-weight: 600; }
+  .mock-upload .f {
+    font-family: var(--mono); font-size: 11px; color: var(--success);
+    margin-top: .75rem;
+    padding-top: .75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .mock-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 460px; }
+  .mock-stat {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 1rem 1.1rem;
+  }
+  .mock-stat .n {
+    font-size: 24px; font-weight: 700; color: var(--text);
+    letter-spacing: -.02em; line-height: 1;
+  }
+  .mock-stat .l {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-4); margin-top: 6px; letter-spacing: .03em;
+  }
+  .mock-stat.success .n { color: var(--success); }
+  .mock-stat.muted .n { color: var(--text-3); }
+
+  .mock-btn-stack {
+    display: flex; flex-direction: column; gap: 8px;
+    max-width: 360px;
+  }
+  .mock-btn {
+    padding: 12px 18px; border-radius: var(--radius-sm);
+    text-align: center; font-size: 13px; font-weight: 600;
+    letter-spacing: -.005em;
+    border: 1px solid var(--border);
+  }
+  .mock-btn.secondary { color: var(--text-2); background: var(--surface-1); }
+  .mock-btn.primary { color: #0a0e1a; background: var(--accent); border-color: var(--accent); }
+  .mock-btn.success { color: var(--success); background: var(--success-soft); border-color: rgba(52,211,153,.3); }
+
+  /* ────────────── pillrow / status pills ────────────── */
+  .pillrow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
     font-family: var(--mono); font-size: 11px;
-    color: var(--text); background: rgba(212,175,100,0.06);
-    padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    color: var(--text-2);
+    letter-spacing: .02em;
   }
+  .pill.accent { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
 
-  /* presenter notes */
-  .notes {
-    position: fixed; left: 0; right: 0; bottom: 70px; z-index: 4;
-    max-width: 760px; margin: 0 auto;
-    padding: 14px 18px;
-    background: rgba(2,2,10,0.96); border: 1px solid var(--border2);
-    border-radius: 14px;
-    font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: var(--text2);
-    display: none;
-    backdrop-filter: blur(20px);
-  }
-  .notes.visible { display: block; }
-  .notes::before { content: '// presenter notes'; display: block; color: var(--text3); font-size: 9.5px; letter-spacing: .22em; margin-bottom: 6px; text-transform: uppercase; }
-
-  /* CTA on last slide */
-  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 1.6rem; }
-  .cta {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 14px 22px; border-radius: 14px;
-    font-family: var(--cinzel); font-size: 12.5px; font-weight: 600; letter-spacing: .14em;
-    text-transform: uppercase; text-decoration: none;
-    transition: transform .2s, box-shadow .2s, background .2s, border-color .2s;
-  }
-  .cta.primary { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.45); color: var(--accent); }
-  .cta.primary:hover { background: rgba(52,211,153,0.22); box-shadow: 0 0 28px rgba(52,211,153,0.2); transform: translateY(-1px); }
-  .cta.ghost { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
-  .cta.ghost:hover { color: var(--text); border-color: var(--border2); background: rgba(212,175,100,0.04); }
-
-  /* misc */
-  .footnote { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: .08em; margin-top: 1rem; }
-  .footnote .grad { background: linear-gradient(120deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-  /* ─── Under the hood: pipeline + code-style blocks ─── */
+  /* ────────────── pipeline / architecture ────────────── */
   .pipeline {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-    margin-top: .4rem;
+    display: grid; grid-template-columns: 1fr;
+    gap: 8px; margin-top: .5rem;
   }
   @media (min-width: 980px) {
-    .pipeline {
-      grid-template-columns: repeat(5, 1fr);
-      align-items: stretch;
-      gap: 6px;
-    }
+    .pipeline { grid-template-columns: repeat(5, 1fr); }
   }
   .stage {
-    background: var(--surface);
+    background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 1rem 1rem 1.1rem;
+    border-radius: var(--radius);
+    padding: 1.1rem 1.1rem 1.2rem;
     position: relative;
     display: flex; flex-direction: column;
     min-height: 100%;
   }
-  .stage::before {
-    content:''; position: absolute; top: 0; left: 12%; right: 12%; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(52,211,153,.28), transparent);
+  .stage-num {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--accent); letter-spacing: .04em;
+    margin-bottom: 8px;
   }
-  .stage-n { font-family: var(--cinzel); font-size: 10.5px; color: var(--accent); letter-spacing: .22em; margin-bottom: .35rem; }
-  .stage-t { font-family: var(--cinzel); font-size: 14px; font-weight: 600; margin-bottom: .35rem; line-height: 1.2; }
-  .stage-d { font-family: var(--syne); font-size: 12.5px; color: var(--text2); line-height: 1.55; flex: 1; }
-  .stage-lib {
-    font-family: var(--mono); font-size: 9.5px; color: var(--text3);
-    margin-top: .7rem; padding-top: .5rem;
-    border-top: 1px dashed var(--border);
-    letter-spacing: .04em;
+  .stage-title {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    margin-bottom: 6px; line-height: 1.3;
   }
-  .stage-lib strong { color: var(--gold); font-weight: 500; }
+  .stage-desc {
+    font-size: 12.5px; color: var(--text-3);
+    line-height: 1.55; flex: 1;
+  }
+  .stage-tag {
+    margin-top: 1rem; padding-top: .75rem;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-4); letter-spacing: .02em;
+  }
+  .stage-tag strong { color: var(--text-2); font-weight: 500; }
 
-  /* arrow between stages on wide screens */
-  .pipeline .stage:not(:last-child)::after {
-    content: '→';
-    position: absolute;
-    right: -14px; top: 50%; transform: translateY(-50%);
-    color: rgba(52,211,153,.5);
-    font-family: var(--mono); font-size: 16px;
-    z-index: 2;
-    display: none;
-  }
   @media (min-width: 980px) {
-    .pipeline .stage:not(:last-child)::after { display: block; }
+    .pipeline .stage:not(:last-child)::after {
+      content: ''; position: absolute;
+      right: -7px; top: 50%; transform: translateY(-50%);
+      width: 10px; height: 1px; background: var(--accent-line);
+      z-index: 2;
+    }
+    .pipeline .stage:not(:last-child)::before {
+      content: '›'; position: absolute;
+      right: -10px; top: 50%; transform: translateY(-50%);
+      color: var(--accent); font-size: 14px; font-weight: 600;
+      z-index: 2; line-height: 0;
+    }
   }
 
-  /* code-style block (rule ladder) */
+  /* ────────────── code-style block ────────────── */
   .codeblock {
-    background: rgba(2,2,10,0.6);
+    background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 1.1rem 1.2rem;
+    border-radius: var(--radius);
+    padding: 1.25rem 1.4rem;
     font-family: var(--mono);
     font-size: 12px;
     line-height: 1.85;
-    color: var(--text2);
+    color: var(--text-2);
     overflow: auto;
     position: relative;
   }
-  .codeblock::before {
-    content: '// rule ladder · evaluated top-to-bottom · first match wins';
-    display: block;
-    color: var(--text3);
-    font-size: 9.5px;
-    letter-spacing: .14em;
-    margin-bottom: .8rem;
-    text-transform: uppercase;
+  .codeblock-header {
+    display: flex; align-items: center; gap: 6px;
+    padding-bottom: .85rem;
+    margin-bottom: .85rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 10.5px; color: var(--text-4);
+    letter-spacing: .04em;
   }
-  .codeblock .kw { color: var(--purple); }
-  .codeblock .cond { color: var(--text); }
-  .codeblock .arrow { color: var(--text3); padding: 0 .6em; }
-  .codeblock .out { color: var(--accent); }
-  .codeblock .com { color: var(--text3); font-style: italic; }
-  .codeblock .num { color: var(--gold); }
+  .codeblock-header .dot-r { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); }
+  .codeblock-header .file { margin-left: 6px; }
+  .codeblock .kw { color: #c4b5fd; }
+  .codeblock .fn { color: var(--accent); }
+  .codeblock .str { color: var(--success); }
+  .codeblock .com { color: var(--text-4); font-style: italic; }
+  .codeblock .num { color: #fbbf24; }
+  .codeblock .arrow { color: var(--text-4); padding: 0 .4em; }
 
-  /* zip tree visualization */
+  /* ────────────── zip tree ────────────── */
   .ziptree {
-    background: rgba(2,2,10,0.6);
+    background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 1.1rem 1.2rem;
+    border-radius: var(--radius);
+    padding: 1.25rem 1.4rem;
     font-family: var(--mono);
-    font-size: 12px;
-    line-height: 1.9;
-    color: var(--text2);
+    font-size: 12px; line-height: 1.95;
+    color: var(--text-3);
   }
-  .ziptree .root { color: var(--gold); }
-  .ziptree .dir { color: var(--text2); }
-  .ziptree .file { color: var(--text3); }
+  .ziptree .root { color: var(--text); font-weight: 500; }
+  .ziptree .dir { color: var(--text-2); }
+  .ziptree .file { color: var(--text-4); }
   .ziptree .file.touched { color: var(--accent); font-weight: 500; }
   .ziptree .file.touched::after {
-    content: ' ← we edit this';
-    font-style: italic; color: var(--accent); opacity: .8; font-size: 11px;
+    content: '  modified';
+    color: var(--accent); font-size: 10.5px; margin-left: 4px;
+    padding: 1px 6px; border-radius: 3px;
+    background: var(--accent-soft);
   }
-  .ziptree .pad { color: var(--text3); }
+  .ziptree .pad { color: var(--text-4); font-style: italic; }
 
-  /* divider slide ("Under the hood" section break) */
-  .section-break {
+  /* ────────────── presenter notes ────────────── */
+  .notes {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: 70px; z-index: 4;
+    width: min(720px, calc(100% - 2rem));
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    font-family: var(--mono); font-size: 12px; line-height: 1.7;
+    color: var(--text-2);
+    display: none;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  }
+  .notes.visible { display: block; }
+  .notes-label {
+    font-size: 9.5px; color: var(--text-4);
+    letter-spacing: .08em; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  /* ────────────── CTAs (closing slide) ────────────── */
+  .cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2rem; }
+  .cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 22px; border-radius: var(--radius-sm);
+    font-family: var(--sans); font-size: 13px; font-weight: 600;
+    letter-spacing: -.005em; text-decoration: none;
+    transition: background .15s, border-color .15s, transform .15s;
+  }
+  .cta.primary {
+    background: var(--accent); color: #0a0e1a;
+    border: 1px solid var(--accent);
+  }
+  .cta.primary:hover { background: #93c5fd; transform: translateY(-1px); }
+  .cta.ghost {
+    background: transparent; color: var(--text-2);
+    border: 1px solid var(--border-strong);
+  }
+  .cta.ghost:hover { color: var(--text); border-color: var(--accent-line); background: var(--surface-1); }
+
+  /* ────────────── live demo (intermission) slide ────────────── */
+  .demo {
     align-items: center !important;
     justify-content: center !important;
-    text-align: center;
+    background:
+      radial-gradient(60% 50% at 50% 35%, rgba(96,165,250,.07), transparent 70%),
+      var(--bg);
   }
-  .section-break .eyebrow { margin-bottom: 1.2rem; }
-  .section-break .title { font-size: clamp(2.4rem, 6.5vw, 5rem); }
+  .demo-inner { max-width: 720px; margin: 0 auto; width: 100%; }
+  .demo-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: .12em;
+    margin-bottom: 1rem;
+    padding: 4px 10px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: 999px;
+  }
+  .demo-label::before {
+    content:''; display: inline-block;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px rgba(96,165,250,.18);
+    animation: demoPulse 2s ease-in-out infinite;
+  }
+  @keyframes demoPulse {
+    0%,100% { box-shadow: 0 0 0 4px rgba(96,165,250,.18); }
+    50%     { box-shadow: 0 0 0 6px rgba(96,165,250,.06); }
+  }
+  .demo-title {
+    font-size: clamp(2.2rem, 4.8vw, 3.5rem);
+    font-weight: 700; color: var(--text);
+    letter-spacing: -.025em; line-height: 1.05;
+    margin-bottom: 1.25rem;
+  }
+  .demo-lede {
+    font-size: clamp(1rem, 1.4vw, 1.125rem);
+    color: var(--text-2); max-width: 52ch;
+    line-height: 1.6; margin-bottom: 2.5rem;
+  }
+  .demo-checklist {
+    display: flex; flex-direction: column;
+    border-top: 1px solid var(--border);
+  }
+  .demo-step {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 14px;
+    align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .demo-num {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent); letter-spacing: .03em;
+    font-weight: 500;
+  }
+  .demo-text {
+    font-size: 15px; color: var(--text);
+    font-weight: 500; letter-spacing: -.005em;
+  }
+  .demo-resume {
+    margin-top: 2rem; padding-top: 1.5rem;
+    border-top: 1px dashed var(--border);
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--text-3); display: flex;
+    align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .demo-resume .kbd { font-size: 10.5px; }
 
-  /* fullscreen tweaks */
-  :fullscreen .top-bar, :-webkit-full-screen .top-bar { padding-top: 18px; }
-
-  /* print → 1 slide per page (rough PDF export) */
+  /* ────────────── print ────────────── */
   @media print {
-    body::before, body::after, .top-bar, .bottom-bar, .progress-strip, .notes { display: none !important; }
+    .top-bar, .bottom-bar, .progress-strip, .notes { display: none !important; }
     .deck { height: auto !important; }
-    .slide { display: flex !important; position: relative; page-break-after: always; min-height: 100vh; padding: 2cm; }
-    html, body { overflow: visible !important; height: auto !important; background: #02020a; }
+    .slide {
+      display: flex !important;
+      position: relative;
+      page-break-after: always;
+      min-height: 100vh;
+      padding: 1.5cm 2cm;
+    }
+    html, body { overflow: visible !important; height: auto !important; background: #0a0e1a; }
   }
 </style>
 </head>
@@ -447,48 +708,124 @@
 <div class="progress-strip"><div class="progress-fill" id="progressFill"></div></div>
 
 <div class="top-bar">
-  <span class="badge">The Alchemist</span>
-  <span class="breadcrumb"><a href="anmerkung.html">← Open the tool</a></span>
+  <a class="brand" href="anmerkung.html" title="Open the tool">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 16 16" width="14" height="14" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3.5"  width="10" height="1.6" rx=".8" fill="#0a0e1a" opacity=".45"/>
+        <rect x="3" y="7"    width="10" height="1.6" rx=".8" fill="#0a0e1a" opacity=".45"/>
+        <rect x="3" y="10.5" width="6.5" height="1.6" rx=".8" fill="#0a0e1a"/>
+      </svg>
+    </span>
+    <span>Anmerkung Processor</span>
+  </a>
   <span class="top-spacer"></span>
+  <span class="section-indicator" id="sectionIndicator" aria-live="polite">
+    <span class="num" id="sectionNum"></span>
+    <span class="sep">/</span>
+    <span class="name" id="sectionName"></span>
+  </span>
   <button type="button" class="hdr-btn" id="btnNotes" aria-pressed="false" title="Toggle presenter notes (P)">Notes</button>
   <button type="button" class="hdr-btn" id="btnFullscreen" title="Toggle fullscreen (F)">Fullscreen</button>
 </div>
 
 <main class="deck" id="deck" tabindex="0" aria-label="Anmerkung Processor presentation">
 
-  <!-- ─────────────────── 1: COVER ─────────────────── -->
-  <section class="slide active cover" data-notes="The Alchemist is the freight-audit annotation tool that lives at anmerkung.html. This deck explains it without jargon. Use ← → to navigate, F for fullscreen, P to toggle these notes.">
-    <div class="eyebrow">// Tome III · The Alchemist</div>
-    <h1 class="title">Anmerkung <span class="grad">Processor</span></h1>
-    <div class="ornament"><div class="line"></div><div class="sym">✦ ᚦ ✦</div><div class="line"></div></div>
-    <p class="lede">A 2-minute walkthrough of the in-browser tool that auto-fills the <span class="code">Anmerkung</span> column on freight-audit Excel files — for Dachser, K+N, DHL Express, and Wackler.</p>
-    <div class="meta">Upload · Select forwarder · Transmute · Download</div>
-    <div class="hint-keys">
-      <span class="kbd">←</span><span class="kbd">→</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--text3);align-self:center;letter-spacing:.08em">navigate</span>
-      <span class="kbd">F</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--text3);align-self:center;letter-spacing:.08em">fullscreen</span>
-      <span class="kbd">P</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--text3);align-self:center;letter-spacing:.08em">notes</span>
+  <!-- ─────────── 01 · COVER ─────────── -->
+  <section class="slide cover active" data-section="" data-notes="Open with the title and presenter context. The audience sees a clean cover with topic, version, and who built it. Use ← → to navigate, F for fullscreen, P for these notes.">
+    <div class="cover-inner">
+      <div class="eyebrow">
+        <span class="num">v1.0</span><span class="sep">·</span><span>Internal product overview</span>
+      </div>
+      <h1 class="title">Anmerkung <span class="accent">Processor</span></h1>
+      <div class="title-rule"></div>
+      <p class="lede">An in-browser tool that automates the <span class="code">Anmerkung</span> column on freight-audit Excel files for Dachser, Kuehne+Nagel, DHL Express, and Wackler.</p>
+
+      <div class="cover-meta">
+        <div class="meta-item">
+          <span class="meta-label">Topic</span>
+          <span class="meta-value">Freight audit automation</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Audience</span>
+          <span class="meta-value">Operations &amp; engineering</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Format</span>
+          <span class="meta-value">~5 minute walkthrough</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Hosted at</span>
+          <span class="meta-value">codingkuh.my.id</span>
+        </div>
+      </div>
+
+      <div class="keys-hint">
+        <span class="group"><span class="kbd">←</span><span class="kbd">→</span> navigate</span>
+        <span class="group"><span class="kbd">F</span> fullscreen</span>
+        <span class="group"><span class="kbd">P</span> notes</span>
+        <span class="group"><span class="kbd">Esc</span> exit</span>
+      </div>
     </div>
   </section>
 
-  <!-- ─────────────────── 2: THE PROBLEM ─────────────────── -->
-  <section class="slide" data-notes="Frame the pain before showing the tool. Manual audit is slow, error-prone, and inconsistent across people and forwarders. The Alchemist removes the typing — humans still review.">
+  <!-- ─────────── 02 · AGENDA ─────────── -->
+  <section class="slide" data-section="Overview" data-notes="Set expectations for the talk. Five sections, ~3 slides each. Mention you'll do a live demo afterwards if the audience wants one.">
     <div class="slide-body">
-      <div class="eyebrow">// The Problem</div>
-      <h2 class="title">Auditing freight invoices is <span class="grad">tedious</span> and easy to get wrong.</h2>
-      <p class="lede">Every row of every workbook needs a human to read a dozen columns, decide what's off, and type the right reason in the <span class="code">Anmerkung</span> column. Different forwarders, different rules.</p>
-      <div class="grid-3" style="margin-top:.4rem">
+      <div class="eyebrow"><span class="num">00</span><span class="sep">/</span><span>Agenda</span></div>
+      <h2 class="title">What we'll cover</h2>
+      <div class="title-rule"></div>
+
+      <div class="agenda-list" style="margin-top: 1.5rem">
+        <div class="agenda-row">
+          <div class="num">01</div>
+          <div class="label">Overview</div>
+          <div class="desc">The problem &amp; the four-step solution</div>
+        </div>
+        <div class="agenda-row">
+          <div class="num">02</div>
+          <div class="label">Workflow</div>
+          <div class="desc">Carrier · Upload · Preview · Process</div>
+        </div>
+        <div class="agenda-row">
+          <div class="num">03</div>
+          <div class="label">Capabilities</div>
+          <div class="desc">Bulk · Rule tester · Comparison mode</div>
+        </div>
+        <div class="agenda-row">
+          <div class="num">04</div>
+          <div class="label">Architecture</div>
+          <div class="desc">Pipeline · Rule engine · File preservation</div>
+        </div>
+        <div class="agenda-row">
+          <div class="num">05</div>
+          <div class="label">Trust &amp; deployment</div>
+          <div class="desc">Privacy model · Offline · Source</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 03 · THE CHALLENGE ─────────── -->
+  <section class="slide" data-section="Overview" data-notes="Frame the pain before showing the tool. Manual freight audit is slow, inconsistent, and easy to get wrong. The Anmerkung Processor removes the typing — the human still reviews and approves.">
+    <div class="slide-body">
+      <div class="eyebrow"><span class="num">01</span><span class="sep">/</span><span>The challenge</span></div>
+      <h2 class="title">Manual freight audit is <span class="accent">slow</span> and error-prone</h2>
+      <div class="title-rule"></div>
+      <p class="lede">Every row needs a person to read a dozen columns, decide what's off, and type the right reason in the <span class="code">Anmerkung</span> column. Different carriers, different rules, every single week.</p>
+
+      <div class="grid-3" style="margin-top: 1.5rem">
         <div class="card">
-          <div class="card-num">SLOW</div>
+          <div class="card-label">Time</div>
           <div class="card-title">Hours per file</div>
-          <div class="card-desc">Hundreds of rows × multiple forwarders × multiple files per week.</div>
+          <div class="card-desc">Hundreds of rows × multiple carriers × multiple files per week.</div>
         </div>
         <div class="card">
-          <div class="card-num">INCONSISTENT</div>
+          <div class="card-label">Consistency</div>
           <div class="card-title">Wording drifts</div>
-          <div class="card-desc">Two auditors write the same finding with different words. Reports get noisy.</div>
+          <div class="card-desc">Two auditors write the same finding in different words. Reports become hard to aggregate.</div>
         </div>
         <div class="card">
-          <div class="card-num">EASY TO MISS</div>
+          <div class="card-label">Accuracy</div>
           <div class="card-title">Tiny deltas hide</div>
           <div class="card-desc">A €0.40 difference is easy to overlook on row 423 of sheet 7.</div>
         </div>
@@ -496,364 +833,511 @@
     </div>
   </section>
 
-  <!-- ─────────────────── 3: HOW IT WORKS — 4 STEPS ─────────────────── -->
-  <section class="slide" data-notes="The whole user journey is four steps. Each step gets its own slide next. Stress: the file never leaves the browser.">
+  <!-- ─────────── 04 · HOW IT WORKS ─────────── -->
+  <section class="slide" data-section="Overview" data-notes="The whole user journey is four steps. Each step gets its own slide next. Stress: nothing leaves the browser, nothing is uploaded.">
     <div class="slide-body">
-      <div class="eyebrow">// How it works</div>
-      <h2 class="title">Four steps. <span class="grad">Done in seconds.</span></h2>
-      <div class="ornament"><div class="line"></div><div class="sym">I · II · III · IV</div><div class="line"></div></div>
-      <div class="steps">
+      <div class="eyebrow"><span class="num">02</span><span class="sep">/</span><span>The solution</span></div>
+      <h2 class="title">Four steps, from upload to download</h2>
+      <div class="title-rule"></div>
+
+      <div class="steps" style="margin-top: 1.5rem">
         <div class="step">
-          <div class="step-n">01</div>
-          <div class="step-t">Pick a forwarder</div>
-          <div class="step-d">Tells the tool which rules to apply.</div>
+          <div class="step-icon">→</div>
+          <div class="step-title">Select the carrier</div>
+          <div class="step-desc">Tells the tool which rule set to apply to your file.</div>
         </div>
         <div class="step">
-          <div class="step-n">02</div>
-          <div class="step-t">Upload your .xlsx</div>
-          <div class="step-d">Click or drag-drop. Stays in your browser.</div>
+          <div class="step-icon">↑</div>
+          <div class="step-title">Upload the file</div>
+          <div class="step-desc">Click to browse or drag-drop. The file stays in your browser.</div>
         </div>
         <div class="step">
-          <div class="step-n">03</div>
-          <div class="step-t">Preview</div>
-          <div class="step-d">See exactly what would change before anything is written.</div>
+          <div class="step-icon">◷</div>
+          <div class="step-title">Review the preview</div>
+          <div class="step-desc">See exactly what would change before any file is written.</div>
         </div>
         <div class="step">
-          <div class="step-n">04</div>
-          <div class="step-t">Run &amp; download</div>
-          <div class="step-d">A patched copy of your file — same name, same layout, Anmerkung filled.</div>
+          <div class="step-icon">↓</div>
+          <div class="step-title">Process &amp; download</div>
+          <div class="step-desc">Receive a patched copy — same name, same layout, Anmerkung filled.</div>
         </div>
       </div>
-      <p class="footnote">// nothing is uploaded · everything runs in your tab · works offline once visited</p>
+
+      <p class="footnote">No upload. No server. Runs entirely in your browser tab.</p>
     </div>
   </section>
 
-  <!-- ─────────────────── 4: STEP 1 — FORWARDER ─────────────────── -->
-  <section class="slide" data-notes="Each forwarder has its own decision tree. The user just clicks a tile. Keyboard: arrow keys cycle. Highlight that this is a one-time decision per file.">
+  <!-- ─────────── 05 · STEP 1 — CARRIER ─────────── -->
+  <section class="slide" data-section="Workflow" data-notes="Each carrier has its own decision tree. The user just clicks a tile. Keyboard navigation supported. Highlight that this is a one-time decision per file.">
     <div class="slide-body">
-      <div class="two-col">
+      <div class="two-col center">
         <div>
-          <div class="eyebrow">// Step I</div>
-          <h2 class="title">Pick the <span class="grad">forwarder</span>.</h2>
-          <p class="lede">Each tile loads a different rule engine — the columns it reads and the phrases it writes are tailored to that forwarder's invoices.</p>
-          <div class="pillrow" style="margin-top:1rem">
-            <span class="pill">Dachser</span>
-            <span class="pill">K+N</span>
-            <span class="pill">DHL Express</span>
-            <span class="pill">Wackler</span>
+          <div class="eyebrow"><span class="num">Step 01</span><span class="sep">·</span><span>Workflow</span></div>
+          <h2 class="title">Select the carrier</h2>
+          <div class="title-rule"></div>
+          <p class="lede">Each carrier loads its own rule engine — the columns it reads and the phrases it produces are tailored to that carrier's invoice format.</p>
+
+          <div class="pillrow" style="margin-top: 1.5rem">
+            <span class="pill accent">Dachser</span>
+            <span class="pill accent">Kuehne+Nagel</span>
+            <span class="pill accent">DHL Express</span>
+            <span class="pill accent">Wackler</span>
           </div>
-          <p class="footnote">// arrow keys cycle the tiles · keyboard friendly</p>
+
+          <p class="footnote">Arrow keys cycle the tiles. Selection is keyboard-friendly.</p>
         </div>
+
         <div class="mock-grid">
           <div class="mock-tile selected">
-            <div class="n">Dachser</div>
-            <div class="d">CekKondisi_Freigabe<br>ZZ · SAM · DGR · EXP · SNK<br>SBFU · FR · ZW · TZ</div>
+            <div class="n">Dachser <span class="badge">selected</span></div>
+            <div class="d">22 rules · ZZ · SAM · DGR · EXP<br>SNK · SBFU · FR · ZW · TZ</div>
           </div>
           <div class="mock-tile">
-            <div class="n">K+N</div>
-            <div class="d">FillAnmerkung<br>Amazon tiers · Bundling<br>Pauschalfracht · SNK</div>
+            <div class="n">Kuehne+Nagel</div>
+            <div class="d">18 rules · Amazon tiers<br>Bundling · Pauschal · SNK</div>
           </div>
           <div class="mock-tile">
             <div class="n">DHL Express</div>
-            <div class="d">YO ×15 · SNK 25/30/60<br>FR · PAL · OW blockers</div>
+            <div class="d">15 rules · YO ×15<br>SNK 25 / 30 / 60 · FR · PAL</div>
           </div>
           <div class="mock-tile">
             <div class="n">Wackler</div>
-            <div class="d">Fremdnummer · AVIS<br>SNK 38 / −11.5 / 22<br>Gewichte · Bündelung · Return</div>
+            <div class="d">14 rules · Fremdnummer<br>AVIS · Gewichte · Bundling</div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ─────────────────── 5: STEP 2 — UPLOAD ─────────────────── -->
-  <section class="slide" data-notes="Only .xlsx. Drag-drop or click. The whole file stays in the tab — File API + SheetJS read it, JSZip later patches it. No server, no upload.">
+  <!-- ─────────── 06 · STEP 2 — UPLOAD ─────────── -->
+  <section class="slide" data-section="Workflow" data-notes="Only .xlsx. Drag-drop or click. The whole file stays in the tab — File API + SheetJS read it, JSZip later patches it. No server, no upload.">
     <div class="slide-body">
-      <div class="two-col">
+      <div class="two-col center">
         <div>
-          <div class="eyebrow">// Step II</div>
-          <h2 class="title">Drop your <span class="grad">scroll</span>.</h2>
-          <p class="lede">Click the dashed box or drag your <span class="code">.xlsx</span> onto it. The file is read by the browser only — it never leaves your machine.</p>
-          <div class="checklist" style="margin-top:1.2rem">
-            <div class="check"><div class="icn">✓</div><div class="body"><strong>Only .xlsx</strong><span>Modern Excel format. Older .xls is not supported.</span></div></div>
-            <div class="check"><div class="icn">✓</div><div class="body"><strong>Original layout preserved</strong><span>Styles, formulas, merged cells, drawings — all untouched.</span></div></div>
-            <div class="check"><div class="icn">✓</div><div class="body"><strong>Original filename kept</strong><span>The download has the same name as what you uploaded.</span></div></div>
+          <div class="eyebrow"><span class="num">Step 02</span><span class="sep">·</span><span>Workflow</span></div>
+          <h2 class="title">Upload the file</h2>
+          <div class="title-rule"></div>
+          <p class="lede">Click the upload area or drag your <span class="code">.xlsx</span> file onto it. The file is read directly by the browser and never leaves your machine.</p>
+
+          <div class="checklist" style="margin-top: 1.5rem">
+            <div class="check">
+              <div class="icn">✓</div>
+              <div class="body">
+                <strong>Modern Excel (.xlsx) only</strong>
+                <span>Older binary .xls files are not supported.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">✓</div>
+              <div class="body">
+                <strong>Original layout is preserved</strong>
+                <span>Styles, formulas, merged cells, and embedded drawings stay untouched.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">✓</div>
+              <div class="body">
+                <strong>Filename is preserved</strong>
+                <span>The download has the same name as your upload — your folder conventions still work.</span>
+              </div>
+            </div>
           </div>
         </div>
+
         <div>
-          <div class="mock-upload">
-            <div class="ic">⬆</div>
-            <div class="t"><strong>Click to browse</strong> or drag &amp; drop your .xlsx file</div>
-            <div class="f">✦ Audit_2026_Q1.xlsx loaded · 7 sheets</div>
+          <div class="mock-upload has-file">
+            <div class="ic">↑</div>
+            <div class="t"><strong>Click to browse</strong> or drag &amp; drop a .xlsx file</div>
+            <div class="f">Audit_2026_Q1.xlsx · 7 sheets · 1,284 rows</div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ─────────────────── 6: STEP 3 — PREVIEW ─────────────────── -->
-  <section class="slide" data-notes="Preview is non-destructive. Always recommend running it first. Stats + per-row table + trigger breakdown. Iterate on the Why? toggle and tolerance thresholds before committing.">
+  <!-- ─────────── 07 · STEP 3 — PREVIEW ─────────── -->
+  <section class="slide" data-section="Workflow" data-notes="Preview is non-destructive. Always recommend running it first. Stats + per-row table + trigger breakdown. Iterate on the Why? toggle and tolerance thresholds before committing.">
     <div class="slide-body">
-      <div class="eyebrow">// Step III</div>
-      <h2 class="title">Preview <span class="grad">before</span> you write.</h2>
-      <p class="lede">Click <span class="code">Preview — dry-run without writing</span>. You'll see every row the tool would change, color-coded — nothing is written to the file yet.</p>
+      <div class="eyebrow"><span class="num">Step 03</span><span class="sep">·</span><span>Workflow</span></div>
+      <h2 class="title">Review the preview before writing</h2>
+      <div class="title-rule"></div>
+      <p class="lede">A dry-run shows every row the tool would change, color-coded by outcome. Nothing is written to the file at this stage.</p>
 
-      <div class="mock-stats" style="margin-top:1rem">
-        <div class="mock-stat gray"><div class="n">1,284</div><div class="l">rows scanned</div></div>
-        <div class="mock-stat green"><div class="n">312</div><div class="l">anmerkung filled</div></div>
-        <div class="mock-stat gold"><div class="n">972</div><div class="l">skipped (stat≠10)</div></div>
+      <div class="mock-stats" style="margin-top: 1.5rem">
+        <div class="mock-stat muted">
+          <div class="n">1,284</div>
+          <div class="l">Rows scanned</div>
+        </div>
+        <div class="mock-stat success">
+          <div class="n">312</div>
+          <div class="l">Anmerkung filled</div>
+        </div>
+        <div class="mock-stat muted">
+          <div class="n">972</div>
+          <div class="l">Skipped (status ≠ 10)</div>
+        </div>
       </div>
 
-      <div class="grid-3" style="margin-top:1.2rem">
+      <div class="grid-3" style="margin-top: 1.5rem">
         <div class="card">
-          <div class="card-num">SAFE</div>
+          <div class="card-label">Non-destructive</div>
           <div class="card-title">Dry-run</div>
-          <div class="card-desc">No file is produced. Iterate freely.</div>
+          <div class="card-desc">No file is produced until you confirm. Iterate freely.</div>
         </div>
         <div class="card">
-          <div class="card-num">CLEAR</div>
+          <div class="card-label">Granular</div>
           <div class="card-title">Per-row table</div>
-          <div class="card-desc">Filled · empty · skipped · preserved — at a glance.</div>
+          <div class="card-desc">Filled · empty · skipped · preserved — every row visible at a glance.</div>
         </div>
         <div class="card">
-          <div class="card-num">EXPLAINS</div>
+          <div class="card-label">Explainable</div>
           <div class="card-title">Trigger breakdown</div>
-          <div class="card-desc">Bar chart of which rule fired how many times.</div>
+          <div class="card-desc">A bar chart showing which rule fired how many times.</div>
         </div>
       </div>
 
-      <p class="footnote">// optional: tick <span class="code">Add "Why?" reason column</span> to also export the raw cell values that triggered each annotation</p>
+      <p class="footnote">Optional: enable the <span class="code">Reason</span> column to also export the cell values that triggered each annotation.</p>
     </div>
   </section>
 
-  <!-- ─────────────────── 7: STEP 4 — RITUAL & DOWNLOAD ─────────────────── -->
-  <section class="slide" data-notes="The Ritual button reruns the engine and patches the XLSX byte-for-byte. JSZip unpacks, we rewrite only the Anmerkung column cells, rezip. Output keeps original filename.">
+  <!-- ─────────── 08 · STEP 4 — PROCESS ─────────── -->
+  <section class="slide" data-section="Workflow" data-notes="The Process button reruns the engine and patches the XLSX byte-for-byte. JSZip unpacks, we rewrite only the Anmerkung column cells, rezip. Output keeps original filename.">
     <div class="slide-body">
-      <div class="two-col">
+      <div class="two-col center">
         <div>
-          <div class="eyebrow">// Step IV</div>
-          <h2 class="title">Invoke &amp; <span class="grad">download</span>.</h2>
-          <p class="lede">When the preview looks right, hit <span class="code">Invoke the Ritual</span>. The tool patches your file in memory and offers a one-click download.</p>
-          <div class="checklist" style="margin-top:1rem">
-            <div class="check"><div class="icn">✓</div><div class="body"><strong>Byte-level patch</strong><span>Only the Anmerkung column is touched — everything else stays exactly as you uploaded it.</span></div></div>
-            <div class="check"><div class="icn">✓</div><div class="body"><strong>Same filename</strong><span>So your folder/version conventions still work.</span></div></div>
-            <div class="check"><div class="icn">✓</div><div class="body"><strong>Reusable</strong><span>Drop a new file or change forwarder without reloading.</span></div></div>
+          <div class="eyebrow"><span class="num">Step 04</span><span class="sep">·</span><span>Workflow</span></div>
+          <h2 class="title">Process &amp; download</h2>
+          <div class="title-rule"></div>
+          <p class="lede">When the preview looks right, click <span class="code">Process file</span>. The tool patches your file in memory and offers a one-click download.</p>
+
+          <div class="checklist" style="margin-top: 1.5rem">
+            <div class="check">
+              <div class="icn">✓</div>
+              <div class="body">
+                <strong>Surgical patch</strong>
+                <span>Only the Anmerkung column is touched — every other byte of the file stays exactly as you uploaded it.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">✓</div>
+              <div class="body">
+                <strong>Original filename preserved</strong>
+                <span>So your folder structure and version conventions continue to work.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">✓</div>
+              <div class="body">
+                <strong>Reusable session</strong>
+                <span>Drop a new file or change carrier without reloading the page.</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="mock-btn-row" style="flex-direction:column;max-width:360px">
-          <div class="mock-btn preview">Preview — dry-run</div>
-          <div class="mock-btn run">✦ Invoke the Ritual</div>
-          <div class="mock-btn dl">↓ Download Transmuted Scroll</div>
+
+        <div class="mock-btn-stack">
+          <div class="mock-btn secondary">Preview — dry-run</div>
+          <div class="mock-btn primary">Process file</div>
+          <div class="mock-btn success">↓ Download processed file</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ─────────────────── 8: BONUS — BULK ─────────────────── -->
-  <section class="slide" data-notes="Bulk panel handles many files at once with the same forwarder. Each gets a per-file download; or grab them all as a ZIP. Honors the Why? toggle and thresholds.">
+  <!-- ─────────── 09 · LIVE DEMO ─────────── -->
+  <section class="slide demo" data-section="" data-notes="Pause for a live demonstration. Switch to anmerkung.html in a separate tab and walk the audience through one full file end-to-end (≈3 minutes). Resume the deck with → after the demo. Tip: pre-load a real audit file on your desktop so you don't fumble for one mid-presentation.">
+    <div class="demo-inner">
+      <div class="demo-label">Live demo</div>
+      <h2 class="demo-title">Let's run a real file together</h2>
+      <div class="title-rule"></div>
+      <p class="demo-lede">We'll switch to the tool now and walk through one carrier-specific audit end-to-end. Should take about three minutes.</p>
+
+      <div class="demo-checklist">
+        <div class="demo-step">
+          <span class="demo-num">01</span>
+          <span class="demo-text">Open <span class="code">anmerkung.html</span> in a new tab</span>
+        </div>
+        <div class="demo-step">
+          <span class="demo-num">02</span>
+          <span class="demo-text">Select a carrier</span>
+        </div>
+        <div class="demo-step">
+          <span class="demo-num">03</span>
+          <span class="demo-text">Drop a recent <span class="code">.xlsx</span> audit file</span>
+        </div>
+        <div class="demo-step">
+          <span class="demo-num">04</span>
+          <span class="demo-text">Run the preview &amp; review the trigger breakdown</span>
+        </div>
+        <div class="demo-step">
+          <span class="demo-num">05</span>
+          <span class="demo-text">Process the file &amp; open the result in Excel</span>
+        </div>
+      </div>
+
+      <div class="demo-resume">
+        <span class="kbd">→</span>
+        <span>resume the deck after the demo</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 10 · CAPABILITIES — BULK ─────────── -->
+  <section class="slide" data-section="Capabilities" data-notes="Bulk panel handles many files at once with the same carrier. Each gets a per-file download; or grab them all as a ZIP. Honors the Reason toggle and thresholds.">
     <div class="slide-body">
-      <div class="eyebrow">// Bonus VI</div>
-      <h2 class="title">Bulk Process — <span class="grad">many files</span> at once.</h2>
-      <p class="lede">Drop a stack of <span class="code">.xlsx</span> files, run them all with one click, and grab them individually or as a single ZIP.</p>
-      <div class="grid-3" style="margin-top:1rem">
-        <div class="card purple">
-          <div class="card-num">QUEUE</div>
+      <div class="eyebrow"><span class="num">03</span><span class="sep">/</span><span>Capabilities</span></div>
+      <h2 class="title">Bulk processing for end-of-month runs</h2>
+      <div class="title-rule"></div>
+      <p class="lede">Drop a stack of <span class="code">.xlsx</span> files, run them all under the same carrier rules in one click, and download them individually or as a single archive.</p>
+
+      <div class="grid-3" style="margin-top: 1.5rem">
+        <div class="card">
+          <div class="card-label">Queue</div>
           <div class="card-title">Live status per file</div>
-          <div class="card-desc">Pending → processing → done · with a per-file download button.</div>
+          <div class="card-desc">Pending → processing → done, with a per-file download button as soon as a file completes.</div>
         </div>
-        <div class="card purple">
-          <div class="card-num">ZIP</div>
-          <div class="card-title">Download all</div>
-          <div class="card-desc">Timestamped archive of every successful patch.</div>
+        <div class="card">
+          <div class="card-label">Bundle</div>
+          <div class="card-title">Download all as ZIP</div>
+          <div class="card-desc">A timestamped archive of every successfully processed file in the queue.</div>
         </div>
-        <div class="card purple">
-          <div class="card-num">SAME ENGINE</div>
-          <div class="card-title">Honors options</div>
-          <div class="card-desc">Why? column and tolerance thresholds apply to the whole batch.</div>
-        </div>
-      </div>
-      <p class="footnote">// great for end-of-month invoice runs</p>
-    </div>
-  </section>
-
-  <!-- ─────────────────── 9: BONUS — RULE TESTER ─────────────────── -->
-  <section class="slide" data-notes="Rule Tester is a what-if console. No file needed. Type values into the cells the engine reads → click Evaluate → see exactly what Anmerkung would be produced. Includes presets per forwarder.">
-    <div class="slide-body">
-      <div class="eyebrow">// Bonus IV</div>
-      <h2 class="title">Rule Tester — <span class="grad">what-if</span> in one click.</h2>
-      <p class="lede">No file required. Type values into the fields the engine actually reads — <span class="code">FR Diff</span>, <span class="code">SNK Kosten DL</span>, <span class="code">Empf.-Ort</span>, etc. — and instantly see the Anmerkung the rules would produce.</p>
-      <div class="grid-3" style="margin-top:1rem">
-        <div class="card blue">
-          <div class="card-num">PLAY</div>
-          <div class="card-title">Hypothetical rows</div>
-          <div class="card-desc">Test edge cases without crafting an Excel file.</div>
-        </div>
-        <div class="card blue">
-          <div class="card-num">PRESETS</div>
-          <div class="card-title">Common branches</div>
-          <div class="card-desc">AUSFALLFRACHT · Amazon tier · NL-FIX · Fremdnummer dup, etc.</div>
-        </div>
-        <div class="card blue">
-          <div class="card-num">SAME ENGINE</div>
-          <div class="card-title">No tricks</div>
-          <div class="card-desc">It calls the production rules — what you see is what the audit would write.</div>
+        <div class="card">
+          <div class="card-label">Consistency</div>
+          <div class="card-title">Same engine, same options</div>
+          <div class="card-desc">Reason column and tolerance thresholds apply to the entire batch.</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ─────────────────── 10: BONUS — DIFF / TRAINING ─────────────────── -->
-  <section class="slide" data-notes="Diff Mode = quality loop. A is your output, B is hand-corrected truth. The tool labels every disagreement (wrong / missed / overfired / drift) and lets you click ✦ to send a row straight into the Rule Tester to iterate.">
+  <!-- ─────────── 11 · CAPABILITIES — RULE TESTER ─────────── -->
+  <section class="slide" data-section="Capabilities" data-notes="Rule Tester is a what-if console. No file needed. Type values into the cells the engine reads → click Evaluate → see exactly what Anmerkung would be produced. Includes presets per carrier.">
     <div class="slide-body">
-      <div class="eyebrow">// Bonus V</div>
-      <h2 class="title">Diff Mode — <span class="grad">train</span> the engine.</h2>
-      <p class="lede">Drop the tool's output (<span class="code">A</span>) and the hand-corrected truth (<span class="code">B</span>). Every disagreement becomes a labeled training case you can filter, export, or send straight into the Rule Tester.</p>
-      <div class="grid-4" style="margin-top:1rem">
-        <div class="card gold">
-          <div class="card-num">WRONG</div>
+      <div class="eyebrow"><span class="num">03</span><span class="sep">/</span><span>Capabilities</span></div>
+      <h2 class="title">Rule tester — validate logic without a file</h2>
+      <div class="title-rule"></div>
+      <p class="lede">Enter values into the same fields the engine reads — <span class="code">FR Diff</span>, <span class="code">SNK Kosten DL</span>, <span class="code">Empf.-Ort</span>, and others — to see exactly what Anmerkung the rules would produce.</p>
+
+      <div class="grid-3" style="margin-top: 1.5rem">
+        <div class="card">
+          <div class="card-label">Hypothetical</div>
+          <div class="card-title">Test edge cases</div>
+          <div class="card-desc">Validate behavior without crafting a sample Excel file.</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Presets</div>
+          <div class="card-title">Common branches built-in</div>
+          <div class="card-desc">AUSFALLFRACHT, Amazon tier, NL-FIX, Fremdnummer duplicate, and more.</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Fidelity</div>
+          <div class="card-title">Same engine, no shortcuts</div>
+          <div class="card-desc">Calls the production rules directly — what you see is what would be written.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 12 · CAPABILITIES — COMPARISON ─────────── -->
+  <section class="slide" data-section="Capabilities" data-notes="Comparison mode is the quality loop. A is the tool's output, B is the hand-corrected truth. The tool labels every disagreement (wrong, missed, overfired, drift) and lets you click through to the rule tester.">
+    <div class="slide-body">
+      <div class="eyebrow"><span class="num">03</span><span class="sep">/</span><span>Capabilities</span></div>
+      <h2 class="title">Comparison mode — refine the engine over time</h2>
+      <div class="title-rule"></div>
+      <p class="lede">Upload the tool's output (<span class="code">A</span>) alongside hand-corrected ground truth (<span class="code">B</span>). Every disagreement is classified into one of four labels you can filter, export, or pipe into the rule tester.</p>
+
+      <div class="grid-4" style="margin-top: 1.5rem">
+        <div class="card">
+          <div class="card-label">Wrong</div>
           <div class="card-title">Both filled, disagree</div>
-          <div class="card-desc">Rule fired, but with the wrong wording.</div>
+          <div class="card-desc">A rule fired but produced the wrong wording.</div>
         </div>
-        <div class="card gold">
-          <div class="card-num">MISSED</div>
+        <div class="card">
+          <div class="card-label">Missed</div>
           <div class="card-title">A empty, B filled</div>
           <div class="card-desc">A rule should have fired but didn't.</div>
         </div>
-        <div class="card gold">
-          <div class="card-num">OVERFIRED</div>
+        <div class="card">
+          <div class="card-label">Overfired</div>
           <div class="card-title">A filled, B empty</div>
-          <div class="card-desc">A rule fired when it shouldn't.</div>
+          <div class="card-desc">A rule fired when it shouldn't have.</div>
         </div>
-        <div class="card gold">
-          <div class="card-num">DRIFT</div>
+        <div class="card">
+          <div class="card-label">Drift</div>
           <div class="card-title">Engine moved</div>
           <div class="card-desc">Rules changed since A was generated.</div>
         </div>
       </div>
-      <p class="footnote">// export the result as <span class="code">CSV</span> or <span class="code">JSONL</span> for analysis or ML</p>
+
+      <p class="footnote">Export the result as <span class="code">CSV</span> or <span class="code">JSONL</span> for analysis or downstream training.</p>
     </div>
   </section>
 
-  <!-- ─────────────────── 11: SECTION BREAK — UNDER THE HOOD ─────────────────── -->
-  <section class="slide section-break" data-notes="Pivot from user-facing to engineering. Audience now sees how the magic works. Three slides follow: pipeline overview, rule engine, byte-level XLSX patch.">
-    <div class="slide-body" style="text-align:center;align-items:center">
-      <div class="eyebrow">// Intermission</div>
-      <h2 class="title">Under the <span class="grad">hood</span>.</h2>
-      <div class="ornament" style="margin-left:auto;margin-right:auto"><div class="line"></div><div class="sym">⚙ ✦ ⚙</div><div class="line"></div></div>
-      <p class="lede" style="margin:0 auto">A look at the moving parts. Three slides — the pipeline, the rule engine, and how we patch your file without breaking it.</p>
-    </div>
-  </section>
-
-  <!-- ─────────────────── 12: HOW IT WORKS — PIPELINE ─────────────────── -->
-  <section class="slide" data-notes="The whole app is a single static HTML page + one CSS + one JS file + a service worker. Two CDN libraries do the heavy lifting: SheetJS reads the workbook, JSZip patches the XLSX. Everything else is hand-written in anmerkung.js (~2500 lines, mostly the rule engine).">
+  <!-- ─────────── 13 · ARCHITECTURE — PIPELINE ─────────── -->
+  <section class="slide" data-section="Architecture" data-notes="The whole app is a single static HTML page + one CSS + one JS file + a service worker. Two CDN libraries do the heavy lifting: SheetJS reads the workbook, JSZip patches the XLSX. Everything else is hand-written in anmerkung.js.">
     <div class="slide-body">
-      <div class="eyebrow">// How the code works · 1 of 3</div>
-      <h2 class="title">The <span class="grad">pipeline</span>.</h2>
-      <p class="lede">Five stages from the file you drop to the file you download — all inside one browser tab.</p>
+      <div class="eyebrow"><span class="num">04</span><span class="sep">/</span><span>Architecture</span></div>
+      <h2 class="title">End-to-end pipeline</h2>
+      <div class="title-rule"></div>
+      <p class="lede">Five stages from the file you drop to the file you download — all running inside one browser tab.</p>
 
       <div class="pipeline">
         <div class="stage">
-          <div class="stage-n">01 · INPUT</div>
-          <div class="stage-t">Read bytes</div>
-          <div class="stage-d">The browser's <span class="code">FileReader</span> turns your <span class="code">.xlsx</span> into an <span class="code">ArrayBuffer</span>. Kept in memory only.</div>
-          <div class="stage-lib"><strong>Built-in</strong> · File API</div>
+          <div class="stage-num">01 · INPUT</div>
+          <div class="stage-title">Read bytes</div>
+          <div class="stage-desc">The browser's <span class="code">FileReader</span> turns the <span class="code">.xlsx</span> into an <span class="code">ArrayBuffer</span> in memory.</div>
+          <div class="stage-tag"><strong>Built-in</strong> · File API</div>
         </div>
         <div class="stage">
-          <div class="stage-n">02 · PARSE</div>
-          <div class="stage-t">Workbook → rows</div>
-          <div class="stage-d">Each sheet becomes a list of row objects keyed by column header (<span class="code">"Frachtdiff"</span>, <span class="code">"SNK Kosten DL"</span>, …).</div>
-          <div class="stage-lib"><strong>SheetJS</strong> · xlsx 0.18.5</div>
+          <div class="stage-num">02 · PARSE</div>
+          <div class="stage-title">Workbook → rows</div>
+          <div class="stage-desc">Each sheet becomes a list of row objects keyed by column header (<span class="code">Frachtdiff</span>, <span class="code">SNK Kosten DL</span>, …).</div>
+          <div class="stage-tag"><strong>SheetJS</strong> · xlsx 0.18.5</div>
         </div>
         <div class="stage">
-          <div class="stage-n">03 · DECIDE</div>
-          <div class="stage-t">Rule engine</div>
-          <div class="stage-d">A per-forwarder dispatcher walks each row through an ordered ladder of rules. First match wins. Output is a phrase from a single catalog.</div>
-          <div class="stage-lib"><strong>Hand-rolled</strong> · anmerkung.js</div>
+          <div class="stage-num">03 · DECIDE</div>
+          <div class="stage-title">Rule engine</div>
+          <div class="stage-desc">A per-carrier dispatcher walks each row through an ordered ladder of rules. First match wins.</div>
+          <div class="stage-tag"><strong>Custom</strong> · anmerkung.js</div>
         </div>
         <div class="stage">
-          <div class="stage-n">04 · PATCH</div>
-          <div class="stage-t">Surgical XLSX edit</div>
-          <div class="stage-d">An <span class="code">.xlsx</span> is a ZIP of XML. We unzip, rewrite only the Anmerkung column cells in <span class="code">sheetN.xml</span>, and re-zip — keeping styles, formulas, and drawings untouched.</div>
-          <div class="stage-lib"><strong>JSZip</strong> · 3.10.1</div>
+          <div class="stage-num">04 · PATCH</div>
+          <div class="stage-title">Surgical XLSX edit</div>
+          <div class="stage-desc">Treat the .xlsx as a ZIP, rewrite only the Anmerkung cells in <span class="code">sheetN.xml</span>, re-zip.</div>
+          <div class="stage-tag"><strong>JSZip</strong> · 3.10.1</div>
         </div>
         <div class="stage">
-          <div class="stage-n">05 · OUTPUT</div>
-          <div class="stage-t">Blob → download</div>
-          <div class="stage-d">The patched archive becomes a <span class="code">Blob</span>; the browser saves it with the original filename. No server round-trip.</div>
-          <div class="stage-lib"><strong>Built-in</strong> · Blob + &lt;a download&gt;</div>
+          <div class="stage-num">05 · OUTPUT</div>
+          <div class="stage-title">Blob → download</div>
+          <div class="stage-desc">The patched archive becomes a <span class="code">Blob</span>; the browser saves it with the original filename.</div>
+          <div class="stage-tag"><strong>Built-in</strong> · Blob API</div>
         </div>
       </div>
 
-      <p class="footnote">// stack: vanilla HTML/CSS/JS · zero build · 2 CDN libs · service worker for offline</p>
+      <p class="footnote">Stack: vanilla HTML / CSS / JS · zero build step · two CDN libraries · service worker for offline.</p>
     </div>
   </section>
 
-  <!-- ─────────────────── 13: HOW IT WORKS — RULE ENGINE ─────────────────── -->
-  <section class="slide" data-notes="Each forwarder has its own processX() function in anmerkung.js — a flat ladder of if/else-if branches. Order matters: more specific rules come first, fallbacks last. All output strings live in a single PHRASES catalog so changing wording is a one-line edit.">
+  <!-- ─────────── 14 · ARCHITECTURE — RULE ENGINE ─────────── -->
+  <section class="slide" data-section="Architecture" data-notes="Each carrier has its own processX() function in anmerkung.js — a flat ladder of if/else-if branches. Order matters: more specific rules come first, fallbacks last. All output strings live in a single PHRASES catalog so changing wording is a one-line edit.">
     <div class="slide-body">
-      <div class="eyebrow">// How the code works · 2 of 3</div>
-      <h2 class="title">The <span class="grad">rule engine</span>.</h2>
+      <div class="eyebrow"><span class="num">04</span><span class="sep">/</span><span>Architecture</span></div>
+      <h2 class="title">Rule engine design</h2>
+      <div class="title-rule"></div>
 
       <div class="two-col">
         <div>
-          <p class="lede">Each forwarder has its own function — <span class="code">processDachser()</span>, <span class="code">processKN()</span>, <span class="code">processDHL()</span>, <span class="code">processWackler()</span>. Inside each is an ordered ladder of rules. The first one that matches a row wins; everything below is skipped.</p>
-          <div class="checklist" style="margin-top:1.1rem">
-            <div class="check"><div class="icn">1</div><div class="body"><strong>Specific before generic</strong><span>Most-narrow conditions are checked first so they aren't masked by broader ones.</span></div></div>
-            <div class="check"><div class="icn">2</div><div class="body"><strong>One phrase catalog</strong><span>Every output string lives in a single <span class="code">PHRASES</span> object. Renaming a wording is a one-line change everywhere.</span></div></div>
-            <div class="check"><div class="icn">3</div><div class="body"><strong>Tunable tolerance</strong><span>Differences below a per-forwarder threshold (e.g. <span class="code">0.08 €</span>) count as zero — saved in <span class="code">localStorage</span>.</span></div></div>
+          <p class="lede">Each carrier has its own function — <span class="code">processDachser()</span>, <span class="code">processKN()</span>, <span class="code">processDHL()</span>, <span class="code">processWackler()</span>. Inside each is an ordered ladder of rules; the first match wins, the rest are skipped.</p>
+          <div class="checklist" style="margin-top: 1.5rem">
+            <div class="check">
+              <div class="icn">1</div>
+              <div class="body">
+                <strong>Specific before generic</strong>
+                <span>Narrower conditions are evaluated first so they aren't masked by broader fallbacks.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">2</div>
+              <div class="body">
+                <strong>Single phrase catalog</strong>
+                <span>Every output string lives in one <span class="code">PHRASES</span> object. Changing a wording is a one-line edit, applied everywhere.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">3</div>
+              <div class="body">
+                <strong>Tunable tolerance</strong>
+                <span>Differences below a per-carrier threshold (e.g. <span class="code">€0.08</span>) count as zero. Stored in <span class="code">localStorage</span>.</span>
+              </div>
+            </div>
           </div>
         </div>
+
         <div class="codeblock" aria-hidden="true">
-<span class="kw">function</span> <span class="cond">processWackler</span>(row) {<br>
-&nbsp;&nbsp;<span class="com">// 1. duplicate Fremdnummer? → flag it</span><br>
-&nbsp;&nbsp;<span class="kw">if</span> (<span class="cond">isDuplicateFremdnummer</span>(row))<span class="arrow">→</span><span class="out">"Fremdnummer Doppelt berechnet"</span>;<br>
+          <div class="codeblock-header">
+            <span class="dot-r"></span><span class="dot-r"></span><span class="dot-r"></span>
+            <span class="file">assets/anmerkung.js · processWackler() · simplified</span>
+          </div>
+<span class="kw">function</span> <span class="fn">processWackler</span>(row) {<br>
+&nbsp;&nbsp;<span class="com">// 1. duplicate Fremdnummer detected</span><br>
+&nbsp;&nbsp;<span class="kw">if</span> (<span class="fn">isDuplicateFremdnummer</span>(row))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="str">"Fremdnummer Doppelt berechnet"</span>;<br>
 <br>
-&nbsp;&nbsp;<span class="com">// 2. would B2C-Line have been cheaper?</span><br>
-&nbsp;&nbsp;<span class="kw">else if</span> (<span class="cond">b2cWouldBeCheaper</span>(row))<span class="arrow">→</span><span class="out">"hätte B2C-Line abrechnen dürfen"</span>;<br>
+&nbsp;&nbsp;<span class="com">// 2. B2C-Line would have been cheaper</span><br>
+&nbsp;&nbsp;<span class="kw">if</span> (<span class="fn">b2cWouldBeCheaper</span>(row))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="str">"hätte B2C-Line abrechnen dürfen"</span>;<br>
 <br>
-&nbsp;&nbsp;<span class="com">// 3. SNK 38 / −11.5 / 22 buckets</span><br>
-&nbsp;&nbsp;<span class="kw">else if</span> (<span class="cond">snkDiff</span>(row) > <span class="num">T_WACKLER</span>)<span class="arrow">→</span><span class="out">"SNK Differenz"</span>;<br>
+&nbsp;&nbsp;<span class="com">// 3. SNK threshold buckets (38 / -11.5 / 22)</span><br>
+&nbsp;&nbsp;<span class="kw">if</span> (<span class="fn">snkDiff</span>(row) > <span class="num">T_WACKLER</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="str">"SNK Differenz"</span>;<br>
 <br>
-&nbsp;&nbsp;<span class="com">// 4. weight / volume mismatch</span><br>
-&nbsp;&nbsp;<span class="kw">else if</span> (<span class="cond">weightOff</span>(row))<span class="arrow">→</span><span class="out">"Differenz aufgrund abweichender Gewichte"</span>;<br>
+&nbsp;&nbsp;<span class="com">// 4. weight or volume mismatch</span><br>
+&nbsp;&nbsp;<span class="kw">if</span> (<span class="fn">weightOff</span>(row))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="str">"Differenz aufgrund abweichender Gewichte"</span>;<br>
 <br>
 &nbsp;&nbsp;<span class="com">// 5. fallback — leave empty</span><br>
-&nbsp;&nbsp;<span class="kw">else</span><span class="arrow">→</span><span class="out">""</span>;<br>
+&nbsp;&nbsp;<span class="kw">return</span> <span class="str">""</span>;<br>
 }
         </div>
       </div>
 
-      <p class="footnote">// real ladders are longer — Dachser has ~22 rules, K+N ~18, DHL ~15, Wackler ~14</p>
+      <p class="footnote">Production ladders are longer: Dachser ≈ 22 rules, K+N ≈ 18, DHL ≈ 15, Wackler ≈ 14.</p>
     </div>
   </section>
 
-  <!-- ─────────────────── 14: HOW IT WORKS — XLSX PATCH ─────────────────── -->
-  <section class="slide" data-notes="Key insight: an .xlsx is just a ZIP archive of XML files. SheetJS *can* write a workbook back, but it re-serializes everything and loses styling, drawings, merged cells. Instead we treat the file as a ZIP, edit one XML file in place, and re-zip. Result: byte-identical output except for the Anmerkung column.">
+  <!-- ─────────── 15 · ARCHITECTURE — FILE PRESERVATION ─────────── -->
+  <section class="slide" data-section="Architecture" data-notes="Key insight: an .xlsx is just a ZIP archive of XML files. SheetJS *can* re-write a workbook, but it re-serializes everything and can lose styling, drawings, and merged cells. Instead we treat the file as a ZIP, edit one XML file in place, and re-zip. Result: byte-identical output except for the Anmerkung column.">
     <div class="slide-body">
-      <div class="eyebrow">// How the code works · 3 of 3</div>
-      <h2 class="title">Why a <span class="grad">byte-level</span> patch?</h2>
-      <p class="lede">Because letting a library re-write the whole workbook would silently lose your styles, formulas, and drawings. So we don't.</p>
+      <div class="eyebrow"><span class="num">04</span><span class="sep">/</span><span>Architecture</span></div>
+      <h2 class="title">Why we patch the file in place</h2>
+      <div class="title-rule"></div>
+      <p class="lede">Letting a library re-write the entire workbook would silently lose styles, formulas, and embedded drawings. So we don't.</p>
 
-      <div class="two-col" style="margin-top:.6rem">
+      <div class="two-col">
         <div>
-          <div class="checklist">
-            <div class="check"><div class="icn">★</div><div class="body"><strong>An .xlsx is a ZIP</strong><span>Rename it to <span class="code">.zip</span> and you can browse the XML inside. We use that fact.</span></div></div>
-            <div class="check"><div class="icn">★</div><div class="body"><strong>Only the Anmerkung column changes</strong><span>JSZip rewrites a few <span class="code">&lt;c&gt;</span> cells in <span class="code">sheetN.xml</span> and leaves every other byte alone.</span></div></div>
-            <div class="check"><div class="icn">★</div><div class="body"><strong>Styles · formulas · pictures survive</strong><span>Conditional formatting, charts, merged cells, frozen panes — all preserved exactly.</span></div></div>
-            <div class="check"><div class="icn">★</div><div class="body"><strong>Diffable output</strong><span>Open the original and the patched file in Excel: only the one column differs. No surprises.</span></div></div>
+          <div class="checklist" style="margin-top: .25rem">
+            <div class="check">
+              <div class="icn">★</div>
+              <div class="body">
+                <strong>An .xlsx is a ZIP archive</strong>
+                <span>Rename it to <span class="code">.zip</span> and you can browse the XML inside. We use that fact directly.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">★</div>
+              <div class="body">
+                <strong>Only the Anmerkung column changes</strong>
+                <span>JSZip rewrites a few <span class="code">&lt;c&gt;</span> cells in <span class="code">sheetN.xml</span> and leaves every other byte alone.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">★</div>
+              <div class="body">
+                <strong>Styles, formulas, pictures survive</strong>
+                <span>Conditional formatting, charts, merged cells, frozen panes — all preserved exactly.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">★</div>
+              <div class="body">
+                <strong>Diff-able output</strong>
+                <span>Open the original and the processed file side-by-side: only the one column differs. No surprises.</span>
+              </div>
+            </div>
           </div>
         </div>
+
         <div class="ziptree" aria-hidden="true">
-<span class="root">YourFile.xlsx</span>  <span class="pad">// it's a ZIP</span><br>
+<span class="root">YourFile.xlsx</span>  <span class="pad">// it's a ZIP archive</span><br>
 ├── <span class="dir">_rels/</span><br>
 ├── <span class="dir">docProps/</span><br>
 │&nbsp;&nbsp;&nbsp;├── <span class="file">app.xml</span><br>
 │&nbsp;&nbsp;&nbsp;└── <span class="file">core.xml</span><br>
 ├── <span class="dir">xl/</span><br>
 │&nbsp;&nbsp;&nbsp;├── <span class="file">workbook.xml</span><br>
-│&nbsp;&nbsp;&nbsp;├── <span class="file">styles.xml</span>      <span class="pad">// preserved</span><br>
-│&nbsp;&nbsp;&nbsp;├── <span class="dir">drawings/</span>     <span class="pad">// preserved</span><br>
-│&nbsp;&nbsp;&nbsp;├── <span class="dir">media/</span>        <span class="pad">// preserved</span><br>
+│&nbsp;&nbsp;&nbsp;├── <span class="file">styles.xml</span><br>
+│&nbsp;&nbsp;&nbsp;├── <span class="dir">drawings/</span><br>
+│&nbsp;&nbsp;&nbsp;├── <span class="dir">media/</span><br>
 │&nbsp;&nbsp;&nbsp;└── <span class="dir">worksheets/</span><br>
 │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file touched">sheet1.xml</span><br>
 │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file touched">sheet2.xml</span><br>
@@ -864,129 +1348,189 @@
     </div>
   </section>
 
-  <!-- ─────────────────── 11: PRIVACY / OFFLINE ─────────────────── -->
-  <section class="slide" data-notes="Privacy is the headline differentiator vs. server-side audit tools. No data leaves the browser. Service worker means the page works on a plane after the first visit.">
+  <!-- ─────────── 16 · TRUST ─────────── -->
+  <section class="slide" data-section="Trust" data-notes="Privacy is the headline differentiator vs. server-side audit tools. No data leaves the browser. The service worker means the page works on a plane after the first visit.">
     <div class="slide-body">
-      <div class="eyebrow">// Trust</div>
-      <h2 class="title">Your data <span class="grad">stays in your browser</span>.</h2>
-      <div class="grid-2" style="margin-top:1rem">
+      <div class="eyebrow"><span class="num">05</span><span class="sep">/</span><span>Trust &amp; deployment</span></div>
+      <h2 class="title">Your data stays in your browser</h2>
+      <div class="title-rule"></div>
+      <p class="lede">There is no backend. There is no account. There is nothing to log in to.</p>
+
+      <div class="grid-2" style="margin-top: 1.5rem">
         <div class="card">
-          <div class="card-num">100% CLIENT-SIDE</div>
-          <div class="card-title">No upload, no server</div>
-          <div class="card-desc">The .xlsx is read, processed, and patched entirely in your tab. There is no backend to send it to.</div>
+          <div class="card-label">Privacy</div>
+          <div class="card-title">100% client-side</div>
+          <div class="card-desc">The .xlsx is read, processed, and patched entirely in your browser tab. There is no backend to send it to.</div>
         </div>
         <div class="card">
-          <div class="card-num">OFFLINE</div>
-          <div class="card-title">Works on a plane</div>
-          <div class="card-desc">After the first visit, the page and its libraries are cached. Open it without internet and it still runs.</div>
+          <div class="card-label">Availability</div>
+          <div class="card-title">Works offline</div>
+          <div class="card-desc">After your first visit, the page and its libraries are cached. Open it without internet and it still runs.</div>
         </div>
         <div class="card">
-          <div class="card-num">PORTABLE</div>
-          <div class="card-title">Static page</div>
-          <div class="card-desc">It's a single HTML page hosted on GitHub Pages. No accounts, no logins, no cookies.</div>
+          <div class="card-label">Deployment</div>
+          <div class="card-title">Static hosting</div>
+          <div class="card-desc">A single HTML page on GitHub Pages. No accounts, no logins, no cookies, no infrastructure to operate.</div>
         </div>
         <div class="card">
-          <div class="card-num">AUDITABLE</div>
+          <div class="card-label">Auditability</div>
           <div class="card-title">Source is open</div>
-          <div class="card-desc">Every rule lives in <span class="code">assets/anmerkung.js</span>. Nothing hidden.</div>
+          <div class="card-desc">Every rule lives in <span class="code">assets/anmerkung.js</span>. Nothing is hidden behind an API.</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ─────────────────── 12: TRY IT ─────────────────── -->
-  <section class="slide" data-notes="End on a clear CTA. Open the tool, try with one of your real files, hit Preview first.">
-    <div class="slide-body" style="text-align:center;align-items:center;justify-content:center;flex:1;display:flex">
-      <div style="text-align:center;width:100%">
-        <div class="eyebrow">// Ready?</div>
-        <h2 class="title">Open the tool. <span class="grad">Try a real file.</span></h2>
-        <div class="ornament" style="margin-left:auto;margin-right:auto"><div class="line"></div><div class="sym">✦ ᚦ ✦</div><div class="line"></div></div>
-        <p class="lede" style="margin-left:auto;margin-right:auto">Pick a forwarder. Drop a workbook. Hit Preview first. Then Invoke the Ritual.</p>
-        <div class="cta-row" style="justify-content:center">
-          <a class="cta primary" href="anmerkung.html">✦ Open the Alchemist</a>
-          <a class="cta ghost" href="index.html">← Back to the Grimoire</a>
+  <!-- ─────────── 17 · GET STARTED ─────────── -->
+  <section class="slide cover" data-section="" data-notes="End on a clear call to action. Open the tool, try with one of your real files, hit Preview first.">
+    <div class="cover-inner">
+      <div class="eyebrow">
+        <span class="num">End</span><span class="sep">·</span><span>Thank you</span>
+      </div>
+      <h1 class="title">Get started in <span class="accent">under a minute</span></h1>
+      <div class="title-rule"></div>
+      <p class="lede">Select a carrier. Drop a workbook. Run the preview first. Process the file when the preview matches your expectations.</p>
+
+      <div class="cta-row">
+        <a class="cta primary" href="anmerkung.html">Open the tool →</a>
+        <a class="cta ghost" href="index.html">Back to overview</a>
+      </div>
+
+      <div class="cover-meta">
+        <div class="meta-item">
+          <span class="meta-label">Live at</span>
+          <span class="meta-value">codingkuh.my.id/anmerkung.html</span>
         </div>
-        <p class="footnote" style="margin-top:1.6rem">codingkuh.my.id <span class="grad">·</span> Firebase + GitHub Pages</p>
+        <div class="meta-item">
+          <span class="meta-label">Source</span>
+          <span class="meta-value">github.com/nicoyogi/vb-code-vault</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Hosting</span>
+          <span class="meta-value">GitHub Pages</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Questions?</span>
+          <span class="meta-value">Open the rule tester</span>
+        </div>
       </div>
     </div>
   </section>
 
 </main>
 
-<div class="notes" id="notes" aria-live="polite"></div>
+<div class="notes" id="notes" aria-live="polite">
+  <div class="notes-label">Presenter notes</div>
+  <div id="notesBody"></div>
+</div>
 
 <div class="bottom-bar">
   <button class="nav-btn" id="btnPrev" title="Previous slide (←)" aria-label="Previous slide">‹</button>
   <div class="dots" id="dots" role="tablist" aria-label="Slide navigation"></div>
-  <span class="counter" id="counter">1 / 12</span>
+  <span class="counter" id="counter"><span class="cur">01</span> / 17</span>
   <button class="nav-btn" id="btnNext" title="Next slide (→)" aria-label="Next slide">›</button>
 </div>
 
 <script>
 (function(){
-  const slides = Array.from(document.querySelectorAll('.slide'));
-  const dotsWrap = document.getElementById('dots');
-  const counter = document.getElementById('counter');
-  const fill = document.getElementById('progressFill');
-  const notes = document.getElementById('notes');
-  const btnPrev = document.getElementById('btnPrev');
-  const btnNext = document.getElementById('btnNext');
-  const btnFs = document.getElementById('btnFullscreen');
-  const btnNotes = document.getElementById('btnNotes');
-  const deck = document.getElementById('deck');
+  'use strict';
 
-  let i = 0;
+  const slides    = Array.from(document.querySelectorAll('.slide'));
+  const dotsWrap  = document.getElementById('dots');
+  const counter   = document.getElementById('counter');
+  const fill      = document.getElementById('progressFill');
+  const notes     = document.getElementById('notes');
+  const notesBody = document.getElementById('notesBody');
+  const sectionEl = document.getElementById('sectionIndicator');
+  const sectionN  = document.getElementById('sectionNum');
+  const sectionNm = document.getElementById('sectionName');
+  const btnPrev   = document.getElementById('btnPrev');
+  const btnNext   = document.getElementById('btnNext');
+  const btnFs     = document.getElementById('btnFullscreen');
+  const btnNotes  = document.getElementById('btnNotes');
+  const deck      = document.getElementById('deck');
+
+  const total = slides.length;
+  let idx = 0;
   let notesOn = false;
 
-  // build dots
-  slides.forEach((_, idx) => {
+  // Pad numbers to 2 digits
+  const pad = n => String(n).padStart(2, '0');
+
+  // Build dot indicators
+  slides.forEach((_, i) => {
     const b = document.createElement('button');
     b.className = 'dot';
     b.type = 'button';
     b.setAttribute('role', 'tab');
-    b.setAttribute('aria-label', 'Go to slide ' + (idx + 1));
-    b.addEventListener('click', () => go(idx));
+    b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    b.addEventListener('click', () => go(i));
     dotsWrap.appendChild(b);
   });
   const dots = Array.from(dotsWrap.children);
 
-  function go(n){
-    i = Math.max(0, Math.min(slides.length - 1, n));
-    slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
-    dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
-    counter.textContent = (i + 1) + ' / ' + slides.length;
-    fill.style.width = ((i + 1) / slides.length * 100) + '%';
-    btnPrev.disabled = i === 0;
-    btnNext.disabled = i === slides.length - 1;
-    notes.textContent = slides[i].getAttribute('data-notes') || '';
-    // sync URL hash so refresh keeps position
-    try { history.replaceState(null, '', '#s' + (i + 1)); } catch(e){}
+  function go(n) {
+    idx = Math.max(0, Math.min(total - 1, n));
+    const s = slides[idx];
+
+    slides.forEach((sl, i) => sl.classList.toggle('active', i === idx));
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+
+    counter.innerHTML = '<span class="cur">' + pad(idx + 1) + '</span> / ' + pad(total);
+    fill.style.width = ((idx + 1) / total * 100) + '%';
+
+    btnPrev.disabled = idx === 0;
+    btnNext.disabled = idx === total - 1;
+
+    // Section indicator (top-right)
+    const sec = s.getAttribute('data-section') || '';
+    if (sec) {
+      sectionN.textContent = pad(idx + 1);
+      sectionNm.textContent = sec;
+      sectionEl.style.visibility = 'visible';
+    } else {
+      sectionEl.style.visibility = 'hidden';
+    }
+
+    // Presenter notes
+    notesBody.textContent = s.getAttribute('data-notes') || '';
+
+    // Reflect in URL hash for deep-linking
+    try { history.replaceState(null, '', '#s' + (idx + 1)); } catch(e){}
+
+    // Reset scroll inside the slide
+    s.scrollTop = 0;
   }
 
-  btnPrev.addEventListener('click', () => go(i - 1));
-  btnNext.addEventListener('click', () => go(i + 1));
+  btnPrev.addEventListener('click', () => go(idx - 1));
+  btnNext.addEventListener('click', () => go(idx + 1));
 
-  // click anywhere on slide → next (but not on links/buttons/inputs)
+  // Click anywhere on a slide → next (skip when on links / buttons / inputs)
   deck.addEventListener('click', (e) => {
-    if (e.target.closest('a,button,input,select,textarea')) return;
-    go(i + 1);
+    if (e.target.closest('a, button, input, select, textarea')) return;
+    go(idx + 1);
   });
 
-  // keyboard
+  // Keyboard
   document.addEventListener('keydown', (e) => {
-    if (e.target.matches('input,textarea,select')) return;
+    if (e.target.matches('input, textarea, select')) return;
     switch (e.key) {
-      case 'ArrowRight': case 'PageDown': case ' ':
-        e.preventDefault(); go(i + 1); break;
-      case 'ArrowLeft': case 'PageUp':
-        e.preventDefault(); go(i - 1); break;
+      case 'ArrowRight':
+      case 'PageDown':
+      case ' ':
+        e.preventDefault(); go(idx + 1); break;
+      case 'ArrowLeft':
+      case 'PageUp':
+        e.preventDefault(); go(idx - 1); break;
       case 'Home':
         e.preventDefault(); go(0); break;
       case 'End':
-        e.preventDefault(); go(slides.length - 1); break;
-      case 'f': case 'F':
+        e.preventDefault(); go(total - 1); break;
+      case 'f':
+      case 'F':
         e.preventDefault(); toggleFullscreen(); break;
-      case 'p': case 'P':
+      case 'p':
+      case 'P':
         e.preventDefault(); toggleNotes(); break;
       case 'Escape':
         if (document.fullscreenElement) document.exitFullscreen();
@@ -995,36 +1539,41 @@
     }
   });
 
-  // touch swipe
+  // Touch swipe
   let touchX = null;
-  deck.addEventListener('touchstart', (e) => { touchX = e.changedTouches[0].clientX; }, { passive: true });
+  deck.addEventListener('touchstart', (e) => {
+    touchX = e.changedTouches[0].clientX;
+  }, { passive: true });
   deck.addEventListener('touchend', (e) => {
     if (touchX === null) return;
     const dx = e.changedTouches[0].clientX - touchX;
-    if (Math.abs(dx) > 60) go(i + (dx < 0 ? 1 : -1));
+    if (Math.abs(dx) > 60) go(idx + (dx < 0 ? 1 : -1));
     touchX = null;
   }, { passive: true });
 
-  // fullscreen
-  function toggleFullscreen(){
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
-    else document.exitFullscreen?.();
+  // Fullscreen
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
   }
   btnFs.addEventListener('click', toggleFullscreen);
 
-  // notes
-  function toggleNotes(){
+  // Presenter notes
+  function toggleNotes() {
     notesOn = !notesOn;
     notes.classList.toggle('visible', notesOn);
     btnNotes.setAttribute('aria-pressed', String(notesOn));
   }
   btnNotes.addEventListener('click', toggleNotes);
 
-  // start at hash if any
+  // Deep-link (#s7) on load
   const m = (location.hash || '').match(/^#s(\d+)$/);
   go(m ? Math.max(0, parseInt(m[1], 10) - 1) : 0);
 
-  // focus deck so keyboard works without an extra click
+  // Focus deck so the keyboard works without an extra click
   setTimeout(() => deck.focus(), 50);
 })();
 </script>
