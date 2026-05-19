@@ -617,7 +617,7 @@
   }
   .cta.ghost:hover { color: var(--text); border-color: var(--accent-line); background: var(--surface-1); }
 
-  /* ────────────── live demo (intermission) slide ────────────── */
+  /* ────────────── animated demo (intermission) slide ────────────── */
   .demo {
     align-items: center !important;
     justify-content: center !important;
@@ -769,7 +769,7 @@
   </section>
 
   <!-- ─────────── 02 · AGENDA ─────────── -->
-  <section class="slide" data-section="Overview" data-notes="Set expectations for the talk. Five sections, ~3 slides each. Mention you'll do a live demo afterwards if the audience wants one.">
+  <section class="slide" data-section="Overview" data-notes="Set expectations for the talk. Five sections, ~3 slides each. Mention there's an animated demo slide partway through that walks through the tool end-to-end without leaving the deck.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">00</span><span class="sep">/</span><span>Agenda</span></div>
       <h2 class="title">What we'll cover</h2>
@@ -1044,40 +1044,40 @@
     </div>
   </section>
 
-  <!-- ─────────── 09 · LIVE DEMO ─────────── -->
-  <section class="slide demo" data-section="" data-notes="Pause for a live demonstration. Switch to anmerkung.html in a separate tab and walk the audience through one full file end-to-end (≈3 minutes). Resume the deck with → after the demo. Tip: pre-load a real audit file on your desktop so you don't fumble for one mid-presentation.">
+  <!-- ─────────── 09 · ANIMATED DEMO ─────────── -->
+  <section class="slide demo" data-section="" data-notes="An animated walkthrough of the tool, embedded in the deck. The five steps below mirror what the audience would see if you ran it live: pick a carrier, drop an .xlsx, run preview, review the trigger breakdown, then process. Pace yourself — narrate the steps as the audience reads them. Resume the deck with → when you're done.">
     <div class="demo-inner">
-      <div class="demo-label">Live demo</div>
+      <div class="demo-label">Animated demo</div>
       <h2 class="demo-title">Let's run a real file together</h2>
       <div class="title-rule"></div>
-      <p class="demo-lede">We'll switch to the tool now and walk through one carrier-specific audit end-to-end. Should take about three minutes.</p>
+      <p class="demo-lede">A scripted walkthrough of one carrier-specific audit, end-to-end. Same five steps you'd run yourself — narrated alongside the deck.</p>
 
       <div class="demo-checklist">
         <div class="demo-step">
           <span class="demo-num">01</span>
-          <span class="demo-text">Open <span class="code">anmerkung.html</span> in a new tab</span>
+          <span class="demo-text">Open the tool and select a carrier</span>
         </div>
         <div class="demo-step">
           <span class="demo-num">02</span>
-          <span class="demo-text">Select a carrier</span>
-        </div>
-        <div class="demo-step">
-          <span class="demo-num">03</span>
           <span class="demo-text">Drop a recent <span class="code">.xlsx</span> audit file</span>
         </div>
         <div class="demo-step">
+          <span class="demo-num">03</span>
+          <span class="demo-text">Run the preview</span>
+        </div>
+        <div class="demo-step">
           <span class="demo-num">04</span>
-          <span class="demo-text">Run the preview &amp; review the trigger breakdown</span>
+          <span class="demo-text">Review the trigger breakdown</span>
         </div>
         <div class="demo-step">
           <span class="demo-num">05</span>
-          <span class="demo-text">Process the file &amp; open the result in Excel</span>
+          <span class="demo-text">Process the file &amp; download the result</span>
         </div>
       </div>
 
       <div class="demo-resume">
         <span class="kbd">→</span>
-        <span>resume the deck after the demo</span>
+        <span>continue when the walkthrough finishes</span>
       </div>
     </div>
   </section>
