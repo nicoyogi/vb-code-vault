@@ -35,7 +35,7 @@ notifier — if you've already set those up, you're done.
 
 | Secret | Required? | Purpose |
 |--------|-----------|---------|
-| `FIREBASE_SERVICE_ACCOUNT` | Yes | JSON of a service-account key with read access to Firestore |
+| `FIREBASE_SERVICE_ACCOUNT` | Yes | JSON of a service-account key with read access to Firestore. **Setup:** see [HOLIDAY-TEAMS-NOTIFIER.md → `FIREBASE_SERVICE_ACCOUNT`](HOLIDAY-TEAMS-NOTIFIER.md#1-firebase_service_account--firestore-service-account-key). The same key is reused here — set it once. |
 | `TEAMS_WEBHOOK_URL`        | Yes (or use `TEAMS_TASKS_WEBHOOK_URL`) | Teams Workflow webhook URL |
 | `TEAMS_TASKS_WEBHOOK_URL`  | Optional | If set, used instead of `TEAMS_WEBHOOK_URL` so tasks can post to a different channel than holidays |
 

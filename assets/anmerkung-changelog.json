@@ -1,6 +1,16 @@
 {
-  "version": "1.7.0",
+  "version": "1.7.1",
   "entries": [
+    {
+      "ver": "1.7.1",
+      "date": "2026-05-19",
+      "items": [
+        "Service worker — switched to network-first for all same-origin assets (HTML, JS, CSS, JSON, manifest). Returning users now get the latest deployed code on every online load, with the cache acting purely as an offline fallback. Cross-origin CDN libs (SheetJS, JSZip, fonts) remain cache-first because they're immutable per URL.",
+        "Service worker — fixes a long-standing symptom where rule fixes shipped to source but didn't reach the live tool because the asset cache (`alchemist-vX`) was still serving an older copy of `anmerkung.js`. The previous strategy required a manual `VERSION` bump per release; the new one needs no cache-bust step at all for content/rule updates.",
+        "Service worker — VERSION bumped v1.4.5 → v1.7.1 (one-time) to rotate the cache name, force a fresh re-install of the precache list, and migrate users off the old cache-first flow. Future content updates won't require a VERSION bump.",
+        "Docs — refreshed README + the two ANMERKUNG docs to match v1.7.x (always-fresh deploy story, Dachser SNK non-integer surcharge detection, negative-FR → Frachtzu/abschlag classification). Added missing `FIREBASE_SERVICE_ACCOUNT` setup steps to the Holiday notifier doc."
+      ]
+    },
     {
       "ver": "1.7.0",
       "date": "2026-05-13",
