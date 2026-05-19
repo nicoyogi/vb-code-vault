@@ -9,7 +9,9 @@
   },
   "scripts": {
     "notify:tomorrow": "node notify-tomorrow.mjs",
-    "notify:tomorrow:dry": "DRY_RUN=1 node notify-tomorrow.mjs"
+    "notify:tomorrow:dry": "DRY_RUN=1 node notify-tomorrow.mjs",
+    "notify:tasks": "node notify-tasks-due.mjs",
+    "notify:tasks:dry": "DRY_RUN=1 node notify-tasks-due.mjs"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0"
