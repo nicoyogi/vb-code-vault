@@ -16,6 +16,7 @@ This document describes the **system-level architecture** of `anmerkung.html` (T
 | Persistence | Browser only (`localStorage` + `Cache Storage`); no remote DB |
 | Trust boundary | Everything runs client-side; uploaded XLSX never leaves the browser |
 | Offline | Installable PWA via service worker `sw.js` |
+| Update model | Always-fresh: same-origin assets are served network-first, so `git push` to `main` reaches users on their next online load with no cache-bust step |
 
 The Alchemist's job: read an XLSX freight-audit workbook, run a per-forwarder rule engine over it, and produce a byte-level patched copy with the `Anmerkung` column filled in — entirely in-browser.
 
@@ -164,23 +165,23 @@ Used by every Grimoire page. Exposes a small global API:
 
 ### 3.4 Service worker — `sw.js`
 
-A small offline shell — not a sync engine, not a queue, not a router.
+A small offline shell — not a sync engine, not a queue, not a router. Optimized for **always-fresh** deploys: returning users get the latest code on every online load, with the cache acting purely as an offline fallback.
 
 **Cache strategy (per request):**
 
-| Request kind | Strategy |
-|---|---|
-| Navigation / `text/html` | network-first, fall back to cache, ultimate fallback `./anmerkung.html` |
-| `assets/anmerkung-changelog.json` | network-first (so release notes update without a SW bump) |
-| Everything else | cache-first, populate on first hit, only cache `status==200 && type in {basic,cors}` |
+| Request kind | Strategy | Why |
+|---|---|---|
+| Same-origin (`anmerkung.html`, `anmerkung.js`, `anmerkung.css`, `anmerkung-changelog.json`, `manifest.webmanifest`, `grimoire-core.*`, …) | **network-first**, cache fallback | Every online load gets the latest deployed bytes. The cached copy is only used when the network fails. |
+| Cross-origin (SheetJS, JSZip, Google Fonts) | **cache-first**, fall through to network on miss | These URLs are immutable per version, so cache-first is both faster and safe. Caches only `status==200 && type in {basic, cors}`. |
+| Navigation while offline + no cached entry | falls back to cached `./anmerkung.html` | Keeps the app bootable offline even on URLs the SW hasn't seen before. |
 
 **Lifecycle:**
 
-- `install` — pre-cache the `CORE` array (page shell + assets + manifest), `skipWaiting`.
+- `install` — pre-cache the `CORE` array (page shell + assets + manifest), `skipWaiting`. Network-first means these entries get refreshed on every subsequent online load anyway, so `CORE` is mainly a first-offline-visit safety net.
 - `activate` — delete every cache that isn't the current `alchemist-vX`, `clients.claim`.
 - `message` — accept `PRECACHE`, `CACHE_STATUS`, `SKIP_WAITING`. Replies use `event.ports[0]` so each request gets its own reply channel.
 
-The SW version (`VERSION` constant) is the cache-bust knob — bumping it deletes all old caches on activate.
+**The `VERSION` constant is for SW logic changes only.** Because same-origin assets are network-first, content/rule edits ship to users on the next online load *without* a cache invalidation step. Bump `VERSION` only when the SW logic itself changes (e.g., new caching strategy, new `CORE` entries, new message types) — that rotates the cache name and forces a fresh `install` of `CORE` for everyone.
 
 ### 3.5 Static data
 
@@ -377,17 +378,23 @@ flowchart LR
   REPO["GitHub repo<br/>nicoyogi/vb-code-vault"] -- "git push to main" --> GHP["GitHub Pages<br/>builds nothing, serves files"]
   GHP -- "CNAME" --> DOM["codingkuh.my.id"]
   DOM -- "first visit" --> SW["sw.js installs, precaches CORE"]
-  DOM -- "subsequent visits" --> CS[("Cache Storage<br/>alchemist-vX")]
+  DOM -- "subsequent online visits" --> NET[("Network — always-fresh<br/>same-origin assets re-fetched every load")]
+  DOM -- "subsequent offline visits" --> CS[("Cache Storage<br/>alchemist-vX")]
 ```
 
-To ship a change:
+To ship a content/rule change:
 
 1. Edit files in place.
-2. If service-worker behavior or `CORE` list changes, bump `VERSION` in `sw.js`.
-3. If release notes should appear in the in-app changelog modal, prepend an entry to `assets/anmerkung-changelog.json` (and bump its top-level `version`).
-4. Push to `main`. GitHub Pages serves directly. The SW will replace itself on the next visit (network-first HTML wins, then `activate` deletes old caches).
+2. Prepend an entry to [`assets/anmerkung-changelog.json`](../assets/anmerkung-changelog.json) (and bump its top-level `version`) so the in-app "What's new" modal and version badge surface the change.
+3. Push to `main`. GitHub Pages serves directly. Users get the new bytes on their next online load — no cache-bust step required, because `sw.js` is network-first for same-origin assets.
 
-The CI workflow `.github/workflows/holiday-notify.yml` is unrelated — it powers the Holiday Tracker page, not the Alchemist.
+To ship a service-worker logic change (rare):
+
+1. Edit `sw.js`. If the `CORE` precache list changed, update it.
+2. Bump `VERSION` in `sw.js`. This rotates the cache name (`alchemist-vX` → `alchemist-vY`); the new SW's `activate` step deletes the old cache, and `install` re-fetches `CORE` from the network.
+3. Push to `main`. The browser detects the byte-changed `sw.js`, installs the new SW, and `clients.claim` puts existing tabs onto the new fetch logic on their next reload.
+
+The CI workflows in `.github/workflows/` (`holiday-notify.yml`, `tasks-notify.yml`) are unrelated to the Alchemist — they power the daily Teams reminders for the Holiday Tracker and The Ledger respectively. See [`HOLIDAY-TEAMS-NOTIFIER.md`](HOLIDAY-TEAMS-NOTIFIER.md) and [`TASKS-TEAMS-NOTIFIER.md`](TASKS-TEAMS-NOTIFIER.md).
 
 ---
 
