@@ -278,7 +278,7 @@ flowchart TD
   E -- yes --> E1["join Gebuehr fuer vergeblichen Abholversuch"]
   E --> F{"ZZ Diff errs?"}
   F -- yes --> F1["join 2. Zustellung"]
-  F --> G["daEvalSNK: switch on SNK_DL"]
+  F --> G["daEvalSNK: switch on effectiveDl<br/>(SNK_DL, or surcharge code derived from SNK_DIFF<br/>when SNK_DL is non-integer)"]
 
   G --> H{"SAM Diff errs?"}
   H -- yes --> H1["join Samstagzustellung"]
@@ -303,7 +303,9 @@ flowchart TD
   Q3 -- yes --> QC["join Sonderfahrt"]
   Q3 -- no --> Q4{"Anz.Sdg > 1?"}
   Q4 -- yes --> QD["join haette gebuendelt werden koennen"]
-  Q4 -- no --> QE["join Differenz aufgrund von abweichendem Gewicht"]
+  Q4 -- no --> Q5{"FR &lt; 0?"}
+  Q5 -- yes --> QF["join Differenz Frachtzu/ abschlag<br/>(negative FR on a single shipment is a freight credit, not a weight miscount)"]
+  Q5 -- no --> QE["join Differenz aufgrund von abweichendem Gewicht"]
 
   R --> S2{"SNK_DL==14 AND SNK_Diff errs?"}
   S2 -- yes --> S2a["join Abholterminvereinbarung"]
@@ -313,9 +315,11 @@ flowchart TD
   T --> Z(["return res"])
 ```
 
-**SNK sub-cascade (`daEvalSNK`)** — pure switch on `SNK_DL` literal:
+**SNK sub-cascade (`daEvalSNK`)** — switch on `effectiveDl`, where `effectiveDl = derivedCode || SNK_DL`:
 
-| `SNK_DL` | Output |
+> **Non-integer SNK_DL** carries a tariff base with cents (e.g. `14.72 = 5.71 tarif + 9 surcharge`, `7.57 = 2.56 tarif + 5 surcharge`). The literal SNK_DL is no longer a clean surcharge code, so `daDetectSurchargeFromDiff(snkDl, snkDiff)` re-derives the code from `SNK_DIFF`: when SNK_DL is non-integer **and** `Math.round(SNK_DIFF) ∈ {5, 9, 11, 14}` **and** the rounding error is `≤ 0.05`, it returns the rounded value. The switch then dispatches on that derived code instead of the raw DL, so the row lands in the correct branch (e.g., `9 → Telefonische Zustellterminvereinbarung`, `5 → Automatische Zustellterminvereinbarung`) instead of falling through to the generic Laderaumkostenentwicklung bucket. The window is deliberately narrow so genuine Laderaum rows are untouched.
+
+| `effectiveDl` | Output |
 |---|---|
 | 190 or 95 | `AUSFALLFRACHT` |
 | 130 | `Standgeld` |
