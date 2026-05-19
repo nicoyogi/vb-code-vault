@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#02020a">
+<title>Anmerkung Processor — Presentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #02020a;
+    --surface: rgba(10,8,24,0.85);
+    --surface2: rgba(16,14,32,0.9);
+    --border: rgba(212,175,100,0.12);
+    --border2: rgba(212,175,100,0.28);
+    --text: #ede8ff;
+    --text2: rgba(212,175,100,0.62);
+    --text3: rgba(212,175,100,0.32);
+    --accent: #34d399;
+    --accent2: #5b9cf6;
+    --gold: #d4af64;
+    --purple: #a78bfa;
+    --danger: #f87171;
+    --cinzel: 'Cinzel', serif;
+    --syne: 'Syne', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--syne); overflow: hidden; }
+
+  /* subtle grid + radial vignette like the rest of the Grimoire */
+  body::before {
+    content:''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(212,175,100,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(212,175,100,0.02) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  body::after {
+    content:''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(60% 60% at 50% 30%, rgba(52,211,153,0.06), transparent 70%),
+      radial-gradient(50% 50% at 80% 90%, rgba(91,156,246,0.05), transparent 70%);
+  }
+
+  /* ─── Stage ─── */
+  .deck { position: relative; z-index: 1; height: 100%; width: 100%; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: clamp(1.5rem, 4vw, 4rem) clamp(1.25rem, 6vw, 6rem) clamp(4.5rem, 6vw, 5rem);
+    overflow: auto;
+    animation: fade .35s ease;
+  }
+  .slide.active { display: flex; }
+  @keyframes fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ─── Top chrome ─── */
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px clamp(1rem, 3vw, 2rem);
+    background: linear-gradient(180deg, rgba(2,2,10,0.85), rgba(2,2,10,0));
+    pointer-events: none;
+  }
+  .top-bar > * { pointer-events: auto; }
+  .badge {
+    font-family: var(--mono); font-size: 10px;
+    padding: 5px 12px; border-radius: 20px;
+    border: 1px solid rgba(52,211,153,0.25);
+    color: var(--accent); background: rgba(52,211,153,0.06);
+    letter-spacing: .08em;
+  }
+  .breadcrumb {
+    font-family: var(--cinzel); font-size: 11px; letter-spacing: .22em;
+    color: var(--text3); text-transform: uppercase;
+  }
+  .breadcrumb a { color: var(--text3); text-decoration: none; border-bottom: 1px dashed transparent; transition: color .2s, border-color .2s; }
+  .breadcrumb a:hover { color: var(--text2); border-bottom-color: var(--border2); }
+  .top-spacer { flex: 1; }
+  .hdr-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text2); font-family: var(--mono); font-size: 10.5px;
+    padding: 6px 12px; border-radius: 20px; cursor: pointer;
+    letter-spacing: .06em; transition: color .2s, border-color .2s, background .2s;
+  }
+  .hdr-btn:hover { color: var(--text); border-color: var(--border2); background: rgba(212,175,100,0.04); }
+  .hdr-btn[aria-pressed="true"] { color: var(--accent); border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.06); }
+
+  /* ─── Bottom chrome ─── */
+  .bottom-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px clamp(1rem, 3vw, 2rem);
+    background: linear-gradient(0deg, rgba(2,2,10,0.9), rgba(2,2,10,0));
+  }
+  .nav-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text2); font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: color .2s, border-color .2s, background .2s, transform .2s;
+  }
+  .nav-btn:hover:not(:disabled) { color: var(--text); border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.06); transform: translateY(-1px); }
+  .nav-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+  .dots { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(212,175,100,0.18); border: 1px solid transparent;
+    cursor: pointer; transition: background .2s, transform .2s, border-color .2s;
+    padding: 0;
+  }
+  .dot:hover { background: rgba(212,175,100,0.4); }
+  .dot.active { background: var(--accent); border-color: rgba(52,211,153,0.5); transform: scale(1.25); box-shadow: 0 0 12px rgba(52,211,153,0.4); }
+
+  .counter { font-family: var(--mono); font-size: 10.5px; color: var(--text3); letter-spacing: .08em; min-width: 60px; text-align: right; }
+
+  /* progress strip at very top */
+  .progress-strip { position: fixed; top: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.04); z-index: 6; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width .35s ease; }
+
+  /* ─── Slide layouts ─── */
+  .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: .3em; text-transform: uppercase; color: var(--text3); margin-bottom: 1rem; }
+  .title {
+    font-family: var(--cinzel); font-weight: 900; line-height: 1.05; letter-spacing: -.01em;
+    font-size: clamp(2rem, 5.5vw, 4.2rem); margin-bottom: 1.2rem;
+  }
+  .title .grad {
+    background: linear-gradient(120deg, #34d399 0%, #5b9cf6 55%, #d4af64 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .lede {
+    font-family: var(--syne); font-size: clamp(1rem, 1.6vw, 1.25rem);
+    color: var(--text2); max-width: 60ch; line-height: 1.6;
+  }
+  .ornament { display: flex; align-items: center; gap: 14px; margin: 1rem 0 1.6rem; max-width: 520px; }
+  .ornament .line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(52,211,153,.22), transparent); }
+  .ornament .sym { font-family: var(--cinzel); font-size: 13px; color: rgba(52,211,153,.45); }
+
+  /* cover */
+  .cover { justify-content: center; align-items: flex-start; }
+  .cover .title { font-size: clamp(2.4rem, 7vw, 5.5rem); }
+  .cover .meta { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 1.6rem; letter-spacing: .12em; }
+  .cover .hint-keys { margin-top: 2.2rem; display: flex; flex-wrap: wrap; gap: 8px; }
+  .kbd {
+    font-family: var(--mono); font-size: 10.5px;
+    padding: 5px 10px; border: 1px solid var(--border2); border-bottom-width: 2px;
+    border-radius: 6px; color: var(--text2); background: rgba(212,175,100,0.04);
+  }
+
+  /* generic content slide */
+  .slide-body { display: flex; flex-direction: column; gap: 1.4rem; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+  /* card grids */
+  .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+  @media (min-width: 900px) { .grid-4 { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 1.2rem 1.4rem;
+    backdrop-filter: blur(12px); position: relative; overflow: hidden;
+  }
+  .card::before {
+    content:''; position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(52,211,153,.22), transparent);
+  }
+  .card-num {
+    font-family: var(--cinzel); font-size: 11px; color: var(--accent);
+    letter-spacing: .22em; margin-bottom: .4rem;
+  }
+  .card-title { font-family: var(--cinzel); font-size: 17px; font-weight: 600; letter-spacing: .03em; margin-bottom: .5rem; }
+  .card-desc { font-family: var(--syne); font-size: 13.5px; color: var(--text2); line-height: 1.6; }
+  .card-tag { display: inline-block; font-family: var(--mono); font-size: 9.5px; padding: 3px 8px; margin-top: .8rem; border: 1px solid var(--border2); border-radius: 12px; color: var(--text3); letter-spacing: .08em; }
+
+  .card.purple { border-color: rgba(167,139,250,0.2); }
+  .card.purple .card-num { color: var(--purple); }
+  .card.purple::before { background: linear-gradient(90deg, transparent, rgba(167,139,250,.3), transparent); }
+
+  .card.blue { border-color: rgba(91,156,246,0.2); }
+  .card.blue .card-num { color: var(--accent2); }
+  .card.blue::before { background: linear-gradient(90deg, transparent, rgba(91,156,246,.3), transparent); }
+
+  .card.gold { border-color: rgba(212,175,100,0.25); }
+  .card.gold .card-num { color: var(--gold); }
+  .card.gold::before { background: linear-gradient(90deg, transparent, rgba(212,175,100,.35), transparent); }
+
+  /* big stat row */
+  .pillrow { display: flex; flex-wrap: wrap; gap: 10px; }
+  .pill {
+    font-family: var(--mono); font-size: 11px;
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(52,211,153,0.06); border: 1px solid rgba(52,211,153,0.25);
+    color: var(--accent); letter-spacing: .04em;
+  }
+  .pill.gold { background: rgba(212,175,100,0.05); border-color: rgba(212,175,100,0.25); color: var(--gold); }
+  .pill.purple { background: rgba(167,139,250,0.05); border-color: rgba(167,139,250,0.3); color: #c4b5fd; }
+  .pill.blue { background: rgba(91,156,246,0.05); border-color: rgba(91,156,246,0.3); color: #93c5fd; }
+
+  /* numbered steps */
+  .steps { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 720px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1040px) { .steps { grid-template-columns: repeat(4, 1fr); } }
+  .step {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    padding: 1.2rem 1.3rem; position: relative;
+  }
+  .step-n {
+    font-family: var(--cinzel); font-size: 28px; font-weight: 900;
+    color: transparent; -webkit-text-stroke: 1px rgba(52,211,153,.55);
+    margin-bottom: .4rem; line-height: 1;
+  }
+  .step-t { font-family: var(--cinzel); font-size: 15px; font-weight: 600; margin-bottom: .35rem; }
+  .step-d { font-family: var(--syne); font-size: 13px; color: var(--text2); line-height: 1.55; }
+
+  /* visual mock — fake forwarder tile */
+  .mock-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 460px; }
+  .mock-tile {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 1rem 1.1rem; position: relative;
+  }
+  .mock-tile.selected { border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.06); box-shadow: 0 6px 24px rgba(52,211,153,0.12); }
+  .mock-tile.selected::before { content:'✦'; position: absolute; top: 8px; right: 12px; color: var(--accent); font-family: var(--cinzel); font-size: 11px; }
+  .mock-tile .n { font-family: var(--cinzel); font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .mock-tile .d { font-family: var(--mono); font-size: 9.5px; color: var(--text3); line-height: 1.6; }
+
+  .mock-upload {
+    background: var(--surface); border: 1.5px dashed rgba(52,211,153,0.35);
+    border-radius: 16px; padding: 1.6rem 1.2rem; text-align: center; max-width: 460px;
+  }
+  .mock-upload .ic { font-size: 22px; color: var(--accent); margin-bottom: 8px; }
+  .mock-upload .t { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+  .mock-upload .t strong { color: var(--text); }
+  .mock-upload .f { font-family: var(--mono); font-size: 10.5px; color: var(--accent); margin-top: 8px; }
+
+  .mock-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 460px; }
+  .mock-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: .9rem 1rem; }
+  .mock-stat .n { font-family: var(--cinzel); font-size: 22px; font-weight: 900; }
+  .mock-stat .l { font-family: var(--mono); font-size: 9.5px; color: var(--text3); margin-top: 2px; letter-spacing: .04em; }
+  .mock-stat.green .n { color: var(--accent); }
+  .mock-stat.gold .n { color: var(--gold); }
+  .mock-stat.gray .n { color: var(--text2); }
+
+  .mock-btn-row { display: flex; flex-wrap: wrap; gap: 10px; max-width: 460px; }
+  .mock-btn {
+    flex: 1; min-width: 160px;
+    padding: 12px 16px; border-radius: 12px; text-align: center;
+    font-family: var(--cinzel); font-size: 11.5px; font-weight: 600; letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .mock-btn.preview { border: 1px solid var(--border2); color: var(--text2); background: transparent; }
+  .mock-btn.run { border: 1px solid rgba(52,211,153,0.4); color: var(--text); background: rgba(52,211,153,0.06); }
+  .mock-btn.dl { border: 1px solid rgba(52,211,153,0.4); color: var(--accent); background: rgba(52,211,153,0.12); }
+
+  .two-col { display: grid; grid-template-columns: 1fr; gap: 1.6rem; align-items: center; }
+  @media (min-width: 900px) { .two-col { grid-template-columns: 1.05fr 1fr; gap: 2.4rem; } }
+
+  .checklist { display: flex; flex-direction: column; gap: 10px; }
+  .check {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: .9rem 1.1rem;
+  }
+  .check .icn {
+    width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+    background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.4);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent); font-size: 11px; font-weight: 700;
+  }
+  .check .body strong { font-family: var(--cinzel); font-size: 14px; letter-spacing: .03em; color: var(--text); display: block; margin-bottom: 2px; }
+  .check .body span { font-family: var(--syne); font-size: 13px; color: var(--text2); line-height: 1.55; }
+
+  /* code-ish chip */
+  .code {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text); background: rgba(212,175,100,0.06);
+    padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border);
+  }
+
+  /* presenter notes */
+  .notes {
+    position: fixed; left: 0; right: 0; bottom: 70px; z-index: 4;
+    max-width: 760px; margin: 0 auto;
+    padding: 14px 18px;
+    background: rgba(2,2,10,0.96); border: 1px solid var(--border2);
+    border-radius: 14px;
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: var(--text2);
+    display: none;
+    backdrop-filter: blur(20px);
+  }
+  .notes.visible { display: block; }
+  .notes::before { content: '// presenter notes'; display: block; color: var(--text3); font-size: 9.5px; letter-spacing: .22em; margin-bottom: 6px; text-transform: uppercase; }
+
+  /* CTA on last slide */
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 1.6rem; }
+  .cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 22px; border-radius: 14px;
+    font-family: var(--cinzel); font-size: 12.5px; font-weight: 600; letter-spacing: .14em;
+    text-transform: uppercase; text-decoration: none;
+    transition: transform .2s, box-shadow .2s, background .2s, border-color .2s;
+  }
+  .cta.primary { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.45); color: var(--accent); }
+  .cta.primary:hover { background: rgba(52,211,153,0.22); box-shadow: 0 0 28px rgba(52,211,153,0.2); transform: translateY(-1px); }
+  .cta.ghost { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+  .cta.ghost:hover { color: var(--text); border-color: var(--border2); background: rgba(212,175,100,0.04); }
+
+  /* misc */
+  .footnote { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: .08em; margin-top: 1rem; }
+  .footnote .grad { background: linear-gradient(120deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  /* fullscreen tweaks */
+  :fullscreen .top-bar, :-webkit-full-screen .top-bar { padding-top: 18px; }
+
+  /* print → 1 slide per page (rough PDF export) */
+  @media print {
+    body::before, body::after, .top-bar, .bottom-bar, .progress-strip, .notes { display: none !important; }
+    .deck { height: auto !important; }
+    .slide { display: flex !important; position: relative; page-break-after: always; min-height: 100vh; padding: 2cm; }
+    html, body { overflow: visible !important; height: auto !important; background: #02020a; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-strip"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="top-bar">
+  <span class="badge">The Alchemist</span>
+  <span class="breadcrumb"><a href="anmerkung.html">← Open the tool</a></span>
+  <span class="top-spacer"></span>
+  <button type="button" class="hdr-btn" id="btnNotes" aria-pressed="false" title="Toggle presenter notes (P)">Notes</button>
+  <button type="button" class="hdr-btn" id="btnFullscreen" title="Toggle fullscreen (F)">Fullscreen</button>
+</div>
+
+<main class="deck" id="deck" tabindex="0" aria-label="Anmerkung Processor presentation">
+
+  <!-- ─────────────────── 1: COVER ─────────────────── -->
+  <section class="slide active cover" data-notes="The Alchemist is the freight-audit annotation tool that lives at anmerkung.html. This deck explains it without jargon. Use ← → to navigate, F for fullscreen, P to toggle these notes.">
+    <div class="eyebrow">// Tome III · The Alchemist</div>
+    <h1 class="title">Anmerkung <span class="grad">Processor</span></h1>
+    <div class="ornament"><div class="line"></div><div class="sym">✦ ᚦ ✦</div><div class="line"></div></div>
+    <p class="lede">A 2-minute walkthrough of the in-browser tool that auto-fills the <span class="code">Anmerkung</span> column on freight-audit Excel files — for Dachser, K+N, DHL Express, and Wackler.</p>
+    <div class="meta">Upload · Select forwarder · Transmute · Download</div>
+    <div class="hint-keys">
+      <span class="kbd">←</span><span class="kbd">→</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--text3);align-self:center;letter-spacing:.08em">navigate</span>
+      <span class="kbd">F</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--text3);align-self:center;letter-spacing:.08em">fullscreen</span>
+      <span class="kbd">P</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--text3);align-self:center;letter-spacing:.08em">notes</span>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 2: THE PROBLEM ─────────────────── -->
+  <section class="slide" data-notes="Frame the pain before showing the tool. Manual audit is slow, error-prone, and inconsistent across people and forwarders. The Alchemist removes the typing — humans still review.">
+    <div class="slide-body">
+      <div class="eyebrow">// The Problem</div>
+      <h2 class="title">Auditing freight invoices is <span class="grad">tedious</span> and easy to get wrong.</h2>
+      <p class="lede">Every row of every workbook needs a human to read a dozen columns, decide what's off, and type the right reason in the <span class="code">Anmerkung</span> column. Different forwarders, different rules.</p>
+      <div class="grid-3" style="margin-top:.4rem">
+        <div class="card">
+          <div class="card-num">SLOW</div>
+          <div class="card-title">Hours per file</div>
+          <div class="card-desc">Hundreds of rows × multiple forwarders × multiple files per week.</div>
+        </div>
+        <div class="card">
+          <div class="card-num">INCONSISTENT</div>
+          <div class="card-title">Wording drifts</div>
+          <div class="card-desc">Two auditors write the same finding with different words. Reports get noisy.</div>
+        </div>
+        <div class="card">
+          <div class="card-num">EASY TO MISS</div>
+          <div class="card-title">Tiny deltas hide</div>
+          <div class="card-desc">A €0.40 difference is easy to overlook on row 423 of sheet 7.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 3: HOW IT WORKS — 4 STEPS ─────────────────── -->
+  <section class="slide" data-notes="The whole user journey is four steps. Each step gets its own slide next. Stress: the file never leaves the browser.">
+    <div class="slide-body">
+      <div class="eyebrow">// How it works</div>
+      <h2 class="title">Four steps. <span class="grad">Done in seconds.</span></h2>
+      <div class="ornament"><div class="line"></div><div class="sym">I · II · III · IV</div><div class="line"></div></div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-n">01</div>
+          <div class="step-t">Pick a forwarder</div>
+          <div class="step-d">Tells the tool which rules to apply.</div>
+        </div>
+        <div class="step">
+          <div class="step-n">02</div>
+          <div class="step-t">Upload your .xlsx</div>
+          <div class="step-d">Click or drag-drop. Stays in your browser.</div>
+        </div>
+        <div class="step">
+          <div class="step-n">03</div>
+          <div class="step-t">Preview</div>
+          <div class="step-d">See exactly what would change before anything is written.</div>
+        </div>
+        <div class="step">
+          <div class="step-n">04</div>
+          <div class="step-t">Run &amp; download</div>
+          <div class="step-d">A patched copy of your file — same name, same layout, Anmerkung filled.</div>
+        </div>
+      </div>
+      <p class="footnote">// nothing is uploaded · everything runs in your tab · works offline once visited</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 4: STEP 1 — FORWARDER ─────────────────── -->
+  <section class="slide" data-notes="Each forwarder has its own decision tree. The user just clicks a tile. Keyboard: arrow keys cycle. Highlight that this is a one-time decision per file.">
+    <div class="slide-body">
+      <div class="two-col">
+        <div>
+          <div class="eyebrow">// Step I</div>
+          <h2 class="title">Pick the <span class="grad">forwarder</span>.</h2>
+          <p class="lede">Each tile loads a different rule engine — the columns it reads and the phrases it writes are tailored to that forwarder's invoices.</p>
+          <div class="pillrow" style="margin-top:1rem">
+            <span class="pill">Dachser</span>
+            <span class="pill">K+N</span>
+            <span class="pill">DHL Express</span>
+            <span class="pill">Wackler</span>
+          </div>
+          <p class="footnote">// arrow keys cycle the tiles · keyboard friendly</p>
+        </div>
+        <div class="mock-grid">
+          <div class="mock-tile selected">
+            <div class="n">Dachser</div>
+            <div class="d">CekKondisi_Freigabe<br>ZZ · SAM · DGR · EXP · SNK<br>SBFU · FR · ZW · TZ</div>
+          </div>
+          <div class="mock-tile">
+            <div class="n">K+N</div>
+            <div class="d">FillAnmerkung<br>Amazon tiers · Bundling<br>Pauschalfracht · SNK</div>
+          </div>
+          <div class="mock-tile">
+            <div class="n">DHL Express</div>
+            <div class="d">YO ×15 · SNK 25/30/60<br>FR · PAL · OW blockers</div>
+          </div>
+          <div class="mock-tile">
+            <div class="n">Wackler</div>
+            <div class="d">Fremdnummer · AVIS<br>SNK 38 / −11.5 / 22<br>Gewichte · Bündelung · Return</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 5: STEP 2 — UPLOAD ─────────────────── -->
+  <section class="slide" data-notes="Only .xlsx. Drag-drop or click. The whole file stays in the tab — File API + SheetJS read it, JSZip later patches it. No server, no upload.">
+    <div class="slide-body">
+      <div class="two-col">
+        <div>
+          <div class="eyebrow">// Step II</div>
+          <h2 class="title">Drop your <span class="grad">scroll</span>.</h2>
+          <p class="lede">Click the dashed box or drag your <span class="code">.xlsx</span> onto it. The file is read by the browser only — it never leaves your machine.</p>
+          <div class="checklist" style="margin-top:1.2rem">
+            <div class="check"><div class="icn">✓</div><div class="body"><strong>Only .xlsx</strong><span>Modern Excel format. Older .xls is not supported.</span></div></div>
+            <div class="check"><div class="icn">✓</div><div class="body"><strong>Original layout preserved</strong><span>Styles, formulas, merged cells, drawings — all untouched.</span></div></div>
+            <div class="check"><div class="icn">✓</div><div class="body"><strong>Original filename kept</strong><span>The download has the same name as what you uploaded.</span></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="mock-upload">
+            <div class="ic">⬆</div>
+            <div class="t"><strong>Click to browse</strong> or drag &amp; drop your .xlsx file</div>
+            <div class="f">✦ Audit_2026_Q1.xlsx loaded · 7 sheets</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 6: STEP 3 — PREVIEW ─────────────────── -->
+  <section class="slide" data-notes="Preview is non-destructive. Always recommend running it first. Stats + per-row table + trigger breakdown. Iterate on the Why? toggle and tolerance thresholds before committing.">
+    <div class="slide-body">
+      <div class="eyebrow">// Step III</div>
+      <h2 class="title">Preview <span class="grad">before</span> you write.</h2>
+      <p class="lede">Click <span class="code">Preview — dry-run without writing</span>. You'll see every row the tool would change, color-coded — nothing is written to the file yet.</p>
+
+      <div class="mock-stats" style="margin-top:1rem">
+        <div class="mock-stat gray"><div class="n">1,284</div><div class="l">rows scanned</div></div>
+        <div class="mock-stat green"><div class="n">312</div><div class="l">anmerkung filled</div></div>
+        <div class="mock-stat gold"><div class="n">972</div><div class="l">skipped (stat≠10)</div></div>
+      </div>
+
+      <div class="grid-3" style="margin-top:1.2rem">
+        <div class="card">
+          <div class="card-num">SAFE</div>
+          <div class="card-title">Dry-run</div>
+          <div class="card-desc">No file is produced. Iterate freely.</div>
+        </div>
+        <div class="card">
+          <div class="card-num">CLEAR</div>
+          <div class="card-title">Per-row table</div>
+          <div class="card-desc">Filled · empty · skipped · preserved — at a glance.</div>
+        </div>
+        <div class="card">
+          <div class="card-num">EXPLAINS</div>
+          <div class="card-title">Trigger breakdown</div>
+          <div class="card-desc">Bar chart of which rule fired how many times.</div>
+        </div>
+      </div>
+
+      <p class="footnote">// optional: tick <span class="code">Add "Why?" reason column</span> to also export the raw cell values that triggered each annotation</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 7: STEP 4 — RITUAL & DOWNLOAD ─────────────────── -->
+  <section class="slide" data-notes="The Ritual button reruns the engine and patches the XLSX byte-for-byte. JSZip unpacks, we rewrite only the Anmerkung column cells, rezip. Output keeps original filename.">
+    <div class="slide-body">
+      <div class="two-col">
+        <div>
+          <div class="eyebrow">// Step IV</div>
+          <h2 class="title">Invoke &amp; <span class="grad">download</span>.</h2>
+          <p class="lede">When the preview looks right, hit <span class="code">Invoke the Ritual</span>. The tool patches your file in memory and offers a one-click download.</p>
+          <div class="checklist" style="margin-top:1rem">
+            <div class="check"><div class="icn">✓</div><div class="body"><strong>Byte-level patch</strong><span>Only the Anmerkung column is touched — everything else stays exactly as you uploaded it.</span></div></div>
+            <div class="check"><div class="icn">✓</div><div class="body"><strong>Same filename</strong><span>So your folder/version conventions still work.</span></div></div>
+            <div class="check"><div class="icn">✓</div><div class="body"><strong>Reusable</strong><span>Drop a new file or change forwarder without reloading.</span></div></div>
+          </div>
+        </div>
+        <div class="mock-btn-row" style="flex-direction:column;max-width:360px">
+          <div class="mock-btn preview">Preview — dry-run</div>
+          <div class="mock-btn run">✦ Invoke the Ritual</div>
+          <div class="mock-btn dl">↓ Download Transmuted Scroll</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 8: BONUS — BULK ─────────────────── -->
+  <section class="slide" data-notes="Bulk panel handles many files at once with the same forwarder. Each gets a per-file download; or grab them all as a ZIP. Honors the Why? toggle and thresholds.">
+    <div class="slide-body">
+      <div class="eyebrow">// Bonus VI</div>
+      <h2 class="title">Bulk Process — <span class="grad">many files</span> at once.</h2>
+      <p class="lede">Drop a stack of <span class="code">.xlsx</span> files, run them all with one click, and grab them individually or as a single ZIP.</p>
+      <div class="grid-3" style="margin-top:1rem">
+        <div class="card purple">
+          <div class="card-num">QUEUE</div>
+          <div class="card-title">Live status per file</div>
+          <div class="card-desc">Pending → processing → done · with a per-file download button.</div>
+        </div>
+        <div class="card purple">
+          <div class="card-num">ZIP</div>
+          <div class="card-title">Download all</div>
+          <div class="card-desc">Timestamped archive of every successful patch.</div>
+        </div>
+        <div class="card purple">
+          <div class="card-num">SAME ENGINE</div>
+          <div class="card-title">Honors options</div>
+          <div class="card-desc">Why? column and tolerance thresholds apply to the whole batch.</div>
+        </div>
+      </div>
+      <p class="footnote">// great for end-of-month invoice runs</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 9: BONUS — RULE TESTER ─────────────────── -->
+  <section class="slide" data-notes="Rule Tester is a what-if console. No file needed. Type values into the cells the engine reads → click Evaluate → see exactly what Anmerkung would be produced. Includes presets per forwarder.">
+    <div class="slide-body">
+      <div class="eyebrow">// Bonus IV</div>
+      <h2 class="title">Rule Tester — <span class="grad">what-if</span> in one click.</h2>
+      <p class="lede">No file required. Type values into the fields the engine actually reads — <span class="code">FR Diff</span>, <span class="code">SNK Kosten DL</span>, <span class="code">Empf.-Ort</span>, etc. — and instantly see the Anmerkung the rules would produce.</p>
+      <div class="grid-3" style="margin-top:1rem">
+        <div class="card blue">
+          <div class="card-num">PLAY</div>
+          <div class="card-title">Hypothetical rows</div>
+          <div class="card-desc">Test edge cases without crafting an Excel file.</div>
+        </div>
+        <div class="card blue">
+          <div class="card-num">PRESETS</div>
+          <div class="card-title">Common branches</div>
+          <div class="card-desc">AUSFALLFRACHT · Amazon tier · NL-FIX · Fremdnummer dup, etc.</div>
+        </div>
+        <div class="card blue">
+          <div class="card-num">SAME ENGINE</div>
+          <div class="card-title">No tricks</div>
+          <div class="card-desc">It calls the production rules — what you see is what the audit would write.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 10: BONUS — DIFF / TRAINING ─────────────────── -->
+  <section class="slide" data-notes="Diff Mode = quality loop. A is your output, B is hand-corrected truth. The tool labels every disagreement (wrong / missed / overfired / drift) and lets you click ✦ to send a row straight into the Rule Tester to iterate.">
+    <div class="slide-body">
+      <div class="eyebrow">// Bonus V</div>
+      <h2 class="title">Diff Mode — <span class="grad">train</span> the engine.</h2>
+      <p class="lede">Drop the tool's output (<span class="code">A</span>) and the hand-corrected truth (<span class="code">B</span>). Every disagreement becomes a labeled training case you can filter, export, or send straight into the Rule Tester.</p>
+      <div class="grid-4" style="margin-top:1rem">
+        <div class="card gold">
+          <div class="card-num">WRONG</div>
+          <div class="card-title">Both filled, disagree</div>
+          <div class="card-desc">Rule fired, but with the wrong wording.</div>
+        </div>
+        <div class="card gold">
+          <div class="card-num">MISSED</div>
+          <div class="card-title">A empty, B filled</div>
+          <div class="card-desc">A rule should have fired but didn't.</div>
+        </div>
+        <div class="card gold">
+          <div class="card-num">OVERFIRED</div>
+          <div class="card-title">A filled, B empty</div>
+          <div class="card-desc">A rule fired when it shouldn't.</div>
+        </div>
+        <div class="card gold">
+          <div class="card-num">DRIFT</div>
+          <div class="card-title">Engine moved</div>
+          <div class="card-desc">Rules changed since A was generated.</div>
+        </div>
+      </div>
+      <p class="footnote">// export the result as <span class="code">CSV</span> or <span class="code">JSONL</span> for analysis or ML</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 11: PRIVACY / OFFLINE ─────────────────── -->
+  <section class="slide" data-notes="Privacy is the headline differentiator vs. server-side audit tools. No data leaves the browser. Service worker means the page works on a plane after the first visit.">
+    <div class="slide-body">
+      <div class="eyebrow">// Trust</div>
+      <h2 class="title">Your data <span class="grad">stays in your browser</span>.</h2>
+      <div class="grid-2" style="margin-top:1rem">
+        <div class="card">
+          <div class="card-num">100% CLIENT-SIDE</div>
+          <div class="card-title">No upload, no server</div>
+          <div class="card-desc">The .xlsx is read, processed, and patched entirely in your tab. There is no backend to send it to.</div>
+        </div>
+        <div class="card">
+          <div class="card-num">OFFLINE</div>
+          <div class="card-title">Works on a plane</div>
+          <div class="card-desc">After the first visit, the page and its libraries are cached. Open it without internet and it still runs.</div>
+        </div>
+        <div class="card">
+          <div class="card-num">PORTABLE</div>
+          <div class="card-title">Static page</div>
+          <div class="card-desc">It's a single HTML page hosted on GitHub Pages. No accounts, no logins, no cookies.</div>
+        </div>
+        <div class="card">
+          <div class="card-num">AUDITABLE</div>
+          <div class="card-title">Source is open</div>
+          <div class="card-desc">Every rule lives in <span class="code">assets/anmerkung.js</span>. Nothing hidden.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 12: TRY IT ─────────────────── -->
+  <section class="slide" data-notes="End on a clear CTA. Open the tool, try with one of your real files, hit Preview first.">
+    <div class="slide-body" style="text-align:center;align-items:center;justify-content:center;flex:1;display:flex">
+      <div style="text-align:center;width:100%">
+        <div class="eyebrow">// Ready?</div>
+        <h2 class="title">Open the tool. <span class="grad">Try a real file.</span></h2>
+        <div class="ornament" style="margin-left:auto;margin-right:auto"><div class="line"></div><div class="sym">✦ ᚦ ✦</div><div class="line"></div></div>
+        <p class="lede" style="margin-left:auto;margin-right:auto">Pick a forwarder. Drop a workbook. Hit Preview first. Then Invoke the Ritual.</p>
+        <div class="cta-row" style="justify-content:center">
+          <a class="cta primary" href="anmerkung.html">✦ Open the Alchemist</a>
+          <a class="cta ghost" href="index.html">← Back to the Grimoire</a>
+        </div>
+        <p class="footnote" style="margin-top:1.6rem">codingkuh.my.id <span class="grad">·</span> Firebase + GitHub Pages</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="notes" id="notes" aria-live="polite"></div>
+
+<div class="bottom-bar">
+  <button class="nav-btn" id="btnPrev" title="Previous slide (←)" aria-label="Previous slide">‹</button>
+  <div class="dots" id="dots" role="tablist" aria-label="Slide navigation"></div>
+  <span class="counter" id="counter">1 / 12</span>
+  <button class="nav-btn" id="btnNext" title="Next slide (→)" aria-label="Next slide">›</button>
+</div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsWrap = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  const fill = document.getElementById('progressFill');
+  const notes = document.getElementById('notes');
+  const btnPrev = document.getElementById('btnPrev');
+  const btnNext = document.getElementById('btnNext');
+  const btnFs = document.getElementById('btnFullscreen');
+  const btnNotes = document.getElementById('btnNotes');
+  const deck = document.getElementById('deck');
+
+  let i = 0;
+  let notesOn = false;
+
+  // build dots
+  slides.forEach((_, idx) => {
+    const b = document.createElement('button');
+    b.className = 'dot';
+    b.type = 'button';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-label', 'Go to slide ' + (idx + 1));
+    b.addEventListener('click', () => go(idx));
+    dotsWrap.appendChild(b);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function go(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+    dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    fill.style.width = ((i + 1) / slides.length * 100) + '%';
+    btnPrev.disabled = i === 0;
+    btnNext.disabled = i === slides.length - 1;
+    notes.textContent = slides[i].getAttribute('data-notes') || '';
+    // sync URL hash so refresh keeps position
+    try { history.replaceState(null, '', '#s' + (i + 1)); } catch(e){}
+  }
+
+  btnPrev.addEventListener('click', () => go(i - 1));
+  btnNext.addEventListener('click', () => go(i + 1));
+
+  // click anywhere on slide → next (but not on links/buttons/inputs)
+  deck.addEventListener('click', (e) => {
+    if (e.target.closest('a,button,input,select,textarea')) return;
+    go(i + 1);
+  });
+
+  // keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input,textarea,select')) return;
+    switch (e.key) {
+      case 'ArrowRight': case 'PageDown': case ' ':
+        e.preventDefault(); go(i + 1); break;
+      case 'ArrowLeft': case 'PageUp':
+        e.preventDefault(); go(i - 1); break;
+      case 'Home':
+        e.preventDefault(); go(0); break;
+      case 'End':
+        e.preventDefault(); go(slides.length - 1); break;
+      case 'f': case 'F':
+        e.preventDefault(); toggleFullscreen(); break;
+      case 'p': case 'P':
+        e.preventDefault(); toggleNotes(); break;
+      case 'Escape':
+        if (document.fullscreenElement) document.exitFullscreen();
+        if (notesOn) toggleNotes();
+        break;
+    }
+  });
+
+  // touch swipe
+  let touchX = null;
+  deck.addEventListener('touchstart', (e) => { touchX = e.changedTouches[0].clientX; }, { passive: true });
+  deck.addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 60) go(i + (dx < 0 ? 1 : -1));
+    touchX = null;
+  }, { passive: true });
+
+  // fullscreen
+  function toggleFullscreen(){
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }
+  btnFs.addEventListener('click', toggleFullscreen);
+
+  // notes
+  function toggleNotes(){
+    notesOn = !notesOn;
+    notes.classList.toggle('visible', notesOn);
+    btnNotes.setAttribute('aria-pressed', String(notesOn));
+  }
+  btnNotes.addEventListener('click', toggleNotes);
+
+  // start at hash if any
+  const m = (location.hash || '').match(/^#s(\d+)$/);
+  go(m ? Math.max(0, parseInt(m[1], 10) - 1) : 0);
+
+  // focus deck so keyboard works without an extra click
+  setTimeout(() => deck.focus(), 50);
+})();
+</script>
+
+</body>
+</html>
