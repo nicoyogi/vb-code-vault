@@ -319,6 +319,117 @@
   .footnote { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: .08em; margin-top: 1rem; }
   .footnote .grad { background: linear-gradient(120deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
+  /* ─── Under the hood: pipeline + code-style blocks ─── */
+  .pipeline {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: .4rem;
+  }
+  @media (min-width: 980px) {
+    .pipeline {
+      grid-template-columns: repeat(5, 1fr);
+      align-items: stretch;
+      gap: 6px;
+    }
+  }
+  .stage {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem 1rem 1.1rem;
+    position: relative;
+    display: flex; flex-direction: column;
+    min-height: 100%;
+  }
+  .stage::before {
+    content:''; position: absolute; top: 0; left: 12%; right: 12%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(52,211,153,.28), transparent);
+  }
+  .stage-n { font-family: var(--cinzel); font-size: 10.5px; color: var(--accent); letter-spacing: .22em; margin-bottom: .35rem; }
+  .stage-t { font-family: var(--cinzel); font-size: 14px; font-weight: 600; margin-bottom: .35rem; line-height: 1.2; }
+  .stage-d { font-family: var(--syne); font-size: 12.5px; color: var(--text2); line-height: 1.55; flex: 1; }
+  .stage-lib {
+    font-family: var(--mono); font-size: 9.5px; color: var(--text3);
+    margin-top: .7rem; padding-top: .5rem;
+    border-top: 1px dashed var(--border);
+    letter-spacing: .04em;
+  }
+  .stage-lib strong { color: var(--gold); font-weight: 500; }
+
+  /* arrow between stages on wide screens */
+  .pipeline .stage:not(:last-child)::after {
+    content: '→';
+    position: absolute;
+    right: -14px; top: 50%; transform: translateY(-50%);
+    color: rgba(52,211,153,.5);
+    font-family: var(--mono); font-size: 16px;
+    z-index: 2;
+    display: none;
+  }
+  @media (min-width: 980px) {
+    .pipeline .stage:not(:last-child)::after { display: block; }
+  }
+
+  /* code-style block (rule ladder) */
+  .codeblock {
+    background: rgba(2,2,10,0.6);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem 1.2rem;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.85;
+    color: var(--text2);
+    overflow: auto;
+    position: relative;
+  }
+  .codeblock::before {
+    content: '// rule ladder · evaluated top-to-bottom · first match wins';
+    display: block;
+    color: var(--text3);
+    font-size: 9.5px;
+    letter-spacing: .14em;
+    margin-bottom: .8rem;
+    text-transform: uppercase;
+  }
+  .codeblock .kw { color: var(--purple); }
+  .codeblock .cond { color: var(--text); }
+  .codeblock .arrow { color: var(--text3); padding: 0 .6em; }
+  .codeblock .out { color: var(--accent); }
+  .codeblock .com { color: var(--text3); font-style: italic; }
+  .codeblock .num { color: var(--gold); }
+
+  /* zip tree visualization */
+  .ziptree {
+    background: rgba(2,2,10,0.6);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.1rem 1.2rem;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--text2);
+  }
+  .ziptree .root { color: var(--gold); }
+  .ziptree .dir { color: var(--text2); }
+  .ziptree .file { color: var(--text3); }
+  .ziptree .file.touched { color: var(--accent); font-weight: 500; }
+  .ziptree .file.touched::after {
+    content: ' ← we edit this';
+    font-style: italic; color: var(--accent); opacity: .8; font-size: 11px;
+  }
+  .ziptree .pad { color: var(--text3); }
+
+  /* divider slide ("Under the hood" section break) */
+  .section-break {
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center;
+  }
+  .section-break .eyebrow { margin-bottom: 1.2rem; }
+  .section-break .title { font-size: clamp(2.4rem, 6.5vw, 5rem); }
+
   /* fullscreen tweaks */
   :fullscreen .top-bar, :-webkit-full-screen .top-bar { padding-top: 18px; }
 
@@ -620,6 +731,136 @@
         </div>
       </div>
       <p class="footnote">// export the result as <span class="code">CSV</span> or <span class="code">JSONL</span> for analysis or ML</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 11: SECTION BREAK — UNDER THE HOOD ─────────────────── -->
+  <section class="slide section-break" data-notes="Pivot from user-facing to engineering. Audience now sees how the magic works. Three slides follow: pipeline overview, rule engine, byte-level XLSX patch.">
+    <div class="slide-body" style="text-align:center;align-items:center">
+      <div class="eyebrow">// Intermission</div>
+      <h2 class="title">Under the <span class="grad">hood</span>.</h2>
+      <div class="ornament" style="margin-left:auto;margin-right:auto"><div class="line"></div><div class="sym">⚙ ✦ ⚙</div><div class="line"></div></div>
+      <p class="lede" style="margin:0 auto">A look at the moving parts. Three slides — the pipeline, the rule engine, and how we patch your file without breaking it.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 12: HOW IT WORKS — PIPELINE ─────────────────── -->
+  <section class="slide" data-notes="The whole app is a single static HTML page + one CSS + one JS file + a service worker. Two CDN libraries do the heavy lifting: SheetJS reads the workbook, JSZip patches the XLSX. Everything else is hand-written in anmerkung.js (~2500 lines, mostly the rule engine).">
+    <div class="slide-body">
+      <div class="eyebrow">// How the code works · 1 of 3</div>
+      <h2 class="title">The <span class="grad">pipeline</span>.</h2>
+      <p class="lede">Five stages from the file you drop to the file you download — all inside one browser tab.</p>
+
+      <div class="pipeline">
+        <div class="stage">
+          <div class="stage-n">01 · INPUT</div>
+          <div class="stage-t">Read bytes</div>
+          <div class="stage-d">The browser's <span class="code">FileReader</span> turns your <span class="code">.xlsx</span> into an <span class="code">ArrayBuffer</span>. Kept in memory only.</div>
+          <div class="stage-lib"><strong>Built-in</strong> · File API</div>
+        </div>
+        <div class="stage">
+          <div class="stage-n">02 · PARSE</div>
+          <div class="stage-t">Workbook → rows</div>
+          <div class="stage-d">Each sheet becomes a list of row objects keyed by column header (<span class="code">"Frachtdiff"</span>, <span class="code">"SNK Kosten DL"</span>, …).</div>
+          <div class="stage-lib"><strong>SheetJS</strong> · xlsx 0.18.5</div>
+        </div>
+        <div class="stage">
+          <div class="stage-n">03 · DECIDE</div>
+          <div class="stage-t">Rule engine</div>
+          <div class="stage-d">A per-forwarder dispatcher walks each row through an ordered ladder of rules. First match wins. Output is a phrase from a single catalog.</div>
+          <div class="stage-lib"><strong>Hand-rolled</strong> · anmerkung.js</div>
+        </div>
+        <div class="stage">
+          <div class="stage-n">04 · PATCH</div>
+          <div class="stage-t">Surgical XLSX edit</div>
+          <div class="stage-d">An <span class="code">.xlsx</span> is a ZIP of XML. We unzip, rewrite only the Anmerkung column cells in <span class="code">sheetN.xml</span>, and re-zip — keeping styles, formulas, and drawings untouched.</div>
+          <div class="stage-lib"><strong>JSZip</strong> · 3.10.1</div>
+        </div>
+        <div class="stage">
+          <div class="stage-n">05 · OUTPUT</div>
+          <div class="stage-t">Blob → download</div>
+          <div class="stage-d">The patched archive becomes a <span class="code">Blob</span>; the browser saves it with the original filename. No server round-trip.</div>
+          <div class="stage-lib"><strong>Built-in</strong> · Blob + &lt;a download&gt;</div>
+        </div>
+      </div>
+
+      <p class="footnote">// stack: vanilla HTML/CSS/JS · zero build · 2 CDN libs · service worker for offline</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 13: HOW IT WORKS — RULE ENGINE ─────────────────── -->
+  <section class="slide" data-notes="Each forwarder has its own processX() function in anmerkung.js — a flat ladder of if/else-if branches. Order matters: more specific rules come first, fallbacks last. All output strings live in a single PHRASES catalog so changing wording is a one-line edit.">
+    <div class="slide-body">
+      <div class="eyebrow">// How the code works · 2 of 3</div>
+      <h2 class="title">The <span class="grad">rule engine</span>.</h2>
+
+      <div class="two-col">
+        <div>
+          <p class="lede">Each forwarder has its own function — <span class="code">processDachser()</span>, <span class="code">processKN()</span>, <span class="code">processDHL()</span>, <span class="code">processWackler()</span>. Inside each is an ordered ladder of rules. The first one that matches a row wins; everything below is skipped.</p>
+          <div class="checklist" style="margin-top:1.1rem">
+            <div class="check"><div class="icn">1</div><div class="body"><strong>Specific before generic</strong><span>Most-narrow conditions are checked first so they aren't masked by broader ones.</span></div></div>
+            <div class="check"><div class="icn">2</div><div class="body"><strong>One phrase catalog</strong><span>Every output string lives in a single <span class="code">PHRASES</span> object. Renaming a wording is a one-line change everywhere.</span></div></div>
+            <div class="check"><div class="icn">3</div><div class="body"><strong>Tunable tolerance</strong><span>Differences below a per-forwarder threshold (e.g. <span class="code">0.08 €</span>) count as zero — saved in <span class="code">localStorage</span>.</span></div></div>
+          </div>
+        </div>
+        <div class="codeblock" aria-hidden="true">
+<span class="kw">function</span> <span class="cond">processWackler</span>(row) {<br>
+&nbsp;&nbsp;<span class="com">// 1. duplicate Fremdnummer? → flag it</span><br>
+&nbsp;&nbsp;<span class="kw">if</span> (<span class="cond">isDuplicateFremdnummer</span>(row))<span class="arrow">→</span><span class="out">"Fremdnummer Doppelt berechnet"</span>;<br>
+<br>
+&nbsp;&nbsp;<span class="com">// 2. would B2C-Line have been cheaper?</span><br>
+&nbsp;&nbsp;<span class="kw">else if</span> (<span class="cond">b2cWouldBeCheaper</span>(row))<span class="arrow">→</span><span class="out">"hätte B2C-Line abrechnen dürfen"</span>;<br>
+<br>
+&nbsp;&nbsp;<span class="com">// 3. SNK 38 / −11.5 / 22 buckets</span><br>
+&nbsp;&nbsp;<span class="kw">else if</span> (<span class="cond">snkDiff</span>(row) > <span class="num">T_WACKLER</span>)<span class="arrow">→</span><span class="out">"SNK Differenz"</span>;<br>
+<br>
+&nbsp;&nbsp;<span class="com">// 4. weight / volume mismatch</span><br>
+&nbsp;&nbsp;<span class="kw">else if</span> (<span class="cond">weightOff</span>(row))<span class="arrow">→</span><span class="out">"Differenz aufgrund abweichender Gewichte"</span>;<br>
+<br>
+&nbsp;&nbsp;<span class="com">// 5. fallback — leave empty</span><br>
+&nbsp;&nbsp;<span class="kw">else</span><span class="arrow">→</span><span class="out">""</span>;<br>
+}
+        </div>
+      </div>
+
+      <p class="footnote">// real ladders are longer — Dachser has ~22 rules, K+N ~18, DHL ~15, Wackler ~14</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────── 14: HOW IT WORKS — XLSX PATCH ─────────────────── -->
+  <section class="slide" data-notes="Key insight: an .xlsx is just a ZIP archive of XML files. SheetJS *can* write a workbook back, but it re-serializes everything and loses styling, drawings, merged cells. Instead we treat the file as a ZIP, edit one XML file in place, and re-zip. Result: byte-identical output except for the Anmerkung column.">
+    <div class="slide-body">
+      <div class="eyebrow">// How the code works · 3 of 3</div>
+      <h2 class="title">Why a <span class="grad">byte-level</span> patch?</h2>
+      <p class="lede">Because letting a library re-write the whole workbook would silently lose your styles, formulas, and drawings. So we don't.</p>
+
+      <div class="two-col" style="margin-top:.6rem">
+        <div>
+          <div class="checklist">
+            <div class="check"><div class="icn">★</div><div class="body"><strong>An .xlsx is a ZIP</strong><span>Rename it to <span class="code">.zip</span> and you can browse the XML inside. We use that fact.</span></div></div>
+            <div class="check"><div class="icn">★</div><div class="body"><strong>Only the Anmerkung column changes</strong><span>JSZip rewrites a few <span class="code">&lt;c&gt;</span> cells in <span class="code">sheetN.xml</span> and leaves every other byte alone.</span></div></div>
+            <div class="check"><div class="icn">★</div><div class="body"><strong>Styles · formulas · pictures survive</strong><span>Conditional formatting, charts, merged cells, frozen panes — all preserved exactly.</span></div></div>
+            <div class="check"><div class="icn">★</div><div class="body"><strong>Diffable output</strong><span>Open the original and the patched file in Excel: only the one column differs. No surprises.</span></div></div>
+          </div>
+        </div>
+        <div class="ziptree" aria-hidden="true">
+<span class="root">YourFile.xlsx</span>  <span class="pad">// it's a ZIP</span><br>
+├── <span class="dir">_rels/</span><br>
+├── <span class="dir">docProps/</span><br>
+│&nbsp;&nbsp;&nbsp;├── <span class="file">app.xml</span><br>
+│&nbsp;&nbsp;&nbsp;└── <span class="file">core.xml</span><br>
+├── <span class="dir">xl/</span><br>
+│&nbsp;&nbsp;&nbsp;├── <span class="file">workbook.xml</span><br>
+│&nbsp;&nbsp;&nbsp;├── <span class="file">styles.xml</span>      <span class="pad">// preserved</span><br>
+│&nbsp;&nbsp;&nbsp;├── <span class="dir">drawings/</span>     <span class="pad">// preserved</span><br>
+│&nbsp;&nbsp;&nbsp;├── <span class="dir">media/</span>        <span class="pad">// preserved</span><br>
+│&nbsp;&nbsp;&nbsp;└── <span class="dir">worksheets/</span><br>
+│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file touched">sheet1.xml</span><br>
+│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file touched">sheet2.xml</span><br>
+│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="file touched">sheet3.xml</span><br>
+└── <span class="file">[Content_Types].xml</span>
+        </div>
+      </div>
     </div>
   </section>
 
