@@ -617,6 +617,77 @@
   }
   .cta.ghost:hover { color: var(--text); border-color: var(--accent-line); background: var(--surface-1); }
 
+  /* ────────────── live demo (intermission) slide ────────────── */
+  .demo {
+    align-items: center !important;
+    justify-content: center !important;
+    background:
+      radial-gradient(60% 50% at 50% 35%, rgba(96,165,250,.07), transparent 70%),
+      var(--bg);
+  }
+  .demo-inner { max-width: 720px; margin: 0 auto; width: 100%; }
+  .demo-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: .12em;
+    margin-bottom: 1rem;
+    padding: 4px 10px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: 999px;
+  }
+  .demo-label::before {
+    content:''; display: inline-block;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px rgba(96,165,250,.18);
+    animation: demoPulse 2s ease-in-out infinite;
+  }
+  @keyframes demoPulse {
+    0%,100% { box-shadow: 0 0 0 4px rgba(96,165,250,.18); }
+    50%     { box-shadow: 0 0 0 6px rgba(96,165,250,.06); }
+  }
+  .demo-title {
+    font-size: clamp(2.2rem, 4.8vw, 3.5rem);
+    font-weight: 700; color: var(--text);
+    letter-spacing: -.025em; line-height: 1.05;
+    margin-bottom: 1.25rem;
+  }
+  .demo-lede {
+    font-size: clamp(1rem, 1.4vw, 1.125rem);
+    color: var(--text-2); max-width: 52ch;
+    line-height: 1.6; margin-bottom: 2.5rem;
+  }
+  .demo-checklist {
+    display: flex; flex-direction: column;
+    border-top: 1px solid var(--border);
+  }
+  .demo-step {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 14px;
+    align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .demo-num {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent); letter-spacing: .03em;
+    font-weight: 500;
+  }
+  .demo-text {
+    font-size: 15px; color: var(--text);
+    font-weight: 500; letter-spacing: -.005em;
+  }
+  .demo-resume {
+    margin-top: 2rem; padding-top: 1.5rem;
+    border-top: 1px dashed var(--border);
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--text-3); display: flex;
+    align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .demo-resume .kbd { font-size: 10.5px; }
+
   /* ────────────── print ────────────── */
   @media print {
     .top-bar, .bottom-bar, .progress-strip, .notes { display: none !important; }
@@ -638,7 +709,13 @@
 
 <div class="top-bar">
   <a class="brand" href="anmerkung.html" title="Open the tool">
-    <span class="brand-mark">A</span>
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 16 16" width="14" height="14" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3.5"  width="10" height="1.6" rx=".8" fill="#0a0e1a" opacity=".45"/>
+        <rect x="3" y="7"    width="10" height="1.6" rx=".8" fill="#0a0e1a" opacity=".45"/>
+        <rect x="3" y="10.5" width="6.5" height="1.6" rx=".8" fill="#0a0e1a"/>
+      </svg>
+    </span>
     <span>Anmerkung Processor</span>
   </a>
   <span class="top-spacer"></span>
@@ -967,7 +1044,45 @@
     </div>
   </section>
 
-  <!-- ─────────── 09 · CAPABILITIES — BULK ─────────── -->
+  <!-- ─────────── 09 · LIVE DEMO ─────────── -->
+  <section class="slide demo" data-section="" data-notes="Pause for a live demonstration. Switch to anmerkung.html in a separate tab and walk the audience through one full file end-to-end (≈3 minutes). Resume the deck with → after the demo. Tip: pre-load a real audit file on your desktop so you don't fumble for one mid-presentation.">
+    <div class="demo-inner">
+      <div class="demo-label">Live demo</div>
+      <h2 class="demo-title">Let's run a real file together</h2>
+      <div class="title-rule"></div>
+      <p class="demo-lede">We'll switch to the tool now and walk through one carrier-specific audit end-to-end. Should take about three minutes.</p>
+
+      <div class="demo-checklist">
+        <div class="demo-step">
+          <span class="demo-num">01</span>
+          <span class="demo-text">Open <span class="code">anmerkung.html</span> in a new tab</span>
+        </div>
+        <div class="demo-step">
+          <span class="demo-num">02</span>
+          <span class="demo-text">Select a carrier</span>
+        </div>
+        <div class="demo-step">
+          <span class="demo-num">03</span>
+          <span class="demo-text">Drop a recent <span class="code">.xlsx</span> audit file</span>
+        </div>
+        <div class="demo-step">
+          <span class="demo-num">04</span>
+          <span class="demo-text">Run the preview &amp; review the trigger breakdown</span>
+        </div>
+        <div class="demo-step">
+          <span class="demo-num">05</span>
+          <span class="demo-text">Process the file &amp; open the result in Excel</span>
+        </div>
+      </div>
+
+      <div class="demo-resume">
+        <span class="kbd">→</span>
+        <span>resume the deck after the demo</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────── 10 · CAPABILITIES — BULK ─────────── -->
   <section class="slide" data-section="Capabilities" data-notes="Bulk panel handles many files at once with the same carrier. Each gets a per-file download; or grab them all as a ZIP. Honors the Reason toggle and thresholds.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">03</span><span class="sep">/</span><span>Capabilities</span></div>
@@ -995,7 +1110,7 @@
     </div>
   </section>
 
-  <!-- ─────────── 10 · CAPABILITIES — RULE TESTER ─────────── -->
+  <!-- ─────────── 11 · CAPABILITIES — RULE TESTER ─────────── -->
   <section class="slide" data-section="Capabilities" data-notes="Rule Tester is a what-if console. No file needed. Type values into the cells the engine reads → click Evaluate → see exactly what Anmerkung would be produced. Includes presets per carrier.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">03</span><span class="sep">/</span><span>Capabilities</span></div>
@@ -1023,7 +1138,7 @@
     </div>
   </section>
 
-  <!-- ─────────── 11 · CAPABILITIES — COMPARISON ─────────── -->
+  <!-- ─────────── 12 · CAPABILITIES — COMPARISON ─────────── -->
   <section class="slide" data-section="Capabilities" data-notes="Comparison mode is the quality loop. A is the tool's output, B is the hand-corrected truth. The tool labels every disagreement (wrong, missed, overfired, drift) and lets you click through to the rule tester.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">03</span><span class="sep">/</span><span>Capabilities</span></div>
@@ -1058,7 +1173,7 @@
     </div>
   </section>
 
-  <!-- ─────────── 12 · ARCHITECTURE — PIPELINE ─────────── -->
+  <!-- ─────────── 13 · ARCHITECTURE — PIPELINE ─────────── -->
   <section class="slide" data-section="Architecture" data-notes="The whole app is a single static HTML page + one CSS + one JS file + a service worker. Two CDN libraries do the heavy lifting: SheetJS reads the workbook, JSZip patches the XLSX. Everything else is hand-written in anmerkung.js.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">04</span><span class="sep">/</span><span>Architecture</span></div>
@@ -1103,7 +1218,7 @@
     </div>
   </section>
 
-  <!-- ─────────── 13 · ARCHITECTURE — RULE ENGINE ─────────── -->
+  <!-- ─────────── 14 · ARCHITECTURE — RULE ENGINE ─────────── -->
   <section class="slide" data-section="Architecture" data-notes="Each carrier has its own processX() function in anmerkung.js — a flat ladder of if/else-if branches. Order matters: more specific rules come first, fallbacks last. All output strings live in a single PHRASES catalog so changing wording is a one-line edit.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">04</span><span class="sep">/</span><span>Architecture</span></div>
@@ -1170,7 +1285,7 @@
     </div>
   </section>
 
-  <!-- ─────────── 14 · ARCHITECTURE — FILE PRESERVATION ─────────── -->
+  <!-- ─────────── 15 · ARCHITECTURE — FILE PRESERVATION ─────────── -->
   <section class="slide" data-section="Architecture" data-notes="Key insight: an .xlsx is just a ZIP archive of XML files. SheetJS *can* re-write a workbook, but it re-serializes everything and can lose styling, drawings, and merged cells. Instead we treat the file as a ZIP, edit one XML file in place, and re-zip. Result: byte-identical output except for the Anmerkung column.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">04</span><span class="sep">/</span><span>Architecture</span></div>
@@ -1233,7 +1348,7 @@
     </div>
   </section>
 
-  <!-- ─────────── 15 · TRUST ─────────── -->
+  <!-- ─────────── 16 · TRUST ─────────── -->
   <section class="slide" data-section="Trust" data-notes="Privacy is the headline differentiator vs. server-side audit tools. No data leaves the browser. The service worker means the page works on a plane after the first visit.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">05</span><span class="sep">/</span><span>Trust &amp; deployment</span></div>
@@ -1266,7 +1381,7 @@
     </div>
   </section>
 
-  <!-- ─────────── 16 · GET STARTED ─────────── -->
+  <!-- ─────────── 17 · GET STARTED ─────────── -->
   <section class="slide cover" data-section="" data-notes="End on a clear call to action. Open the tool, try with one of your real files, hit Preview first.">
     <div class="cover-inner">
       <div class="eyebrow">
@@ -1312,7 +1427,7 @@
 <div class="bottom-bar">
   <button class="nav-btn" id="btnPrev" title="Previous slide (←)" aria-label="Previous slide">‹</button>
   <div class="dots" id="dots" role="tablist" aria-label="Slide navigation"></div>
-  <span class="counter" id="counter"><span class="cur">01</span> / 16</span>
+  <span class="counter" id="counter"><span class="cur">01</span> / 17</span>
   <button class="nav-btn" id="btnNext" title="Next slide (→)" aria-label="Next slide">›</button>
 </div>
 
