@@ -1,10 +1,24 @@
 /* The Alchemist \u2014 offline service worker (#21).
-   Strategy: network-first for the HTML shell (so updates are picked up on
-   next load), cache-first for external scripts & fonts. Keeps the app fully
-   functional offline once the first online visit has primed the caches.
+   Strategy:
+     - Network-first for the HTML shell so updates are picked up on next load.
+     - Network-first for `anmerkung-changelog.json` so content edits surface
+       immediately. We piggyback on this fetch to auto-invalidate the static
+       asset cache whenever the changelog `version` field changes — that way
+       future rule/content updates only need a changelog version bump and the
+       SW reliably re-fetches `anmerkung.js` & friends without a manual
+       VERSION bump here. (See `reconcileChangelogVersion` below.)
+     - Cache-first for everything else (static assets, CDN libs).
+     Keeps the app fully functional offline once the first online visit has
+     primed the caches.
 */
-const VERSION = 'v1.4.5';
+const VERSION = 'v1.7.0';
 const CACHE = 'alchemist-' + VERSION;
+
+/* Internal marker used to remember the last changelog `version` we observed.
+   Stored as a regular cache entry under a path that will never collide with a
+   real fetch. Lives in the same `CACHE` so it gets cleaned up alongside the
+   rest when the cache is rotated on a SW VERSION bump. */
+const VERSION_MARKER_URL = './__sw_changelog_version__';
 
 /* Core assets to pre-cache on install. Keep the list short and let
    runtime caching handle the rest; unreachable URLs should not block install. */
@@ -38,6 +52,66 @@ self.addEventListener('activate', event => {
     )).then(() => self.clients.claim())
   );
 });
+
+/* ──────────────────────────────────────────────────────────
+   Auto-invalidation on changelog version bump.
+
+   `anmerkung-changelog.json` is fetched network-first on every page load, so
+   it gives us a free signal: when its top-level `version` field changes we
+   purge the cached static assets (anmerkung.js / .css / .html / etc.) so the
+   next request for each asset misses the cache, falls through to the network,
+   and gets re-cached fresh. This means future rule/content updates only need
+   a changelog version bump — the SW VERSION constant only needs to bump when
+   the SW logic itself changes.
+
+   First-time encounters (no marker stored yet) just record the version
+   without purging — the assets we'd be purging were just freshly installed.
+   ────────────────────────────────────────────────────────── */
+async function getStoredChangelogVersion(cache) {
+  try {
+    const resp = await cache.match(VERSION_MARKER_URL);
+    if (!resp) return null;
+    return (await resp.text()) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function setStoredChangelogVersion(cache, ver) {
+  try {
+    await cache.put(VERSION_MARKER_URL, new Response(ver, {
+      headers: { 'Content-Type': 'text/plain' }
+    }));
+  } catch (e) { /* swallow — best-effort marker */ }
+}
+
+async function purgeStaleAssets(cache) {
+  /* Drop every CORE entry except the changelog itself (we just refreshed it
+     above) and obviously not the marker. Next request for each purged URL
+     will miss the cache, fall through to network, and repopulate. */
+  const toPurge = CORE.filter(url => !url.endsWith('/anmerkung-changelog.json'));
+  await Promise.all(toPurge.map(url => cache.delete(url).catch(() => null)));
+}
+
+async function reconcileChangelogVersion(respForBody, cache) {
+  try {
+    const text = await respForBody.text();
+    const data = JSON.parse(text);
+    const newVer = data && data.version;
+    if (!newVer) return;
+    const stored = await getStoredChangelogVersion(cache);
+    if (stored === null) {
+      /* First boot under this SW — record the baseline so future bumps trigger
+         a purge, but don't purge now (cache was just primed at install). */
+      await setStoredChangelogVersion(cache, newVer);
+      return;
+    }
+    if (stored !== newVer) {
+      await purgeStaleAssets(cache);
+      await setStoredChangelogVersion(cache, newVer);
+    }
+  } catch (e) { /* malformed JSON / fetch error — leave cache alone */ }
+}
 
 /* ──────────────────────────────────────────────────────────
    Explicit precache on demand (wired to a "Download for Offline"
@@ -101,15 +175,22 @@ self.addEventListener('fetch', event => {
   const isHtml = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
   /* Network-first for small JSON config files (e.g. anmerkung-changelog.json)
      so content edits surface on next load without waiting for a SW version bump.
-     Falls back to the cached copy when offline. */
+     Falls back to the cached copy when offline. Also drives the auto-purge
+     guard via `reconcileChangelogVersion` — see top-of-file comment. */
   const isChangelogJson = url.pathname.endsWith('/assets/anmerkung-changelog.json');
 
   if (isChangelogJson) {
     event.respondWith(
       fetch(req).then(resp => {
         if (resp && resp.ok) {
-          const copy = resp.clone();
-          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+          /* One clone for the cache write, one for the version reconcile —
+             a Response body is a stream and can only be consumed once. */
+          const copyForCache = resp.clone();
+          const copyForReconcile = resp.clone();
+          caches.open(CACHE).then(async c => {
+            await c.put(req, copyForCache);
+            await reconcileChangelogVersion(copyForReconcile, c);
+          }).catch(() => {});
         }
         return resp;
       }).catch(() => caches.match(req))
