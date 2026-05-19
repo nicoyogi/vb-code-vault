@@ -1660,7 +1660,65 @@
     </div>
   </section>
 
-  <!-- ─────────── 15 · ARCHITECTURE — FILE PRESERVATION ─────────── -->
+  <!-- ─────────── 15 · ARCHITECTURE — DACHSER SPECIAL CODES ─────────── -->
+  <section class="slide" data-section="Architecture" data-notes="Dachser carries a few service-art codes that always map to one specific Anmerkung phrase, regardless of what else is going on in the row. K1AS → Sonderfahrt is the headline example: if the service art column reads K1AS and there's an FR difference, the engine writes 'Sonderfahrt' and skips every other freight-diff classifier (no weight-miscount, no bundling-miss, no Frachtzu/abschlag). Same short-circuit pattern for sachkonto = X (VORHOLUNG) and referenz3 = ZW (Zwischenwiegung note). These three codes resolve before any generic fallback fires.">
+    <div class="slide-body">
+      <div class="eyebrow"><span class="num">04</span><span class="sep">/</span><span>Architecture</span></div>
+      <h2 class="title">Dachser <span class="accent">special-code</span> short-circuits</h2>
+      <div class="title-rule"></div>
+      <p class="lede">Some Dachser service codes always map to one specific Anmerkung — no other condition can override them. They short-circuit the FR-difference ladder before any generic fallback fires.</p>
+
+      <div class="two-col">
+        <div>
+          <div class="checklist" style="margin-top: .25rem">
+            <div class="check">
+              <div class="icn">★</div>
+              <div class="body">
+                <strong><span class="code">servArt = K1AS</span> → always "Sonderfahrt"</strong>
+                <span>Special-trip courier. If the service-art column reads <span class="code">K1AS</span>, the row is always tagged <span class="code">Sonderfahrt</span> — never misclassified as a weight miscount, a bundling miss, or a Frachtzu/abschlag credit.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">★</div>
+              <div class="body">
+                <strong><span class="code">sachkonto = X</span> → always "VORHOLUNG"</strong>
+                <span>Pre-collection leg. The freight delta represents a Vorholung, not a tariff error.</span>
+              </div>
+            </div>
+            <div class="check">
+              <div class="icn">★</div>
+              <div class="body">
+                <strong><span class="code">referenz3 = ZW</span> → Zwischenwiegung note</strong>
+                <span>Re-weigh result; the FR delta reflects the corrected weight, not a billing error.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="codeblock" aria-hidden="true">
+          <div class="codeblock-header">
+            <span class="dot-r"></span><span class="dot-r"></span><span class="dot-r"></span>
+            <span class="file">assets/anmerkung.js · processDachser() · FR branch</span>
+          </div>
+<span class="kw">if</span> (<span class="fn">hasFRError</span>(row)) {<br>
+&nbsp;&nbsp;<span class="com">// special-code short-circuits — first match wins</span><br>
+&nbsp;&nbsp;<span class="kw">if</span> (isZW)                   <span class="kw">return</span> <span class="fn">daZWNote</span>(row);<br>
+&nbsp;&nbsp;<span class="kw">if</span> (sachkonto === <span class="str">'X'</span>)    <span class="kw">return</span> <span class="str">"VORHOLUNG"</span>;<br>
+&nbsp;&nbsp;<span class="kw">if</span> (servArt   === <span class="str">'K1AS'</span>) <span class="kw">return</span> <span class="str">"Sonderfahrt"</span>;<br>
+<br>
+&nbsp;&nbsp;<span class="com">// generic fallbacks (only reached if no special code)</span><br>
+&nbsp;&nbsp;<span class="kw">if</span> (anzSdg > <span class="num">1</span>)            <span class="kw">return</span> <span class="str">"hätte gebündelt werden können?"</span>;<br>
+&nbsp;&nbsp;<span class="kw">if</span> (frVal &lt; <span class="num">0</span>)            <span class="kw">return</span> <span class="str">"Differenz Frachtzu/ abschlag"</span>;<br>
+&nbsp;&nbsp;<span class="kw">return</span> <span class="str">"Differenz aufgrund von abweichendem Gewicht"</span>;<br>
+}
+        </div>
+      </div>
+
+      <p class="footnote">All three codes resolve before any generic weight / bundling / FR-credit fallback — that's what makes them "always".</p>
+    </div>
+  </section>
+
+  <!-- ─────────── 16 · ARCHITECTURE — FILE PRESERVATION ─────────── -->
   <section class="slide" data-section="Architecture" data-notes="Key insight: an .xlsx is just a ZIP archive of XML files. SheetJS *can* re-write a workbook, but it re-serializes everything and can lose styling, drawings, and merged cells. Instead we treat the file as a ZIP, edit one XML file in place, and re-zip. Result: byte-identical output except for the Anmerkung column.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">04</span><span class="sep">/</span><span>Architecture</span></div>
@@ -1723,7 +1781,7 @@
     </div>
   </section>
 
-  <!-- ─────────── 16 · TRUST ─────────── -->
+  <!-- ─────────── 17 · TRUST ─────────── -->
   <section class="slide" data-section="Trust" data-notes="Privacy is the headline differentiator vs. server-side audit tools. No data leaves the browser. The service worker means the page works on a plane after the first visit.">
     <div class="slide-body">
       <div class="eyebrow"><span class="num">05</span><span class="sep">/</span><span>Trust &amp; deployment</span></div>
@@ -1756,7 +1814,7 @@
     </div>
   </section>
 
-  <!-- ─────────── 17 · GET STARTED ─────────── -->
+  <!-- ─────────── 18 · GET STARTED ─────────── -->
   <section class="slide cover" data-section="" data-notes="End on a clear call to action. Open the tool, try with one of your real files, hit Preview first.">
     <div class="cover-inner">
       <div class="eyebrow">
@@ -1802,7 +1860,7 @@
 <div class="bottom-bar">
   <button class="nav-btn" id="btnPrev" title="Previous slide (←)" aria-label="Previous slide">‹</button>
   <div class="dots" id="dots" role="tablist" aria-label="Slide navigation"></div>
-  <span class="counter" id="counter"><span class="cur">01</span> / 17</span>
+  <span class="counter" id="counter"><span class="cur">01</span> / 18</span>
   <button class="nav-btn" id="btnNext" title="Next slide (→)" aria-label="Next slide">›</button>
 </div>
 
