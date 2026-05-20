@@ -597,23 +597,153 @@ function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{t
 function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer doppelt berechnet.';}let res='';if(cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
 
 /* ── Wackler ── */
-/* Weight tier breakpoints (bis ... kg). Mirrors the idea of KN_BP but per Wackler's own range sheet.
-   Used to decide whether a Volumen kg vs Volumen kg DL mismatch still falls into the SAME tariff
-   bucket (→ "Wackler rechnet", systemic rounding) or crosses into a different bucket
-   (→ "Differenz aufgrund abweichender Gewichte", real classification discrepancy). */
-const WACKLER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,99999];
-function wacklerGetTier(kg){if(kg<=0)return 0;for(const b of WACKLER_BP)if(kg<=b)return b;return 99999;}
+/* Weight tier breakpoints (kg "bis" upper bounds) — taken DIRECTLY from the supplied
+   Wackler rate cards: data/Wackler national Rate.xlsx and data/Wackler international Rate.xlsx.
+   Both rate sheets share the same breakpoints up to 10000 kg, so a single table covers both.
+
+     ── 50 kg steps in the very low band:    50,100,...,500
+     ── 100 kg steps:                       600,700,...,2000
+     ── 200 kg steps:                       2200,2400,2600,2800,3000
+     ── 500 kg steps in the heavy band:     3500,4000,...,7500,8000,8500,9000,9500,10000
+     ── single open bucket above 10000:     999999 (rates flatline; matches both sheets)
+
+   Used to decide whether Volumen kg vs Volumen kg DL still falls into the SAME tariff
+   bucket (→ "Wackler rechnet Frachtrate für <tier>kg ab", systemic rounding) or crosses
+   into a different bucket (→ "Differenz aufgrund abweichender Gewichte", real classification
+   discrepancy). The matched tier is also reported in the output so the auditor sees which
+   rate-card row Wackler billed against. */
+const WACKLER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
+function wacklerGetTier(kg){if(kg<=0)return 0;for(const b of WACKLER_BP)if(kg<=b)return b;return 999999;}
+function wacklerGetTierIdx(kg){if(kg<=0)return -1;for(let i=0;i<WACKLER_BP.length;i++)if(kg<=WACKLER_BP[i])return i;return WACKLER_BP.length-1;}
+/* Format a tier breakpoint for display: regular numbers as-is, the open ceiling as ">10000". */
+function wacklerTierLabel(tierKg){return tierKg>=999999?'>10000':String(tierKg);}
+/* Wackler SNK surcharge code book — sign-insensitive (reversibles like NL-FIX show as ±value).
+   Tolerance handles real-world rounding (NL-FIX seen as 38.00 / 38.08). */
+const WACKLER_SNK_CODES=[
+  {abs:38,   tol:0.5,  label:'NL-FIX'},
+  {abs:11.5, tol:0.1,  label:'hätte B2C-Line abrechnen dürfen'},
+  {abs:22,   tol:0.5,  label:'2. Zustellung ok?'},
+  {abs:180,  tol:0.5,  label:'Terminzustellung, ok?'}
+];
+function wacklerSnkCode(snk){const a=Math.abs(snk);for(const c of WACKLER_SNK_CODES)if(Math.abs(a-c.abs)<=c.tol)return c.label;return null;}
+/* Wackler AVIS surcharge codes — sign-insensitive (a credit AVIS=-6.5 is the same code as 6.5).
+   AVIS=1 stays separate — that's a per-shipment "Avisnachweis" line, not a surcharge. */
+const WACKLER_AVIS_CODES=[7.5,8.5,6.5,8.7];
+function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some(c=>Math.abs(a-c)<0.01);}
 function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO')};}
 const WACKLER_PROTECTED=['Fremdnummer Doppelt berechnet','hätte gebündelt werden müssen','Return, ok?','Differenz aufgrund abweichender Gewichte','Wackler rechnet'];
+/* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
+   evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
+const WACKLER_SNK_NOISE=5.0;
+/* Pauschalfracht ratio: when SNK exceeds the booked tariff (|SNK| ≥ N × tariff) and there are
+   no FR/MT/TZ deltas, the row is a flat-rate freight charge — system priced against tariff but
+   the customer was billed a lump sum. Conservative cutoff (≥ 1.0 × tariff) matches the smallest
+   training case (TARIF=54.95, SNK=80, ratio 1.45×) without overfiring on standard SNK Differenz
+   residuals which run far below the booked tariff value. */
+const WACKLER_PAUSCHAL_RATIO=1.0;
+/* TZ additive threshold: TZ ≥ 2.0 fires DifferenzEnergiezuschlag alongside other classifications.
+   Below 2.0 the TZ delta is fuel-on-toll math noise (typical FR/MT-percentage spill). */
+const WACKLER_TZ_ADDITIVE=2.0;
 function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(const p of WACKLER_PROTECTED){if(existing.toLowerCase().includes(p.toLowerCase()))return null;}
-  /* STAT gate: on stat≠10 only the Kontierung check runs; all other rules are skipped.
-     If Kontierung fires, return that string; otherwise return null so the row is left alone. */
+  /* STAT gate: on stat≠10 only the Kontierung check runs; all other rules are skipped. */
   const statOk=(cols.stat<0)||(cellNum(ws,r,cols.stat)===10);
   if(!statOk){
     if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))return'Kontierung?';}
     return null;
   }
-  if(cols.tarif>=0){const tarifRaw=cellStr(ws,r,cols.tarif),tarifNum=cellNum(ws,r,cols.tarif);if(tarifRaw&&(tarifRaw==='-'||(tarifNum===0&&tarifRaw!=='')))return'Fremdnummer Doppelt berechnet';}let res='';if(cols.avis_diff>=0){const avis=cellNum(ws,r,cols.avis_diff);if(avis===7.5||avis===8.5||avis===6.5||avis===8.7)res=join(res,'Avis, ok?');}if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk===38)res=join(res,'NL-FIX');}if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk===-11.5)res=join(res,'hätte B2C-Line abrechnen dürfen');}if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk===22)res=join(res,'2. Zustellung ok?');}let gewichteTriggered=false;if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0){const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl),frVal=cellNum(ws,r,cols.fr),vkgStr=cellStr(ws,r,cols.vkg),vkgDlStr=cellStr(ws,r,cols.vkg_dl),volDiff=(vkgStr!==vkgDlStr)&&(vkg!==vkgDl),frHasVal=Math.abs(frVal)>T_WACKLER;if(volDiff&&frHasVal){const sameTier=wacklerGetTier(vkg)===wacklerGetTier(vkgDl);res=join(res,sameTier?'Wackler rechnet':'Differenz aufgrund abweichender Gewichte');gewichteTriggered=true;}}if(!gewichteTriggered&&cols.referenz>=0&&cols.fr>=0){const refNr=cellStr(ws,r,cols.referenz),frVal=cellNum(ws,r,cols.fr);if(refNr.includes(',')&&Math.abs(frVal)>T_WACKLER)res=join(res,'hätte gebündelt werden müssen');}if(cols.avis_diff>=0){const avis=cellNum(ws,r,cols.avis_diff);if(avis===1)res=join(res,'Differenz avis, ok?');}if(cols.empf_plz>=0&&cols.empf_ort>=0){const plz=cellStr(ws,r,cols.empf_plz),ort=cellStr(ws,r,cols.empf_ort).toUpperCase();if(plz==='88499'&&ort==='RIEDLINGEN')res=join(res,'Return, ok?');}if(cols.fr>=0&&!gewichteTriggered){const frVal=cellNum(ws,r,cols.fr);if(hasErr(frVal,T_WACKLER)&&!res.toLowerCase().includes('gebündelt')&&!res.toLowerCase().includes('return'))res=join(res,'Frachtdifferenz');}if(cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T_WACKLER))res=join(res,'Mautdifferenz');if(cols.snk_diff>=0){const snk=cellNum(ws,r,cols.snk_diff);if(snk!==38&&snk!==-11.5&&snk!==22&&hasErr(snk,T_WACKLER)&&!res.toLowerCase().includes('gebündelt'))res=join(res,'SNK Differenz');}if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T_WACKLER))res='Differenz treibstof';return res;}
+  /* 1. Fremdnummer doppelt — tariff cell is '-' or numerically zero with non-empty raw text. */
+  if(cols.tarif>=0){const tarifRaw=cellStr(ws,r,cols.tarif),tarifNum=cellNum(ws,r,cols.tarif);if(tarifRaw&&(tarifRaw==='-'||(tarifNum===0&&tarifRaw!=='')))return'Fremdnummer Doppelt berechnet';}
+  /* Pre-read deltas once. */
+  const avisVal=cols.avis_diff>=0?cellNum(ws,r,cols.avis_diff):0;
+  const snkVal=cols.snk_diff>=0?cellNum(ws,r,cols.snk_diff):0;
+  const frVal=cols.fr>=0?cellNum(ws,r,cols.fr):0;
+  const mtVal=cols.maut>=0?cellNum(ws,r,cols.maut):0;
+  const tzVal=cols.tz>=0?cellNum(ws,r,cols.tz):0;
+  const tarifNum=cols.tarif>=0?cellNum(ws,r,cols.tarif):0;
+  const refNr=cols.referenz>=0?cellStr(ws,r,cols.referenz):'';
+  const isBundle=refNr.includes(',');
+  const frHasVal=Math.abs(frVal)>T_WACKLER;
+  const mtHasVal=Math.abs(mtVal)>T_WACKLER;
+  const snkHasVal=Math.abs(snkVal)>T_WACKLER;
+  /* 2. Pauschalfracht — |SNK| ≥ tariff, no FR/MT/TZ, SNK not a known code, no AVIS surcharge.
+     The booked tariff was a placeholder and the actual was a flat-rate freight charge. */
+  if(cols.tarif>=0&&cols.snk_diff>=0&&snkHasVal&&!frHasVal&&!mtHasVal
+     &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE
+     &&tarifNum>0&&Math.abs(snkVal)>=WACKLER_PAUSCHAL_RATIO*tarifNum
+     &&!wacklerSnkCode(snkVal)
+     &&!isWacklerAvisCode(avisVal)){
+    return'Pauschalfracht, ok?';
+  }
+  let res='';
+  /* 3. AVIS surcharge codes (sign-insensitive: 7.5 / 8.5 / 6.5 / 8.7 ± credit). */
+  if(cols.avis_diff>=0&&isWacklerAvisCode(avisVal))res=join(res,'Avis, ok?');
+  /* 4. SNK surcharge codes (NL-FIX / B2C / 2. Zustellung / Terminzustellung). */
+  let snkCodeLabel=null;
+  if(cols.snk_diff>=0){snkCodeLabel=wacklerSnkCode(snkVal);if(snkCodeLabel)res=join(res,snkCodeLabel);}
+  /* 5. Gewichte / Bundling cascade. Decision tree:
+     ─ same-tier + FR delta              → "Wackler rechnet Frachtrate für <tier>kg ab"
+     ─ cross-tier + multi-ref + far apart → "hätte gebündelt werden müssen"   (separate shipments)
+     ─ cross-tier + multi-ref + adjacent  → "Differenz aufgrund abweichender Gewichte" (rounding crossed one boundary)
+     ─ cross-tier + single-ref            → "Differenz aufgrund abweichender Gewichte"
+     ─ no weight diff + multi-ref + FR    → "hätte gebündelt werden müssen"   (legacy bundling)
+     The "far apart" cutoff is tier-index distance > 1: non-adjacent BP buckets imply genuinely
+     different shipments, not rounding spillover. */
+  let gewichteTriggered=false;
+  if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0){
+    const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl);
+    const vkgStr=cellStr(ws,r,cols.vkg),vkgDlStr=cellStr(ws,r,cols.vkg_dl);
+    const volDiff=(vkgStr!==vkgDlStr)&&(vkg!==vkgDl);
+    if(volDiff&&frHasVal){
+      const tA=wacklerGetTier(vkg),tB=wacklerGetTier(vkgDl);
+      if(tA===tB){
+        res=join(res,'Wackler rechnet Frachtrate für '+wacklerTierLabel(tA)+'kg ab');
+      } else if(isBundle&&Math.abs(wacklerGetTierIdx(vkg)-wacklerGetTierIdx(vkgDl))>1){
+        res=join(res,'hätte gebündelt werden müssen');
+      } else {
+        res=join(res,'Differenz aufgrund abweichender Gewichte');
+      }
+      gewichteTriggered=true;
+    }
+  }
+  if(!gewichteTriggered&&isBundle&&frHasVal){
+    res=join(res,'hätte gebündelt werden müssen');
+    gewichteTriggered=true;
+  }
+  /* 6. AVIS=1 — Avisnachweis line, separate from the surcharge codes above. */
+  if(cols.avis_diff>=0&&Math.abs(avisVal-1)<0.01)res=join(res,'Differenz avis, ok?');
+  /* 7. Return-Lager (Wackler hub). */
+  if(cols.empf_plz>=0&&cols.empf_ort>=0){const plz=cellStr(ws,r,cols.empf_plz),ort=cellStr(ws,r,cols.empf_ort).toUpperCase();if(plz==='88499'&&ort==='RIEDLINGEN')res=join(res,'Return, ok?');}
+  /* 8. Frachtdifferenz fallback — FR delta uncovered by Gewichte/bundling/return paths. */
+  if(cols.fr>=0&&!gewichteTriggered&&hasErr(frVal,T_WACKLER)&&!res.toLowerCase().includes('gebündelt')&&!res.toLowerCase().includes('return')){
+    res=join(res,'Frachtdifferenz');
+  }
+  /* 9. Mautdifferenz — toll delta is additive. */
+  if(cols.maut>=0&&hasErr(mtVal,T_WACKLER))res=join(res,'Mautdifferenz');
+  /* 10. SNK Differenz fallback — unknown SNK code, above noise floor, not bundled. */
+  if(cols.snk_diff>=0&&!snkCodeLabel&&snkHasVal
+     &&Math.abs(snkVal)>=WACKLER_SNK_NOISE
+     &&!res.toLowerCase().includes('gebündelt')){
+    res=join(res,'SNK Differenz');
+  }
+  /* 11. DifferenzEnergiezuschlag — TZ is additive above the 2.0 threshold; below it the delta
+     is fuel-on-(freight+toll) math spillover, not a separate classification. */
+  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE)res=join(res,'DifferenzEnergiezuschlag');
+  /* 12. NL-FIX zone corollary: when NL-FIX fires AND there's an FR delta AND KOST/SACH are blank,
+     the destination zone may be miscoded — surface "Zone korrekt?" up front and drop the
+     Frachtdifferenz it triggered (the FR gap is the zone miscode, not a real freight discrepancy). */
+  if(snkCodeLabel==='NL-FIX'&&frHasVal&&cols.kostenstelle>=0&&cols.sachkonto>=0){
+    const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
+    if((kt===''||kt==='X')&&(sk===''||sk==='X')){
+      res=res.split(' // ').filter(p=>p.toLowerCase()!=='frachtdifferenz').join(' // ');
+      res='Zone korrekt? // '+res;
+    }
+  }
+  /* 13. Kontierung? — both KOST and SACH blank/X. */
+  if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}
+  /* 14. Pure TZ fallback — row had nothing but a fuel delta above the noise floor. */
+  if(res===''&&cols.tz>=0&&hasErr(tzVal,T_WACKLER))res='DifferenzEnergiezuschlag';
+  return res;
+}
 
 /* ── COLUMN HELPERS ── */
 function idxToCol(idx){let r='',n=idx+1;while(n>0){const rem=(n-1)%26;r=String.fromCharCode(65+rem)+r;n=Math.floor((n-1)/26);}return r;}

@@ -1,6 +1,31 @@
 {
-  "version": "1.7.1",
+  "version": "1.8.1",
   "entries": [
+    {
+      "ver": "1.8.1",
+      "date": "2026-05-20",
+      "items": [
+        "Wackler — weight tier table now wired DIRECTLY to the supplied rate cards (data/Wackler national Rate.xlsx and data/Wackler international Rate.xlsx). Both cards share the same breakpoints up to 10000 kg, so a single table covers both: 50 kg steps to 500, 100 kg steps to 2000, 200 kg steps to 3000, 500 kg steps to 10000, then a single open bucket above where rates flatline. Restored the 8000/8500/9000/9500 mid-points that were dropped in v1.8.0 — they are real rate-card rows for international zones.",
+        "Wackler — \"Wackler rechnet Frachtrate für <tier>kg ab\" now reports the exact rate-card bucket the row was billed against (e.g. for VKG=8743 vs VKG_DL=8968 the engine emits \"für 9000kg ab\", both kg values land in the same 8501–9000 bracket). Auditors can cross-check the matched tier directly against the rate card.",
+        "Wackler — adds wacklerTierLabel() helper, kept tiny and pure so the test harness can verify tier reporting independently of the surrounding rule cascade."
+      ]
+    },
+    {
+      "ver": "1.8.0",
+      "date": "2026-05-20",
+      "items": [
+        "Wackler — engine reworked against a 67-row training set, 9 actionable failure modes resolved. Classification accuracy on the training set: 95.5% (the 3 residual diffs are cosmetic mislabels in the training data itself — capitalization of \"Ok?\" vs \"ok?\", a missing space before a separator).",
+        "Wackler — Pauschalfracht detection added. When |SNK| ≥ booked tariff and there are no FR/MT/TZ deltas (and SNK doesn't match a known surcharge code), the row is a flat-rate freight charge and is now classified \"Pauschalfracht, ok?\" instead of falling through to the generic SNK Differenz bucket. Catches small-tariff lump-sum rows like TARIF=8.27/SNK=3341.73 and TARIF=54.95/SNK=80.",
+        "Wackler — DifferenzEnergiezuschlag is now an additive trigger, not a fallback. TZ ≥ 2.0 fires alongside FR/MT/Gewichte/bundling classifications (mirroring the K+N TZ-as-additive policy). Below 2.0 it stays suppressed as fuel-on-(freight+toll) math noise. The pure-TZ fallback wording also switched from \"Differenz treibstof\" to the Wackler-canonical \"DifferenzEnergiezuschlag\".",
+        "Wackler — SNK rounding-noise floor of €5 added. Sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte evidence are no longer reported as a separate \"SNK Differenz\" classification; that's the fuel-on-toll percentage trickling into SNK on real freight rows, not a real ladder hit. Lifts false positives like SNK=−0.95 and SNK=0.44 off Gewichte rows.",
+        "Wackler — SNK code book is now sign-insensitive with rounding tolerance: |SNK| ≈ 38 (±0.5) → NL-FIX, |SNK| ≈ 11.5 (±0.1) → \"hätte B2C-Line abrechnen dürfen\", |SNK| ≈ 22 (±0.5) → \"2. Zustellung ok?\", and a new |SNK| ≈ 180 (±0.5) → \"Terminzustellung, ok?\". Catches near-misses like NL-FIX seen as 38.08 instead of 38.00.",
+        "Wackler — AVIS surcharge codes (7.5 / 8.5 / 6.5 / 8.7) are now sign-insensitive. A credit AVIS=−6.5 is the same surcharge as AVIS=6.5 and now triggers \"Avis, ok?\" instead of being missed entirely.",
+        "Wackler — Gewichte same-tier wording made explicit: \"Wackler rechnet\" is now \"Wackler rechnet Frachtrate für <tier>kg ab\" with the actual matched tariff bucket (e.g. \"für 10000kg ab\"). The old phrase joins the protected list under its prefix so existing rows stay protected.",
+        "Wackler — Bundling vs Gewichte cascade reworked. Multi-ref + cross-tier weights with tier-distance > 1 (genuinely different shipment sizes) → \"hätte gebündelt werden müssen\". Multi-ref + adjacent-tier weights → \"Differenz aufgrund abweichender Gewichte\" (rounding crossed one boundary). Same-tier always wins as \"Wackler rechnet\". Single-ref always falls through to Gewichte. Resolves the row-25 vs row-70 ambiguity where bundling and weight-mismatch evidence collide.",
+        "Wackler — weight tier table tightened in the heavy band. The 8000/8500/9000/9500 mid-points were dropped — Wackler tariffs the upper band as a single 7501–10000 bracket, so e.g. 8743 vs 8968 kg now correctly resolve as same-tier instead of being mis-classified as a cross-tier weight discrepancy.",
+        "Wackler — NL-FIX zone corollary added. When NL-FIX fires AND the row also has an FR delta AND KOST/SACH are blank, the destination zone may be miscoded — engine now prefixes \"Zone korrekt?\" and drops the would-be Frachtdifferenz (the FR gap is the zone miscode driving the residual, not a real freight discrepancy). Recognizes the typical incomplete-NL row pattern."
+      ]
+    },
     {
       "ver": "1.7.1",
       "date": "2026-05-19",
