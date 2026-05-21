@@ -591,16 +591,29 @@ function processDachser(ws,r,cols){
        1.0-EUR cutoff sits comfortably between the two observed cases (0.09 vs 26.24). */
     else if(frVal<0&&Math.abs(frVal)<1.0)res=join(res,'Differenz Frachtzu/ abschlag');
     else {
-      /* Weight-deviation wording. Earlier (v1.8.3) the Dachser FR branch tried to
-         mirror the K+N tier-crossing pattern by emitting the plural
-         "Differenz aufgrund abweichender Gewichte" when Volumen kg vs Volumen kg DL
-         crossed a Dachser tariff bucket. The training corpus shows the Dachser
-         auditor uses the singular wording exclusively (training row 346: VKG=54
-         vs VKG_DL=40 cross the 50/100 bucket but the auditor still labels it
-         singular). The plural variant has been retired here — the K+N tier guard
-         stays K+N-only. `DACHSER_BP` and `dachserGetTier` are left in place for
-         the diagnostic-reason output and possible future use. */
-      res=join(res,'Differenz aufgrund von abweichendem Gewicht');
+      /* Weight-tier guard, consistent with the K+N and Wackler engines. When
+         `Volumen kg` and `Volumen kg DL` are both populated AND fall into
+         DIFFERENT Dachser tariff buckets (DACHSER_BP), the FR delta is a real
+         weight miscalc → plural "Differenz aufgrund abweichender Gewichte".
+         When they stay in the same bucket (or one of the volumes is missing /
+         non-positive — e.g. dummy-zero rows where the auditor doesn't attribute
+         the gap to weight at all), the row falls through to the legacy singular
+         "Differenz aufgrund von abweichendem Gewicht". Tier table is
+         `DACHSER_BP` above — sourced from the data/Dachser-weight.xlsx rate
+         card.
+
+         Trade-off note: training row 346 (VKG=54, VKG_DL=40) crosses the 50/100
+         bracket boundary so this rule labels it plural; the auditor labeled it
+         singular. Choosing tier-crossing here mirrors the K+N / Wackler
+         behavior and keeps the three forwarder engines consistent — the row 346
+         label is treated as a one-off auditor variation. */
+      const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
+      const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
+      const tiersKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
+      const crossTier=tiersKnown&&(dachserGetTier(v1)!==dachserGetTier(v2));
+      res=join(res, crossTier
+        ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
+        : 'Differenz aufgrund von abweichendem Gewicht'); /* singular — same tier or weights unknown */
     }
   }
   if(cols.snk_dl>=0&&cellNum(ws,r,cols.snk_dl)===14&&cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))
