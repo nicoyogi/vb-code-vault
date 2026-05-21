@@ -416,8 +416,31 @@ function resolveDachser(ws,range){
     c503_dl:  fc('503','Kosten DL'),
     lg_diff:  fc('LG','Differenz'),
     av_diff:  fc('AV','Differenz'),
+    vkg:      fc('','Volumen kg'),
+    vkg_dl:   fc('','Volumen kg DL'),
   };
 }
+
+/* Dachser weight tier breakpoints (kg "bis" upper bounds) — taken DIRECTLY from
+   the supplied `data/Dachser-weight.xlsx` rate card (Staffel column, 44 brackets:
+   0-50, 51-100, …, 9501-10000). Used by the FR-branch weight guard to decide
+   whether `Volumen kg` vs `Volumen kg DL` cross a tariff bucket
+   (→ plural "Differenz aufgrund abweichender Gewichte", a real weight miscalc)
+   or stay inside the same bucket (→ singular "Differenz aufgrund von abweichendem
+   Gewicht", the legacy wording — FR delta exists but it's not a tier crossing).
+
+     ── 50 kg steps in the very low band:    50,100,...,500
+     ── 100 kg steps:                       600,700,...,2000
+     ── 200 kg steps:                       2200,2400,2600,2800,3000
+     ── 500 kg steps in the heavy band:     3500,4000,...,7500,8000,8500,9000,9500,10000
+     ── single open bucket above 10000:     999999 (rates flatline above the rate-card ceiling)
+
+   Differs from `KN_BP` in two places: Dachser keeps every 500 kg step in the
+   8000–10000 band (K+N collapses 8500/9500 only) and tops out at a real 10000
+   ceiling (K+N has an open 99999). Both differences come straight from the
+   supplied rate card. */
+const DACHSER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
+function dachserGetTier(kg){if(kg<=0)return 0;for(const b of DACHSER_BP)if(kg<=b)return b;return 999999;}
 
 function daIsTarifZero(ws,r,col){if(col<0)return false;const raw=cellStr(ws,r,col);if(!raw)return false;if(raw==='-')return true;return(cellNum(ws,r,col)===0&&raw.includes('0'));}
 function daIsNonInteger(n){return n!==Math.floor(n);}
@@ -520,7 +543,24 @@ function processDachser(ws,r,cols){
        weight-miscount. Training row 144: FR=-28.58, anz_sdg=1, no service flags →
        expected "Differenz Frachtzu/ abschlag", not "abweichendem Gewicht". */
     else if(frVal<0)res=join(res,'Differenz Frachtzu/ abschlag');
-    else res=join(res,'Differenz aufgrund von abweichendem Gewicht');
+    else {
+      /* Weight-tier guard, mirroring the K+N pattern. When `Volumen kg` and
+         `Volumen kg DL` fall into DIFFERENT Dachser tariff buckets, the FR
+         delta is a real weight-miscalc — emit the plural phrase. When they
+         stay in the same bucket (or the weights aren't visible on this row)
+         the FR delta is a within-tier rounding gap, so keep the legacy
+         singular wording.
+
+         Tier table is `DACHSER_BP` above — sourced from the
+         data/Dachser-weight.xlsx rate card. */
+      const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
+      const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
+      const tiersKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
+      const crossTier=tiersKnown&&(dachserGetTier(v1)!==dachserGetTier(v2));
+      res=join(res, crossTier
+        ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
+        : 'Differenz aufgrund von abweichendem Gewicht'); /* singular — same tier or weights unknown */
+    }
   }
   if(cols.snk_dl>=0&&cellNum(ws,r,cols.snk_dl)===14&&cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))
     res=join(res,'Abholterminvereinbarung');
@@ -781,6 +821,7 @@ function buildReason(fw,ws,r,cols){
     push('ZZ',num(cols.zz));push('SAM',num(cols.sam));push('DGR',num(cols.dgr));
     push('EXP',num(cols.exp));push('EXP_DL',num(cols.exp_dl));push('MAUT',num(cols.maut));
     push('LG',num(cols.lg_diff));push('AV',num(cols.av_diff));push('TZ',num(cols.tz));
+    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
     const ref3=cellStr(ws,r,DA_COL_REFERENZ3);if(ref3)parts.push('REF3='+ref3);
     const sa=cellStr(ws,r,DA_COL_SERV_ART);if(sa)parts.push('SERV='+sa);
     const sk=cellStr(ws,r,DA_COL_SACHKONTO);if(sk)parts.push('SACH='+sk);
