@@ -242,6 +242,7 @@ const PHRASES={
   nlFix:                      'NL-FIX',
   b2cLine:                    'hätte B2C-Line abrechnen dürfen',
   buendelMuessen:             'hätte gebündelt werden müssen',
+  avisTelefonisch:            'hätte Avisgebühr telefonisch abrechnen dürfen',
   differenzAvisOk:            'Differenz avis, ok?',
   returnOk:                   'Return, ok?',
   frachtDiff:                 'Frachtdifferenz',
@@ -627,11 +628,16 @@ const WACKLER_SNK_CODES=[
 ];
 function wacklerSnkCode(snk){const a=Math.abs(snk);for(const c of WACKLER_SNK_CODES)if(Math.abs(a-c.abs)<=c.tol)return c.label;return null;}
 /* Wackler AVIS surcharge codes — sign-insensitive (a credit AVIS=-6.5 is the same code as 6.5).
-   AVIS=1 stays separate — that's a per-shipment "Avisnachweis" line, not a surcharge. */
+   AVIS=1 stays separate — that's a per-shipment "Avisnachweis" line, not a surcharge.
+   AVIS≈-8.7 is also split out: a negative 8.7 credit is the audit signature for "billed the
+   standard Avisgebühr, should have used the cheaper telephonic rate" → see wacklerAvisLabel. */
 const WACKLER_AVIS_CODES=[7.5,8.5,6.5,8.7];
 function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some(c=>Math.abs(a-c)<0.01);}
+/* Resolve the audit wording for a Wackler AVIS code. The 8.7 credit (negative) is the
+   "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
+function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
 function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO')};}
-const WACKLER_PROTECTED=['Fremdnummer Doppelt berechnet','hätte gebündelt werden müssen','Return, ok?','Differenz aufgrund abweichender Gewichte','Wackler rechnet'];
+const WACKLER_PROTECTED=['Fremdnummer Doppelt berechnet','hätte gebündelt werden müssen','hätte Avisgebühr telefonisch abrechnen dürfen','Return, ok?','Differenz aufgrund abweichender Gewichte','Wackler rechnet'];
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
 const WACKLER_SNK_NOISE=5.0;
@@ -675,8 +681,9 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
     return'Pauschalfracht, ok?';
   }
   let res='';
-  /* 3. AVIS surcharge codes (sign-insensitive: 7.5 / 8.5 / 6.5 / 8.7 ± credit). */
-  if(cols.avis_diff>=0&&isWacklerAvisCode(avisVal))res=join(res,'Avis, ok?');
+  /* 3. AVIS surcharge codes (sign-insensitive: 7.5 / 8.5 / 6.5 / 8.7 ± credit).
+     AVIS=-8.7 is the "should have billed telephonically" signature → specific wording. */
+  if(cols.avis_diff>=0){const al=wacklerAvisLabel(avisVal);if(al)res=join(res,al);}
   /* 4. SNK surcharge codes (NL-FIX / B2C / 2. Zustellung / Terminzustellung). */
   let snkCodeLabel=null;
   if(cols.snk_diff>=0){snkCodeLabel=wacklerSnkCode(snkVal);if(snkCodeLabel)res=join(res,snkCodeLabel);}
