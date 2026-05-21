@@ -1,6 +1,14 @@
 {
-  "version": "1.8.1",
+  "version": "1.8.2",
   "entries": [
+    {
+      "ver": "1.8.2",
+      "date": "2026-05-20",
+      "items": [
+        "Wackler — AVIS=-8.7 (negative credit) is now classified \"hätte Avisgebühr telefonisch abrechnen dürfen\" instead of the generic \"Avis, ok?\". The negative 8.7 line is the audit signature for \"billed the standard Avisgebühr, should have used the cheaper telephonic rate\", so the row carries the specific corrective wording. Positive AVIS=+8.7 and the other surcharge codes (7.5 / 8.5 / 6.5) stay sign-insensitive under \"Avis, ok?\".",
+        "Wackler — adds wacklerAvisLabel() helper that resolves the AVIS code to its specific wording. Kept pure so the harness can assert the new label independently of the rest of the cascade. \"hätte Avisgebühr telefonisch abrechnen dürfen\" added to the WACKLER_PROTECTED list so re-runs preserve the wording on already-classified rows."
+      ]
+    },
     {
       "ver": "1.8.1",
       "date": "2026-05-20",
