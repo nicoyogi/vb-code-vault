@@ -416,8 +416,26 @@ function resolveDachser(ws,range){
     c503_dl:  fc('503','Kosten DL'),
     lg_diff:  fc('LG','Differenz'),
     av_diff:  fc('AV','Differenz'),
+    vkg:      fc('','Volumen kg'),
+    vkg_dl:   fc('','Volumen kg DL'),
   };
 }
+
+/* Dachser weight tier breakpoints — kg "bis" upper bounds, used by the FR-branch
+   weight guard to decide whether `Volumen kg` vs `Volumen kg DL` cross a tariff
+   bucket (→ plural "Differenz aufgrund abweichender Gewichte", a real weight
+   miscalc) or stay inside the same bucket (→ singular "Differenz aufgrund von
+   abweichendem Gewicht", the legacy wording — FR delta exists but it's not a
+   tier crossing).
+
+   TODO: replace with the exact breakpoints from `data/Dachser-weight.xlsx` when
+   the rate card is committed to the repo. The current values are a placeholder
+   adopted from the K+N tier table (`KN_BP`) — same shape (50 kg steps low,
+   100 kg mid, 200/500 kg high), since K+N and Dachser run nearly identical
+   German LTL tariff structures. Once the Dachser xlsx lands, only this array
+   needs to change; the guard logic stays put. */
+const DACHSER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8500,9500,99999];
+function dachserGetTier(kg){if(kg<=0)return 0;for(const b of DACHSER_BP)if(kg<=b)return b;return 99999;}
 
 function daIsTarifZero(ws,r,col){if(col<0)return false;const raw=cellStr(ws,r,col);if(!raw)return false;if(raw==='-')return true;return(cellNum(ws,r,col)===0&&raw.includes('0'));}
 function daIsNonInteger(n){return n!==Math.floor(n);}
@@ -520,7 +538,24 @@ function processDachser(ws,r,cols){
        weight-miscount. Training row 144: FR=-28.58, anz_sdg=1, no service flags →
        expected "Differenz Frachtzu/ abschlag", not "abweichendem Gewicht". */
     else if(frVal<0)res=join(res,'Differenz Frachtzu/ abschlag');
-    else res=join(res,'Differenz aufgrund von abweichendem Gewicht');
+    else {
+      /* Weight-tier guard, mirroring the K+N pattern. When `Volumen kg` and
+         `Volumen kg DL` fall into DIFFERENT Dachser tariff buckets, the FR
+         delta is a real weight-miscalc — emit the plural phrase. When they
+         stay in the same bucket (or the weights aren't visible on this row)
+         the FR delta is a within-tier rounding gap, so keep the legacy
+         singular wording.
+
+         Tier table is `DACHSER_BP` above; replace it with the real
+         data/Dachser-weight.xlsx breakpoints when the rate card lands. */
+      const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
+      const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
+      const tiersKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
+      const crossTier=tiersKnown&&(dachserGetTier(v1)!==dachserGetTier(v2));
+      res=join(res, crossTier
+        ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
+        : 'Differenz aufgrund von abweichendem Gewicht'); /* singular — same tier or weights unknown */
+    }
   }
   if(cols.snk_dl>=0&&cellNum(ws,r,cols.snk_dl)===14&&cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))
     res=join(res,'Abholterminvereinbarung');
@@ -781,6 +816,7 @@ function buildReason(fw,ws,r,cols){
     push('ZZ',num(cols.zz));push('SAM',num(cols.sam));push('DGR',num(cols.dgr));
     push('EXP',num(cols.exp));push('EXP_DL',num(cols.exp_dl));push('MAUT',num(cols.maut));
     push('LG',num(cols.lg_diff));push('AV',num(cols.av_diff));push('TZ',num(cols.tz));
+    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
     const ref3=cellStr(ws,r,DA_COL_REFERENZ3);if(ref3)parts.push('REF3='+ref3);
     const sa=cellStr(ws,r,DA_COL_SERV_ART);if(sa)parts.push('SERV='+sa);
     const sk=cellStr(ws,r,DA_COL_SACHKONTO);if(sk)parts.push('SACH='+sk);
