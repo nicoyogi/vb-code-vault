@@ -1,6 +1,17 @@
 {
-  "version": "1.8.4",
+  "version": "1.8.5",
   "entries": [
+    {
+      "ver": "1.8.5",
+      "date": "2026-05-21",
+      "items": [
+        "Dachser — `daEvalSNK` case 75 now splits along whether the surcharge has a tariff base. SNK_TARIF>0 (e.g. tariff 85, billed 75, SNK_DIFF=-10) classifies as \"Differenz Hebebuehnen-Zuschlag\" — a real Hebebühnen (tail-lift) tariff differential. SNK_TARIF empty/0 with SNK_DIFF==SNK_DL=75 stays as the legacy \"Ausfallfracht/Schadensersatz\" — an ad-hoc fee with no tariff backing. Training row 47 was previously misclassified as Ausfallfracht; row 343 still classifies correctly as Ausfallfracht.",
+        "Dachser — `daEvalSNK` default branch now routes K1AV rows with a non-standard SNK_DL (anything outside the 5/14 codes handled higher up) to \"Differenz Laderaumkostenentwicklung\". Training row 324 (SNK_DL=19, SNK_DIFF=19, SERV=K1AV) was previously misclassified as Differenz Automatische Zustellterminvereinbarung. The non-integer K1AV cases (rows 303/304/307/342) were already handled correctly via the cents-bearing SNK_DL fallback below.",
+        "Dachser — `processDachser` adds an early-return for the blank-TARIF + significant FR pattern. When the Tarif cell is completely empty (not '-' which `daIsTarifZero` already catches) and FR exceeds threshold: empty SACH+SERV → \"VORHOLUNG\" (training row 344, advance-freight line); SACH+SERV present → \"Fremdnummer Doppelt berechnet\" (training row 345). Both cases short-circuit the standard Produktzuschlag/Mautdifferenz/Gewichte cascade — these accounting artifacts shouldn't pile up unrelated classifications.",
+        "Dachser — FR branch tightens the negative-FR shortcut. Only small-magnitude negative FR (|FR| < 1.0) routes to \"Differenz Frachtzu/ abschlag\"; larger negative FR falls through to the weight-deviation wording. Training row 357 (FR=-0.09) is a real Frachtzu surcharge adjustment; training row 241 (FR=-26.24) is a weight deviation that the previous unconditional shortcut misclassified as Frachtzu/abschlag.",
+        "Dachser — retired the plural \"Differenz aufgrund abweichender Gewichte\" branch added in v1.8.3. The training corpus shows the Dachser auditor uses the singular \"Differenz aufgrund von abweichendem Gewicht\" exclusively (training row 346: VKG=54 vs VKG_DL=40 cross the 50/100 tariff bucket but the auditor still labels it singular). The K+N tier-crossing pattern stays K+N-only. `DACHSER_BP` and `dachserGetTier` remain in place for the diagnostic-reason output and possible future use."
+      ]
+    },
     {
       "ver": "1.8.4",
       "date": "2026-05-21",

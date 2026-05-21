@@ -479,7 +479,21 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
     case 190:return'AUSFALLFRACHT';
     case 95:return'AUSFALLFRACHT';
     case 130:return'Standgeld';
-    case 75:return(servArt.toUpperCase()==='K1AV')?'Speditionskosten gem. Text':'Ausfallfracht/Schadensersatz';
+    case 75:
+      if(servArt.toUpperCase()==='K1AV')return'Speditionskosten gem. Text';
+      /* SNK_DL=75 splits along whether the surcharge has a tariff base.
+         When SNK_TARIF>0, the row is a Hebebühnen (tail-lift) tariff line that's
+         been miscalculated — training row 47 (SNK_TARIF=85, SNK_DL=75, SNK_DIFF=-10):
+         tariff says €85, billed €75, the -€10 gap is a Differenz on a real
+         Hebebühnen-Zuschlag, not an ad-hoc fee. Conversely when SNK_TARIF is
+         empty/0 with SNK_DIFF==SNK_DL=75 (training row 343) the line is a
+         standalone Ausfallfracht/Schadensersatz fee with no tariff backing.
+         Note the spelling "Hebebuehnen" matches the auditor's ASCII wording. */
+      if(snkTar>0){
+        if(!hasErr(snkDiff,T))return'';
+        return'Differenz Hebebuehnen-Zuschlag';
+      }
+      return'Ausfallfracht/Schadensersatz';
     case 11:
       if(!hasErr(snkDiff,T))return'';
       return'Differenz Telefonische Zustellankündigung - Laderaumzuschlag';
@@ -499,6 +513,14 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
       return'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag';
     default:
       if(!hasErr(snkDiff,T))return'';
+      /* K1AV with a non-standard SNK_DL value classifies as Laderaumkostenentwicklung.
+         Training row 324: SNK_DL=19, SNK_DIFF=19, SERV=K1AV → expected
+         "Differenz Laderaumkostenentwicklung". The non-integer fallback below
+         already catches K1AV rows with cents-bearing SNK_DL (rows 303/304/307/342);
+         this catches the integer-only K1AV cases that previously fell through to
+         "Differenz Automatische Zustellterminvereinbarung — Laderaumzuschlag".
+         K1AV's standard codes (5/14) are still handled higher up in the switch. */
+      if(servArt.toUpperCase()==='K1AV')return'Differenz Laderaumkostenentwicklung';
       if(daIsNonInteger(snkDl)&&daIsNonInteger(snkDiff)){
         return'Differenz Laderaumkostenentwicklung';
       }
@@ -517,6 +539,26 @@ function processDachser(ws,r,cols){
         sachkonto=cellStr(ws,r,DA_COL_SACHKONTO),
         anzSdg=parseInt(cellStr(ws,r,DA_COL_ANZ_SDG))||0,
         isTarifZero=daIsTarifZero(ws,r,cols.tarif);
+
+  /* Blank-TARIF + significant FR pattern. When the TARIF cell is completely empty
+     (not '-' which daIsTarifZero already catches) AND FR exceeds threshold, the
+     row is an accounting artifact, not a billing differential. Two flavors:
+       - No SACH and no SERV_ART → Vorholung advance-freight line (training row 344:
+         FR=646.7, every other input column blank → expected "VORHOLUNG").
+       - SACH+SERV present → Fremdnummer doppelt berechnet (training row 345:
+         FR=47.2, EXP=10, MAUT=1.15, SERV=DA01, SACH=612100 → expected
+         "Fremdnummer Doppelt berechnet" alone, with every other classification
+         suppressed).
+     Returns early so the standard Produktzuschlag/Mautdifferenz/Gewichte cascade
+     doesn't pile irrelevant labels onto these accounting rows. */
+  if(cols.tarif>=0&&cols.fr>=0){
+    const tarifRaw=cellStr(ws,r,cols.tarif);
+    if(tarifRaw===''&&hasErr(cellNum(ws,r,cols.fr),T)){
+      if(!sachkonto&&!servArt)return PHRASES.vorholung;
+      return'Fremdnummer Doppelt berechnet';
+    }
+  }
+
   let res='',hasFR=false;
 
   if(cols.c502_dl>=0){const v=cellStr(ws,r,cols.c502_dl);if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c502_dl)!==0)res=join(res,'Einlagern');}
@@ -539,27 +581,26 @@ function processDachser(ws,r,cols){
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
     else if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
     /* Negative FR with no special flags (no ZW, no Vorholung, no Sonderfahrt, single
-       shipment) is a freight surcharge/credit line (Frachtzu/ abschlag), not a
-       weight-miscount. Training row 144: FR=-28.58, anz_sdg=1, no service flags →
-       expected "Differenz Frachtzu/ abschlag", not "abweichendem Gewicht". */
-    else if(frVal<0)res=join(res,'Differenz Frachtzu/ abschlag');
+       shipment). The audit splits these along magnitude: a small-magnitude negative
+       FR (just above the rounding threshold) is a Frachtzu/abschlag — a freight
+       surcharge/credit adjustment (training row 357: FR=-0.09 → expected
+       "Differenz Frachtzu/ abschlag" alongside other triggers). A large-magnitude
+       FR is a real freight discrepancy that falls through to the weight-deviation
+       wording (training row 241: FR=-26.24, no VKG → expected
+       "Differenz aufgrund von abweichendem Gewicht", NOT Frachtzu/abschlag). The
+       1.0-EUR cutoff sits comfortably between the two observed cases (0.09 vs 26.24). */
+    else if(frVal<0&&Math.abs(frVal)<1.0)res=join(res,'Differenz Frachtzu/ abschlag');
     else {
-      /* Weight-tier guard, mirroring the K+N pattern. When `Volumen kg` and
-         `Volumen kg DL` fall into DIFFERENT Dachser tariff buckets, the FR
-         delta is a real weight-miscalc — emit the plural phrase. When they
-         stay in the same bucket (or the weights aren't visible on this row)
-         the FR delta is a within-tier rounding gap, so keep the legacy
-         singular wording.
-
-         Tier table is `DACHSER_BP` above — sourced from the
-         data/Dachser-weight.xlsx rate card. */
-      const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
-      const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
-      const tiersKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
-      const crossTier=tiersKnown&&(dachserGetTier(v1)!==dachserGetTier(v2));
-      res=join(res, crossTier
-        ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
-        : 'Differenz aufgrund von abweichendem Gewicht'); /* singular — same tier or weights unknown */
+      /* Weight-deviation wording. Earlier (v1.8.3) the Dachser FR branch tried to
+         mirror the K+N tier-crossing pattern by emitting the plural
+         "Differenz aufgrund abweichender Gewichte" when Volumen kg vs Volumen kg DL
+         crossed a Dachser tariff bucket. The training corpus shows the Dachser
+         auditor uses the singular wording exclusively (training row 346: VKG=54
+         vs VKG_DL=40 cross the 50/100 bucket but the auditor still labels it
+         singular). The plural variant has been retired here — the K+N tier guard
+         stays K+N-only. `DACHSER_BP` and `dachserGetTier` are left in place for
+         the diagnostic-reason output and possible future use. */
+      res=join(res,'Differenz aufgrund von abweichendem Gewicht');
     }
   }
   if(cols.snk_dl>=0&&cellNum(ws,r,cols.snk_dl)===14&&cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))
