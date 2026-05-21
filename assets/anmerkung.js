@@ -421,21 +421,26 @@ function resolveDachser(ws,range){
   };
 }
 
-/* Dachser weight tier breakpoints — kg "bis" upper bounds, used by the FR-branch
-   weight guard to decide whether `Volumen kg` vs `Volumen kg DL` cross a tariff
-   bucket (→ plural "Differenz aufgrund abweichender Gewichte", a real weight
-   miscalc) or stay inside the same bucket (→ singular "Differenz aufgrund von
-   abweichendem Gewicht", the legacy wording — FR delta exists but it's not a
-   tier crossing).
+/* Dachser weight tier breakpoints (kg "bis" upper bounds) — taken DIRECTLY from
+   the supplied `data/Dachser-weight.xlsx` rate card (Staffel column, 44 brackets:
+   0-50, 51-100, …, 9501-10000). Used by the FR-branch weight guard to decide
+   whether `Volumen kg` vs `Volumen kg DL` cross a tariff bucket
+   (→ plural "Differenz aufgrund abweichender Gewichte", a real weight miscalc)
+   or stay inside the same bucket (→ singular "Differenz aufgrund von abweichendem
+   Gewicht", the legacy wording — FR delta exists but it's not a tier crossing).
 
-   TODO: replace with the exact breakpoints from `data/Dachser-weight.xlsx` when
-   the rate card is committed to the repo. The current values are a placeholder
-   adopted from the K+N tier table (`KN_BP`) — same shape (50 kg steps low,
-   100 kg mid, 200/500 kg high), since K+N and Dachser run nearly identical
-   German LTL tariff structures. Once the Dachser xlsx lands, only this array
-   needs to change; the guard logic stays put. */
-const DACHSER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8500,9500,99999];
-function dachserGetTier(kg){if(kg<=0)return 0;for(const b of DACHSER_BP)if(kg<=b)return b;return 99999;}
+     ── 50 kg steps in the very low band:    50,100,...,500
+     ── 100 kg steps:                       600,700,...,2000
+     ── 200 kg steps:                       2200,2400,2600,2800,3000
+     ── 500 kg steps in the heavy band:     3500,4000,...,7500,8000,8500,9000,9500,10000
+     ── single open bucket above 10000:     999999 (rates flatline above the rate-card ceiling)
+
+   Differs from `KN_BP` in two places: Dachser keeps every 500 kg step in the
+   8000–10000 band (K+N collapses 8500/9500 only) and tops out at a real 10000
+   ceiling (K+N has an open 99999). Both differences come straight from the
+   supplied rate card. */
+const DACHSER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
+function dachserGetTier(kg){if(kg<=0)return 0;for(const b of DACHSER_BP)if(kg<=b)return b;return 999999;}
 
 function daIsTarifZero(ws,r,col){if(col<0)return false;const raw=cellStr(ws,r,col);if(!raw)return false;if(raw==='-')return true;return(cellNum(ws,r,col)===0&&raw.includes('0'));}
 function daIsNonInteger(n){return n!==Math.floor(n);}
@@ -546,8 +551,8 @@ function processDachser(ws,r,cols){
          the FR delta is a within-tier rounding gap, so keep the legacy
          singular wording.
 
-         Tier table is `DACHSER_BP` above; replace it with the real
-         data/Dachser-weight.xlsx breakpoints when the rate card lands. */
+         Tier table is `DACHSER_BP` above — sourced from the
+         data/Dachser-weight.xlsx rate card. */
       const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
       const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
       const tiersKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
