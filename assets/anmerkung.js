@@ -1378,6 +1378,7 @@ function collectInputsForRow(fw,ws,r,cols){
   const get=(k,c)=>{if(c===undefined||c<0)return;const v=cellStr(ws,r,c);if(v!=='')o[k]=v;};
   if(fw==='dachser'){
     get('stat',cols.stat);get('tarif',cols.tarif);get('fr_diff',cols.fr);
+    get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
     get('snk_dl',cols.snk_dl);get('snk_diff',cols.snk_diff);get('snk_tarif',cols.snk_tar);
     get('zz_diff',cols.zz);get('sam_diff',cols.sam);get('dgr_diff',cols.dgr);
     get('exp_diff',cols.exp);get('exp_dl',cols.exp_dl);
@@ -1680,16 +1681,31 @@ function downloadDiffCsv(){
   const rows=filterDiffRows();
   if(!rows.length){showLog('Diff CSV \u2014 nothing to export (filter scope is empty).','err');return;}
   const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  const lines=['sheet,row,forwarder,label,change,before,after,engine_now,engine_matches_a,reason'];
+  /* Collect every input key that appears in the filtered scope so we can
+     emit one column per rule-visible cell (Volumen kg, FR Differenz, MT
+     Differenz, TZ Differenz, Tarif, Stat_Freigabe, Sachkonto, …). Without
+     these the diff CSV was just before/after/reason — useless for triage
+     unless you also opened the source xlsx side-by-side. */
+  const inputKeys=[];const seen=new Set();
   for(const r of rows){
-    lines.push([r.sheet,r.row,r.fw,r.label,r.change,r.before,r.after,r.engineNow||'',r.engineMatchesA?'true':'false',r.reason||''].map(esc).join(','));
+    if(r.change==='sheet')continue;
+    for(const k of Object.keys(r.inputs||{})){
+      if(!seen.has(k)){seen.add(k);inputKeys.push(k);}
+    }
+  }
+  const header=['sheet','row','forwarder','label','change','before','after','engine_now','engine_matches_a','reason',...inputKeys.map(k=>'in_'+k)];
+  const lines=[header.join(',')];
+  for(const r of rows){
+    const base=[r.sheet,r.row,r.fw,r.label,r.change,r.before,r.after,r.engineNow||'',r.engineMatchesA?'true':'false',r.reason||''];
+    for(const k of inputKeys){const v=(r.inputs||{})[k];base.push(v==null?'':v);}
+    lines.push(base.map(esc).join(','));
   }
   const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   a.href=url;a.download='anmerkung_diff_'+stamp+'.csv';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  showLog(`Diff CSV exported \u2014 ${rows.length} row(s).`,'ok');
+  showLog(`Diff CSV exported \u2014 ${rows.length} row(s), ${inputKeys.length} input column(s).`,'ok');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1760,6 +1776,7 @@ function tsCollectInputs(fw,ws,r,cols){
   if(fw==='dachser'){
     push('stat',cols.stat);push('tarif',cols.tarif);
     push('fr_diff',cols.fr);
+    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
     push('snk_dl',cols.snk_dl);push('snk_diff',cols.snk_diff);push('snk_tarif',cols.snk_tar);
     push('zz_diff',cols.zz);push('sam_diff',cols.sam);push('dgr_diff',cols.dgr);
     push('exp_diff',cols.exp);push('exp_dl',cols.exp_dl);
