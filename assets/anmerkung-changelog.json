@@ -1,6 +1,14 @@
 {
-  "version": "1.8.3",
+  "version": "1.8.4",
   "entries": [
+    {
+      "ver": "1.8.4",
+      "date": "2026-05-21",
+      "items": [
+        "Diff Mode — the \"Download diff CSV\" export now includes one column per rule-visible input cell (Volumen kg, Volumen kg DL, FR / MT / TZ / SNK Differenzen, Tarif, Stat_Freigabe, Sachkonto / Kostenstelle, …), prefixed `in_<key>`. Triage no longer requires opening the source xlsx side-by-side to see why a row was labeled wrong / missed / overfired — every input the engine read is right there in the CSV. Column set is the union of all keys seen in the filtered scope, so it adapts per forwarder.",
+        "Diff Mode — Dachser rows now capture `vkg` (Volumen kg) and `vkg_dl` (Volumen kg DL) in the per-row inputs bag. The values were already resolved into the cols bag in v1.8.3 for the FR-branch weight-tier guard; now they also surface in the diff-row detail drawer, the diff CSV, and the training-set CSV / JSONL — matching K+N and Wackler parity."
+      ]
+    },
     {
       "ver": "1.8.3",
       "date": "2026-05-21",
