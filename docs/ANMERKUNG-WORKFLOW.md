@@ -305,7 +305,9 @@ flowchart TD
   Q4 -- yes --> QD["join haette gebuendelt werden koennen"]
   Q4 -- no --> Q5{"FR &lt; 0?"}
   Q5 -- yes --> QF["join Differenz Frachtzu/ abschlag<br/>(negative FR on a single shipment is a freight credit, not a weight miscount)"]
-  Q5 -- no --> QE["join Differenz aufgrund von abweichendem Gewicht"]
+  Q5 -- no --> Q6{"Volumen kg vs Volumen kg DL<br/>cross a DACHSER_BP tier?"}
+  Q6 -- yes --> QG["join Differenz aufgrund abweichender Gewichte<br/>(plural — real cross-tier weight miscalc)"]
+  Q6 -- no --> QE["join Differenz aufgrund von abweichendem Gewicht<br/>(singular — same tier or weights unknown, within-tier rounding)"]
 
   R --> S2{"SNK_DL==14 AND SNK_Diff errs?"}
   S2 -- yes --> S2a["join Abholterminvereinbarung"]

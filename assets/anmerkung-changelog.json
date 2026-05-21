@@ -1,6 +1,15 @@
 {
-  "version": "1.8.2",
+  "version": "1.8.3",
   "entries": [
+    {
+      "ver": "1.8.3",
+      "date": "2026-05-21",
+      "items": [
+        "Dachser — FR branch gains a weight-tier guard, mirroring the K+N pattern. When `Volumen kg` and `Volumen kg DL` cross a Dachser tariff bucket the row is now classified \"Differenz aufgrund abweichender Gewichte\" (plural — a real weight miscalc). When the two volumes stay in the same bucket (or aren't visible on the row) the legacy singular \"Differenz aufgrund von abweichendem Gewicht\" wording is preserved — that's a within-tier rounding gap, not a tier crossing.",
+        "Dachser — `resolveDachser` now resolves the `Volumen kg` and `Volumen kg DL` columns into the cols bag, so the FR-branch guard above can read them. The diagnostic reason column also picks up `VKG` / `VKG_DL` for Dachser, matching the K+N / Wackler reason format.",
+        "Dachser — `DACHSER_BP` weight-tier table added with a TODO marker. Current values are a placeholder taken from the K+N tier table (same shape: 50 kg low band, 100 kg mid, 200/500 kg high) since K+N and Dachser run nearly identical German LTL tariff structures. Once `data/Dachser-weight.xlsx` is committed, only the `DACHSER_BP` array needs to change — the guard logic stays put."
+      ]
+    },
     {
       "ver": "1.8.2",
       "date": "2026-05-20",
