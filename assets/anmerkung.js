@@ -1329,16 +1329,37 @@ function _processorFor(fw){
   return null;
 }
 /* Pick the forwarder whose resolver finds the most known columns on
-   the sheet. Tie-break: dachser → kn → dhl → wackler. Falls back to
-   the currently-selected forwarder, then 'unknown'. */
+   the sheet. Tie-break: the user-selected forwarder wins, otherwise
+   dachser → kn → dhl → wackler. Falls back to the currently-selected
+   forwarder, then 'unknown'.
+
+   Why the explicit-selection bias: K+N and Wackler share a lot of
+   header names (FR/MT/TZ Differenz, Volumen kg, ReferenzNr, Stat_Freigabe,
+   Total/Kosten lt. Tarif), so on a Wackler sheet whose AVIS/SNK or
+   KOSTENSTELLE/SACHKONTO headers don't quite match Wackler's resolver
+   the K+N score can edge ahead and silently override the user's
+   click — tracked by the "diff mode shows wrong forwarder" report. */
 function detectForwarderForSheet(ws,range){
   const order=['dachser','kn','dhl','wackler'];
+  /* Honor the user's explicit forwarder pick when its resolver finds
+     the Anmerkung target column on this sheet. Auto-detect still kicks
+     in when the selected forwarder simply doesn't fit the sheet, so
+     mixed-forwarder workbooks keep working. */
+  if(selectedFW){
+    const fn=_resolverFor(selectedFW);
+    if(fn){
+      let cols;try{cols=fn(ws,range);}catch(_){cols=null;}
+      if(cols&&cols.target>=0)return selectedFW;
+    }
+  }
   let best=null,bestScore=-1;
   for(const fw of order){
     const fn=_resolverFor(fw);if(!fn)continue;
     let cols;try{cols=fn(ws,range);}catch(_){continue;}
     if(cols.target<0)continue;
     let score=0;for(const k of Object.keys(cols))if(cols[k]>=0)score++;
+    /* Strict > keeps the order[] tie-break; if the selected forwarder
+       ties, the early-return above already handled it. */
     if(score>bestScore){bestScore=score;best=fw;}
   }
   return best||selectedFW||'unknown';
