@@ -1,6 +1,16 @@
 {
-  "version": "1.8.6",
+  "version": "1.8.7",
   "entries": [
+    {
+      "ver": "1.8.7",
+      "date": "2026-05-25",
+      "items": [
+        "Wackler — TZ classification wording switched from \"DifferenzEnergiezuschlag\" to \"DifferenzTreibstof\" everywhere (additive trigger at TZ ≥ 2.0 and the pure-TZ fallback). The new wording is what the Wackler training data labels these rows under; the previous \"DifferenzEnergiezuschlag\" was an internal Wackler-canonical that disagreed with the auditor's terminology. Resolves 16 wrong rows in data/Wackler-training.csv (training rows 4–19).",
+        "Wackler — `processWackler` rule 1 (Fremdnummer doppelt berechnet) now also fires when the Tarif cell is completely empty AND there's at least one cost-side delta on the row (|FR|/|MT|/|TZ| above the Wackler threshold). Empty TARIF with real deltas means the FR/MT/TZ comparisons are against a non-existent baseline — that's the Fremdnummer-doppelt signature, not real freight/toll/fuel discrepancies. The legacy '-' and zero-with-text TARIF signatures still fire as before. Resolves training row 20 (TARIF empty, FR=29.5, MT=2.6, TZ=2.51).",
+        "Wackler — rule 1 no longer hard short-circuits on Kontierung. When Fremdnummer-doppelt fires AND Kostenstelle+Sachkonto are both blank/X, the row now emits \"Fremdnummer doppelt berechnet // Kontierung?\" instead of just \"Fremdnummer Doppelt berechnet\". The other delta-derived rules (3–12) stay suppressed since their inputs compare against a non-existent tariff. Casing of the canonical phrase normalized from \"Doppelt\" to \"doppelt\" to match training data — existing protected rows are unaffected because WACKLER_PROTECTED matching is case-insensitive.",
+        "Rule Tester — added two new Wackler presets: \"TZ-only Treibstof\" exercises the renamed pure-TZ fallback (training row 4 inputs); \"Fremdnummer empty tarif\" exercises the new empty-TARIF-with-cost-signal branch (training row 20 inputs)."
+      ]
+    },
     {
       "ver": "1.8.6",
       "date": "2026-05-25",

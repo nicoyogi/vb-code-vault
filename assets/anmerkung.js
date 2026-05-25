@@ -731,7 +731,7 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
 function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO')};}
-const WACKLER_PROTECTED=['Fremdnummer Doppelt berechnet','hätte gebündelt werden müssen','hätte Avisgebühr telefonisch abrechnen dürfen','Return, ok?','Differenz aufgrund abweichender Gewichte','Wackler rechnet'];
+const WACKLER_PROTECTED=['Fremdnummer doppelt berechnet','hätte gebündelt werden müssen','hätte Avisgebühr telefonisch abrechnen dürfen','Return, ok?','Differenz aufgrund abweichender Gewichte','Wackler rechnet'];
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
 const WACKLER_SNK_NOISE=5.0;
@@ -741,7 +741,7 @@ const WACKLER_SNK_NOISE=5.0;
    training case (TARIF=54.95, SNK=80, ratio 1.45×) without overfiring on standard SNK Differenz
    residuals which run far below the booked tariff value. */
 const WACKLER_PAUSCHAL_RATIO=1.0;
-/* TZ additive threshold: TZ ≥ 2.0 fires DifferenzEnergiezuschlag alongside other classifications.
+/* TZ additive threshold: TZ ≥ 2.0 fires DifferenzTreibstof alongside other classifications.
    Below 2.0 the TZ delta is fuel-on-toll math noise (typical FR/MT-percentage spill). */
 const WACKLER_TZ_ADDITIVE=2.0;
 function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(const p of WACKLER_PROTECTED){if(existing.toLowerCase().includes(p.toLowerCase()))return null;}
@@ -751,8 +751,34 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
     if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))return'Kontierung?';}
     return null;
   }
-  /* 1. Fremdnummer doppelt — tariff cell is '-' or numerically zero with non-empty raw text. */
-  if(cols.tarif>=0){const tarifRaw=cellStr(ws,r,cols.tarif),tarifNum=cellNum(ws,r,cols.tarif);if(tarifRaw&&(tarifRaw==='-'||(tarifNum===0&&tarifRaw!=='')))return'Fremdnummer Doppelt berechnet';}
+  /* 1. Fremdnummer doppelt — fires when the tariff baseline is missing AND there's a real
+     cost signal on the row. Three TARIF signatures are accepted:
+       - tarifRaw === '-'                                  (legacy duplicate-billing marker)
+       - tarifNum === 0 with non-empty raw text            (legacy "0,00" / "0" placeholder)
+       - tarifRaw === '' AND |FR|>T or |MT|>T or |TZ|>T    (training row 20 — empty tariff,
+         FR/MT/TZ deltas are spurious comparisons against a zero baseline, so the row is
+         a duplicate Fremdnummer billing). The cost-signal guard avoids firing on rows
+         that are genuinely not yet rated (TARIF blank, every delta also blank).
+     When this fires, all delta-derived rules (3–12) are suppressed since their inputs are
+     comparing against a non-existent tariff. Kontierung (rule 13) still runs inline — when
+     KOST/SACH are blank/X the row carries both classifications, matching training row 20's
+     expected "Fremdnummer doppelt berechnet // Kontierung?". */
+  if(cols.tarif>=0){
+    const tarifRaw=cellStr(ws,r,cols.tarif),tarifNumEarly=cellNum(ws,r,cols.tarif);
+    const _frEarly=cols.fr>=0?cellNum(ws,r,cols.fr):0;
+    const _mtEarly=cols.maut>=0?cellNum(ws,r,cols.maut):0;
+    const _tzEarly=cols.tz>=0?cellNum(ws,r,cols.tz):0;
+    const dashOrZero=tarifRaw==='-'||(tarifNumEarly===0&&tarifRaw!=='');
+    const emptyWithSignal=tarifRaw===''&&(Math.abs(_frEarly)>T_WACKLER||Math.abs(_mtEarly)>T_WACKLER||Math.abs(_tzEarly)>T_WACKLER);
+    if(dashOrZero||emptyWithSignal){
+      let out='Fremdnummer doppelt berechnet';
+      if(cols.kostenstelle>=0&&cols.sachkonto>=0){
+        const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
+        if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
+      }
+      return out;
+    }
+  }
   /* Pre-read deltas once. */
   const avisVal=cols.avis_diff>=0?cellNum(ws,r,cols.avis_diff):0;
   const snkVal=cols.snk_diff>=0?cellNum(ws,r,cols.snk_diff):0;
@@ -826,9 +852,9 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
      &&!res.toLowerCase().includes('gebündelt')){
     res=join(res,'SNK Differenz');
   }
-  /* 11. DifferenzEnergiezuschlag — TZ is additive above the 2.0 threshold; below it the delta
+  /* 11. DifferenzTreibstof — TZ is additive above the 2.0 threshold; below it the delta
      is fuel-on-(freight+toll) math spillover, not a separate classification. */
-  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE)res=join(res,'DifferenzEnergiezuschlag');
+  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE)res=join(res,'DifferenzTreibstof');
   /* 12. NL-FIX zone corollary: when NL-FIX fires AND there's an FR delta AND KOST/SACH are blank,
      the destination zone may be miscoded — surface "Zone korrekt?" up front and drop the
      Frachtdifferenz it triggered (the FR gap is the zone miscode, not a real freight discrepancy). */
@@ -842,7 +868,7 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
   /* 13. Kontierung? — both KOST and SACH blank/X. */
   if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}
   /* 14. Pure TZ fallback — row had nothing but a fuel delta above the noise floor. */
-  if(res===''&&cols.tz>=0&&hasErr(tzVal,T_WACKLER))res='DifferenzEnergiezuschlag';
+  if(res===''&&cols.tz>=0&&hasErr(tzVal,T_WACKLER))res='DifferenzTreibstof';
   return res;
 }
 
@@ -1134,6 +1160,8 @@ const TESTER_PRESETS={
     {name:'AVIS 7.5',values:{stat:10,avis_diff:7.5,tarif:'60,00'}},
     {name:'Riedlingen return',values:{stat:10,fr:10,empf_plz:'88499',empf_ort:'Riedlingen',tarif:'70,00'}},
     {name:'NL-FIX SNK 38',values:{stat:10,snk_diff:38,tarif:'80,00'}},
+    {name:'TZ-only Treibstof',values:{stat:10,tarif:'40,04',tz:'-1.32',vkg:214,vkg_dl:214,kostenstelle:'211FO998',sachkonto:'612100'}},
+    {name:'Fremdnummer empty tarif',values:{stat:10,tarif:'',fr:29.5,maut:2.6,tz:2.51,vkg:120,vkg_dl:120}},
   ],
 };
 
