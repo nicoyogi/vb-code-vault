@@ -170,6 +170,26 @@ function toggleTheme(){
 (function loadTheme(){try{const saved=localStorage.getItem(THEME_KEY);if(saved==='light'||saved==='dark')applyTheme(saved);}catch(_){}})();
 
 /* ══════════════════════════════════════════════════════════
+   STYLE TOGGLE — "Pro" professional vs "Mystic" grimoire look
+   Independent of dark/light theme. Persists to localStorage.
+══════════════════════════════════════════════════════════ */
+const STYLE_KEY='anmerkung.style.v1';
+function applyStyle(s){
+  const pro=s==='pro';
+  document.body.classList.toggle('theme-pro',pro);
+  const btn=document.getElementById('btnStyle'),lbl=document.getElementById('styleLabel');
+  if(btn){btn.setAttribute('aria-pressed',pro?'true':'false');btn.title=pro?'Switch back to mystic style':'Switch to professional style';}
+  if(lbl)lbl.textContent=pro?'Pro':'Mystic';
+}
+function toggleStyle(){
+  const cur=document.body.classList.contains('theme-pro')?'pro':'mystic';
+  const next=cur==='pro'?'mystic':'pro';
+  applyStyle(next);
+  try{localStorage.setItem(STYLE_KEY,next);}catch(_){}
+}
+(function loadStyle(){try{const saved=localStorage.getItem(STYLE_KEY);if(saved==='pro'||saved==='mystic')applyStyle(saved);}catch(_){}})();
+
+/* ══════════════════════════════════════════════════════════
    PHRASE CATALOG (#11 partial) — single source of truth for all
    rule output strings. Rule engine imports from here; Rule Tester
    uses the same catalog. Changing wording is now a 1-line edit.
