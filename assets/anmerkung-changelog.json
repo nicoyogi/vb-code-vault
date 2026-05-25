@@ -1,6 +1,13 @@
 {
-  "version": "1.8.5",
+  "version": "1.8.6",
   "entries": [
+    {
+      "ver": "1.8.6",
+      "date": "2026-05-25",
+      "items": [
+        "Diff Mode — `detectForwarderForSheet` now honors the user's explicit forwarder pick. Previously the per-sheet auto-detect picked the resolver with the highest column-match score, but K+N and Wackler share a lot of header names (FR/MT/TZ Differenz, Volumen kg, ReferenzNr, Stat_Freigabe, Total/Kosten lt. Tarif), so on a Wackler sheet whose AVIS/SNK or KOSTENSTELLE/SACHKONTO headers didn't quite match the Wackler resolver, K+N could edge ahead and the diff-row `fw` column would silently flip to `kn` even though the user had clicked Wackler. The fix: when `selectedFW` is set and that resolver finds the Anmerkung target column on the sheet, prefer `selectedFW`. Auto-detect still kicks in when the selected forwarder genuinely doesn't fit a sheet, so mixed-forwarder workbooks keep working."
+      ]
+    },
     {
       "ver": "1.8.5",
       "date": "2026-05-21",
