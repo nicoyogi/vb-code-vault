@@ -1,6 +1,18 @@
 {
-  "version": "1.9.0",
+  "version": "1.10.0",
   "entries": [
+    {
+      "ver": "1.10.0",
+      "date": "2026-05-27",
+      "items": [
+        "Diff Mode — every row now carries a phrase-key reverse lookup. `predicted_phrase_keys`, `expected_phrase_keys`, `common_phrase_keys`, `missing_phrase_keys`, `extra_phrase_keys`, and `engine_phrase_keys` map each emitted phrase string to a stable identifier (a key from the `PHRASES` catalog, a `lit_*` synthetic for hard-coded literals like `lit_pauschalfrachtOk` / `lit_terminzustellungOk` / `lit_zoneKorrekt` / `lit_differenzHebebuehnen` / `lit_differenzTreibstofWackler`, or a `tpl_*` for dynamic templates like `zwPrefix` and `tpl_wacklerRechnet`). Anything unmapped surfaces as `?:<raw phrase>` so promotions to the catalog are visible at a glance. AI consumers can grep these keys directly against `assets/anmerkung.js` to find the rule branch responsible — no fuzzy phrase matching, no source dive.",
+        "Diff Mode — every row also carries `processor` (the exact JS symbol to edit, e.g. `processWackler`) and `applicable_threshold` (the `hasErr()` tolerance for that forwarder, sourced from the active `TH` config). Both flow through Diff CSV, Training Set CSV, and Training Set JSONL exports.",
+        "Diff Mode — new export: `↓ Rule Spec (JSON)`. Self-describing schema for the training data: full PHRASES catalog (key → German string), all `PHRASE_LITERALS` and `PHRASE_TEMPLATES`, per-forwarder thresholds, gate condition, processor + resolver symbol, canonical input order, and an English glossary entry for every input key (e.g. `fr_diff` → \"FR Differenz — freight-charge delta vs tariff (numeric, signed)\"). Engine version is stamped from the changelog. Pair this sidecar with any Training Set export and an AI consumer has the complete rule contract.",
+        "Diff Mode — new export: `✦ AI Bundle (ZIP)` (primary-soft button next to the other diff exports). One click packages the filter-scoped training set (`training.jsonl`) + the rule spec (`rule_spec.json`) + a hand-written `README.md` with a prompt template that walks an AI assistant through the rule-update workflow: read the spec, group records by `forwarder` and `missing_phrase_keys`/`extra_phrase_keys`, locate the branch in `process<Forwarder>`, loosen/tighten gates using `inputs.*`, re-run Train & Compare to verify. Drop the ZIP into any AI assistant — it has everything to propose a patch to `assets/anmerkung.js` without reading the source.",
+        "Diff CSV / Training Set CSV — column layout now leads with `row_uid · sheet · row · forwarder · processor · applicable_threshold` then label/granular/predicted/expected/engine, then the five phrase-string columns, then the five phrase-key columns, then engine_phrases + engine_phrase_keys, then reason, then `in_*` canonical inputs. Successive exports of the same workbook still line up column-for-column for clean version-controlled training corpora.",
+        "Diff Mode — intro copy updated to surface the AI Bundle as the recommended export for AI-driven rule updates. Existing CSV / JSONL / Diff CSV / Send-to-Tester flows are unchanged."
+      ]
+    },
     {
       "ver": "1.9.0",
       "date": "2026-05-27",

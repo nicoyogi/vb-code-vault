@@ -271,6 +271,75 @@ const PHRASES={
 const P=PHRASES;
 
 /* ══════════════════════════════════════════════════════════
+   PHRASE → KEY REVERSE INDEX (AI-friendly training output)
+   Every phrase the rule engine emits should resolve to a stable
+   identifier that maps 1-to-1 to a branch in process<Forwarder>.
+   That way training-data consumers (humans OR LLMs) can read a
+   row like  missing_phrase_keys: ["snkAvis", "kontierungQ"]
+   and know exactly which PHRASES entries to fire / not-fire — no
+   substring matching, no fuzzy alignment, no source dive.
+
+   Three resolution layers (first hit wins):
+     1. Exact match against PHRASES catalog (case-insensitive, trimmed)
+     2. Exact match against PHRASE_LITERALS — phrases emitted directly
+        as string literals from inside processors (not yet promoted
+        to PHRASES). These get a synthetic key prefixed `lit_` so
+        consumers can still find them in `rule_spec.phrase_literals`.
+     3. Regex match against PHRASE_TEMPLATES — phrases that interpolate
+        runtime values (PLZ/Ort, weight tier). The key here points to
+        the template family, and a trimmed example is preserved in
+        rule_spec.phrase_templates so an AI can see the variable parts.
+
+   Anything that fails all three is returned as `?:<phrase>` so the
+   consumer can spot truly unmapped emissions and add a key.
+══════════════════════════════════════════════════════════ */
+const PHRASES_REVERSE=(function(){
+  const m=new Map();
+  for(const[k,v]of Object.entries(PHRASES))m.set(String(v).toLowerCase().trim(),k);
+  return m;
+})();
+
+/* Direct literals emitted by processors but NOT in PHRASES (yet).
+   Keys are synthesized — prefer adding the entry to PHRASES proper if
+   you find yourself reaching for one of these. Listed here as a
+   fallback so AI consumers still get a stable identifier today. */
+const PHRASE_LITERALS={
+  'differenz hebebuehnen-zuschlag':'lit_differenzHebebuehnen',     /* Dachser SNK_DL=75 + tariff base */
+  'pauschalfracht, ok?'           :'lit_pauschalfrachtOk',          /* Wackler |SNK|>=tariff flat-rate */
+  'terminzustellung, ok?'         :'lit_terminzustellungOk',        /* Wackler |SNK|≈180 */
+  'zone korrekt?'                 :'lit_zoneKorrekt',               /* Wackler NL-FIX zone corollary */
+  'differenztreibstof'            :'lit_differenzTreibstofWackler', /* Wackler additive TZ */
+};
+
+/* Phrases that interpolate runtime values. The key identifies the
+   template family; the example shows the shape so an AI knows what
+   varies. Order matters — first regex that matches wins. */
+const PHRASE_TEMPLATES=[
+  {key:'zwPrefix',         regex:/^differenz aufgrund abweichender zwischenempf/i,
+   example:'Differenz aufgrund abweichender Zwischenempfänger 12345 Berlin',
+   processor:'processDachser'},
+  {key:'tpl_wacklerRechnet',regex:/^wackler rechnet frachtrate/i,
+   example:'Wackler rechnet Frachtrate für 10000kg ab',
+   processor:'processWackler'},
+];
+
+/* Resolve a single phrase string to a stable key. Returns null when
+   nothing matches — callers that want a never-null result use the
+   `?:<phrase>` sentinel via phraseKeysFor. */
+function phraseToKey(phrase){
+  if(phrase==null)return null;
+  const norm=String(phrase).toLowerCase().trim();
+  if(!norm)return null;
+  if(PHRASES_REVERSE.has(norm))return PHRASES_REVERSE.get(norm);
+  if(Object.prototype.hasOwnProperty.call(PHRASE_LITERALS,norm))return PHRASE_LITERALS[norm];
+  for(const t of PHRASE_TEMPLATES)if(t.regex.test(norm))return t.key;
+  return null;
+}
+function phraseKeysFor(arr){
+  return(arr||[]).map(p=>phraseToKey(p)||('?:'+(p==null?'':String(p))));
+}
+
+/* ══════════════════════════════════════════════════════════
    TIMESTAMPED STREAMING LOG (#16) — replaces original showLog
    with an append-only stream. Kept the same public signature
    so all existing call sites work unchanged.
@@ -1619,6 +1688,19 @@ function runDiff(){
          reads the same enriched record — no second pass. */
       const phraseDiff=computePhraseDiff(vA,vB);
       const granular=granularLabel(vA,vB,phraseDiff);
+      /* AI-friendly enrichment (#21): every phrase array becomes a
+         parallel array of stable PHRASES keys, the engine's current
+         output gets the same treatment, and we stamp the active
+         threshold + processor name so a downstream consumer can map
+         a row to the exact source-code branch without re-reading
+         anmerkung.js. Anything that doesn't resolve to a known key
+         comes through as `?:<raw phrase>` so unmapped emissions are
+         immediately visible. */
+      const enginePhrases=splitTriggers(engineNow||'');
+      const processorName=(fw&&fw!=='unknown'&&fw!=='-')
+        ?('process'+fw[0].toUpperCase()+fw.slice(1))
+        :'';
+      const applicableThreshold=(TH&&TH[fw]!=null)?TH[fw]:null;
       const rowObj={
         sheet:name,row:r+1,label,
         change:label==='missed'?'added':(label==='overfired'?'removed':(label==='wrong'?'changed':'correct')),
@@ -1632,6 +1714,17 @@ function runDiff(){
         extra_phrases    :phraseDiff.extra_phrases,
         phrase_jaccard   :phraseDiff.phrase_jaccard,
         granular,
+        /* === Phrase-key reverse-lookup payload (AI-friendly) === */
+        predicted_phrase_keys:phraseKeysFor(phraseDiff.predicted_phrases),
+        expected_phrase_keys :phraseKeysFor(phraseDiff.expected_phrases),
+        common_phrase_keys   :phraseKeysFor(phraseDiff.common_phrases),
+        missing_phrase_keys  :phraseKeysFor(phraseDiff.missing_phrases),
+        extra_phrase_keys    :phraseKeysFor(phraseDiff.extra_phrases),
+        engine_phrases       :enginePhrases,
+        engine_phrase_keys   :phraseKeysFor(enginePhrases),
+        /* === Source-code anchors === */
+        processor            :processorName,
+        applicable_threshold :applicableThreshold,
       };
       rowObj.row_uid=rowUid(fw,name,r+1,inputs);
       rows.push(rowObj);
@@ -1759,6 +1852,8 @@ function renderDiff(){
     document.getElementById('btnDiffCsv').style.display='none';
     const tCsv=document.getElementById('btnDiffTrainCsv');if(tCsv)tCsv.style.display='none';
     const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='none';
+    const tSpec=document.getElementById('btnDiffRuleSpec');if(tSpec)tSpec.style.display='none';
+    const tBundle=document.getElementById('btnDiffAiBundle');if(tBundle)tBundle.style.display='none';
     const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='none';
   } else {
     document.getElementById('diffResults').style.display='block';
@@ -1766,6 +1861,8 @@ function renderDiff(){
     document.getElementById('btnDiffCsv').style.display='inline-block';
     const tCsv=document.getElementById('btnDiffTrainCsv');if(tCsv)tCsv.style.display='inline-block';
     const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='inline-block';
+    const tSpec=document.getElementById('btnDiffRuleSpec');if(tSpec)tSpec.style.display='inline-block';
+    const tBundle=document.getElementById('btnDiffAiBundle');if(tBundle)tBundle.style.display='inline-block';
     const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='flex';
   }
 
@@ -1803,6 +1900,8 @@ function refreshDiffView(){
   document.getElementById('ctDiffCsv').textContent=filtered.length?`\u00b7 ${filtered.length}`:'';
   document.getElementById('ctTrainCsv').textContent=trainable?`\u00b7 ${trainable}`:'';
   document.getElementById('ctTrainJsonl').textContent=trainable?`\u00b7 ${trainable}`:'';
+  const ctBundle=document.getElementById('ctAiBundle');
+  if(ctBundle)ctBundle.textContent=trainable?`\u00b7 ${trainable}`:'';
 
   /* Active chip visual state */
   document.querySelectorAll('#trainChips .train-chip').forEach(b=>
@@ -1990,10 +2089,14 @@ function downloadDiffCsv(){
   const trainable=rows.filter(r=>r.change!=='sheet');
   const inputKeys=orderedInputKeys(trainable);
   const header=[
-    'row_uid','sheet','row','forwarder','label','granular_label','change',
+    'row_uid','sheet','row','forwarder','processor','applicable_threshold',
+    'label','granular_label','change',
     'before','after','engine_now','engine_matches_a','phrase_jaccard',
     'predicted_phrases','expected_phrases','common_phrases',
     'missing_phrases','extra_phrases',
+    'predicted_phrase_keys','expected_phrase_keys','common_phrase_keys',
+    'missing_phrase_keys','extra_phrase_keys',
+    'engine_phrases','engine_phrase_keys',
     'reason',
     ...inputKeys.map(k=>'in_'+k),
   ];
@@ -2002,7 +2105,10 @@ function downloadDiffCsv(){
     const isSheet=r.change==='sheet';
     const base=[
       isSheet?'':(r.row_uid||''),
-      r.sheet,r.row,r.fw,r.label,isSheet?'':(r.granular||''),r.change,
+      r.sheet,r.row,r.fw,
+      isSheet?'':(r.processor||''),
+      isSheet?'':(r.applicable_threshold==null?'':r.applicable_threshold),
+      r.label,isSheet?'':(r.granular||''),r.change,
       r.before,r.after,r.engineNow||'',r.engineMatchesA?'true':'false',
       isSheet?'':(r.phrase_jaccard==null?'':r.phrase_jaccard),
       isSheet?'':joinPhr(r.predicted_phrases),
@@ -2010,6 +2116,13 @@ function downloadDiffCsv(){
       isSheet?'':joinPhr(r.common_phrases),
       isSheet?'':joinPhr(r.missing_phrases),
       isSheet?'':joinPhr(r.extra_phrases),
+      isSheet?'':joinPhr(r.predicted_phrase_keys),
+      isSheet?'':joinPhr(r.expected_phrase_keys),
+      isSheet?'':joinPhr(r.common_phrase_keys),
+      isSheet?'':joinPhr(r.missing_phrase_keys),
+      isSheet?'':joinPhr(r.extra_phrase_keys),
+      isSheet?'':joinPhr(r.engine_phrases),
+      isSheet?'':joinPhr(r.engine_phrase_keys),
       r.reason||'',
     ];
     for(const k of inputKeys){const v=isSheet?'':(r.inputs||{})[k];base.push(v==null?'':v);}
@@ -2185,6 +2298,8 @@ function buildTrainingSet(){
       sheet:r.sheet,
       row:r.row,
       forwarder:r.fw,
+      processor:r.processor||'',         /* exact source-code symbol to edit */
+      applicable_threshold:r.applicable_threshold==null?null:r.applicable_threshold,
       label:r.label,
       granular_label:r.granular||'',
       predicted:r.before,                     /* what slot A (tool) says */
@@ -2199,6 +2314,17 @@ function buildTrainingSet(){
       common_phrases   :r.common_phrases||[],
       missing_phrases  :r.missing_phrases||[],
       extra_phrases    :r.extra_phrases||[],
+      /* Phrase-key reverse lookup — maps directly to PHRASES catalog
+         keys (or `lit_*`/`tpl_*`/`?:*` for non-catalog/dynamic/unknown).
+         These are the source-code identifiers an AI consumer can grep
+         for to locate the rule branch in process<Forwarder>. */
+      predicted_phrase_keys:r.predicted_phrase_keys||[],
+      expected_phrase_keys :r.expected_phrase_keys||[],
+      common_phrase_keys   :r.common_phrase_keys||[],
+      missing_phrase_keys  :r.missing_phrase_keys||[],
+      extra_phrase_keys    :r.extra_phrase_keys||[],
+      engine_phrases       :r.engine_phrases||[],
+      engine_phrase_keys   :r.engine_phrase_keys||[],
       inputs:r.inputs||{},
     });
   }
@@ -2223,18 +2349,25 @@ function downloadTrainingSet(format){
     const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
     const joinPhr=arr=>Array.isArray(arr)?arr.join(' | '):'';
     const header=[
-      'row_uid','sheet','row','forwarder','label','granular_label',
+      'row_uid','sheet','row','forwarder','processor','applicable_threshold',
+      'label','granular_label',
       'predicted','expected','rule_engine_now','engine_matches_a',
       'phrase_jaccard',
       'predicted_phrases','expected_phrases','common_phrases',
       'missing_phrases','extra_phrases',
+      'predicted_phrase_keys','expected_phrase_keys','common_phrase_keys',
+      'missing_phrase_keys','extra_phrase_keys',
+      'engine_phrases','engine_phrase_keys',
       'reason',
       ...inputKeys.map(k=>'in_'+k),
     ];
     const lines=[header.join(',')];
     for(const r of records){
       const row=[
-        r.row_uid,r.sheet,r.row,r.forwarder,r.label,r.granular_label||'',
+        r.row_uid,r.sheet,r.row,r.forwarder,
+        r.processor||'',
+        r.applicable_threshold==null?'':r.applicable_threshold,
+        r.label,r.granular_label||'',
         r.predicted,r.expected,r.rule_engine_now,r.engine_matches_a?'true':'false',
         r.phrase_jaccard==null?'':r.phrase_jaccard,
         joinPhr(r.predicted_phrases),
@@ -2242,6 +2375,13 @@ function downloadTrainingSet(format){
         joinPhr(r.common_phrases),
         joinPhr(r.missing_phrases),
         joinPhr(r.extra_phrases),
+        joinPhr(r.predicted_phrase_keys),
+        joinPhr(r.expected_phrase_keys),
+        joinPhr(r.common_phrase_keys),
+        joinPhr(r.missing_phrase_keys),
+        joinPhr(r.extra_phrase_keys),
+        joinPhr(r.engine_phrases),
+        joinPhr(r.engine_phrase_keys),
         r.reason,
       ];
       for(const k of inputKeys)row.push(r.inputs[k]==null?'':r.inputs[k]);
@@ -2268,6 +2408,298 @@ function downloadTrainingSet(format){
     ' \u00b7 labels: '+lblParts.join(', ')+
     (granParts.length?' \u00b7 granular: '+granParts.join(', '):'')+
     scopeNote+'.','ok');
+}
+
+/* ══════════════════════════════════════════════════════════
+   RULE SPEC + AI BUNDLE (#21) — make Diff-Mode exports
+   self-describing so an AI consumer can update the rules in
+   assets/anmerkung.js without re-reading the source.
+
+   The JSONL training set already carries `forwarder`,
+   `processor`, `*_phrase_keys`, and `inputs`. The Rule Spec
+   sidecar provides the schema the keys/inputs are drawn from:
+     • phrases       — PHRASES catalog (key → human string)
+     • phrase_literals — direct literals not yet promoted to PHRASES
+     • phrase_templates — dynamic interpolating phrases (zw, Wackler tier)
+     • thresholds    — per-forwarder hasErr() tolerance
+     • forwarders    — gate, processor symbol, resolver symbol,
+                       canonical input order, and an English glossary
+                       for every input key
+     • instructions  — a prompt template telling an AI exactly which
+                       file/symbol to edit and how to interpret the
+                       missing/extra/expected_phrase_keys triple
+
+   Pair (training.jsonl + rule_spec.json) is enough for an AI to
+   propose source patches. The AI Bundle ZIP packages both plus a
+   README so a single drag-drop is all the user needs.
+══════════════════════════════════════════════════════════ */
+
+/* English glossary keyed by the same identifiers collectInputsForRow
+   emits. Helps an AI consumer know "fr_diff" means "freight delta"
+   without having to grep header-string conventions. */
+const INPUT_GLOSSARY={
+  stat              :'Stat_Freigabe — approval state. 10 = approved (engine runs). Anything else gates most rules off.',
+  tarif             :'Total Kosten lt. Tarif — booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
+  fr_diff           :'FR Differenz — freight-charge delta vs tariff (numeric, signed).',
+  exp_diff          :'EXP Differenz — express/priority surcharge delta (numeric, signed).',
+  exp_dl            :'EXP Kosten DL — DL-side express cost (Dachser-only signal).',
+  mt_diff           :'MT/Maut Differenz — toll delta (numeric, signed).',
+  maut_diff         :'Maut Differenz — toll delta (numeric, signed). Same signal as mt_diff for non-DHL forwarders.',
+  tz_diff           :'TZ Differenz — fuel surcharge delta (numeric, signed).',
+  snk_diff          :'SNK Differenz — surcharge delta (numeric, signed). Compared against forwarder threshold.',
+  snk_dl            :'SNK Kosten DL — DL-side surcharge code (numeric). Carries the surcharge type (e.g. 5/9/14/18/25/30/34/60/75/95/130/190).',
+  snk_tarif         :'SNK Kosten lt. Tarif — tariff-side surcharge baseline (numeric).',
+  zz_diff           :'ZZ Differenz — second-attempt delivery delta (Dachser).',
+  sam_diff          :'SAM Differenz — Saturday delivery delta (Dachser).',
+  dgr_diff          :'DGR Differenz — dangerous-goods surcharge delta (Dachser).',
+  sbfu_diff         :'SBFU Differenz — SBfU certificate delta (Dachser).',
+  lg_diff           :'LG Differenz — storage-fee delta (Dachser).',
+  av_diff           :'AV Differenz — failed-pickup-attempt delta (Dachser).',
+  pal_diff          :'PAL Differenz — non-stackable surcharge (DHL).',
+  ow_diff           :'OW Differenz — overweight surcharge (DHL).',
+  yo_diff           :'YO Differenz — non-conveyable piece surcharge (DHL). Multiples of 15 are the piece-weight variant.',
+  yl_diff           :'YL Differenz — non-conveyable irregular piece (DHL).',
+  nd_diff           :'ND Differenz — neutral delivery (DHL).',
+  sf_diff           :'SF Differenz — direct-signature surcharge (DHL).',
+  ac_diff           :'AC Differenz — address-correction surcharge (DHL). Value 11 = "Addres Correction, ok?", others = "Address Correction ok?".',
+  nx_diff           :'NX Differenz — generic demand surcharge (DHL).',
+  os_diff           :'OS Differenz — oversize piece surcharge (DHL).',
+  avis_diff         :'AVIS Differenz — Wackler-only avisierung delta. Codes ±7.5/±8.5/±6.5/±8.7 each map to a specific phrase. AVIS=1 has its own phrase.',
+  vkg               :'Volumen kg — gross/volume weight on the audit row (numeric).',
+  vkg_dl            :'Volumen kg DL — DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table.',
+  anz_sdg           :'Anz.Sdg — number of shipments on the row (Dachser).',
+  referenz          :'ReferenzNr — Sendungs-Referenznummer. A "," in the value is the bundling signal.',
+  referenz3         :'ReferenzNr3 — Dachser-specific tertiary reference column (used in trigger trace).',
+  recip             :'Empf.-Name — recipient name. "amazon" substring triggers Amazon-tier branches in K+N.',
+  empf_plz          :'Empf.-PLZ — recipient ZIP code. 88499 is the Wackler return hub.',
+  empf_ort          :'Empf.-Ort — recipient city. RIEDLINGEN is the Wackler return hub city.',
+  serv_art          :'Serv.-Art — service category code (Dachser). K1AV / K1AS gate several SNK branches.',
+  kostenstelle      :'KOSTENSTELLE — cost-center. Empty or "X" triggers Kontierung?.',
+  sachkonto         :'SACHKONTO — GL account. Empty or "X" triggers Kontierung? (or VORHOLUNG on Dachser when "X").',
+  existing_anmerkung:'Existing Anmerkung — Wackler reads this; matching any WACKLER_PROTECTED phrase causes the row to be preserved (no overwrite).',
+};
+
+/* Per-forwarder gate + signature. Mirrors the gate doc-comments in
+   each processor. Kept as data so the spec can re-export it. */
+const FORWARDER_SPEC={
+  dachser:{
+    processor:'processDachser',
+    resolver :'resolveDachser',
+    gate     :'Stat_Freigabe == 10',
+    notes    :'Position-based reads for ReferenzNr3/Empf.-PLZ/Ort/Anz.Sdg/Serv.-Art/Sachkonto (DA_COL_*). Threshold T_DACHSER applied via hasErr() to every *_diff cell.',
+  },
+  kn:{
+    processor:'processKN',
+    resolver :'resolveKN',
+    gate     :'Stat_Freigabe == 10',
+    notes    :'Bundling check (`,` in ReferenzNr) wins early. Amazon recipient + single ref + tier match triggers amazonMuessen/amazonDuerfen branches.',
+  },
+  dhl:{
+    processor:'processDHL',
+    resolver :'resolveDHL',
+    gate     :'Stat_Freigabe == 10',
+    notes    :'Fremdnummer dup early-return. Blocker set (FR/PAL/OW/YO/YL/ND/SF/SNK) suppresses the secondary set (AC/MT/NX/OS).',
+  },
+  wackler:{
+    processor:'processWackler',
+    resolver :'resolveWackler',
+    gate     :'Stat_Freigabe == 10 (partial: Kontierung still emitted on stat≠10 if KOST/SACH blank)',
+    notes    :'Existing Anmerkung is read first; if it matches WACKLER_PROTECTED it short-circuits to null (preserved). AVIS/SNK code-book is sign-insensitive with rounding tolerance.',
+  },
+};
+
+/* Build the Rule Spec object. Pure — no DOM, no I/O. Caller decides
+   whether to download as JSON or include in the bundle ZIP. */
+function buildRuleSpec(){
+  const fwsSeen=(diffState.results&&diffState.results.forwarders)||['dachser','kn','dhl','wackler'];
+  const forwarders={};
+  for(const fw of ['dachser','kn','dhl','wackler']){
+    const spec=FORWARDER_SPEC[fw]||{};
+    const inputKeys=CANONICAL_INPUT_ORDER[fw]||[];
+    const glossary={};
+    for(const k of inputKeys)glossary[k]=INPUT_GLOSSARY[k]||'(no glossary entry)';
+    forwarders[fw]={
+      processor:spec.processor||'',
+      resolver :spec.resolver||'',
+      gate     :spec.gate||'',
+      threshold:(TH&&TH[fw]!=null)?TH[fw]:null,
+      notes    :spec.notes||'',
+      input_keys:inputKeys.slice(),
+      input_glossary:glossary,
+      seen_in_export:fwsSeen.includes(fw),
+    };
+  }
+  const phraseTemplates=PHRASE_TEMPLATES.map(t=>({
+    key:t.key,regex:t.regex.source,flags:t.regex.flags,
+    example:t.example,processor:t.processor||'',
+  }));
+  const phraseLiterals={};
+  for(const[k,v]of Object.entries(PHRASE_LITERALS)){
+    /* Invert the lookup: the key in PHRASE_LITERALS is the lowercased
+       phrase, the value is the synthetic id. AI consumers want
+       id → phrase (matches PHRASES shape). */
+    phraseLiterals[v]=k;
+  }
+  return{
+    schema:'anmerkung.rule-spec/v1',
+    engine_version:VERSION,
+    exported_at:new Date().toISOString(),
+    source_file:'assets/anmerkung.js',
+    phrases:{...PHRASES},
+    phrase_literals:phraseLiterals,
+    phrase_templates:phraseTemplates,
+    thresholds:{...TH},
+    label_taxonomy:{
+      wrong:'A and B both non-empty but disagree.',
+      missed:'A empty, B filled — engine should have fired.',
+      overfired:'A filled, B empty — engine should NOT have fired.',
+      drift:'Current engine disagrees with slot A — rules already changed since A was generated.',
+      correct:'A and B agree — positive example.',
+    },
+    granular_label_taxonomy:{
+      exact_match:'Strings identical (non-empty).',
+      empty_match:'Both sides empty.',
+      case_only:'Differ only by case.',
+      whitespace:'Differ only by whitespace/separator formatting.',
+      phrase_subset:'Every A-phrase appears in B, B has more (engine UNDER-fired).',
+      phrase_superset:'Every B-phrase appears in A, A has more (engine OVER-fired).',
+      phrase_overlap:'Both sides have unique phrases AND share at least one.',
+      phrase_disjoint:'No shared phrases.',
+      missed_full:'Promoted from top-level missed.',
+      overfired_full:'Promoted from top-level overfired.',
+    },
+    forwarders,
+    instructions:{
+      summary:'Each training record describes one rule-engine output vs ground truth. Use forwarder + processor to find the function in assets/anmerkung.js. Use missing_phrase_keys / extra_phrase_keys to know which PHRASES branches to add or guard. Use inputs.* as the gating signals.',
+      edit_target:'process<Forwarder> functions in assets/anmerkung.js (resolver columns are already wired; add/edit branches inside the processor).',
+      phrase_catalog_target:'PHRASES object near the top of assets/anmerkung.js — add new entries here, then reference via P.<key> with join().',
+      threshold_helper:'hasErr(value, T_FORWARDER) — returns true when |value| > threshold. Use this as the gating predicate on numeric *_diff inputs.',
+      rule_update_workflow:[
+        '1. Group records by forwarder, then by missing_phrase_keys / extra_phrase_keys patterns.',
+        '2. For missed rows: locate the existing branch that emits the missing key (or add one). Loosen its gate using the inputs.* signals on the failing rows.',
+        '3. For overfired rows: locate the branch that emits the extra key. Tighten its gate so the inputs.* signature on these rows no longer matches.',
+        '4. For wrong rows: handle the missing and extra key sets independently.',
+        '5. Preserve the join() pattern — phrases are de-duplicated case-insensitively automatically.',
+        '6. After editing, the user re-runs Train & Compare; engine_drift turns into "correct" when fixed.',
+      ],
+    },
+  };
+}
+
+function downloadRuleSpec(){
+  const spec=buildRuleSpec();
+  const blob=new Blob([JSON.stringify(spec,null,2)+'\n'],{type:'application/json;charset=utf-8'});
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='anmerkung_rule_spec_'+stamp+'.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showLog('Rule Spec exported \u2014 '+Object.keys(spec.phrases).length+' phrases, '+
+    Object.keys(spec.forwarders).length+' forwarders, engine v'+spec.engine_version+'.','ok');
+}
+
+/* Build the README.md a downstream AI agent reads first. Hard-coded
+   so the bundle is self-explanatory; the schema description echoes
+   what's actually in rule_spec.json. */
+function buildAiBundleReadme(spec,recordCount,filterScope){
+  const lines=[];
+  lines.push('# Anmerkung Rule-Update Bundle');
+  lines.push('');
+  lines.push('Engine version: **v'+spec.engine_version+'**  ');
+  lines.push('Exported: '+spec.exported_at+'  ');
+  lines.push('Records: **'+recordCount+'** training case(s)'+(filterScope?'  (filter: '+filterScope+')':''));
+  lines.push('Source file: `'+spec.source_file+'`');
+  lines.push('');
+  lines.push('## Files in this bundle');
+  lines.push('');
+  lines.push('- `training.jsonl` — one JSON record per line, one record per failing/correct row from Diff Mode.');
+  lines.push('- `rule_spec.json` — the schema. Lists every PHRASES key, every threshold, every input field per forwarder, and the exact source-code symbol an AI should edit to update rules.');
+  lines.push('- `README.md` — this file.');
+  lines.push('');
+  lines.push('## How an AI assistant should use this bundle');
+  lines.push('');
+  lines.push('### 1. Read `rule_spec.json` first');
+  lines.push('It tells you:');
+  lines.push('- The exact source file (`assets/anmerkung.js`) and the four processor symbols to edit (`processDachser`, `processKN`, `processDHL`, `processWackler`).');
+  lines.push('- The `PHRASES` catalog: every key you can emit and the German string it produces.');
+  lines.push('- The threshold per forwarder for the `hasErr()` numeric guard.');
+  lines.push('- The English glossary for every input field on every forwarder.');
+  lines.push('- The exact label / granular_label taxonomy.');
+  lines.push('');
+  lines.push('### 2. Walk `training.jsonl`');
+  lines.push('Each line is a JSON object with these fields (selected):');
+  lines.push('');
+  lines.push('| field | meaning |');
+  lines.push('| --- | --- |');
+  lines.push('| `forwarder` | one of `dachser` / `kn` / `dhl` / `wackler` |');
+  lines.push('| `processor` | exact JS symbol to edit, e.g. `processWackler` |');
+  lines.push('| `applicable_threshold` | the `hasErr()` tolerance for this forwarder |');
+  lines.push('| `label` | `wrong` / `missed` / `overfired` / `correct` |');
+  lines.push('| `granular_label` | `phrase_subset` / `phrase_superset` / `phrase_disjoint` / etc. |');
+  lines.push('| `expected_phrase_keys` | PHRASES keys ground truth wants — use `rule_spec.phrases[key]` to see the German string |');
+  lines.push('| `predicted_phrase_keys` | PHRASES keys the engine output |');
+  lines.push('| `missing_phrase_keys` | in expected, NOT in predicted → engine UNDER-fired |');
+  lines.push('| `extra_phrase_keys` | in predicted, NOT in expected → engine OVER-fired |');
+  lines.push('| `engine_phrase_keys` | what `process<Forwarder>` would output today (drift detector) |');
+  lines.push('| `inputs` | per-row map of cell values the rules read; keys explained in `rule_spec.forwarders.<fw>.input_glossary` |');
+  lines.push('| `reason` | trigger trace (raw cell values that fired branches) |');
+  lines.push('| `row_uid` | stable hash for joining across runs |');
+  lines.push('');
+  lines.push('Synthetic key prefixes:');
+  lines.push('- `lit_*` — phrase string is hard-coded inside a processor (not yet in `PHRASES`). Promote it to `PHRASES` if you need to fire it from a new branch.');
+  lines.push('- `tpl_*` — dynamic phrase that interpolates runtime values (see `rule_spec.phrase_templates`).');
+  lines.push('- `?:<raw>` — phrase did not resolve. Add it to `PHRASES` or `PHRASE_LITERALS` first.');
+  lines.push('');
+  lines.push('### 3. Apply the rule-update workflow');
+  lines.push('');
+  for(const step of (spec.instructions.rule_update_workflow||[])){
+    lines.push('- '+step);
+  }
+  lines.push('');
+  lines.push('### 4. Common patterns');
+  lines.push('');
+  lines.push('**`missed`** — engine should have emitted a phrase but didn\'t.');
+  lines.push('- Find the existing branch in `process<Forwarder>` that emits the `missing_phrase_keys[i]` (search for `P.<key>` or the literal phrase).');
+  lines.push('- Diagnose why the gate didn\'t match: compare the failing row\'s `inputs` against the gate condition.');
+  lines.push('- Loosen the gate or add a parallel branch using `inputs` as new gating signals.');
+  lines.push('');
+  lines.push('**`overfired`** — engine emitted a phrase that shouldn\'t appear.');
+  lines.push('- Find the branch that emits the `extra_phrase_keys[i]`.');
+  lines.push('- Add a guard using `inputs` so the branch no longer matches the row\'s signature.');
+  lines.push('- Be careful not to break `correct` rows for the same forwarder — re-run Diff Mode to verify.');
+  lines.push('');
+  lines.push('**`wrong`** — both missed AND extra keys present.');
+  lines.push('- Treat the missing and extra sets independently. Often a single branch picked the wrong phrase: change the phrase emitted, not the gate.');
+  lines.push('');
+  lines.push('### 5. Verify');
+  lines.push('Re-run Diff Mode → Train & Compare. The chip counts should move from `wrong`/`missed`/`overfired` toward `correct`. `engine drift` rows turn into `correct` once the rule emits what slot A says.');
+  return lines.join('\n')+'\n';
+}
+
+async function downloadAiBundle(){
+  if(!diffState.results){showLog('AI Bundle \u2014 run Train & Compare first.','err');return;}
+  if(typeof JSZip==='undefined'){showLog('AI Bundle \u2014 JSZip not loaded yet, retry in a moment.','err');return;}
+  const{records}=buildTrainingSet();
+  if(!records.length){showLog('AI Bundle \u2014 no training rows in current filter scope.','err');return;}
+  const spec=buildRuleSpec();
+  const filterScope=(diffFilter.label!=='all'||diffFilter.fw!=='all'||diffFilter.sheet!=='all'||(diffFilter.q&&diffFilter.q.trim()))
+    ?[diffFilter.label!=='all'?'label='+diffFilter.label:'',
+      diffFilter.fw!=='all'?'fw='+diffFilter.fw:'',
+      diffFilter.sheet!=='all'?'sheet='+diffFilter.sheet:'',
+      diffFilter.q?'search='+diffFilter.q:''].filter(Boolean).join(', ')
+    :'';
+  const jsonl=records.map(r=>JSON.stringify(r)).join('\n')+'\n';
+  const readme=buildAiBundleReadme(spec,records.length,filterScope);
+  const zip=new JSZip();
+  zip.file('training.jsonl',jsonl);
+  zip.file('rule_spec.json',JSON.stringify(spec,null,2)+'\n');
+  zip.file('README.md',readme);
+  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='anmerkung_ai_bundle_'+stamp+'.zip';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showLog('AI Bundle exported \u2014 '+records.length+' record(s) + rule_spec.json + README.md'+
+    (filterScope?' (filter: '+filterScope+')':'')+'. Drop into any AI assistant to update rules.','ok');
 }
 
 /* ══════════════════════════════════════════════════════════
