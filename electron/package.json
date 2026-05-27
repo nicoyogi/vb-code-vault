@@ -1,0 +1,60 @@
+{
+  "name": "anmerkung-processor",
+  "productName": "Anmerkung Processor",
+  "version": "1.0.0",
+  "description": "Anmerkung Processor — desktop wrapper around anmerkung.html",
+  "main": "main.js",
+  "author": "codingkuh.my.id",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64",
+    "build:win-portable": "electron-builder --win portable --x64",
+    "build:linux": "electron-builder --linux --x64",
+    "dist": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.0.2",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "id.my.codingkuh.anmerkung",
+    "productName": "Anmerkung Processor",
+    "asar": true,
+    "directories": {
+      "output": "../dist-electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "../anmerkung.html", "to": "app/anmerkung.html" },
+      { "from": "../assets",         "to": "app/assets" },
+      { "from": "../manifest.webmanifest", "to": "app/manifest.webmanifest" }
+    ],
+    "win": {
+      "target": [
+        { "target": "portable", "arch": ["x64"] },
+        { "target": "nsis",     "arch": ["x64"] }
+      ],
+      "artifactName": "AnmerkungProcessor-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "AnmerkungProcessor-${version}-portable.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "AnmerkungProcessor-Setup-${version}.exe"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Office"
+    }
+  }
+}
