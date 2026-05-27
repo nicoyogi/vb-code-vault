@@ -131,16 +131,28 @@ Click **✦ Train & Compare**. The engine walks both files in one pass and label
 | `drift` | Current engine would disagree with slot A → rules changed since A was generated |
 | `correct` | A and B agree (positive example; off by default, opt-in) |
 
+The Anmerkung column is a list of `' // '`-joined phrases, so every row also carries a **phrase-level diff** (`computePhraseDiff`):
+
+- `predicted_phrases`, `expected_phrases` — phrases on each side
+- `common_phrases` — phrases present in both (case-insensitive)
+- `missing_phrases` — in B but not A → what the engine should have output
+- `extra_phrases` — in A but not B → what the engine wrongly output
+- `phrase_jaccard` — `|common| / |union|`, in `[0, 1]`
+
+…and a `granular_label` that refines `wrong` along set-relation lines: `exact_match`, `empty_match`, `case_only`, `whitespace`, `phrase_subset` (under-fired), `phrase_superset` (over-fired), `phrase_overlap` (both sides have unique phrases AND share at least one), `phrase_disjoint`, `missed_full`, `overfired_full`. This is the precision payload — a row labeled `wrong` can still tell you exactly which phrase the engine missed and which it over-fired.
+
+Each row also gets a stable **`row_uid`** (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`), so identical rows across multiple Train & Compare runs share the same hash. Useful for joining/deduping/diffing training CSVs across rule-engine iterations.
+
 Output:
 
 - **Click-to-filter chips** (all / wrong / missed / overfired / drift / correct) — the table, counts, and *export buttons* all honor the active filter.
 - **Filter bar** — by forwarder, by sheet, and free-text search (scans before/after/reason/engine-now).
-- **Per-row expansion** — chevron reveals the exact input cells the engine read + the trigger trace in a k/v grid.
+- **Per-row expansion** — chevron reveals the exact input cells the engine read, the granular-label badge, the Jaccard score, the row_uid, the missing/extra/common phrase chips, and the trigger trace.
 - **Send to Tester** (✦ on any row) — switches to that forwarder, opens the Rule Tester, pre-fills every matching field with the row's inputs, auto-evaluates, and scrolls you there. Tighten the rule → re-run Train & Compare.
 - **Exports** (filter-scoped; buttons carry live `· N` counters):
-  - `↓ Diff CSV` — classic before/after + forwarder + label + engine_now + engine_matches_a + trigger trace.
-  - `↓ Training Set (CSV)` — one row per case with inputs + trace, feed straight into ML / spreadsheet analysis.
-  - `↓ Training Set (JSONL)` — one JSON record per line, ML-friendly.
+  - `↓ Diff CSV` — `row_uid` + classic before/after + forwarder + label + `granular_label` + engine_now + engine_matches_a + `phrase_jaccard` + the five phrase columns + trigger trace + one column per rule-visible input cell. Columns appear in canonical per-forwarder order so successive exports diff cleanly.
+  - `↓ Training Set (CSV)` — same precision payload, padding rows dropped, deduped by `row_uid`. Phrase arrays serialise as `' | '`-joined strings.
+  - `↓ Training Set (JSONL)` — one JSON record per line; phrase arrays remain native JSON arrays. ML-friendly.
 
 ---
 

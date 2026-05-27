@@ -1,6 +1,19 @@
 {
-  "version": "1.8.7",
+  "version": "1.9.0",
   "entries": [
+    {
+      "ver": "1.9.0",
+      "date": "2026-05-27",
+      "items": [
+        "Diff Mode — training-set output now carries a phrase-level diff per row, not just the coarse top-level label. Each row gets `predicted_phrases`, `expected_phrases`, `common_phrases`, `missing_phrases`, `extra_phrases`, and a `phrase_jaccard` score. The Anmerkung column is `' // '`-joined phrases (handled by the existing `splitTriggers`), so a row labeled `wrong` can now tell you exactly which phrase the engine missed and which it over-fired. Comparison is case-insensitive but the output preserves original casing.",
+        "Diff Mode — added `granular_label` that refines `wrong` along set-relation lines: `exact_match` / `empty_match` / `case_only` / `whitespace` / `phrase_subset` (under-fired — every A-phrase appears in B, B has more) / `phrase_superset` (over-fired — every B-phrase appears in A, A has more) / `phrase_overlap` (both sides have unique phrases AND share at least one) / `phrase_disjoint` / `missed_full` / `overfired_full`. The detail drawer renders this as a colored badge alongside the Jaccard score; the CSV/JSONL exports carry it as a column.",
+        "Diff Mode — every row now has a stable `row_uid` (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`). Identical rows across multiple Train & Compare runs share the same UID, so successive training CSVs can be joined / deduped / diffed across rule-engine iterations. The training-set export dedupes by `row_uid` automatically.",
+        "Diff Mode — CSV column ordering is now canonical per forwarder (`CANONICAL_INPUT_ORDER` per forwarder, with cross-forwarder rows clustered in the order dachser → kn → dhl → wackler). Successive Diff CSVs from the same workbook line up column-for-column, so version-controlled training corpora produce clean diffs instead of column shuffles.",
+        "Diff Mode — training-set export drops padding rows (A and B both empty AND no rule-visible inputs AND no engine output). Previously these were emitted as `correct` rows when \"Include matching rows\" was on, polluting the dataset with rows from below the actual data range. Real \"correct\" rows (rule correctly stayed silent on a row that DID have inputs) are still kept under the opt-in.",
+        "Diff Mode — detail drawer (chevron) now shows the phrase breakdown directly: missing-phrase chips (amber), extra-phrase chips (violet), common-phrase chips (green), the granular-label badge, the Jaccard score, and the row_uid. Triage no longer requires exporting the CSV to see which phrase was off — it's right there in the row expansion.",
+        "Docs — `ANMERKUNG-WORKFLOW.md` Diff Mode section refreshed: phrase-diff fields, granular-label taxonomy, row_uid semantics, canonical column ordering, and the padding-row drop are all documented inline."
+      ]
+    },
     {
       "ver": "1.8.7",
       "date": "2026-05-25",

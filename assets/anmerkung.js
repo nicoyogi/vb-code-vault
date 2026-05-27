@@ -1420,6 +1420,139 @@ function classifyDiff(vA,vB){
   return 'wrong';
 }
 
+/* ──────────────────────────────────────────────────────────
+   PRECISION HELPERS FOR TRAINING-DATA OUTPUT
+   The Anmerkung column is a list of independent rule outputs
+   joined by ' // '. Comparing the whole strings gives us
+   wrong / missed / overfired / correct — useful but coarse.
+   These helpers decompose each row into PHRASE-LEVEL signal
+   so a row labeled "wrong" can still tell us exactly which
+   phrase the engine missed and which it over-fired.
+
+   Example:
+     A = "Portalavisierung, ok?"
+     B = "Portalavisierung, ok? // Differenz treibstoff"
+       → missing_phrases = ["Differenz treibstoff"]
+       → extra_phrases   = []
+       → common_phrases  = ["Portalavisierung, ok?"]
+       → phrase_jaccard  = 0.5
+       → granular_label  = "phrase_subset"   (A ⊂ B  → MISSED a phrase)
+
+   Phrase comparison is case-insensitive but the output
+   preserves the original casing from whichever side it came.
+────────────────────────────────────────────────────────── */
+function computePhraseDiff(beforeRaw,afterRaw){
+  const A=splitTriggers(beforeRaw||''), B=splitTriggers(afterRaw||'');
+  const norm=p=>p.toLowerCase();
+  const Bset=new Set(B.map(norm)), Aset=new Set(A.map(norm));
+  const common =A.filter(p=>Bset.has(norm(p)));
+  const missing=B.filter(p=>!Aset.has(norm(p)));
+  const extra  =A.filter(p=>!Bset.has(norm(p)));
+  const union=new Set([...Aset,...Bset]);
+  const jaccard=union.size===0?1:(common.length/union.size);
+  return{
+    predicted_phrases:A,
+    expected_phrases:B,
+    common_phrases:common,
+    missing_phrases:missing,
+    extra_phrases:extra,
+    phrase_jaccard:Math.round(jaccard*10000)/10000,
+  };
+}
+
+/* Granular sub-label refines `wrong` along set-relation lines.
+   - exact_match   : strings identical (incl. both empty → empty_match)
+   - case_only     : differ only by case
+   - whitespace    : differ only by whitespace/separator formatting
+   - phrase_subset : every A-phrase appears in B, B has more (engine UNDER-fired)
+   - phrase_superset: every B-phrase appears in A, A has more (engine OVER-fired)
+   - phrase_overlap: both sides have unique phrases AND share at least one
+   - phrase_disjoint: no shared phrases
+   - missed_full   : A empty, B non-empty (lifted from top-level label)
+   - overfired_full: A non-empty, B empty (lifted from top-level label) */
+function granularLabel(beforeRaw,afterRaw,pd){
+  const a=(beforeRaw||'').trim(), b=(afterRaw||'').trim();
+  if(a===b)return a===''?'empty_match':'exact_match';
+  if(a===''&&b!=='')return 'missed_full';
+  if(a!==''&&b==='')return 'overfired_full';
+  if(a.toLowerCase()===b.toLowerCase())return 'case_only';
+  if(a.replace(/\s+/g,'')===b.replace(/\s+/g,''))return 'whitespace';
+  const m=pd.missing_phrases.length, x=pd.extra_phrases.length, c=pd.common_phrases.length;
+  if(c===0)return 'phrase_disjoint';
+  if(m>0&&x===0)return 'phrase_subset';
+  if(m===0&&x>0)return 'phrase_superset';
+  return 'phrase_overlap';
+}
+
+/* Stable short hash of (forwarder | sheet | row | sorted-inputs).
+   Same row across multiple Train & Compare runs gets the same
+   row_uid, so training CSVs from successive iterations can be
+   joined / deduped / diffed across versions of the rule engine.
+   FNV-1a 32-bit, hex-encoded — collision risk negligible at
+   workbook scale. */
+function rowUid(forwarder,sheet,row,inputs){
+  const seedParts=[forwarder||'',sheet||'',String(row||'')];
+  const keys=Object.keys(inputs||{}).sort();
+  for(const k of keys)seedParts.push(k+'='+(inputs[k]==null?'':inputs[k]));
+  const seed=seedParts.join('|');
+  let h=2166136261>>>0;
+  for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+  return ('00000000'+h.toString(16)).slice(-8);
+}
+
+/* Canonical input-key order per forwarder. Stabilises CSV column
+   layout so successive Train & Compare runs produce diff-friendly
+   files (same columns in the same positions, regardless of which
+   row happened to fill which key first). Keys not in the canonical
+   list (rare — only happens if collectInputsForRow grows a new key
+   without this list being updated) are appended in first-seen order. */
+const CANONICAL_INPUT_ORDER={
+  dachser:['stat','tarif','fr_diff','vkg','vkg_dl',
+           'snk_dl','snk_diff','snk_tarif',
+           'zz_diff','sam_diff','dgr_diff',
+           'exp_diff','exp_dl','maut_diff','sbfu_diff','tz_diff',
+           'lg_diff','av_diff',
+           'referenz3','empf_plz','empf_ort','anz_sdg','serv_art','sachkonto'],
+  kn:['stat','tarif','fr_diff','exp_diff','mt_diff','tz_diff',
+      'snk_dl','snk_diff',
+      'referenz','recip','vkg','vkg_dl',
+      'kostenstelle','sachkonto'],
+  dhl:['stat','tarif','fr_diff','pal_diff','ow_diff',
+       'yo_diff','yl_diff','nd_diff','sf_diff',
+       'snk_diff','ac_diff','mt_diff','nx_diff','os_diff','tz_diff',
+       'kostenstelle','sachkonto'],
+  wackler:['stat','tarif','existing_anmerkung',
+           'avis_diff','snk_diff','fr_diff','mt_diff','tz_diff',
+           'referenz','vkg','vkg_dl','empf_plz','empf_ort',
+           'kostenstelle','sachkonto'],
+};
+
+/* Build the ordered key list for a CSV: union of (canonical for each
+   forwarder seen) ∪ (any keys observed but not canonical). Keeps
+   per-forwarder columns clustered + deterministic. */
+function orderedInputKeys(rows){
+  const observed=new Set();
+  const fwSeen=new Set();
+  for(const r of rows){
+    if(r.fw)fwSeen.add(r.fw);
+    for(const k of Object.keys(r.inputs||{}))observed.add(k);
+  }
+  const ordered=[];
+  const add=k=>{if(observed.has(k)&&!ordered.includes(k))ordered.push(k);};
+  /* Emit canonical order for each forwarder we actually saw, in a
+     stable forwarder order — dachser → kn → dhl → wackler. */
+  ['dachser','kn','dhl','wackler'].forEach(fw=>{
+    if(!fwSeen.has(fw))return;
+    (CANONICAL_INPUT_ORDER[fw]||[]).forEach(add);
+  });
+  /* Any leftover observed keys (unknown forwarder / new key not yet
+     in CANONICAL_INPUT_ORDER) — append in first-seen order. */
+  for(const r of rows){
+    for(const k of Object.keys(r.inputs||{}))add(k);
+  }
+  return ordered;
+}
+
 function runDiff(){
   if(!diffState.a||!diffState.b){showLog('Diff — load both files first.','err');return;}
   const rows=[];
@@ -1480,8 +1613,28 @@ function runDiff(){
       /* Only keep mismatches in the row set by default; 'correct' rows
          are kept too so the chip filter can reveal them when the user
          ticks "Include matching rows". They're hidden in the default
-         table view via filterDiffRows(). */
-      rows.push({sheet:name,row:r+1,label,change:label==='missed'?'added':(label==='overfired'?'removed':(label==='wrong'?'changed':'correct')),fw,before:vA,after:vB,engineNow,engineMatchesA,hasDrift:!engineMatchesA,reason,inputs});
+         table view via filterDiffRows(). Phrase-level diff + granular
+         sub-label + stable row_uid are attached now so every consumer
+         (table render, detail drawer, diff CSV, training-set CSV/JSONL)
+         reads the same enriched record — no second pass. */
+      const phraseDiff=computePhraseDiff(vA,vB);
+      const granular=granularLabel(vA,vB,phraseDiff);
+      const rowObj={
+        sheet:name,row:r+1,label,
+        change:label==='missed'?'added':(label==='overfired'?'removed':(label==='wrong'?'changed':'correct')),
+        fw,before:vA,after:vB,
+        engineNow,engineMatchesA,hasDrift:!engineMatchesA,
+        reason,inputs,
+        predicted_phrases:phraseDiff.predicted_phrases,
+        expected_phrases :phraseDiff.expected_phrases,
+        common_phrases   :phraseDiff.common_phrases,
+        missing_phrases  :phraseDiff.missing_phrases,
+        extra_phrases    :phraseDiff.extra_phrases,
+        phrase_jaccard   :phraseDiff.phrase_jaccard,
+        granular,
+      };
+      rowObj.row_uid=rowUid(fw,name,r+1,inputs);
+      rows.push(rowObj);
     }
   }
 
@@ -1694,6 +1847,29 @@ function toggleDiffDetail(i){
   const kv=keys.length
     ? keys.map(k=>`<div class="df-detail-kv"><span class="kv-k">${esc(k)}</span><span class="kv-v" title="${esc(r.inputs[k])}">${esc(r.inputs[k])}</span></div>`).join('')
     : '<div class="df-detail-kv empty"><span class="kv-k">inputs</span><span class="kv-v">(no rule-visible cells captured — unknown forwarder)</span></div>';
+  /* Phrase-level diff visualisation. Only render when meaningful — for
+     `correct` rows there's nothing to show; for missed/overfired/wrong
+     the breakdown is the whole point of the precision pass. */
+  const phrChip=(cls,p)=>`<span class="df-phr-chip ${cls}">${esc(p)}</span>`;
+  const phrSection=(label,arr,cls)=>arr&&arr.length
+    ? `<div class="df-phr-row"><span class="df-phr-label">${label}</span><span class="df-phr-list">${arr.map(p=>phrChip(cls,p)).join('')}</span></div>`
+    : '';
+  const hasPhraseDiff=(r.missing_phrases&&r.missing_phrases.length)||
+                     (r.extra_phrases&&r.extra_phrases.length)||
+                     (r.common_phrases&&r.common_phrases.length);
+  const phrBlock=hasPhraseDiff
+    ? `<div class="df-phr-block">
+         <div class="df-phr-head">
+           <span class="df-phr-title">phrase diff</span>
+           ${r.granular?`<span class="df-gran-badge df-gran-${esc(r.granular)}">${esc(r.granular.replace(/_/g,' '))}</span>`:''}
+           ${r.phrase_jaccard!=null?`<span class="df-phr-jac" title="Jaccard similarity of predicted vs expected phrase sets (1.0 = identical, 0 = disjoint)">jaccard ${(r.phrase_jaccard).toFixed(2)}</span>`:''}
+           ${r.row_uid?`<span class="df-uid" title="Stable row UID — identical rows across runs share this hash">uid ${esc(r.row_uid)}</span>`:''}
+         </div>
+         ${phrSection('missing',r.missing_phrases,'phr-missing')}
+         ${phrSection('extra'  ,r.extra_phrases  ,'phr-extra')}
+         ${phrSection('common' ,r.common_phrases ,'phr-common')}
+       </div>`
+    : '';
   const reasonHtml=r.reason
     ? `<div class="df-reason-block"><span class="rb-label">trigger trace</span>${esc(r.reason)}</div>`
     : '<div class="df-reason-block empty"><span class="rb-label">trigger trace</span>(engine produced no reason — either no rule fired or forwarder unknown)</div>';
@@ -1703,7 +1879,7 @@ function toggleDiffDetail(i){
     : '';
   const tr=document.createElement('tr');
   tr.className='df-detail';tr.dataset.for=String(i);
-  tr.innerHTML=`<td colspan="8"><div class="df-detail-wrap"><div class="df-detail-grid">${kv}${reasonHtml}</div>${sendBtn?`<div>${sendBtn}</div>`:''}</div></td>`;
+  tr.innerHTML=`<td colspan="8"><div class="df-detail-wrap"><div class="df-detail-grid">${kv}${phrBlock}${reasonHtml}</div>${sendBtn?`<div>${sendBtn}</div>`:''}</div></td>`;
   mainTr.after(tr);
   btn.classList.add('open');btn.setAttribute('aria-expanded','true');btn.textContent='\u00b7';
 }
@@ -1804,23 +1980,39 @@ function downloadDiffCsv(){
   const rows=filterDiffRows();
   if(!rows.length){showLog('Diff CSV \u2014 nothing to export (filter scope is empty).','err');return;}
   const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  /* Collect every input key that appears in the filtered scope so we can
-     emit one column per rule-visible cell (Volumen kg, FR Differenz, MT
-     Differenz, TZ Differenz, Tarif, Stat_Freigabe, Sachkonto, …). Without
-     these the diff CSV was just before/after/reason — useless for triage
-     unless you also opened the source xlsx side-by-side. */
-  const inputKeys=[];const seen=new Set();
-  for(const r of rows){
-    if(r.change==='sheet')continue;
-    for(const k of Object.keys(r.inputs||{})){
-      if(!seen.has(k)){seen.add(k);inputKeys.push(k);}
-    }
-  }
-  const header=['sheet','row','forwarder','label','change','before','after','engine_now','engine_matches_a','reason',...inputKeys.map(k=>'in_'+k)];
+  /* Phrase arrays serialise to '|'-joined strings — readable in a
+     spreadsheet AND parseable downstream. Empty arrays become ''. */
+  const joinPhr=arr=>Array.isArray(arr)?arr.join(' | '):'';
+  /* Use the per-forwarder canonical order so successive Diff CSVs from
+     the same workbook line up column-for-column. Sheet rows (header
+     warnings) are skipped before the union, since they don't have
+     meaningful inputs. */
+  const trainable=rows.filter(r=>r.change!=='sheet');
+  const inputKeys=orderedInputKeys(trainable);
+  const header=[
+    'row_uid','sheet','row','forwarder','label','granular_label','change',
+    'before','after','engine_now','engine_matches_a','phrase_jaccard',
+    'predicted_phrases','expected_phrases','common_phrases',
+    'missing_phrases','extra_phrases',
+    'reason',
+    ...inputKeys.map(k=>'in_'+k),
+  ];
   const lines=[header.join(',')];
   for(const r of rows){
-    const base=[r.sheet,r.row,r.fw,r.label,r.change,r.before,r.after,r.engineNow||'',r.engineMatchesA?'true':'false',r.reason||''];
-    for(const k of inputKeys){const v=(r.inputs||{})[k];base.push(v==null?'':v);}
+    const isSheet=r.change==='sheet';
+    const base=[
+      isSheet?'':(r.row_uid||''),
+      r.sheet,r.row,r.fw,r.label,isSheet?'':(r.granular||''),r.change,
+      r.before,r.after,r.engineNow||'',r.engineMatchesA?'true':'false',
+      isSheet?'':(r.phrase_jaccard==null?'':r.phrase_jaccard),
+      isSheet?'':joinPhr(r.predicted_phrases),
+      isSheet?'':joinPhr(r.expected_phrases),
+      isSheet?'':joinPhr(r.common_phrases),
+      isSheet?'':joinPhr(r.missing_phrases),
+      isSheet?'':joinPhr(r.extra_phrases),
+      r.reason||'',
+    ];
+    for(const k of inputKeys){const v=isSheet?'':(r.inputs||{})[k];base.push(v==null?'':v);}
     lines.push(base.map(esc).join(','));
   }
   const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
@@ -1956,32 +2148,62 @@ function tsRunRule(fw,ws,r,cols){
 /* Build the training-set records directly from the enriched rows
    produced by runDiff — no second sheet walk. Honors the current
    filter scope (chip + forwarder + sheet + search) so the user can
-   e.g. export only the "missed" rows for one forwarder. */
+   e.g. export only the "missed" rows for one forwarder.
+
+   Precision rules (all in service of cleaner training data):
+     1. Sheet-level rows (header/missing-sheet warnings) are dropped.
+     2. `correct` rows are dropped unless "Include matching rows" is on.
+     3. Trivially-empty rows — A==B=='' AND no rule-visible inputs AND
+        no engine output — are ALWAYS dropped (even with includeMatches),
+        because they're padding rows below the data, not real negatives.
+     4. Records are deduped by row_uid (stable hash of fw|sheet|row|inputs)
+        so identical rows can't sneak in twice across runs that get
+        concatenated downstream.
+     5. Input columns are returned in canonical per-forwarder order so
+        the CSV layout is stable across runs of the same workbook.
+
+   Each record carries the full phrase-level diff produced by runDiff,
+   not just the coarse top-level label — see computePhraseDiff. */
 function buildTrainingSet(){
   if(!diffState.results||!diffState.results.rows.length)return{records:[],inputKeys:[]};
   const includeMatches=!!document.getElementById('diffIncludeMatch')?.checked;
   const scope=filterDiffRows();
   const records=[];
-  const allKeys=new Set();
+  const seenUids=new Set();
   for(const r of scope){
     if(r.change==='sheet')continue;
     if(r.label==='correct'&&!includeMatches)continue;
-    Object.keys(r.inputs||{}).forEach(k=>allKeys.add(k));
+    /* Drop padding rows: nothing on either side, no inputs, no engine. */
+    const hasInputs=Object.keys(r.inputs||{}).length>0;
+    const hasContent=(r.before||'').trim()!==''||(r.after||'').trim()!==''||(r.engineNow||'').trim()!=='';
+    if(!hasContent&&!hasInputs)continue;
+    /* Dedupe by stable row UID. */
+    if(r.row_uid&&seenUids.has(r.row_uid))continue;
+    if(r.row_uid)seenUids.add(r.row_uid);
     records.push({
+      row_uid:r.row_uid||'',
       sheet:r.sheet,
       row:r.row,
       forwarder:r.fw,
       label:r.label,
+      granular_label:r.granular||'',
       predicted:r.before,                     /* what slot A (tool) says */
       expected:r.after,                       /* what slot B (truth) says */
       rule_engine_now:r.engineNow||'',        /* what the current engine would say today */
       engine_matches_a:!!r.engineMatchesA,
       reason:r.reason||'',                    /* trigger trace */
+      /* Phrase-level diff — the precision payload. */
+      phrase_jaccard   :r.phrase_jaccard,
+      predicted_phrases:r.predicted_phrases||[],
+      expected_phrases :r.expected_phrases||[],
+      common_phrases   :r.common_phrases||[],
+      missing_phrases  :r.missing_phrases||[],
+      extra_phrases    :r.extra_phrases||[],
       inputs:r.inputs||{},
     });
   }
-  /* Stable ordering of input keys: keep first-seen order from Set iteration. */
-  const inputKeys=[...allKeys];
+  /* Canonical, deterministic input-key ordering across all records. */
+  const inputKeys=orderedInputKeys(records.map(r=>({fw:r.forwarder,inputs:r.inputs})));
   return{records,inputKeys};
 }
 
@@ -1991,16 +2213,37 @@ function downloadTrainingSet(format){
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   let blob,ext;
   if(format==='jsonl'){
+    /* JSONL preserves phrase arrays as native JSON arrays — direct ML feed. */
     const lines=records.map(r=>JSON.stringify(r));
     blob=new Blob([lines.join('\n')+'\n'],{type:'application/x-ndjson;charset=utf-8'});
     ext='jsonl';
   } else {
-    /* CSV: flatten inputs to one column per key. */
+    /* CSV: flatten inputs to one column per key, phrase arrays to ' | '
+       joined strings. row_uid leads so successive runs can be joined. */
     const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-    const header=['sheet','row','forwarder','label','predicted','expected','rule_engine_now','engine_matches_a','reason',...inputKeys.map(k=>'in_'+k)];
+    const joinPhr=arr=>Array.isArray(arr)?arr.join(' | '):'';
+    const header=[
+      'row_uid','sheet','row','forwarder','label','granular_label',
+      'predicted','expected','rule_engine_now','engine_matches_a',
+      'phrase_jaccard',
+      'predicted_phrases','expected_phrases','common_phrases',
+      'missing_phrases','extra_phrases',
+      'reason',
+      ...inputKeys.map(k=>'in_'+k),
+    ];
     const lines=[header.join(',')];
     for(const r of records){
-      const row=[r.sheet,r.row,r.forwarder,r.label,r.predicted,r.expected,r.rule_engine_now,r.engine_matches_a?'true':'false',r.reason];
+      const row=[
+        r.row_uid,r.sheet,r.row,r.forwarder,r.label,r.granular_label||'',
+        r.predicted,r.expected,r.rule_engine_now,r.engine_matches_a?'true':'false',
+        r.phrase_jaccard==null?'':r.phrase_jaccard,
+        joinPhr(r.predicted_phrases),
+        joinPhr(r.expected_phrases),
+        joinPhr(r.common_phrases),
+        joinPhr(r.missing_phrases),
+        joinPhr(r.extra_phrases),
+        r.reason,
+      ];
       for(const k of inputKeys)row.push(r.inputs[k]==null?'':r.inputs[k]);
       lines.push(row.map(esc).join(','));
     }
@@ -2010,11 +2253,21 @@ function downloadTrainingSet(format){
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='anmerkung_training_'+stamp+'.'+ext;a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  /* Quick summary in the log so users know what they got. */
-  const by={};for(const r of records)by[r.label]=(by[r.label]||0)+1;
-  const parts=Object.keys(by).sort().map(k=>k+'='+by[k]);
+  /* Quick summary in the log so users know what they got — top-level
+     label counts AND granular sub-label counts, since the latter is
+     where the precision lives. */
+  const byLabel={};const byGran={};
+  for(const r of records){
+    byLabel[r.label]=(byLabel[r.label]||0)+1;
+    if(r.granular_label)byGran[r.granular_label]=(byGran[r.granular_label]||0)+1;
+  }
+  const lblParts=Object.keys(byLabel).sort().map(k=>k+'='+byLabel[k]);
+  const granParts=Object.keys(byGran).sort().map(k=>k+'='+byGran[k]);
   const scopeNote=(diffFilter.label!=='all'||diffFilter.fw!=='all'||diffFilter.sheet!=='all'||(diffFilter.q&&diffFilter.q.trim()))?' (filter-scoped)':'';
-  showLog('Training set exported \u2014 '+records.length+' row(s) as '+ext.toUpperCase()+' ('+parts.join(', ')+')'+scopeNote+'.','ok');
+  showLog('Training set exported \u2014 '+records.length+' row(s) as '+ext.toUpperCase()+
+    ' \u00b7 labels: '+lblParts.join(', ')+
+    (granParts.length?' \u00b7 granular: '+granParts.join(', '):'')+
+    scopeNote+'.','ok');
 }
 
 /* ══════════════════════════════════════════════════════════
