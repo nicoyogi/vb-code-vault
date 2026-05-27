@@ -628,6 +628,72 @@ body.theme-light .df-reason-block { background: rgba(80,55,20,0.03); }
 .df-reason-block .rb-label { color: var(--text3); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; margin-right: 8px; }
 .df-reason-block.empty { color: var(--text3); font-style: italic; }
 
+/* ── Phrase-level diff block (#19 precision pass) ──
+   Renders inside the detail drawer below the input k/v grid. Each
+   row is one "section" — missing / extra / common — with a label
+   on the left and a horizontal list of phrase chips on the right.
+   The block also carries a granular-label badge (phrase_subset,
+   phrase_overlap, …), the Jaccard score, and the stable row_uid. */
+.df-phr-block {
+  grid-column: 1 / -1;
+  display: flex; flex-direction: column; gap: 6px;
+  background: rgba(91,156,246,0.04); border: 1px dashed var(--border);
+  border-radius: 8px; padding: 8px 10px;
+}
+body.theme-light .df-phr-block { background: rgba(91,156,246,0.06); }
+.df-phr-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  font-family: var(--mono); font-size: 9px; color: var(--text3);
+  letter-spacing: .12em; text-transform: uppercase;
+  padding-bottom: 4px; border-bottom: 1px dashed var(--border);
+}
+.df-phr-title { color: var(--text2); }
+.df-phr-jac, .df-uid {
+  font-family: var(--mono); font-size: 9px; color: var(--text3);
+  background: rgba(255,255,255,0.03); padding: 1px 7px; border-radius: 6px;
+  letter-spacing: .04em; text-transform: lowercase;
+}
+.df-uid { color: var(--text3); opacity: .8; }
+body.theme-light .df-phr-jac, body.theme-light .df-uid { background: rgba(80,55,20,0.05); }
+
+.df-gran-badge {
+  font-family: var(--mono); font-size: 9px; padding: 2px 8px; border-radius: 999px;
+  letter-spacing: .06em; text-transform: lowercase;
+  border: 1px solid var(--border); color: var(--text3); background: rgba(255,255,255,0.02);
+}
+.df-gran-badge.df-gran-exact_match,
+.df-gran-badge.df-gran-empty_match    { color: var(--accent);     border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.08); }
+.df-gran-badge.df-gran-phrase_subset,
+.df-gran-badge.df-gran-missed_full    { color: #fbbf24;           border-color: rgba(251,191,36,0.4);  background: rgba(251,191,36,0.08); }
+.df-gran-badge.df-gran-phrase_superset,
+.df-gran-badge.df-gran-overfired_full { color: #c4b5fd;           border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.08); }
+.df-gran-badge.df-gran-phrase_overlap,
+.df-gran-badge.df-gran-phrase_disjoint{ color: #fca5a5;           border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.08); }
+.df-gran-badge.df-gran-case_only,
+.df-gran-badge.df-gran-whitespace     { color: var(--text2);      border-color: var(--border2);        background: rgba(255,255,255,0.04); }
+
+.df-phr-row {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-family: var(--mono); font-size: 10px; line-height: 1.5;
+}
+.df-phr-label {
+  flex-shrink: 0; min-width: 56px; padding-top: 3px;
+  font-size: 9px; color: var(--text3); letter-spacing: .12em; text-transform: uppercase;
+}
+.df-phr-list { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; min-width: 0; }
+.df-phr-chip {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  font-family: var(--mono); font-size: 10px; line-height: 1.5;
+  border: 1px solid var(--border); color: var(--text2); background: rgba(255,255,255,0.02);
+  word-break: break-word; max-width: 100%;
+}
+.df-phr-chip.phr-missing  { color: #fbbf24; border-color: rgba(251,191,36,0.45);  background: rgba(251,191,36,0.10); }
+.df-phr-chip.phr-extra    { color: #c4b5fd; border-color: rgba(167,139,250,0.45); background: rgba(167,139,250,0.10); }
+.df-phr-chip.phr-common   { color: var(--accent); border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.06); }
+body.theme-light .df-phr-chip.phr-missing { color: #92400e; background: rgba(251,191,36,0.18); }
+body.theme-light .df-phr-chip.phr-extra   { color: #5b21b6; background: rgba(167,139,250,0.18); }
+body.theme-light .df-phr-chip.phr-common  { color: #047857; background: rgba(52,211,153,0.16); }
+
 /* Send-to-Tester action */
 .df-send-tester {
   display: inline-flex; align-items: center; gap: 5px;
