@@ -143,6 +143,27 @@ The Anmerkung column is a list of `' // '`-joined phrases, so every row also car
 
 Each row also gets a stable **`row_uid`** (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`), so identical rows across multiple Train & Compare runs share the same hash. Useful for joining/deduping/diffing training CSVs across rule-engine iterations.
 
+#### AI-friendly enrichment (#21)
+
+Each row now also carries a phrase-key reverse lookup so AI consumers can map a row to source-code branches without re-reading `assets/anmerkung.js`:
+
+- `predicted_phrase_keys`, `expected_phrase_keys`, `common_phrase_keys`, `missing_phrase_keys`, `extra_phrase_keys` — parallel arrays of stable identifiers for each phrase string.
+- `engine_phrases`, `engine_phrase_keys` — same for what the current rule engine would emit on slot A's inputs.
+
+Resolution rules (first hit wins):
+
+1. **PHRASES catalog hit** → returns the catalog key (e.g. `snkAvis`, `frachtDiff`, `kontierungQ`). These are the keys an AI greps in source to find the rule branch.
+2. **`PHRASE_LITERALS` table hit** → returns a `lit_*` synthetic id for phrases hard-coded inside processors but not yet promoted to `PHRASES` (e.g. `lit_pauschalfrachtOk`, `lit_terminzustellungOk`, `lit_zoneKorrekt`, `lit_differenzHebebuehnen`, `lit_differenzTreibstofWackler`).
+3. **`PHRASE_TEMPLATES` regex match** → returns a template key for dynamic interpolating phrases (`zwPrefix` for Dachser ZW lines, `tpl_wacklerRechnet` for the Wackler same-tier `Wackler rechnet Frachtrate für <N>kg ab` template).
+4. **No match** → `?:<raw phrase>` so unmapped emissions are visible at a glance and easy to promote to `PHRASES`.
+
+Two more anchors per row:
+
+- `processor` — the exact JS symbol an AI consumer should edit (e.g. `processWackler`).
+- `applicable_threshold` — the active `hasErr()` tolerance for that forwarder, sourced from the user's `TH` config.
+
+Each row also gets a stable **`row_uid`** (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`), so identical rows across multiple Train & Compare runs share the same hash. Useful for joining/deduping/diffing training CSVs across rule-engine iterations.
+
 Output:
 
 - **Click-to-filter chips** (all / wrong / missed / overfired / drift / correct) — the table, counts, and *export buttons* all honor the active filter.
@@ -150,9 +171,11 @@ Output:
 - **Per-row expansion** — chevron reveals the exact input cells the engine read, the granular-label badge, the Jaccard score, the row_uid, the missing/extra/common phrase chips, and the trigger trace.
 - **Send to Tester** (✦ on any row) — switches to that forwarder, opens the Rule Tester, pre-fills every matching field with the row's inputs, auto-evaluates, and scrolls you there. Tighten the rule → re-run Train & Compare.
 - **Exports** (filter-scoped; buttons carry live `· N` counters):
-  - `↓ Diff CSV` — `row_uid` + classic before/after + forwarder + label + `granular_label` + engine_now + engine_matches_a + `phrase_jaccard` + the five phrase columns + trigger trace + one column per rule-visible input cell. Columns appear in canonical per-forwarder order so successive exports diff cleanly.
+  - `↓ Diff CSV` — `row_uid` + classic before/after + forwarder + label + `granular_label` + engine_now + engine_matches_a + `phrase_jaccard` + the five phrase columns + the five phrase-key columns + engine_phrases + engine_phrase_keys + `processor` + `applicable_threshold` + trigger trace + one column per rule-visible input cell. Columns appear in canonical per-forwarder order so successive exports diff cleanly.
   - `↓ Training Set (CSV)` — same precision payload, padding rows dropped, deduped by `row_uid`. Phrase arrays serialise as `' | '`-joined strings.
   - `↓ Training Set (JSONL)` — one JSON record per line; phrase arrays remain native JSON arrays. ML-friendly.
+  - `↓ Rule Spec (JSON)` — self-describing schema sidecar. Lists every PHRASES key (key → German string), every `PHRASE_LITERALS` entry, every `PHRASE_TEMPLATES` regex, per-forwarder thresholds, gate condition, processor + resolver symbol, canonical input order, and an English glossary entry for every input key. Engine version stamped from the changelog. Pair with any Training Set export and an AI consumer has the complete rule contract.
+  - `✦ AI Bundle (ZIP)` — one-click bundle of `training.jsonl` + `rule_spec.json` + `README.md` (with prompt template). The README walks an AI assistant through the rule-update workflow: read the spec, group records by `forwarder` and `missing_phrase_keys`/`extra_phrase_keys`, locate the branch in `process<Forwarder>`, loosen/tighten gates using `inputs.*`, re-run Train & Compare to verify. Recommended export for AI-driven rule updates — drop into any AI assistant and it has everything to propose a patch to `assets/anmerkung.js` without reading the source.
 
 ---
 
