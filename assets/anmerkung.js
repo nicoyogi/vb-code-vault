@@ -979,6 +979,23 @@ function patchSheet(sheetXml,targetCol,rowResults,strings){const tIdx=colToIdx(t
 /* ── MAIN RUNNER ── */
 /* Split a processor result into distinct triggers (they're joined with ' // '). */
 function splitTriggers(s){if(!s)return[];return s.split(/\s*\/\/\s*/).map(x=>x.trim()).filter(Boolean);}
+/* Normalise a single phrase for comparison the way the rule engine itself
+   dedupes. `join()` folds case (`a.toLowerCase().includes(...)`), and stray
+   double-spaces / tabs routinely creep into hand-corrected ground-truth
+   cells. Folding both out means the phrase diff and the row labels reflect a
+   REAL rule disagreement instead of cosmetic formatting noise — historically
+   the single biggest source of false `wrong` rows in the exported training
+   data fed to an AI. */
+function normPhrase(p){return String(p==null?'':p).toLowerCase().replace(/\s+/g,' ').trim();}
+/* Order-insensitive set equality of two phrase lists under normPhrase.
+   The Anmerkung column is a list of independent rule outputs, so the order
+   they were emitted in does not change correctness. */
+function samePhraseSet(a,b){
+  const A=new Set((a||[]).map(normPhrase)),B=new Set((b||[]).map(normPhrase));
+  if(A.size!==B.size)return false;
+  for(const x of A)if(!B.has(x))return false;
+  return true;
+}
 /* Build a compact "why" string for the reason column. Captures raw values of the cells
    the processor actually reads, per-forwarder. Purely diagnostic — never affects rules. */
 function buildReason(fw,ws,r,cols){
@@ -1481,11 +1498,19 @@ function detectForwarderForSheet(ws,range){
   }
   return best||selectedFW||'unknown';
 }
+/* Top-level label for a row. The Anmerkung column is an ORDER-INDEPENDENT,
+   case-insensitively-deduped list of '//'-joined phrases (see join /
+   normPhrase), so two cells holding the same phrase set that differ only by
+   order, case, or whitespace are NOT a rule disagreement. Comparing phrase
+   SETS instead of raw strings keeps those cosmetic-only rows out of the
+   `wrong` / `missed` / `overfired` buckets — so the diff tiles and, crucially,
+   the exported training set surface genuine rule errors only. */
 function classifyDiff(vA,vB){
-  const a=(vA||'').trim(),b=(vB||'').trim();
-  if(a===b)return 'correct';
-  if(!a&&b)return 'missed';
-  if(a&&!b)return 'overfired';
+  const A=splitTriggers(vA||''), B=splitTriggers(vB||'');
+  if(samePhraseSet(A,B))return 'correct';
+  const aEmpty=A.length===0, bEmpty=B.length===0;
+  if(aEmpty&&!bEmpty)return 'missed';
+  if(!aEmpty&&bEmpty)return 'overfired';
   return 'wrong';
 }
 
@@ -1507,16 +1532,26 @@ function classifyDiff(vA,vB){
        → phrase_jaccard  = 0.5
        → granular_label  = "phrase_subset"   (A ⊂ B  → MISSED a phrase)
 
-   Phrase comparison is case-insensitive but the output
-   preserves the original casing from whichever side it came.
+   Phrase comparison is case- and whitespace-insensitive (matching the
+   engine's own dedup) but the output preserves the original casing from
+   whichever side it came.
 ────────────────────────────────────────────────────────── */
 function computePhraseDiff(beforeRaw,afterRaw){
   const A=splitTriggers(beforeRaw||''), B=splitTriggers(afterRaw||'');
-  const norm=p=>p.toLowerCase();
+  const norm=normPhrase;
   const Bset=new Set(B.map(norm)), Aset=new Set(A.map(norm));
-  const common =A.filter(p=>Bset.has(norm(p)));
-  const missing=B.filter(p=>!Aset.has(norm(p)));
-  const extra  =A.filter(p=>!Bset.has(norm(p)));
+  /* Dedupe each bucket on the normalised form so a phrase that appears
+     more than once on one side can't inflate the counts (or push the
+     Jaccard score above 1). Original casing is preserved from whichever
+     side the phrase came from. */
+  const pick=(list,test)=>{
+    const seen=new Set(),out=[];
+    for(const p of list){const n=norm(p);if(test(n)&&!seen.has(n)){seen.add(n);out.push(p);}}
+    return out;
+  };
+  const common =pick(A,n=>Bset.has(n));
+  const missing=pick(B,n=>!Aset.has(n));
+  const extra  =pick(A,n=>!Bset.has(n));
   const union=new Set([...Aset,...Bset]);
   const jaccard=union.size===0?1:(common.length/union.size);
   return{
@@ -1533,6 +1568,7 @@ function computePhraseDiff(beforeRaw,afterRaw){
    - exact_match   : strings identical (incl. both empty → empty_match)
    - case_only     : differ only by case
    - whitespace    : differ only by whitespace/separator formatting
+   - reordered     : same phrase set, different order (a match, not an error)
    - phrase_subset : every A-phrase appears in B, B has more (engine UNDER-fired)
    - phrase_superset: every B-phrase appears in A, A has more (engine OVER-fired)
    - phrase_overlap: both sides have unique phrases AND share at least one
@@ -1547,6 +1583,10 @@ function granularLabel(beforeRaw,afterRaw,pd){
   if(a.toLowerCase()===b.toLowerCase())return 'case_only';
   if(a.replace(/\s+/g,'')===b.replace(/\s+/g,''))return 'whitespace';
   const m=pd.missing_phrases.length, x=pd.extra_phrases.length, c=pd.common_phrases.length;
+  /* No missing AND no extra phrases ⇒ identical phrase sets that the flat
+     string checks above didn't catch — i.e. emitted in a different order
+     (or with per-phrase case/whitespace noise). This is a match. */
+  if(m===0&&x===0)return 'reordered';
   if(c===0)return 'phrase_disjoint';
   if(m>0&&x===0)return 'phrase_subset';
   if(m===0&&x>0)return 'phrase_superset';
@@ -2550,17 +2590,18 @@ function buildRuleSpec(){
     phrase_templates:phraseTemplates,
     thresholds:{...TH},
     label_taxonomy:{
-      wrong:'A and B both non-empty but disagree.',
+      wrong:'A and B both non-empty and their phrase sets genuinely differ (content, not just order/case/whitespace).',
       missed:'A empty, B filled — engine should have fired.',
       overfired:'A filled, B empty — engine should NOT have fired.',
       drift:'Current engine disagrees with slot A — rules already changed since A was generated.',
-      correct:'A and B agree — positive example.',
+      correct:'A and B carry the same phrase set, ignoring order, case, and whitespace — positive example. Phrases are compared per-phrase (the column is a "//"-joined list), so reordered/recased/respaced rows count as correct, not as rule errors.',
     },
     granular_label_taxonomy:{
       exact_match:'Strings identical (non-empty).',
       empty_match:'Both sides empty.',
       case_only:'Differ only by case.',
       whitespace:'Differ only by whitespace/separator formatting.',
+      reordered:'Same phrase set, emitted in a different order (or with per-phrase case/whitespace differences). Counts as a match (top-level label "correct"), not a rule error.',
       phrase_subset:'Every A-phrase appears in B, B has more (engine UNDER-fired).',
       phrase_superset:'Every B-phrase appears in A, A has more (engine OVER-fired).',
       phrase_overlap:'Both sides have unique phrases AND share at least one.',
