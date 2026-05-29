@@ -5,15 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#02020a">
 <title>Anmerkung Processor · The Grimoire</title>
+<meta name="description" content="Transmute forwarder invoices (Dachser, K+N, DHL Express, Wackler) with dynamic Anmerkung rules — entirely in your browser. No upload, no server.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Grimoire">
+<meta property="og:title" content="Anmerkung Processor · The Alchemist">
+<meta property="og:description" content="Transmute forwarder invoices with dynamic Anmerkung rules, entirely in your browser.">
+<meta property="og:url" content="https://codingkuh.my.id/anmerkung.html">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Anmerkung Processor · The Alchemist">
+<meta name="twitter:description" content="Transmute forwarder invoices with dynamic Anmerkung rules, entirely in your browser.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%2302020a'/><text x='256' y='346' font-family='Georgia,serif' font-size='300' font-weight='900' text-anchor='middle' fill='%2334d399'>%E2%9C%A6</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="assets/grimoire-core.css">
 <link rel="stylesheet" href="assets/anmerkung.css">
-<script src="assets/grimoire-core.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+<script src="assets/grimoire-core.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -43,13 +53,13 @@
   <span class="nav-badge">The Alchemist</span>
 </header>
 
-<div class="container" id="main">
+<main class="container" id="main">
   <div class="page-eyebrow">// Tome III · The Alchemist</div>
-  <div class="page-title">Anmerkung <span class="grad">Processor</span></div>
+  <h1 class="page-title">Anmerkung <span class="grad">Processor</span></h1>
   <div class="page-sub">Upload · select forwarder · transmute · download</div>
   <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᚦ ✦</div><div class="page-orn-line"></div></div>
 
-  <div class="section-label" id="fwLabel">I — Select Forwarder</div>
+  <h2 class="section-label" id="fwLabel">I — Select Forwarder</h2>
   <div class="fw-grid" role="radiogroup" aria-labelledby="fwLabel" id="fwGroup">
     <button class="fw-btn" data-fw="dachser" role="radio" aria-checked="false" tabindex="0" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">Dachser</div>
@@ -69,17 +79,19 @@
     </button>
   </div>
 
-  <div class="section-label">II — Upload Scroll</div>
-  <div class="upload-area" id="dropArea"
+  <h2 class="section-label">II — Upload Scroll</h2>
+  <div class="upload-area" id="dropArea" role="button" tabindex="0"
+    aria-label="Upload an .xlsx file: activate to browse, or drag and drop"
     onclick="document.getElementById('fileInput').click()"
+    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('fileInput').click();}"
     ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
-    <div class="upload-icon">⬆</div>
+    <div class="upload-icon" aria-hidden="true">⬆</div>
     <div class="upload-text"><strong>Click to browse</strong> or drag &amp; drop your .xlsx file</div>
     <div class="file-name" id="fileName"></div>
   </div>
   <input type="file" id="fileInput" accept=".xlsx" style="display:none" onchange="onFileSelect(event)">
 
-  <div class="section-label">III — Transmute &amp; Download</div>
+  <h2 class="section-label">III — Transmute &amp; Download</h2>
 
   <div class="opt-wrap">
     <label class="opt-row" for="optReason">
@@ -166,10 +178,12 @@
     <div class="bonus-panel" id="bulkPanel" role="region" aria-label="Bulk process multiple files">
       <div class="tester-intro">Upload multiple .xlsx files and process them all at once with the selected forwarder. Each document gets its own download button, or download all as a ZIP.</div>
 
-      <div class="bulk-upload-area" id="bulkDropArea"
+      <div class="bulk-upload-area" id="bulkDropArea" role="button" tabindex="0"
+        aria-label="Upload multiple .xlsx files: activate to browse, or drag and drop"
         onclick="document.getElementById('bulkFileInput').click()"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('bulkFileInput').click();}"
         ondragover="onBulkDrag(event,true)" ondragleave="onBulkDrag(event,false)" ondrop="onBulkDrop(event)">
-        <div class="upload-icon">⬆</div>
+        <div class="upload-icon" aria-hidden="true">⬆</div>
         <div class="upload-text"><strong>Click to browse</strong> or drag &amp; drop multiple .xlsx files</div>
         <div class="bulk-file-count" id="bulkFileCount"></div>
       </div>
@@ -221,14 +235,18 @@
       <div class="diff-intro">Drop two processed workbooks and Kiro will <strong>train the engine</strong> against them. Put your tool's output in <strong>A</strong>, the hand-corrected ground truth in <strong>B</strong>. Every disagreement becomes a labeled training case — <span class="lbl-pill lbl-wrong">wrong</span> <span class="lbl-pill lbl-missed">missed</span> <span class="lbl-pill lbl-overfired">overfired</span> — with the input cells the rules read and the trigger trace. Ship it as CSV/JSONL, or click <strong>✦</strong> on any row to open it in the Rule Tester and iterate on the rule against that exact case. <strong>For AI-driven rule updates:</strong> grab the <strong>✦ AI Bundle (ZIP)</strong> — it packages the training set with a self-describing rule spec and a prompt template so any AI assistant can propose patches to <code>assets/anmerkung.js</code> without reading the source.</div>
 
       <div class="diff-slots">
-        <div class="diff-slot" id="diffSlotA" data-slot="a"
+        <div class="diff-slot" id="diffSlotA" data-slot="a" role="button" tabindex="0"
+          aria-label="Slot A, predicted tool output: activate to browse, or drop an .xlsx"
           onclick="document.getElementById('diffInputA').click()"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('diffInputA').click();}"
           ondragover="onDiffDrag(event,'a',true)" ondragleave="onDiffDrag(event,'a',false)" ondrop="onDiffDrop(event,'a')">
           <div class="diff-slot-label">A — Predicted (tool output)</div>
           <div class="diff-slot-name" id="diffNameA">Click or drop an .xlsx</div>
         </div>
-        <div class="diff-slot" id="diffSlotB" data-slot="b"
+        <div class="diff-slot" id="diffSlotB" data-slot="b" role="button" tabindex="0"
+          aria-label="Slot B, expected ground truth: activate to browse, or drop an .xlsx"
           onclick="document.getElementById('diffInputB').click()"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('diffInputB').click();}"
           ondragover="onDiffDrag(event,'b',true)" ondragleave="onDiffDrag(event,'b',false)" ondrop="onDiffDrop(event,'b')">
           <div class="diff-slot-label">B — Expected (ground truth)</div>
           <div class="diff-slot-name" id="diffNameB">Click or drop an .xlsx</div>
@@ -320,11 +338,11 @@
     </div>
   </div>
 
-  <div class="footer">
+  <footer class="footer">
     codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
-    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a>
-  </div>
-</div>
+    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html" aria-current="page">The Alchemist</a>
+  </footer>
+</main>
 
 <!-- Changelog Modal (#24) -->
 <div id="cl-overlay" onclick="handleClBgClick(event)" role="dialog" aria-modal="true" aria-labelledby="clTitle">
@@ -338,10 +356,10 @@
 
 <!-- Subscription Modal -->
 <div id="sub-overlay" onclick="handleSubBgClick(event)">
-  <div class="sub-box" onclick="event.stopPropagation()">
+  <div class="sub-box" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="subTitle">
     <div id="sub-default">
-      <div class="sub-sparkle">💎</div>
-      <div class="sub-title">You must buy a<br><span class="grad">Subscription</span></div>
+      <div class="sub-sparkle" aria-hidden="true">💎</div>
+      <div class="sub-title" id="subTitle">You must buy a<br><span class="grad">Subscription</span></div>
       <div class="sub-tagline">// unlock the full grimoire</div>
       <div class="sub-perks">
         <div class="sub-perk"><span class="sub-perk-icon">✦</span> Run the transmutation ritual</div>
@@ -356,7 +374,7 @@
       <button class="sub-cancel-btn" onclick="closeSubModal()">Maybe later</button>
     </div>
     <div class="sub-thankyou" id="sub-thankyou">
-      <div class="sub-thankyou-icon">🎉</div>
+      <div class="sub-thankyou-icon" aria-hidden="true">🎉</div>
       <div class="sub-thankyou-title">Thank you for your purchase!</div>
       <div class="sub-thankyou-msg">
         Welcome to the inner sanctum, Archmage.<br>
@@ -368,6 +386,6 @@
   </div>
 </div>
 
-<script src="assets/anmerkung.js"></script>
+<script src="assets/anmerkung.js" defer></script>
 </body>
 </html>
