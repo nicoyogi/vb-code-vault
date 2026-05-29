@@ -1,6 +1,16 @@
 {
-  "version": "1.10.0",
+  "version": "1.11.0",
   "entries": [
+    {
+      "ver": "1.11.0",
+      "date": "2026-05-29",
+      "items": [
+        "Diff Mode — row labels are now phrase-SET aware, which removes the biggest source of false `wrong` rows from the AI training exports. The Anmerkung column is an order-independent, case-insensitively-deduped list of `' // '`-joined phrases, so a tool-output cell (A) and a hand-corrected cell (B) that hold the same phrases but differ only by order, casing, or whitespace are no longer scored as a rule disagreement. `classifyDiff` compares the normalized phrase sets: identical sets → `correct`; empty-A/filled-B → `missed`; filled-A/empty-B → `overfired`; genuinely-different content → `wrong`. Net effect on `↓ Training Set (CSV/JSONL)` and the `✦ AI Bundle (ZIP)`: cosmetic-only rows drop out by default, so an AI consumer is no longer told to 'fix' rules that already emit the correct phrase set.",
+        "Diff Mode — phrase comparison (`computePhraseDiff`) now normalizes whitespace as well as case (`normPhrase` = lowercase + collapse internal whitespace + trim), matching the engine's own `join()` dedup. A phrase that differs only by a stray double-space or tab in the ground-truth cell now lands in `common_phrases` instead of being split across `missing_phrases` + `extra_phrases`, so `phrase_jaccard`, the chips, and the phrase-key arrays reflect real rule signal.",
+        "Diff Mode — `common_phrases` / `missing_phrases` / `extra_phrases` are de-duplicated on the normalized form, so a phrase repeated on one side can no longer inflate the bucket counts or push `phrase_jaccard` above 1.0.",
+        "Diff Mode — new `granular_label` value `reordered`: identical phrase sets emitted in a different order (or with per-phrase case/whitespace noise the flat-string checks miss). It renders as a green match-style badge and is documented in the Rule Spec's `granular_label_taxonomy`. The `label_taxonomy.correct` / `label_taxonomy.wrong` descriptions in `rule_spec.json` were reworded to spell out the order/case/whitespace-insensitive matching so the AI Bundle stays self-describing."
+      ]
+    },
     {
       "ver": "1.10.0",
       "date": "2026-05-27",

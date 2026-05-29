@@ -667,7 +667,8 @@ body.theme-light .df-phr-jac, body.theme-light .df-uid { background: rgba(80,55,
   border: 1px solid var(--border); color: var(--text3); background: rgba(255,255,255,0.02);
 }
 .df-gran-badge.df-gran-exact_match,
-.df-gran-badge.df-gran-empty_match    { color: var(--accent);     border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.08); }
+.df-gran-badge.df-gran-empty_match,
+.df-gran-badge.df-gran-reordered      { color: var(--accent);     border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.08); }
 .df-gran-badge.df-gran-phrase_subset,
 .df-gran-badge.df-gran-missed_full    { color: #fbbf24;           border-color: rgba(251,191,36,0.4);  background: rgba(251,191,36,0.08); }
 .df-gran-badge.df-gran-phrase_superset,

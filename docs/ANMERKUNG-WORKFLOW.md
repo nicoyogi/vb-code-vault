@@ -121,25 +121,27 @@ Drop two processed workbooks:
 - **A — Predicted** (your tool's output)
 - **B — Expected** (hand-corrected ground truth)
 
-Click **✦ Train & Compare**. The engine walks both files in one pass and labels every row:
+Click **✦ Train & Compare**. The engine walks both files in one pass and labels every row. The Anmerkung column is an **order-independent, case-insensitively-deduped** list of `' // '`-joined phrases, so labels compare the *phrase sets* on each side — two cells holding the same phrases but differing only by order, case, or whitespace are scored `correct`, not as a rule error:
 
 | Label | Meaning |
 |---|---|
-| `wrong` | A and B both filled, but disagree |
+| `wrong` | A and B both filled, and their phrase sets genuinely differ in content |
 | `missed` | A empty, B filled — rule should have fired |
 | `overfired` | A filled, B empty — rule fired when it shouldn't |
 | `drift` | Current engine would disagree with slot A → rules changed since A was generated |
-| `correct` | A and B agree (positive example; off by default, opt-in) |
+| `correct` | A and B carry the same phrase set, ignoring order/case/whitespace (positive example; off by default, opt-in) |
 
 The Anmerkung column is a list of `' // '`-joined phrases, so every row also carries a **phrase-level diff** (`computePhraseDiff`):
 
 - `predicted_phrases`, `expected_phrases` — phrases on each side
-- `common_phrases` — phrases present in both (case-insensitive)
+- `common_phrases` — phrases present in both (case- and whitespace-insensitive)
 - `missing_phrases` — in B but not A → what the engine should have output
 - `extra_phrases` — in A but not B → what the engine wrongly output
 - `phrase_jaccard` — `|common| / |union|`, in `[0, 1]`
 
-…and a `granular_label` that refines `wrong` along set-relation lines: `exact_match`, `empty_match`, `case_only`, `whitespace`, `phrase_subset` (under-fired), `phrase_superset` (over-fired), `phrase_overlap` (both sides have unique phrases AND share at least one), `phrase_disjoint`, `missed_full`, `overfired_full`. This is the precision payload — a row labeled `wrong` can still tell you exactly which phrase the engine missed and which it over-fired.
+Comparison normalizes case **and** whitespace (`normPhrase` — lowercase, collapse internal whitespace, trim) to match the engine's own `join()` dedup, and de-duplicates each bucket so a repeated phrase can't inflate the counts or push `phrase_jaccard` above 1.
+
+…and a `granular_label` that refines the row along set-relation lines: `exact_match`, `empty_match`, `case_only`, `whitespace`, `reordered` (same phrase set, different order — a match), `phrase_subset` (under-fired), `phrase_superset` (over-fired), `phrase_overlap` (both sides have unique phrases AND share at least one), `phrase_disjoint`, `missed_full`, `overfired_full`. This is the precision payload — a row labeled `wrong` can still tell you exactly which phrase the engine missed and which it over-fired.
 
 Each row also gets a stable **`row_uid`** (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`), so identical rows across multiple Train & Compare runs share the same hash. Useful for joining/deduping/diffing training CSVs across rule-engine iterations.
 
