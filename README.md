@@ -102,7 +102,7 @@ XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.18.5) and [J
 
 - **HTML / CSS / vanilla JavaScript** — no build tooling; every page can be opened directly in a browser.
 - **Service Worker + PWA** — offline caching for the whole Grimoire, installable on Chrome / Edge.
-- **Firebase Firestore** (`firebase-app-compat` + `firebase-firestore-compat` 10.7.2) — real-time sync for `holiday-tracker.html`.
+- **Firebase Firestore** (`firebase-app-compat` + `firebase-firestore-compat` 10.12.2) — real-time sync for `holiday-tracker.html`. CDN scripts are pinned with Subresource Integrity (SRI) hashes.
 - **SheetJS** (`xlsx` 0.18.5) and **JSZip** — client-side XLSX parsing and writing in `anmerkung.html`.
 - **Fonts (Google Fonts):** Cinzel, Syne, DM Sans, DM Mono, IBM Plex Sans/Mono, Space Grotesk.
 - **Hosting:** GitHub Pages with a `CNAME` pointing to `codingkuh.my.id`.
@@ -153,7 +153,7 @@ Pages that need Firestore (currently only the Holiday Tracker) import config fro
 
 1. Create a Firebase project and enable Firestore.
 2. Replace the config object in `assets/firebase-config.js` with your project's keys.
-3. Mind your Firestore [security rules](https://firebase.google.com/docs/firestore/security/get-started) — the default open rules are not suitable for production.
+3. Deploy the Firestore security rules in [`firestore.rules`](firestore.rules). They allow-list only the collections the apps use (everything else is denied by default), which is safer than the default open rules. **They do not add authentication** — the collections are still effectively public, so also enable Firebase Authentication and/or [App Check](https://firebase.google.com/docs/app-check) and API key referrer restrictions if the data is sensitive. See Firestore [security rules](https://firebase.google.com/docs/firestore/security/get-started).
 
 Firebase API keys in client code are identifiers, not secrets; access control must be enforced by security rules.
 
@@ -188,12 +188,16 @@ vb-code-vault/
 ├── scripts/
 │   ├── notify-tomorrow.mjs          # Holiday Tracker → Teams Adaptive Card
 │   ├── notify-tasks-due.mjs         # The Ledger → Teams Adaptive Card
-│   └── package.json                 # Node deps for the notifier scripts
+│   ├── package.json                 # Node deps for the notifier scripts
+│   └── package-lock.json            # pinned dependency tree (used by `npm ci` in CI)
 ├── .github/workflows/
 │   ├── holiday-notify.yml           # daily cron + manual dispatch (holidays)
 │   └── tasks-notify.yml             # daily cron + manual dispatch (tasks)
 ├── data/                            # reference training corpora (Dachser, K+N samples)
+├── firestore.rules                  # Firestore security rules (collection allow-list)
+├── .gitignore
 ├── CNAME                            # custom domain config
+├── LICENSE                          # all rights reserved
 └── README.md
 ```
 
@@ -222,4 +226,10 @@ Third-party libraries and services that make the Grimoire possible:
 
 ## License
 
-No license is currently declared in this repository. If you intend to reuse, fork, or redistribute, please open an issue to clarify licensing with the maintainer first.
+Copyright (c) 2026 nicoyogi. **All rights reserved.** See [`LICENSE`](LICENSE).
+
+This repository is publicly viewable for reference only; no rights to reuse,
+fork, modify, or redistribute are granted by default, and it contains
+project-/client-specific material (e.g. Siemens references, forwarder data)
+that is not intended for reuse. If you'd like to reuse any part of it, please
+open an issue to coordinate with the maintainer.
