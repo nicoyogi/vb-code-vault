@@ -1,0 +1,9 @@
+{
+  "name": "vb-code-vault",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static Grimoire tools. Unit tests for the Anmerkung rule engine run via the built-in Node test runner (no build step).",
+  "scripts": {
+    "test": "node --test"
+  }
+}
