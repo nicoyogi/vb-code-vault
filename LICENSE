@@ -1,0 +1,21 @@
+Copyright (c) 2026 nicoyogi (The Grimoire maintainer). All rights reserved.
+
+This repository and its contents (the "Software") are made publicly viewable
+for reference and transparency only. No license — express or implied — is
+granted to copy, modify, merge, publish, distribute, sublicense, or sell
+copies of the Software, or to create derivative works from it, except with the
+prior written permission of the copyright holder.
+
+The Software includes project- and client-specific material (for example,
+Siemens-related references and forwarder data) that is not intended for reuse.
+
+To request permission to use, fork, or redistribute any part of the Software,
+please open an issue in this repository to coordinate with the maintainer.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
+OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
