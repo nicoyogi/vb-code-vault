@@ -84,7 +84,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 - **Always-fresh deploys** — same-origin assets are served network-first, so content/rule edits reach users on their next online load with no cache-bust step required. The cache acts purely as an offline fallback.
 - **Data-driven changelog** — [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) drives both the version badge and the in-app "What's new" modal, so prepending an entry there is the canonical way to publish release notes.
 
-XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.18.5) and [JSZip](https://stuk.github.io/jszip/); the XLSX is patched in-place — only the `Anmerkung` column (and optionally `Anmerkung_Reason`) is rewritten, leaving styles, merged cells, formulas, and drawings untouched.
+XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.20.3, loaded from the official `cdn.sheetjs.com` with an SRI hash) and [JSZip](https://stuk.github.io/jszip/); the XLSX is patched in-place — only the `Anmerkung` column (and optionally `Anmerkung_Reason`) is rewritten, leaving styles, merged cells, formulas, and drawings untouched.
 
 ## Shared assets
 
@@ -103,7 +103,7 @@ XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.18.5) and [J
 - **HTML / CSS / vanilla JavaScript** — no build tooling; every page can be opened directly in a browser.
 - **Service Worker + PWA** — offline caching for the whole Grimoire, installable on Chrome / Edge.
 - **Firebase Firestore** (`firebase-app-compat` + `firebase-firestore-compat` 10.12.2) — real-time sync for `holiday-tracker.html`. CDN scripts are pinned with Subresource Integrity (SRI) hashes.
-- **SheetJS** (`xlsx` 0.18.5) and **JSZip** — client-side XLSX parsing and writing in `anmerkung.html`.
+- **SheetJS** (`xlsx` 0.20.3, from `cdn.sheetjs.com`) and **JSZip** — client-side XLSX parsing and writing in `anmerkung.html`.
 - **Fonts (Google Fonts):** Cinzel, Syne, DM Sans, DM Mono, IBM Plex Sans/Mono, Space Grotesk.
 - **Hosting:** GitHub Pages with a `CNAME` pointing to `codingkuh.my.id`.
 

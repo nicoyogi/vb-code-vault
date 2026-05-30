@@ -197,7 +197,7 @@ A small offline shell — not a sync engine, not a queue, not a router. Optimize
 
 | Dep | Loaded from | Why |
 |---|---|---|
-| `xlsx.full.min.js` (SheetJS) | `cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5` | Read XLSX → in-memory workbook (`workbook.SheetNames`, `workbook.Sheets[name]`) |
+| `xlsx.full.min.js` (SheetJS) | `cdn.sheetjs.com/xlsx-0.20.3` | Read XLSX → in-memory workbook (`workbook.SheetNames`, `workbook.Sheets[name]`) |
 | `jszip.min.js` | `cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1` | Unpack the original XLSX, patch sheet XML, rezip without re-encoding styles |
 | Google Fonts (`Cinzel`, `Syne`, `DM Mono`) | `fonts.googleapis.com` / `fonts.gstatic.com` | Typography |
 
