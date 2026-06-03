@@ -6,6 +6,8 @@ This document describes how **`anmerkung.html`** (The Alchemist) works, at two l
 - **Part C — Engine workflow** — how the rule engine actually runs, per forwarder, under the hood.
 
 > Audience: Part A is for anyone audit-billing freight invoices. Part C is for anyone tweaking rules or debugging why a row got (or didn't get) a specific Anmerkung.
+>
+> Looking for the **system architecture** (layers, modules, persistence, PWA shell, extensibility recipes)? See [`ANMERKUNG-ARCHITECTURE.md`](ANMERKUNG-ARCHITECTURE.md).
 
 ---
 
@@ -119,26 +121,63 @@ Drop two processed workbooks:
 - **A — Predicted** (your tool's output)
 - **B — Expected** (hand-corrected ground truth)
 
-Click **✦ Train & Compare**. The engine walks both files in one pass and labels every row:
+Click **✦ Train & Compare**. The engine walks both files in one pass and labels every row. The Anmerkung column is an **order-independent, case-insensitively-deduped** list of `' // '`-joined phrases, so labels compare the *phrase sets* on each side — two cells holding the same phrases but differing only by order, case, or whitespace are scored `correct`, not as a rule error:
 
 | Label | Meaning |
 |---|---|
-| `wrong` | A and B both filled, but disagree |
+| `wrong` | A and B both filled, and their phrase sets genuinely differ in content |
 | `missed` | A empty, B filled — rule should have fired |
 | `overfired` | A filled, B empty — rule fired when it shouldn't |
 | `drift` | Current engine would disagree with slot A → rules changed since A was generated |
-| `correct` | A and B agree (positive example; off by default, opt-in) |
+| `correct` | A and B carry the same phrase set, ignoring order/case/whitespace (positive example; off by default, opt-in) |
+
+The Anmerkung column is a list of `' // '`-joined phrases, so every row also carries a **phrase-level diff** (`computePhraseDiff`):
+
+- `predicted_phrases`, `expected_phrases` — phrases on each side
+- `common_phrases` — phrases present in both (case- and whitespace-insensitive)
+- `missing_phrases` — in B but not A → what the engine should have output
+- `extra_phrases` — in A but not B → what the engine wrongly output
+- `phrase_jaccard` — `|common| / |union|`, in `[0, 1]`
+
+Comparison normalizes case **and** whitespace (`normPhrase` — lowercase, collapse internal whitespace, trim) to match the engine's own `join()` dedup, and de-duplicates each bucket so a repeated phrase can't inflate the counts or push `phrase_jaccard` above 1.
+
+…and a `granular_label` that refines the row along set-relation lines: `exact_match`, `empty_match`, `case_only`, `whitespace`, `reordered` (same phrase set, different order — a match), `phrase_subset` (under-fired), `phrase_superset` (over-fired), `phrase_overlap` (both sides have unique phrases AND share at least one), `phrase_disjoint`, `missed_full`, `overfired_full`. This is the precision payload — a row labeled `wrong` can still tell you exactly which phrase the engine missed and which it over-fired.
+
+Each row also gets a stable **`row_uid`** (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`), so identical rows across multiple Train & Compare runs share the same hash. Useful for joining/deduping/diffing training CSVs across rule-engine iterations.
+
+#### AI-friendly enrichment (#21)
+
+Each row now also carries a phrase-key reverse lookup so AI consumers can map a row to source-code branches without re-reading `assets/anmerkung.js`:
+
+- `predicted_phrase_keys`, `expected_phrase_keys`, `common_phrase_keys`, `missing_phrase_keys`, `extra_phrase_keys` — parallel arrays of stable identifiers for each phrase string.
+- `engine_phrases`, `engine_phrase_keys` — same for what the current rule engine would emit on slot A's inputs.
+
+Resolution rules (first hit wins):
+
+1. **PHRASES catalog hit** → returns the catalog key (e.g. `snkAvis`, `frachtDiff`, `kontierungQ`). These are the keys an AI greps in source to find the rule branch.
+2. **`PHRASE_LITERALS` table hit** → returns a `lit_*` synthetic id for phrases hard-coded inside processors but not yet promoted to `PHRASES` (e.g. `lit_pauschalfrachtOk`, `lit_terminzustellungOk`, `lit_zoneKorrekt`, `lit_differenzHebebuehnen`, `lit_differenzTreibstofWackler`).
+3. **`PHRASE_TEMPLATES` regex match** → returns a template key for dynamic interpolating phrases (`zwPrefix` for Dachser ZW lines, `tpl_wacklerRechnet` for the Wackler same-tier `Wackler rechnet Frachtrate für <N>kg ab` template).
+4. **No match** → `?:<raw phrase>` so unmapped emissions are visible at a glance and easy to promote to `PHRASES`.
+
+Two more anchors per row:
+
+- `processor` — the exact JS symbol an AI consumer should edit (e.g. `processWackler`).
+- `applicable_threshold` — the active `hasErr()` tolerance for that forwarder, sourced from the user's `TH` config.
+
+Each row also gets a stable **`row_uid`** (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`), so identical rows across multiple Train & Compare runs share the same hash. Useful for joining/deduping/diffing training CSVs across rule-engine iterations.
 
 Output:
 
 - **Click-to-filter chips** (all / wrong / missed / overfired / drift / correct) — the table, counts, and *export buttons* all honor the active filter.
 - **Filter bar** — by forwarder, by sheet, and free-text search (scans before/after/reason/engine-now).
-- **Per-row expansion** — chevron reveals the exact input cells the engine read + the trigger trace in a k/v grid.
+- **Per-row expansion** — chevron reveals the exact input cells the engine read, the granular-label badge, the Jaccard score, the row_uid, the missing/extra/common phrase chips, and the trigger trace.
 - **Send to Tester** (✦ on any row) — switches to that forwarder, opens the Rule Tester, pre-fills every matching field with the row's inputs, auto-evaluates, and scrolls you there. Tighten the rule → re-run Train & Compare.
 - **Exports** (filter-scoped; buttons carry live `· N` counters):
-  - `↓ Diff CSV` — classic before/after + forwarder + label + engine_now + engine_matches_a + trigger trace.
-  - `↓ Training Set (CSV)` — one row per case with inputs + trace, feed straight into ML / spreadsheet analysis.
-  - `↓ Training Set (JSONL)` — one JSON record per line, ML-friendly.
+  - `↓ Diff CSV` — `row_uid` + classic before/after + forwarder + label + `granular_label` + engine_now + engine_matches_a + `phrase_jaccard` + the five phrase columns + the five phrase-key columns + engine_phrases + engine_phrase_keys + `processor` + `applicable_threshold` + trigger trace + one column per rule-visible input cell. Columns appear in canonical per-forwarder order so successive exports diff cleanly.
+  - `↓ Training Set (CSV)` — same precision payload, padding rows dropped, deduped by `row_uid`. Phrase arrays serialise as `' | '`-joined strings.
+  - `↓ Training Set (JSONL)` — one JSON record per line; phrase arrays remain native JSON arrays. ML-friendly.
+  - `↓ Rule Spec (JSON)` — self-describing schema sidecar. Lists every PHRASES key (key → German string), every `PHRASE_LITERALS` entry, every `PHRASE_TEMPLATES` regex, per-forwarder thresholds, gate condition, processor + resolver symbol, canonical input order, and an English glossary entry for every input key. Engine version stamped from the changelog. Pair with any Training Set export and an AI consumer has the complete rule contract.
+  - `✦ AI Bundle (ZIP)` — one-click bundle of `training.jsonl` + `rule_spec.json` + `README.md` (with prompt template). The README walks an AI assistant through the rule-update workflow: read the spec, group records by `forwarder` and `missing_phrase_keys`/`extra_phrase_keys`, locate the branch in `process<Forwarder>`, loosen/tighten gates using `inputs.*`, re-run Train & Compare to verify. Recommended export for AI-driven rule updates — drop into any AI assistant and it has everything to propose a patch to `assets/anmerkung.js` without reading the source.
 
 ---
 
@@ -276,7 +315,7 @@ flowchart TD
   E -- yes --> E1["join Gebuehr fuer vergeblichen Abholversuch"]
   E --> F{"ZZ Diff errs?"}
   F -- yes --> F1["join 2. Zustellung"]
-  F --> G["daEvalSNK: switch on SNK_DL"]
+  F --> G["daEvalSNK: switch on effectiveDl<br/>(SNK_DL, or surcharge code derived from SNK_DIFF<br/>when SNK_DL is non-integer)"]
 
   G --> H{"SAM Diff errs?"}
   H -- yes --> H1["join Samstagzustellung"]
@@ -301,7 +340,11 @@ flowchart TD
   Q3 -- yes --> QC["join Sonderfahrt"]
   Q3 -- no --> Q4{"Anz.Sdg > 1?"}
   Q4 -- yes --> QD["join haette gebuendelt werden koennen"]
-  Q4 -- no --> QE["join Differenz aufgrund von abweichendem Gewicht"]
+  Q4 -- no --> Q5{"FR &lt; 0?"}
+  Q5 -- yes --> QF["join Differenz Frachtzu/ abschlag<br/>(negative FR on a single shipment is a freight credit, not a weight miscount)"]
+  Q5 -- no --> Q6{"Volumen kg vs Volumen kg DL<br/>cross a DACHSER_BP tier?"}
+  Q6 -- yes --> QG["join Differenz aufgrund abweichender Gewichte<br/>(plural — real cross-tier weight miscalc)"]
+  Q6 -- no --> QE["join Differenz aufgrund von abweichendem Gewicht<br/>(singular — same tier or weights unknown, within-tier rounding)"]
 
   R --> S2{"SNK_DL==14 AND SNK_Diff errs?"}
   S2 -- yes --> S2a["join Abholterminvereinbarung"]
@@ -311,9 +354,11 @@ flowchart TD
   T --> Z(["return res"])
 ```
 
-**SNK sub-cascade (`daEvalSNK`)** — pure switch on `SNK_DL` literal:
+**SNK sub-cascade (`daEvalSNK`)** — switch on `effectiveDl`, where `effectiveDl = derivedCode || SNK_DL`:
 
-| `SNK_DL` | Output |
+> **Non-integer SNK_DL** carries a tariff base with cents (e.g. `14.72 = 5.71 tarif + 9 surcharge`, `7.57 = 2.56 tarif + 5 surcharge`). The literal SNK_DL is no longer a clean surcharge code, so `daDetectSurchargeFromDiff(snkDl, snkDiff)` re-derives the code from `SNK_DIFF`: when SNK_DL is non-integer **and** `Math.round(SNK_DIFF) ∈ {5, 9, 11, 14}` **and** the rounding error is `≤ 0.05`, it returns the rounded value. The switch then dispatches on that derived code instead of the raw DL, so the row lands in the correct branch (e.g., `9 → Telefonische Zustellterminvereinbarung`, `5 → Automatische Zustellterminvereinbarung`) instead of falling through to the generic Laderaumkostenentwicklung bucket. The window is deliberately narrow so genuine Laderaum rows are untouched.
+
+| `effectiveDl` | Output |
 |---|---|
 | 190 or 95 | `AUSFALLFRACHT` |
 | 130 | `Standgeld` |

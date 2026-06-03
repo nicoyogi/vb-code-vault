@@ -1,0 +1,57 @@
+name: Holiday Tracker · Notify Tomorrow
+
+on:
+  schedule:
+    # 13:00 Asia/Bangkok (UTC+7) == 06:00 UTC, every day.
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print payload only, do not POST to Teams'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: holiday-notify
+  cancel-in-progress: false
+
+# Opt in to Node.js 24 for JavaScript-based actions ahead of GitHub's June 2026
+# default-switch. Silences the Node 20 deprecation warning on actions/checkout
+# and actions/setup-node, since they still ship a Node 20 runtime today.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: scripts
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: scripts/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Send Teams notification
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          TIMEZONE: Asia/Bangkok
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: node notify-tomorrow.mjs

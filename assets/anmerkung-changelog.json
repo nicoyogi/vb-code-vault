@@ -1,6 +1,129 @@
 {
-  "version": "1.7.0",
+  "version": "1.11.0",
   "entries": [
+    {
+      "ver": "1.11.0",
+      "date": "2026-05-29",
+      "items": [
+        "Diff Mode — row labels are now phrase-SET aware, which removes the biggest source of false `wrong` rows from the AI training exports. The Anmerkung column is an order-independent, case-insensitively-deduped list of `' // '`-joined phrases, so a tool-output cell (A) and a hand-corrected cell (B) that hold the same phrases but differ only by order, casing, or whitespace are no longer scored as a rule disagreement. `classifyDiff` compares the normalized phrase sets: identical sets → `correct`; empty-A/filled-B → `missed`; filled-A/empty-B → `overfired`; genuinely-different content → `wrong`. Net effect on `↓ Training Set (CSV/JSONL)` and the `✦ AI Bundle (ZIP)`: cosmetic-only rows drop out by default, so an AI consumer is no longer told to 'fix' rules that already emit the correct phrase set.",
+        "Diff Mode — phrase comparison (`computePhraseDiff`) now normalizes whitespace as well as case (`normPhrase` = lowercase + collapse internal whitespace + trim), matching the engine's own `join()` dedup. A phrase that differs only by a stray double-space or tab in the ground-truth cell now lands in `common_phrases` instead of being split across `missing_phrases` + `extra_phrases`, so `phrase_jaccard`, the chips, and the phrase-key arrays reflect real rule signal.",
+        "Diff Mode — `common_phrases` / `missing_phrases` / `extra_phrases` are de-duplicated on the normalized form, so a phrase repeated on one side can no longer inflate the bucket counts or push `phrase_jaccard` above 1.0.",
+        "Diff Mode — new `granular_label` value `reordered`: identical phrase sets emitted in a different order (or with per-phrase case/whitespace noise the flat-string checks miss). It renders as a green match-style badge and is documented in the Rule Spec's `granular_label_taxonomy`. The `label_taxonomy.correct` / `label_taxonomy.wrong` descriptions in `rule_spec.json` were reworded to spell out the order/case/whitespace-insensitive matching so the AI Bundle stays self-describing."
+      ]
+    },
+    {
+      "ver": "1.10.0",
+      "date": "2026-05-27",
+      "items": [
+        "Diff Mode — every row now carries a phrase-key reverse lookup. `predicted_phrase_keys`, `expected_phrase_keys`, `common_phrase_keys`, `missing_phrase_keys`, `extra_phrase_keys`, and `engine_phrase_keys` map each emitted phrase string to a stable identifier (a key from the `PHRASES` catalog, a `lit_*` synthetic for hard-coded literals like `lit_pauschalfrachtOk` / `lit_terminzustellungOk` / `lit_zoneKorrekt` / `lit_differenzHebebuehnen` / `lit_differenzTreibstofWackler`, or a `tpl_*` for dynamic templates like `zwPrefix` and `tpl_wacklerRechnet`). Anything unmapped surfaces as `?:<raw phrase>` so promotions to the catalog are visible at a glance. AI consumers can grep these keys directly against `assets/anmerkung.js` to find the rule branch responsible — no fuzzy phrase matching, no source dive.",
+        "Diff Mode — every row also carries `processor` (the exact JS symbol to edit, e.g. `processWackler`) and `applicable_threshold` (the `hasErr()` tolerance for that forwarder, sourced from the active `TH` config). Both flow through Diff CSV, Training Set CSV, and Training Set JSONL exports.",
+        "Diff Mode — new export: `↓ Rule Spec (JSON)`. Self-describing schema for the training data: full PHRASES catalog (key → German string), all `PHRASE_LITERALS` and `PHRASE_TEMPLATES`, per-forwarder thresholds, gate condition, processor + resolver symbol, canonical input order, and an English glossary entry for every input key (e.g. `fr_diff` → \"FR Differenz — freight-charge delta vs tariff (numeric, signed)\"). Engine version is stamped from the changelog. Pair this sidecar with any Training Set export and an AI consumer has the complete rule contract.",
+        "Diff Mode — new export: `✦ AI Bundle (ZIP)` (primary-soft button next to the other diff exports). One click packages the filter-scoped training set (`training.jsonl`) + the rule spec (`rule_spec.json`) + a hand-written `README.md` with a prompt template that walks an AI assistant through the rule-update workflow: read the spec, group records by `forwarder` and `missing_phrase_keys`/`extra_phrase_keys`, locate the branch in `process<Forwarder>`, loosen/tighten gates using `inputs.*`, re-run Train & Compare to verify. Drop the ZIP into any AI assistant — it has everything to propose a patch to `assets/anmerkung.js` without reading the source.",
+        "Diff CSV / Training Set CSV — column layout now leads with `row_uid · sheet · row · forwarder · processor · applicable_threshold` then label/granular/predicted/expected/engine, then the five phrase-string columns, then the five phrase-key columns, then engine_phrases + engine_phrase_keys, then reason, then `in_*` canonical inputs. Successive exports of the same workbook still line up column-for-column for clean version-controlled training corpora.",
+        "Diff Mode — intro copy updated to surface the AI Bundle as the recommended export for AI-driven rule updates. Existing CSV / JSONL / Diff CSV / Send-to-Tester flows are unchanged."
+      ]
+    },
+    {
+      "ver": "1.9.0",
+      "date": "2026-05-27",
+      "items": [
+        "Diff Mode — training-set output now carries a phrase-level diff per row, not just the coarse top-level label. Each row gets `predicted_phrases`, `expected_phrases`, `common_phrases`, `missing_phrases`, `extra_phrases`, and a `phrase_jaccard` score. The Anmerkung column is `' // '`-joined phrases (handled by the existing `splitTriggers`), so a row labeled `wrong` can now tell you exactly which phrase the engine missed and which it over-fired. Comparison is case-insensitive but the output preserves original casing.",
+        "Diff Mode — added `granular_label` that refines `wrong` along set-relation lines: `exact_match` / `empty_match` / `case_only` / `whitespace` / `phrase_subset` (under-fired — every A-phrase appears in B, B has more) / `phrase_superset` (over-fired — every B-phrase appears in A, A has more) / `phrase_overlap` (both sides have unique phrases AND share at least one) / `phrase_disjoint` / `missed_full` / `overfired_full`. The detail drawer renders this as a colored badge alongside the Jaccard score; the CSV/JSONL exports carry it as a column.",
+        "Diff Mode — every row now has a stable `row_uid` (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`). Identical rows across multiple Train & Compare runs share the same UID, so successive training CSVs can be joined / deduped / diffed across rule-engine iterations. The training-set export dedupes by `row_uid` automatically.",
+        "Diff Mode — CSV column ordering is now canonical per forwarder (`CANONICAL_INPUT_ORDER` per forwarder, with cross-forwarder rows clustered in the order dachser → kn → dhl → wackler). Successive Diff CSVs from the same workbook line up column-for-column, so version-controlled training corpora produce clean diffs instead of column shuffles.",
+        "Diff Mode — training-set export drops padding rows (A and B both empty AND no rule-visible inputs AND no engine output). Previously these were emitted as `correct` rows when \"Include matching rows\" was on, polluting the dataset with rows from below the actual data range. Real \"correct\" rows (rule correctly stayed silent on a row that DID have inputs) are still kept under the opt-in.",
+        "Diff Mode — detail drawer (chevron) now shows the phrase breakdown directly: missing-phrase chips (amber), extra-phrase chips (violet), common-phrase chips (green), the granular-label badge, the Jaccard score, and the row_uid. Triage no longer requires exporting the CSV to see which phrase was off — it's right there in the row expansion.",
+        "Docs — `ANMERKUNG-WORKFLOW.md` Diff Mode section refreshed: phrase-diff fields, granular-label taxonomy, row_uid semantics, canonical column ordering, and the padding-row drop are all documented inline."
+      ]
+    },
+    {
+      "ver": "1.8.7",
+      "date": "2026-05-25",
+      "items": [
+        "Wackler — TZ classification wording switched from \"DifferenzEnergiezuschlag\" to \"DifferenzTreibstof\" everywhere (additive trigger at TZ ≥ 2.0 and the pure-TZ fallback). The new wording is what the Wackler training data labels these rows under; the previous \"DifferenzEnergiezuschlag\" was an internal Wackler-canonical that disagreed with the auditor's terminology. Resolves 16 wrong rows in data/Wackler-training.csv (training rows 4–19).",
+        "Wackler — `processWackler` rule 1 (Fremdnummer doppelt berechnet) now also fires when the Tarif cell is completely empty AND there's at least one cost-side delta on the row (|FR|/|MT|/|TZ| above the Wackler threshold). Empty TARIF with real deltas means the FR/MT/TZ comparisons are against a non-existent baseline — that's the Fremdnummer-doppelt signature, not real freight/toll/fuel discrepancies. The legacy '-' and zero-with-text TARIF signatures still fire as before. Resolves training row 20 (TARIF empty, FR=29.5, MT=2.6, TZ=2.51).",
+        "Wackler — rule 1 no longer hard short-circuits on Kontierung. When Fremdnummer-doppelt fires AND Kostenstelle+Sachkonto are both blank/X, the row now emits \"Fremdnummer doppelt berechnet // Kontierung?\" instead of just \"Fremdnummer Doppelt berechnet\". The other delta-derived rules (3–12) stay suppressed since their inputs compare against a non-existent tariff. Casing of the canonical phrase normalized from \"Doppelt\" to \"doppelt\" to match training data — existing protected rows are unaffected because WACKLER_PROTECTED matching is case-insensitive.",
+        "Rule Tester — added two new Wackler presets: \"TZ-only Treibstof\" exercises the renamed pure-TZ fallback (training row 4 inputs); \"Fremdnummer empty tarif\" exercises the new empty-TARIF-with-cost-signal branch (training row 20 inputs)."
+      ]
+    },
+    {
+      "ver": "1.8.6",
+      "date": "2026-05-25",
+      "items": [
+        "Diff Mode — `detectForwarderForSheet` now honors the user's explicit forwarder pick. Previously the per-sheet auto-detect picked the resolver with the highest column-match score, but K+N and Wackler share a lot of header names (FR/MT/TZ Differenz, Volumen kg, ReferenzNr, Stat_Freigabe, Total/Kosten lt. Tarif), so on a Wackler sheet whose AVIS/SNK or KOSTENSTELLE/SACHKONTO headers didn't quite match the Wackler resolver, K+N could edge ahead and the diff-row `fw` column would silently flip to `kn` even though the user had clicked Wackler. The fix: when `selectedFW` is set and that resolver finds the Anmerkung target column on the sheet, prefer `selectedFW`. Auto-detect still kicks in when the selected forwarder genuinely doesn't fit a sheet, so mixed-forwarder workbooks keep working."
+      ]
+    },
+    {
+      "ver": "1.8.5",
+      "date": "2026-05-21",
+      "items": [
+        "Dachser — `daEvalSNK` case 75 now splits along whether the surcharge has a tariff base. SNK_TARIF>0 (e.g. tariff 85, billed 75, SNK_DIFF=-10) classifies as \"Differenz Hebebuehnen-Zuschlag\" — a real Hebebühnen (tail-lift) tariff differential. SNK_TARIF empty/0 with SNK_DIFF==SNK_DL=75 stays as the legacy \"Ausfallfracht/Schadensersatz\" — an ad-hoc fee with no tariff backing. Training row 47 was previously misclassified as Ausfallfracht; row 343 still classifies correctly as Ausfallfracht.",
+        "Dachser — `daEvalSNK` default branch now routes K1AV rows with a non-standard SNK_DL (anything outside the 5/14 codes handled higher up) to \"Differenz Laderaumkostenentwicklung\". Training row 324 (SNK_DL=19, SNK_DIFF=19, SERV=K1AV) was previously misclassified as Differenz Automatische Zustellterminvereinbarung. The non-integer K1AV cases (rows 303/304/307/342) were already handled correctly via the cents-bearing SNK_DL fallback below.",
+        "Dachser — `processDachser` adds an early-return for the blank-TARIF + significant FR pattern. When the Tarif cell is completely empty (not '-' which `daIsTarifZero` already catches) and FR exceeds threshold: empty SACH+SERV → \"VORHOLUNG\" (training row 344, advance-freight line); SACH+SERV present → \"Fremdnummer Doppelt berechnet\" (training row 345). Both cases short-circuit the standard Produktzuschlag/Mautdifferenz/Gewichte cascade — these accounting artifacts shouldn't pile up unrelated classifications.",
+        "Dachser — FR branch tightens the negative-FR shortcut. Only small-magnitude negative FR (|FR| < 1.0) routes to \"Differenz Frachtzu/ abschlag\"; larger negative FR falls through to the weight-deviation wording. Training row 357 (FR=-0.09) is a real Frachtzu surcharge adjustment; training row 241 (FR=-26.24) is a weight deviation that the previous unconditional shortcut misclassified as Frachtzu/abschlag.",
+        "Dachser — FR branch weight-tier guard (added v1.8.3) is now consistent with the K+N and Wackler engines: plural \"Differenz aufgrund abweichender Gewichte\" fires when Volumen kg and Volumen kg DL are both populated AND fall into different DACHSER_BP buckets; singular \"Differenz aufgrund von abweichendem Gewicht\" fires when they stay in the same bucket or one of the volumes is missing/non-positive. Training row 346 (VKG=54 vs VKG_DL=40, cross 50/100 bracket) labels plural under this rule even though the auditor used singular — the row 346 variation is treated as a one-off in favor of forwarder-engine consistency."
+      ]
+    },
+    {
+      "ver": "1.8.4",
+      "date": "2026-05-21",
+      "items": [
+        "Diff Mode — the \"Download diff CSV\" export now includes one column per rule-visible input cell (Volumen kg, Volumen kg DL, FR / MT / TZ / SNK Differenzen, Tarif, Stat_Freigabe, Sachkonto / Kostenstelle, …), prefixed `in_<key>`. Triage no longer requires opening the source xlsx side-by-side to see why a row was labeled wrong / missed / overfired — every input the engine read is right there in the CSV. Column set is the union of all keys seen in the filtered scope, so it adapts per forwarder.",
+        "Diff Mode — Dachser rows now capture `vkg` (Volumen kg) and `vkg_dl` (Volumen kg DL) in the per-row inputs bag. The values were already resolved into the cols bag in v1.8.3 for the FR-branch weight-tier guard; now they also surface in the diff-row detail drawer, the diff CSV, and the training-set CSV / JSONL — matching K+N and Wackler parity."
+      ]
+    },
+    {
+      "ver": "1.8.3",
+      "date": "2026-05-21",
+      "items": [
+        "Dachser — FR branch gains a weight-tier guard, mirroring the K+N pattern. When `Volumen kg` and `Volumen kg DL` cross a Dachser tariff bucket the row is now classified \"Differenz aufgrund abweichender Gewichte\" (plural — a real weight miscalc). When the two volumes stay in the same bucket (or aren't visible on the row) the legacy singular \"Differenz aufgrund von abweichendem Gewicht\" wording is preserved — that's a within-tier rounding gap, not a tier crossing.",
+        "Dachser — `resolveDachser` now resolves the `Volumen kg` and `Volumen kg DL` columns into the cols bag, so the FR-branch guard above can read them. The diagnostic reason column also picks up `VKG` / `VKG_DL` for Dachser, matching the K+N / Wackler reason format.",
+        "Dachser — `DACHSER_BP` weight-tier table is wired DIRECTLY to the supplied `data/Dachser-weight.xlsx` rate card (44 Staffel brackets: 50 kg steps to 500, 100 kg steps to 2000, 200 kg steps to 3000, 500 kg steps to 10000, then a single open bucket above where rates flatline). Differs from K+N in two spots: Dachser keeps every 500 kg step in the 8000–10000 heavy band, and tops out at a real 10000 ceiling — both straight from the rate card."
+      ]
+    },
+    {
+      "ver": "1.8.2",
+      "date": "2026-05-20",
+      "items": [
+        "Wackler — AVIS=-8.7 (negative credit) is now classified \"hätte Avisgebühr telefonisch abrechnen dürfen\" instead of the generic \"Avis, ok?\". The negative 8.7 line is the audit signature for \"billed the standard Avisgebühr, should have used the cheaper telephonic rate\", so the row carries the specific corrective wording. Positive AVIS=+8.7 and the other surcharge codes (7.5 / 8.5 / 6.5) stay sign-insensitive under \"Avis, ok?\".",
+        "Wackler — adds wacklerAvisLabel() helper that resolves the AVIS code to its specific wording. Kept pure so the harness can assert the new label independently of the rest of the cascade. \"hätte Avisgebühr telefonisch abrechnen dürfen\" added to the WACKLER_PROTECTED list so re-runs preserve the wording on already-classified rows."
+      ]
+    },
+    {
+      "ver": "1.8.1",
+      "date": "2026-05-20",
+      "items": [
+        "Wackler — weight tier table now wired DIRECTLY to the supplied rate cards (data/Wackler national Rate.xlsx and data/Wackler international Rate.xlsx). Both cards share the same breakpoints up to 10000 kg, so a single table covers both: 50 kg steps to 500, 100 kg steps to 2000, 200 kg steps to 3000, 500 kg steps to 10000, then a single open bucket above where rates flatline. Restored the 8000/8500/9000/9500 mid-points that were dropped in v1.8.0 — they are real rate-card rows for international zones.",
+        "Wackler — \"Wackler rechnet Frachtrate für <tier>kg ab\" now reports the exact rate-card bucket the row was billed against (e.g. for VKG=8743 vs VKG_DL=8968 the engine emits \"für 9000kg ab\", both kg values land in the same 8501–9000 bracket). Auditors can cross-check the matched tier directly against the rate card.",
+        "Wackler — adds wacklerTierLabel() helper, kept tiny and pure so the test harness can verify tier reporting independently of the surrounding rule cascade."
+      ]
+    },
+    {
+      "ver": "1.8.0",
+      "date": "2026-05-20",
+      "items": [
+        "Wackler — engine reworked against a 67-row training set, 9 actionable failure modes resolved. Classification accuracy on the training set: 95.5% (the 3 residual diffs are cosmetic mislabels in the training data itself — capitalization of \"Ok?\" vs \"ok?\", a missing space before a separator).",
+        "Wackler — Pauschalfracht detection added. When |SNK| ≥ booked tariff and there are no FR/MT/TZ deltas (and SNK doesn't match a known surcharge code), the row is a flat-rate freight charge and is now classified \"Pauschalfracht, ok?\" instead of falling through to the generic SNK Differenz bucket. Catches small-tariff lump-sum rows like TARIF=8.27/SNK=3341.73 and TARIF=54.95/SNK=80.",
+        "Wackler — DifferenzEnergiezuschlag is now an additive trigger, not a fallback. TZ ≥ 2.0 fires alongside FR/MT/Gewichte/bundling classifications (mirroring the K+N TZ-as-additive policy). Below 2.0 it stays suppressed as fuel-on-(freight+toll) math noise. The pure-TZ fallback wording also switched from \"Differenz treibstof\" to the Wackler-canonical \"DifferenzEnergiezuschlag\".",
+        "Wackler — SNK rounding-noise floor of €5 added. Sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte evidence are no longer reported as a separate \"SNK Differenz\" classification; that's the fuel-on-toll percentage trickling into SNK on real freight rows, not a real ladder hit. Lifts false positives like SNK=−0.95 and SNK=0.44 off Gewichte rows.",
+        "Wackler — SNK code book is now sign-insensitive with rounding tolerance: |SNK| ≈ 38 (±0.5) → NL-FIX, |SNK| ≈ 11.5 (±0.1) → \"hätte B2C-Line abrechnen dürfen\", |SNK| ≈ 22 (±0.5) → \"2. Zustellung ok?\", and a new |SNK| ≈ 180 (±0.5) → \"Terminzustellung, ok?\". Catches near-misses like NL-FIX seen as 38.08 instead of 38.00.",
+        "Wackler — AVIS surcharge codes (7.5 / 8.5 / 6.5 / 8.7) are now sign-insensitive. A credit AVIS=−6.5 is the same surcharge as AVIS=6.5 and now triggers \"Avis, ok?\" instead of being missed entirely.",
+        "Wackler — Gewichte same-tier wording made explicit: \"Wackler rechnet\" is now \"Wackler rechnet Frachtrate für <tier>kg ab\" with the actual matched tariff bucket (e.g. \"für 10000kg ab\"). The old phrase joins the protected list under its prefix so existing rows stay protected.",
+        "Wackler — Bundling vs Gewichte cascade reworked. Multi-ref + cross-tier weights with tier-distance > 1 (genuinely different shipment sizes) → \"hätte gebündelt werden müssen\". Multi-ref + adjacent-tier weights → \"Differenz aufgrund abweichender Gewichte\" (rounding crossed one boundary). Same-tier always wins as \"Wackler rechnet\". Single-ref always falls through to Gewichte. Resolves the row-25 vs row-70 ambiguity where bundling and weight-mismatch evidence collide.",
+        "Wackler — weight tier table tightened in the heavy band. The 8000/8500/9000/9500 mid-points were dropped — Wackler tariffs the upper band as a single 7501–10000 bracket, so e.g. 8743 vs 8968 kg now correctly resolve as same-tier instead of being mis-classified as a cross-tier weight discrepancy.",
+        "Wackler — NL-FIX zone corollary added. When NL-FIX fires AND the row also has an FR delta AND KOST/SACH are blank, the destination zone may be miscoded — engine now prefixes \"Zone korrekt?\" and drops the would-be Frachtdifferenz (the FR gap is the zone miscode driving the residual, not a real freight discrepancy). Recognizes the typical incomplete-NL row pattern."
+      ]
+    },
+    {
+      "ver": "1.7.1",
+      "date": "2026-05-19",
+      "items": [
+        "Service worker — switched to network-first for all same-origin assets (HTML, JS, CSS, JSON, manifest). Returning users now get the latest deployed code on every online load, with the cache acting purely as an offline fallback. Cross-origin CDN libs (SheetJS, JSZip, fonts) remain cache-first because they're immutable per URL.",
+        "Service worker — fixes a long-standing symptom where rule fixes shipped to source but didn't reach the live tool because the asset cache (`alchemist-vX`) was still serving an older copy of `anmerkung.js`. The previous strategy required a manual `VERSION` bump per release; the new one needs no cache-bust step at all for content/rule updates.",
+        "Service worker — VERSION bumped v1.4.5 → v1.7.1 (one-time) to rotate the cache name, force a fresh re-install of the precache list, and migrate users off the old cache-first flow. Future content updates won't require a VERSION bump.",
+        "Docs — refreshed README + the two ANMERKUNG docs to match v1.7.x (always-fresh deploy story, Dachser SNK non-integer surcharge detection, negative-FR → Frachtzu/abschlag classification). Added missing `FIREBASE_SERVICE_ACCOUNT` setup steps to the Holiday notifier doc."
+      ]
+    },
     {
       "ver": "1.7.0",
       "date": "2026-05-13",

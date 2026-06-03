@@ -1,13 +1,25 @@
 /* The Alchemist \u2014 offline service worker (#21).
-   Strategy: network-first for the HTML shell (so updates are picked up on
-   next load), cache-first for external scripts & fonts. Keeps the app fully
-   functional offline once the first online visit has primed the caches.
+
+   Strategy (always-fresh by default):
+     - Same-origin requests (everything we own — HTML, JS, CSS, JSON,
+       manifest) → NETWORK-FIRST with cache fallback. The user always gets
+       the latest deployed code when online; the cache is purely an offline
+       safety net. No VERSION bumps required when content/rules change.
+     - Cross-origin requests (CDN libs like XLSX, JSZip) → cache-first. These
+       are big, immutable per URL, and don't change between deploys.
+     - Navigation requests fall back to `./anmerkung.html` when the user is
+       offline and lands on a URL we haven't cached yet.
+
+   The cache name (and therefore implicit migration on upgrade) is still
+   keyed off VERSION so SW logic changes can rotate the cache cleanly when
+   needed. But VERSION no longer needs to bump for content updates.
 */
-const VERSION = 'v1.4.5';
+const VERSION = 'v1.7.1';
 const CACHE = 'alchemist-' + VERSION;
 
-/* Core assets to pre-cache on install. Keep the list short and let
-   runtime caching handle the rest; unreachable URLs should not block install. */
+/* Core assets to pre-cache on install so the very first offline visit works.
+   Runtime caching takes over from there; with network-first for same-origin,
+   these entries get refreshed naturally on every online load anyway. */
 const CORE = [
   './anmerkung.html',
   './task-reviewer-siemens.html',
@@ -93,51 +105,50 @@ self.addEventListener('message', event => {
   }
 });
 
+/* Helper: write a successful response into the runtime cache, fire-and-forget.
+   `resp` must be cloned by the caller before it's consumed elsewhere. */
+function cachePut(req, resp) {
+  if (!resp || !resp.ok) return;
+  const copy = resp.clone();
+  caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+}
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  const isHtml = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
-  /* Network-first for small JSON config files (e.g. anmerkung-changelog.json)
-     so content edits surface on next load without waiting for a SW version bump.
-     Falls back to the cached copy when offline. */
-  const isChangelogJson = url.pathname.endsWith('/assets/anmerkung-changelog.json');
+  const sameOrigin = (url.origin === self.location.origin);
+  const isNavigate = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
 
-  if (isChangelogJson) {
+  /* ── Same-origin → network-first ──
+     Always try the network so the user gets the latest deployed code.
+     On success, refresh the cached copy. On network failure, fall back to
+     whatever we have cached; for navigations with no cached copy, fall back
+     to the cached anmerkung.html shell so the app still boots offline. */
+  if (sameOrigin) {
     event.respondWith(
       fetch(req).then(resp => {
-        if (resp && resp.ok) {
-          const copy = resp.clone();
-          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
-        }
+        cachePut(req, resp);
         return resp;
-      }).catch(() => caches.match(req))
+      }).catch(() => caches.match(req).then(cached => {
+        if (cached) return cached;
+        if (isNavigate) return caches.match('./anmerkung.html');
+        return undefined;
+      }))
     );
     return;
   }
 
-  /* Network-first for HTML so a fresh version wins when online. */
-  if (isHtml) {
-    event.respondWith(
-      fetch(req).then(resp => {
-        const copy = resp.clone();
-        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
-        return resp;
-      }).catch(() => caches.match(req).then(r => r || caches.match('./anmerkung.html')))
-    );
-    return;
-  }
-
-  /* Cache-first for everything else (static assets, CDN libs). */
+  /* ── Cross-origin (CDN libs etc.) → cache-first ──
+     These URLs are immutable in practice (CDN-served libraries pinned by
+     version), so cache-first is both faster and safe. */
   event.respondWith(
     caches.match(req).then(cached => {
       if (cached) return cached;
       return fetch(req).then(resp => {
-        /* Only cache successful, basic/cors responses. */
         if (resp && resp.status === 200 && (resp.type === 'basic' || resp.type === 'cors')) {
-          const copy = resp.clone();
-          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+          cachePut(req, resp);
         }
         return resp;
       }).catch(() => cached);

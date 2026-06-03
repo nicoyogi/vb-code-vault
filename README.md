@@ -10,7 +10,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 [![Hosting](https://img.shields.io/badge/hosting-GitHub%20Pages-24292e?logo=github)](https://pages.github.com/)
 [![No Build](https://img.shields.io/badge/build-none-34d399)](#running-locally)
 [![PWA](https://img.shields.io/badge/PWA-offline--capable-5b9cf6)](#offline--pwa)
-[![Alchemist](https://img.shields.io/badge/Alchemist-v1.5.1-d4af64)](assets/anmerkung-changelog.json)
+[![Alchemist](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fnicoyogi%2Fvb-code-vault%2Fmain%2Fassets%2Fanmerkung-changelog.json&query=%24.version&prefix=v&label=Alchemist&color=d4af64)](assets/anmerkung-changelog.json)
 [![Privacy](https://img.shields.io/badge/data-stays%20in%20browser-a78bfa)](#privacy--data-handling)
 
 ---
@@ -41,6 +41,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 | Browse the live site | [codingkuh.my.id](https://codingkuh.my.id/) |
 | Annotate a forwarder invoice (Dachser / K+N / DHL / Wackler) | [The Alchemist](https://codingkuh.my.id/anmerkung.html) · [source](anmerkung.html) |
 | Understand the Alchemist end-to-end (user flow + rule engine) | [`docs/ANMERKUNG-WORKFLOW.md`](docs/ANMERKUNG-WORKFLOW.md) |
+| Understand the Alchemist's architecture (modules, state, PWA shell, extensibility) | [`docs/ANMERKUNG-ARCHITECTURE.md`](docs/ANMERKUNG-ARCHITECTURE.md) |
 | Look up a VB/VBA snippet | [The Vault](https://codingkuh.my.id/code.html) · [source](code.html) |
 | Check team absences / leave | [Holiday Tracker](https://codingkuh.my.id/holiday-tracker.html) · [source](holiday-tracker.html) |
 | Review a Siemens task | [Task Reviewer](https://codingkuh.my.id/task-reviewer-siemens.html) · [source](task-reviewer-siemens.html) |
@@ -80,9 +81,10 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 - **Configurable tolerance thresholds** per forwarder, persisted in `localStorage`.
 - **Light / dark theme**, keyboard-navigable forwarder tiles (ARIA radiogroup), timestamped streaming log.
 - **Installable as a PWA** (see [Offline / PWA](#offline--pwa)); the service worker is [`sw.js`](sw.js) and the manifest is [`manifest.webmanifest`](manifest.webmanifest).
-- **Data-driven changelog** — [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) is served network-first, so bumping `version` there updates the badge and "What's new" modal on the next load without requiring a SW version change.
+- **Always-fresh deploys** — same-origin assets are served network-first, so content/rule edits reach users on their next online load with no cache-bust step required. The cache acts purely as an offline fallback.
+- **Data-driven changelog** — [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) drives both the version badge and the in-app "What's new" modal, so prepending an entry there is the canonical way to publish release notes.
 
-XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.18.5) and [JSZip](https://stuk.github.io/jszip/); the XLSX is patched in-place — only the `Anmerkung` column (and optionally `Anmerkung_Reason`) is rewritten, leaving styles, merged cells, formulas, and drawings untouched.
+XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.20.3, loaded from the official `cdn.sheetjs.com` with an SRI hash) and [JSZip](https://stuk.github.io/jszip/); the XLSX is patched in-place — only the `Anmerkung` column (and optionally `Anmerkung_Reason`) is rewritten, leaving styles, merged cells, formulas, and drawings untouched.
 
 ## Shared assets
 
@@ -93,15 +95,15 @@ XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.18.5) and [J
 | [`assets/firebase-config.js`](assets/firebase-config.js) | Centralized Firebase config loaded by pages that need Firestore. |
 | [`assets/anmerkung.css`](assets/anmerkung.css) · [`assets/anmerkung.js`](assets/anmerkung.js) | Styling and rule engine for The Alchemist. |
 | [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) | Versioned release notes for the Anmerkung Processor. |
-| [`sw.js`](sw.js) | Service worker. Network-first for HTML + the changelog JSON, cache-first for everything else. |
+| [`sw.js`](sw.js) | Service worker. Network-first for **same-origin** assets (always serve the latest deployed code when online), cache-first for cross-origin CDN libs. Cache acts purely as an offline fallback. |
 | [`manifest.webmanifest`](manifest.webmanifest) | PWA manifest for the Anmerkung Processor. |
 
 ## Tech stack
 
 - **HTML / CSS / vanilla JavaScript** — no build tooling; every page can be opened directly in a browser.
 - **Service Worker + PWA** — offline caching for the whole Grimoire, installable on Chrome / Edge.
-- **Firebase Firestore** (`firebase-app-compat` + `firebase-firestore-compat` 10.7.2) — real-time sync for `holiday-tracker.html`.
-- **SheetJS** (`xlsx` 0.18.5) and **JSZip** — client-side XLSX parsing and writing in `anmerkung.html`.
+- **Firebase Firestore** (`firebase-app-compat` + `firebase-firestore-compat` 10.12.2) — real-time sync for `holiday-tracker.html`. CDN scripts are pinned with Subresource Integrity (SRI) hashes.
+- **SheetJS** (`xlsx` 0.20.3, from `cdn.sheetjs.com`) and **JSZip** — client-side XLSX parsing and writing in `anmerkung.html`.
 - **Fonts (Google Fonts):** Cinzel, Syne, DM Sans, DM Mono, IBM Plex Sans/Mono, Space Grotesk.
 - **Hosting:** GitHub Pages with a `CNAME` pointing to `codingkuh.my.id`.
 
@@ -121,12 +123,12 @@ Any static server works — `npx serve`, `http-server`, or VS Code Live Server a
 
 ## Offline / PWA
 
-The Alchemist (`anmerkung.html`) is installable and fully offline-capable:
+The Alchemist (`anmerkung.html`) is installable and fully offline-capable, but it's also **always-fresh** when online — the cache is treated as an offline fallback, not a content gate.
 
 - Click **"Download for offline"** in the header to precache every Grimoire page and asset. A progress indicator reports each URL as it's fetched.
-- Once primed, the site works with no network — new cached versions are picked up on the next online visit (HTML and the changelog JSON are served network-first, everything else cache-first).
-- The SW lives at [`sw.js`](sw.js). When the cache schema changes, bump the `VERSION` constant to purge old caches on activate.
-- `assets/anmerkung-changelog.json` is served **network-first**, so bumping its `version` field surfaces in the badge and "What's new" modal on the next load without requiring a SW version change.
+- **Online behavior:** every same-origin request (HTML, JS, CSS, JSON, manifest) goes network-first, so the latest deployed version of each file always wins. Cross-origin CDN libraries (SheetJS, JSZip, fonts) are cache-first because they're immutable per URL.
+- **Offline behavior:** if the network fails, the SW falls back to whatever it last cached. Navigation requests with no cached entry fall back to the cached `./anmerkung.html` shell so the app still boots.
+- **No version bumps required for content updates.** Editing `anmerkung.js`, `anmerkung.css`, the changelog JSON, or any other same-origin asset and pushing to `main` is enough — users get it on their next online load. Bump `VERSION` in [`sw.js`](sw.js) only when the SW logic itself changes (rare).
 
 ## Privacy & data handling
 
@@ -151,7 +153,7 @@ Pages that need Firestore (currently only the Holiday Tracker) import config fro
 
 1. Create a Firebase project and enable Firestore.
 2. Replace the config object in `assets/firebase-config.js` with your project's keys.
-3. Mind your Firestore [security rules](https://firebase.google.com/docs/firestore/security/get-started) — the default open rules are not suitable for production.
+3. Deploy the Firestore security rules in [`firestore.rules`](firestore.rules). They allow-list only the collections the apps use (everything else is denied by default), which is safer than the default open rules. **They do not add authentication** — the collections are still effectively public, so also enable Firebase Authentication and/or [App Check](https://firebase.google.com/docs/app-check) and API key referrer restrictions if the data is sensitive. See Firestore [security rules](https://firebase.google.com/docs/firestore/security/get-started).
 
 Firebase API keys in client code are identifiers, not secrets; access control must be enforced by security rules.
 
@@ -159,28 +161,43 @@ Firebase API keys in client code are identifiers, not secrets; access control mu
 
 ```
 vb-code-vault/
-├── index.html                    # landing page / hub
-├── code.html                     # VB snippets (The Vault)
-├── qa.html                       # general QA (The Oracle)
-├── qa-siemens.html               # Siemens-specific QA
-├── standard-wording.html         # standard phrases / templates
-├── task-reviewer-siemens.html    # Siemens task reviewer
-├── anmerkung.html                # forwarder invoice processor (The Alchemist)
-├── todo.html                     # task ledger
-├── holiday-tracker.html          # team holiday tracker (Firestore)
-├── sw.js                         # service worker
-├── manifest.webmanifest          # PWA manifest (Alchemist)
+├── index.html                       # landing page / hub
+├── code.html                        # VB snippets (The Vault)
+├── qa.html                          # general QA (The Oracle)
+├── qa-siemens.html                  # Siemens-specific QA
+├── standard-wording.html            # standard phrases / templates
+├── task-reviewer-siemens.html       # Siemens task reviewer
+├── anmerkung.html                   # forwarder invoice processor (The Alchemist)
+├── anmerkung-presentation.html      # presentation deck for the Alchemist
+├── todo.html                        # task ledger
+├── holiday-tracker.html             # team holiday tracker (Firestore)
+├── sw.js                            # service worker
+├── manifest.webmanifest             # PWA manifest (Alchemist)
 ├── assets/
-│   ├── grimoire-core.css         # shared styling tokens
-│   ├── grimoire-core.js          # shared runtime (canvas + offline helpers)
-│   ├── anmerkung.css             # Alchemist styles
-│   ├── anmerkung.js              # Alchemist rule engine + UI glue
-│   ├── firebase-config.js        # centralized Firebase config
-│   └── anmerkung-changelog.json  # versioned release notes for The Alchemist
+│   ├── grimoire-core.css            # shared styling tokens
+│   ├── grimoire-core.js             # shared runtime (canvas + offline helpers)
+│   ├── anmerkung.css                # Alchemist styles
+│   ├── anmerkung.js                 # Alchemist rule engine + UI glue
+│   ├── firebase-config.js           # centralized Firebase config
+│   └── anmerkung-changelog.json     # versioned release notes for The Alchemist
 ├── docs/
-│   └── ANMERKUNG-WORKFLOW.md     # user flow + engine internals for The Alchemist
-├── data/                         # training / reference data (git-tracked samples)
-├── CNAME                         # custom domain config
+│   ├── ANMERKUNG-WORKFLOW.md        # user flow + engine internals for The Alchemist
+│   ├── ANMERKUNG-ARCHITECTURE.md    # system architecture / extensibility recipes
+│   ├── HOLIDAY-TEAMS-NOTIFIER.md    # daily Teams cron for the Holiday Tracker
+│   └── TASKS-TEAMS-NOTIFIER.md      # daily Teams cron for The Ledger (tasks due)
+├── scripts/
+│   ├── notify-tomorrow.mjs          # Holiday Tracker → Teams Adaptive Card
+│   ├── notify-tasks-due.mjs         # The Ledger → Teams Adaptive Card
+│   ├── package.json                 # Node deps for the notifier scripts
+│   └── package-lock.json            # pinned dependency tree (used by `npm ci` in CI)
+├── .github/workflows/
+│   ├── holiday-notify.yml           # daily cron + manual dispatch (holidays)
+│   └── tasks-notify.yml             # daily cron + manual dispatch (tasks)
+├── data/                            # reference training corpora (Dachser, K+N samples)
+├── firestore.rules                  # Firestore security rules (collection allow-list)
+├── .gitignore
+├── CNAME                            # custom domain config
+├── LICENSE                          # all rights reserved
 └── README.md
 ```
 
@@ -191,8 +208,8 @@ Each HTML file is **self-contained** (styles and scripts inline) apart from the 
 - Keep shared visual tokens (colors, fonts, spacing, focus-ring rules) in [`assets/grimoire-core.css`](assets/grimoire-core.css) so the pages stay visually consistent.
 - Reuse [`Grimoire.Offline`](assets/grimoire-core.js) rather than wiring a service worker per page.
 - When editing rule strings in `anmerkung.html`, prefer the `PHRASES` catalog in [`assets/anmerkung.js`](assets/anmerkung.js) — it is the single source of truth for all Anmerkung output strings.
-- When changing the Anmerkung rule engine, bump the version in [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) and add a release note so users see what changed. Also update [`docs/ANMERKUNG-WORKFLOW.md`](docs/ANMERKUNG-WORKFLOW.md) if the decision tree or column layout changed.
-- If the service worker cache schema changes, bump `VERSION` in [`sw.js`](sw.js) so old caches are purged on activate.
+- When changing the Anmerkung rule engine, bump the version in [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) and add a release note so users see what changed in the in-app "What's new" modal. Also update [`docs/ANMERKUNG-WORKFLOW.md`](docs/ANMERKUNG-WORKFLOW.md) if the decision tree or column layout changed, and [`docs/ANMERKUNG-ARCHITECTURE.md`](docs/ANMERKUNG-ARCHITECTURE.md) if module boundaries / state shapes / SW strategy changed.
+- **You generally do not need to bump `VERSION` in [`sw.js`](sw.js).** Same-origin assets are served network-first, so content/rule edits ship to users on their next online load with no cache invalidation step. Bump `VERSION` only when the SW logic itself changes (e.g., new caching strategy, new message types) — that rotates the cache name and forces a fresh re-install of `CORE`.
 
 Pull requests welcome.
 
@@ -209,4 +226,10 @@ Third-party libraries and services that make the Grimoire possible:
 
 ## License
 
-No license is currently declared in this repository. If you intend to reuse, fork, or redistribute, please open an issue to clarify licensing with the maintainer first.
+Copyright (c) 2026 nicoyogi. **All rights reserved.** See [`LICENSE`](LICENSE).
+
+This repository is publicly viewable for reference only; no rights to reuse,
+fork, modify, or redistribute are granted by default, and it contains
+project-/client-specific material (e.g. Siemens references, forwarder data)
+that is not intended for reuse. If you'd like to reuse any part of it, please
+open an issue to coordinate with the maintainer.
