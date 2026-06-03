@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+�<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0e0f13">
-<title>Holiday Tracker Â· The Grimoire</title>
+<title>Holiday Tracker · The Grimoire</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=Cinzel:wght@400;600;900&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@
 <div id="authGate">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="auth-logo-icon">ðŸŒ´</div>
-      <div class="auth-logo-text">Holiday Tracker<span>THE GRIMOIRE Â· IDSM</span></div>
+      <div class="auth-logo-icon">🌴</div>
+      <div class="auth-logo-text">Holiday Tracker<span>THE GRIMOIRE · IDSM</span></div>
     </div>
     <div class="auth-title">Welcome back</div>
     <div class="auth-sub" id="authSubtitle">SIGN IN TO YOUR ACCOUNT</div>
@@ -34,11 +34,11 @@
       <div class="auth-form">
         <div class="auth-input-group">
           <label class="auth-input-label">Your Name</label>
-          <select class="auth-select" id="loginEmail"><option value="">â€” Loadingâ€¦ â€”</option></select>
+          <select class="auth-select" id="loginEmail"><option value="">— Loading… —</option></select>
         </div>
         <div class="auth-input-group">
           <label class="auth-input-label">Password</label>
-          <input class="auth-input" type="password" id="loginPassword" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password">
+          <input class="auth-input" type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
         </div>
         <div class="auth-error" id="loginError"></div>
         <button class="auth-btn" id="loginBtn" onclick="doLogin()">
@@ -48,12 +48,12 @@
     </div>
     <div id="registerPanel" style="display:none;">
       <div class="auth-info-box" style="margin-bottom:18px;">
-        â„¹ Register once with your name from the team list. After registering, you can only add or delete <strong>your own</strong> holidays.
+        ℹ Register once with your name from the team list. After registering, you can only add or delete <strong>your own</strong> holidays.
       </div>
       <div class="auth-form">
         <div class="auth-input-group">
           <label class="auth-input-label">Your Name (from team list)</label>
-          <select class="auth-select" id="registerPerson"><option value="">â€” Loading teamâ€¦ â€”</option></select>
+          <select class="auth-select" id="registerPerson"><option value="">— Loading team… —</option></select>
         </div>
         <div class="auth-input-group">
           <label class="auth-input-label">Password</label>
@@ -75,8 +75,8 @@
 <!-- MAIN APP -->
 <div id="mainApp" style="display:none;">
 <div class="grimoire-header">
-  <a href="index.html" class="back-btn">â† Grimoire</a>
-  <div class="header-logo"><div class="header-logo-icon">ðŸŒ´</div>Holiday Tracker</div>
+  <a href="index.html" class="back-btn">← Grimoire</a>
+  <div class="header-logo"><div class="header-logo-icon">🌴</div>Holiday Tracker</div>
   <div class="header-right">
     <div class="status-wrap">
       <div class="status-dot" id="statusDot"></div>
@@ -86,12 +86,12 @@
       <span class="saving-dot"></span>Saving...
     </span>
     <button class="log-btn" onclick="openLog()">
-      <span class="log-unread-dot" id="logUnreadDot"></span>ðŸ“‹ Log
+      <span class="log-unread-dot" id="logUnreadDot"></span>📋 Log
     </button>
     <div class="user-chip" id="userChip" onclick="openProfileModal()" title="My account / sign out">
       <div class="user-chip-avatar" id="userChipAvatar"></div>
-      <span id="userChipName">â€¦</span>
-      <span class="admin-crown" id="userChipCrown" style="display:none;">ðŸ‘‘</span>
+      <span id="userChipName">…</span>
+      <span class="admin-crown" id="userChipCrown" style="display:none;">👑</span>
     </div>
   </div>
 </div>
@@ -100,12 +100,12 @@
   <header class="page-header">
     <div class="logo-block">
       <h1>Away<span>Track</span></h1>
-      <p>Team Holiday &amp; Vacation Tracker Â· IDSM Â· Weekdays only</p>
+      <p>Team Holiday &amp; Vacation Tracker · IDSM · Weekdays only</p>
     </div>
     <div class="header-actions">
       <div class="view-toggle">
-        <button class="view-btn active" id="viewCalBtn" onclick="setView('calendar')">ðŸ“… Calendar</button>
-        <button class="view-btn" id="viewGanttBtn" onclick="setView('gantt')">ðŸ“Š Timeline</button>
+        <button class="view-btn active" id="viewCalBtn" onclick="setView('calendar')">📅 Calendar</button>
+        <button class="view-btn" id="viewGanttBtn" onclick="setView('gantt')">📊 Timeline</button>
       </div>
       <div class="dept-filter-wrap" id="deptFilterWrap">
         <span class="dept-filter-label">Dept</span>
@@ -113,9 +113,9 @@
           <option value="">All</option>
         </select>
       </div>
-      <button class="btn btn-export" onclick="exportCSV()">â¬‡ Export CSV</button>
-      <button class="btn btn-ghost admin-only-btn" id="pubHolBtn" onclick="openPublicHolidays()" style="display:none;">ðŸ—“ Public Hols</button>
-      <button class="btn btn-ghost admin-only-btn" id="manageBtn" onclick="openManage()" style="display:none;">âš™ Manage People</button>
+      <button class="btn btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn btn-ghost admin-only-btn" id="pubHolBtn" onclick="openPublicHolidays()" style="display:none;">🗓 Public Hols</button>
+      <button class="btn btn-ghost admin-only-btn" id="manageBtn" onclick="openManage()" style="display:none;">⚙ Manage People</button>
       <button class="btn btn-primary" id="addHolBtn" onclick="openAddModal()">+ Add Holiday</button>
     </div>
   </header>
@@ -127,13 +127,13 @@
       <div class="calendar-header">
         <div class="calendar-header-left">
           <div class="month-nav">
-            <button class="nav-btn" onclick="changeMonth(-1)">â€¹</button>
+            <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
             <span class="month-label" id="monthLabel"></span>
-            <button class="nav-btn" onclick="changeMonth(1)">â€º</button>
+            <button class="nav-btn" onclick="changeMonth(1)">›</button>
           </div>
           <button class="today-btn" onclick="goToday()">Today</button>
         </div>
-        <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.06em;">Monâ€“Fri only</span>
+        <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.06em;">Mon–Fri only</span>
       </div>
       <div id="calendarView">
         <div class="calendar-grid">
@@ -153,13 +153,13 @@
 
     <div class="sidebar">
       <div class="search-card">
-        <div class="search-label">ðŸ” Search by Date</div>
+        <div class="search-label">🔍 Search by Date</div>
         <div class="search-row"><input type="date" id="searchDate" onchange="searchByDate()"></div>
         <div id="searchResults"></div>
       </div>
       <div class="panel-card">
         <div class="panel-header">
-          <span class="panel-title">ðŸŒ´ Vacation Balance</span>
+          <span class="panel-title">🌴 Vacation Balance</span>
           <div class="panel-header-right">
             <span class="vac-year-tag" id="vacYearTag"></span>
             <span class="badge" id="vacAllotBadge">12 days/yr</span>
@@ -183,21 +183,21 @@
 <div class="modal-overlay" id="addModal">
   <div class="modal">
     <div class="modal-title" id="addModalTitle">Add Holiday</div>
-    <div class="modal-sub" id="addModalSub">Record who's out and when Â· weekdays (Monâ€“Fri) only</div>
+    <div class="modal-sub" id="addModalSub">Record who's out and when · weekdays (Mon–Fri) only</div>
     <div class="form-group"><label class="form-label">Person</label><select id="formPerson"></select></div>
     <div class="form-group form-row">
       <div><label class="form-label">Start Date</label><input type="date" id="formStart"></div>
       <div><label class="form-label">End Date</label><input type="date" id="formEnd"></div>
     </div>
-    <div class="weekend-warn" id="weekendWarn">âš  Weekends are excluded â€” only Monâ€“Fri days count toward vacation balance.</div>
+    <div class="weekend-warn" id="weekendWarn">⚠ Weekends are excluded — only Mon–Fri days count toward vacation balance.</div>
     <div class="form-group"><label class="form-label">Type</label>
       <select id="formType">
-        <option value="vacation">ðŸŒ´ Vacation</option>
-        <option value="sick">ðŸ¤’ Sick Leave</option>
-        <option value="wfh">ðŸ  Work From Home</option>
-        <option value="training">ðŸ“š Training</option>
-        <option value="parental">ðŸ‘¶ Parental Leave</option>
-        <option value="other">ðŸ“Œ Other</option>
+        <option value="vacation">🌴 Vacation</option>
+        <option value="sick">🤒 Sick Leave</option>
+        <option value="wfh">🏠 Work From Home</option>
+        <option value="training">📚 Training</option>
+        <option value="parental">👶 Parental Leave</option>
+        <option value="other">📌 Other</option>
       </select>
     </div>
     <label class="half-day-row" id="halfDayRow">
@@ -208,12 +208,12 @@
         <select id="halfDayPart"><option value="AM">Morning (AM)</option><option value="PM">Afternoon (PM)</option></select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">Note (optional)</label><input type="text" id="formNote" placeholder="e.g. Bali trip, doctor appointmentâ€¦"></div>
+    <div class="form-group"><label class="form-label">Note (optional)</label><input type="text" id="formNote" placeholder="e.g. Bali trip, doctor appointment…"></div>
     <div class="conflict-warn" id="conflictWarn"></div>
     <div id="capacityWarn" style="border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:0.72rem;margin-bottom:4px;display:none;border:1px solid transparent;"></div>
     <div id="vacWarning"></div>
     <div class="modal-footer">
-      <button class="btn btn-danger" id="editDeleteBtn" onclick="deleteFromEdit()" style="display:none;margin-right:auto;">ðŸ—‘ Delete</button>
+      <button class="btn btn-danger" id="editDeleteBtn" onclick="deleteFromEdit()" style="display:none;margin-right:auto;">🗑 Delete</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" id="saveHolBtn" onclick="saveHoliday()">Save Holiday</button>
     </div>
@@ -224,7 +224,7 @@
 <div class="modal-overlay" id="editPersonModal" style="z-index:150;">
   <div class="modal">
     <div class="modal-title">Edit Person</div>
-    <div class="modal-sub" id="editPersonSub">Update name and department Â· ðŸ‘‘ Admin only</div>
+    <div class="modal-sub" id="editPersonSub">Update name and department · 👑 Admin only</div>
     <div class="form-group">
       <label class="form-label">Full Name</label>
       <input type="text" id="editPersonName" placeholder="Full name">
@@ -246,7 +246,7 @@
 <div class="modal-overlay" id="manageModal">
   <div class="modal" style="max-width:520px;">
     <div class="modal-title">Manage People</div>
-    <div class="modal-sub">Add, edit, or remove team members Â· ðŸ‘‘ Admin only</div>
+    <div class="modal-sub">Add, edit, or remove team members · 👑 Admin only</div>
     <div class="form-group" style="display:flex;gap:8px;">
       <input type="text" id="newPersonName" placeholder="Full name">
       <input type="text" id="newPersonDept" list="newPersonDeptOptions" placeholder="Department" style="flex:0.6">
@@ -256,7 +256,7 @@
     <div class="scrollable" id="peopleList" style="max-height:240px;"></div>
 
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-      <div class="form-label" style="margin-bottom:8px;">ðŸ· Departments</div>
+      <div class="form-label" style="margin-bottom:8px;">🏷 Departments</div>
       <div class="dept-list" id="deptManagerList"></div>
       <div style="display:flex;gap:8px;align-items:center;">
         <input type="text" id="newDeptName" placeholder="New department name" style="flex:1;">
@@ -268,7 +268,7 @@
     </div>
 
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-      <div class="form-label" style="margin-bottom:8px;">âš  Team Capacity Threshold</div>
+      <div class="form-label" style="margin-bottom:8px;">⚠ Team Capacity Threshold</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input type="number" id="capacityThreshold" min="0" max="20" step="1" style="flex:0 0 80px;" placeholder="3">
         <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--text-muted);flex:1;min-width:120px;">
@@ -285,7 +285,7 @@
 <div class="modal-overlay" id="pubHolModal">
   <div class="modal" style="max-width:520px;">
     <div class="modal-title">Public Holidays</div>
-    <div class="modal-sub">National/regional holidays Â· ðŸ‘‘ Admin only</div>
+    <div class="modal-sub">National/regional holidays · 👑 Admin only</div>
     <div class="form-group" style="display:flex;gap:8px;flex-wrap:wrap;">
       <input type="date" id="newPubDate" style="flex:0 0 150px;">
       <input type="text" id="newPubName" placeholder="Holiday name" style="flex:1;min-width:140px;">
@@ -293,35 +293,35 @@
     </div>
     <details style="margin-bottom:14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;">
       <summary style="cursor:pointer;font-family:'DM Mono',monospace;font-size:0.72rem;letter-spacing:0.06em;color:var(--accent3);">
-        ðŸŒ Import from country (date.nager.at)
+        🌍 Import from country (date.nager.at)
       </summary>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <select id="pubHolCountry" style="flex:1;min-width:140px;">
-          <option value="">â€” Select country â€”</option>
-          <option value="DE">ðŸ‡©ðŸ‡ª Germany</option>
-          <option value="AT">ðŸ‡¦ðŸ‡¹ Austria</option>
-          <option value="CH">ðŸ‡¨ðŸ‡­ Switzerland</option>
-          <option value="FR">ðŸ‡«ðŸ‡· France</option>
-          <option value="GB">ðŸ‡¬ðŸ‡§ United Kingdom</option>
-          <option value="US">ðŸ‡ºðŸ‡¸ United States</option>
-          <option value="ES">ðŸ‡ªðŸ‡¸ Spain</option>
-          <option value="IT">ðŸ‡®ðŸ‡¹ Italy</option>
-          <option value="NL">ðŸ‡³ðŸ‡± Netherlands</option>
-          <option value="BE">ðŸ‡§ðŸ‡ª Belgium</option>
-          <option value="PL">ðŸ‡µðŸ‡± Poland</option>
-          <option value="IE">ðŸ‡®ðŸ‡ª Ireland</option>
-          <option value="PT">ðŸ‡µðŸ‡¹ Portugal</option>
-          <option value="SE">ðŸ‡¸ðŸ‡ª Sweden</option>
-          <option value="NO">ðŸ‡³ðŸ‡´ Norway</option>
-          <option value="DK">ðŸ‡©ðŸ‡° Denmark</option>
-          <option value="FI">ðŸ‡«ðŸ‡® Finland</option>
-          <option value="CA">ðŸ‡¨ðŸ‡¦ Canada</option>
-          <option value="AU">ðŸ‡¦ðŸ‡º Australia</option>
-          <option value="NZ">ðŸ‡³ðŸ‡¿ New Zealand</option>
-          <option value="JP">ðŸ‡¯ðŸ‡µ Japan</option>
-          <option value="IN">ðŸ‡®ðŸ‡³ India</option>
-          <option value="BR">ðŸ‡§ðŸ‡· Brazil</option>
-          <option value="MX">ðŸ‡²ðŸ‡½ Mexico</option>
+          <option value="">— Select country —</option>
+          <option value="DE">🇩🇪 Germany</option>
+          <option value="AT">🇦🇹 Austria</option>
+          <option value="CH">🇨🇭 Switzerland</option>
+          <option value="FR">🇫🇷 France</option>
+          <option value="GB">🇬🇧 United Kingdom</option>
+          <option value="US">🇺🇸 United States</option>
+          <option value="ES">🇪🇸 Spain</option>
+          <option value="IT">🇮🇹 Italy</option>
+          <option value="NL">🇳🇱 Netherlands</option>
+          <option value="BE">🇧🇪 Belgium</option>
+          <option value="PL">🇵🇱 Poland</option>
+          <option value="IE">🇮🇪 Ireland</option>
+          <option value="PT">🇵🇹 Portugal</option>
+          <option value="SE">🇸🇪 Sweden</option>
+          <option value="NO">🇳🇴 Norway</option>
+          <option value="DK">🇩🇰 Denmark</option>
+          <option value="FI">🇫🇮 Finland</option>
+          <option value="CA">🇨🇦 Canada</option>
+          <option value="AU">🇦🇺 Australia</option>
+          <option value="NZ">🇳🇿 New Zealand</option>
+          <option value="JP">🇯🇵 Japan</option>
+          <option value="IN">🇮🇳 India</option>
+          <option value="BR">🇧🇷 Brazil</option>
+          <option value="MX">🇲🇽 Mexico</option>
         </select>
         <input type="number" id="pubHolYear" min="2020" max="2099" step="1" style="flex:0 0 90px;" placeholder="2026">
         <button class="btn btn-export btn-sm" id="pubHolFetchBtn" onclick="fetchCountryHolidays()" style="flex-shrink:0;">Fetch</button>
@@ -343,7 +343,7 @@
     <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" id="newPw2" placeholder="repeat password" autocomplete="new-password" style="font-family:'DM Sans',sans-serif;"></div>
     <div class="auth-error" id="pwChangeError" style="margin-bottom:12px;font-family:'DM Mono',monospace;font-size:0.7rem;"></div>
     <div class="modal-footer">
-      <button class="btn btn-danger" onclick="doSignOut()">ðŸšª Sign Out</button>
+      <button class="btn btn-danger" onclick="doSignOut()">🚪 Sign Out</button>
       <button class="btn btn-ghost" onclick="closeProfileModal()">Cancel</button>
       <button class="btn btn-primary" onclick="doChangePassword()">Update Password</button>
     </div>
@@ -371,17 +371,17 @@
 <div class="log-drawer-backdrop" id="logBackdrop" onclick="closeLog()"></div>
 <div class="log-drawer" id="logDrawer">
   <div class="log-drawer-header">
-    <div><div class="log-drawer-title">Activity Log</div><div class="log-drawer-sub" id="logCount">Loadingâ€¦</div></div>
-    <button class="log-close-btn" onclick="closeLog()">âœ•</button>
+    <div><div class="log-drawer-title">Activity Log</div><div class="log-drawer-sub" id="logCount">Loading…</div></div>
+    <button class="log-close-btn" onclick="closeLog()">✕</button>
   </div>
   <div class="log-filter-row">
     <button class="log-filter-btn active" data-filter="all" onclick="setLogFilter('all',this)">All</button>
-    <button class="log-filter-btn" data-filter="holiday_add" onclick="setLogFilter('holiday_add',this)">ðŸŒ´ Added</button>
-    <button class="log-filter-btn" data-filter="holiday_delete" onclick="setLogFilter('holiday_delete',this)">ðŸ—‘ Deleted</button>
-    <button class="log-filter-btn" data-filter="vac_reset" onclick="setLogFilter('vac_reset',this)">â†º Reset</button>
-    <button class="log-filter-btn" data-filter="person" onclick="setLogFilter('person',this)">ðŸ‘¤ People</button>
+    <button class="log-filter-btn" data-filter="holiday_add" onclick="setLogFilter('holiday_add',this)">🌴 Added</button>
+    <button class="log-filter-btn" data-filter="holiday_delete" onclick="setLogFilter('holiday_delete',this)">🗑 Deleted</button>
+    <button class="log-filter-btn" data-filter="vac_reset" onclick="setLogFilter('vac_reset',this)">↺ Reset</button>
+    <button class="log-filter-btn" data-filter="person" onclick="setLogFilter('person',this)">👤 People</button>
   </div>
-  <div class="log-body" id="logBody"><div class="log-loading">Loading activityâ€¦</div></div>
+  <div class="log-body" id="logBody"><div class="log-loading">Loading activity…</div></div>
 </div>
 </div><!-- end #mainApp -->
 

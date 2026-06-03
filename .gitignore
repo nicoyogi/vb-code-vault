@@ -31,3 +31,4 @@ dist/
 build/
 .cache/
 *.tmp
+fix-encoding.js
