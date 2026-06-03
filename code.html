@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#02020a">
-  <title>VB Code Vault Â· The Grimoire</title>
+  <title>VB Code Vault · The Grimoire</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -84,7 +84,7 @@
     .detail-code .ln { flex-shrink: 0; width: 44px; text-align: right; padding: 0 14px 0 10px; color: #2a2a42; user-select: none; font-size: 11px; border-right: 1px solid #1a1a2e; }
     .detail-code .lc { flex: 1; white-space: pre; padding: 0 12px 0 14px; }
 
-    /* VB Syntax â€” Catppuccin */
+    /* VB Syntax — Catppuccin */
     .kw  { color: #cba6f7; font-weight: 600; }
     .str { color: #a6e3a1; }
     .cmt { color: #4a4860; font-style: italic; }
@@ -196,7 +196,7 @@
     }
     .sub-cancel-btn:hover { color: var(--text2); }
 
-    /* â”€â”€ THANK YOU STATE â”€â”€ */
+    /* ── THANK YOU STATE ── */
     .sub-thankyou { display: none; flex-direction: column; align-items: center; text-align: center; }
     .sub-thankyou.show { display: flex; }
     .sub-thankyou-icon { font-size: 52px; margin-bottom: 1rem; animation: pop .4s cubic-bezier(.36,.07,.19,.97); }
@@ -224,21 +224,21 @@
 <!-- Lock screen -->
 <div id="lock-screen">
   <div class="lock-box">
-    <div class="lock-rune">áš¢</div>
+    <div class="lock-rune">ᚢ</div>
     <div class="lock-title">VB Code Vault</div>
     <div class="lock-sub">// speak friend and enter</div>
     <div class="lock-input-wrap">
       <input class="lock-input" type="password" id="lock-input" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()">
-      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn">ðŸ‘</button>
+      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn">👁</button>
     </div>
-    <button class="lock-btn" onclick="unlock()">Unlock Â· Inscribe</button>
+    <button class="lock-btn" onclick="unlock()">Unlock · Inscribe</button>
     <div class="lock-error" id="lock-error"></div>
     <div class="lock-hint">Same password as your Q&amp;A Base.<br>Sealed in the Firebase ether.</div>
   </div>
 </div>
 
 <header>
-  <a href="index.html" class="logo-back">â† Grimoire</a>
+  <a href="index.html" class="logo-back">← Grimoire</a>
   <div class="logo" role="heading" aria-level="1">
     <div class="logo-icon">VB</div>
     Code Vault
@@ -248,21 +248,21 @@
       <div class="status-dot" id="status-dot"></div>
       <span id="status-label">Connecting...</span>
     </div>
-    <span id="total-badge">â€” scrolls</span>
-    <button class="btn-sm" onclick="lockApp()" title="Lock">ðŸ”’</button>
+    <span id="total-badge">— scrolls</span>
+    <button class="btn-sm" onclick="lockApp()" title="Lock">🔒</button>
     <button class="btn-primary" id="add-btn" onclick="openAdd()">+ Inscribe Spell</button>
   </div>
 </header>
 
 <main id="main">
   <div class="page-head">
-    <div class="page-eyebrow">// Tome I Â· The Vault</div>
+    <div class="page-eyebrow">// Tome I · The Vault</div>
     <div class="page-title">VB Code <span class="grad">Vault</span></div>
   </div>
-  <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">âœ¦ áš¢ âœ¦</div><div class="page-orn-line"></div></div>
+  <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᚢ ✦</div><div class="page-orn-line"></div></div>
 
   <div class="toolbar">
-    <input type="text" id="search" placeholder="âŒ•  Search title, code, or description..." oninput="render()">
+    <input type="text" id="search" placeholder="⌕  Search title, code, or description..." oninput="render()">
     <select id="filter-cat" onchange="render()"><option value="">All categories</option></select>
   </div>
   <div id="stats" class="stats"></div>
@@ -299,7 +299,7 @@
         <div class="detail-title" id="d-title"></div>
         <div id="d-meta" style="margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;"></div>
       </div>
-      <button class="btn-sm" onclick="closeDetail()">âœ• Close</button>
+      <button class="btn-sm" onclick="closeDetail()">✕ Close</button>
     </div>
     <div id="d-desc" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:10px;flex-shrink:0;"></div>
     <div class="detail-code-wrap">
@@ -312,8 +312,8 @@
       <div id="d-code" class="detail-code"></div>
     </div>
     <div class="detail-actions">
-      <button class="btn-sm" id="copy-btn" onclick="copyCode()">ðŸ“‹ Copy code</button>
-      <button class="btn-sm" onclick="editFromDetail()">âœŽ Edit</button>
+      <button class="btn-sm" id="copy-btn" onclick="copyCode()">📋 Copy code</button>
+      <button class="btn-sm" onclick="editFromDetail()">✎ Edit</button>
       <span class="copy-ok" id="copy-ok"></span>
     </div>
   </div>
@@ -325,32 +325,32 @@
 
     <!-- Default state -->
     <div id="sub-default">
-      <div class="sub-sparkle">ðŸ’Ž</div>
+      <div class="sub-sparkle">💎</div>
       <div class="sub-title">You must buy a<br><span class="grad">Subscription</span></div>
       <div class="sub-tagline">// unlock the full grimoire</div>
       <div class="sub-perks">
-        <div class="sub-perk"><span class="sub-perk-icon">âœ¦</span> View full spell source code</div>
-        <div class="sub-perk"><span class="sub-perk-icon">âœ¦</span> Edit &amp; update inscriptions</div>
-        <div class="sub-perk"><span class="sub-perk-icon">âœ¦</span> Unlimited copy &amp; export</div>
-        <div class="sub-perk"><span class="sub-perk-icon">âœ¦</span> Priority ether connection</div>
-        <div class="sub-perk"><span class="sub-perk-icon">âœ¦</span> Dark arts support (24/7)</div>
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> View full spell source code</div>
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Edit &amp; update inscriptions</div>
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Unlimited copy &amp; export</div>
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Priority ether connection</div>
+        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Dark arts support (24/7)</div>
       </div>
       <div class="sub-price">$9.99 <span>/ month</span></div>
-      <div class="sub-note">Cancel anytime Â· No dark rituals required</div>
-      <button class="sub-buy-btn" onclick="handleBuySubscription()">âœ¦ Buy Subscription âœ¦</button>
+      <div class="sub-note">Cancel anytime · No dark rituals required</div>
+      <button class="sub-buy-btn" onclick="handleBuySubscription()">✦ Buy Subscription ✦</button>
       <button class="sub-cancel-btn" onclick="closeSubModal()">Maybe later</button>
     </div>
 
     <!-- Thank you state -->
     <div class="sub-thankyou" id="sub-thankyou">
-      <div class="sub-thankyou-icon">ðŸŽ‰</div>
+      <div class="sub-thankyou-icon">🎉</div>
       <div class="sub-thankyou-title">Thank you for your purchase!</div>
       <div class="sub-thankyou-msg">
         Welcome to the inner sanctum, Archmage.<br>
         All spells are now unlocked. May your code<br>
-        compile on the first attempt. âœ¨
+        compile on the first attempt. ✨
       </div>
-      <button class="sub-continue-btn" onclick="proceedAfterPurchase()">âœ¦ Enter the Vault âœ¦</button>
+      <button class="sub-continue-btn" onclick="proceedAfterPurchase()">✦ Enter the Vault ✦</button>
     </div>
 
   </div>
@@ -363,7 +363,7 @@
 <script src="assets/firebase-config.js"></script>
 
 <script>
-/* â”€â”€ BACKGROUND PARTICLES â”€â”€ */
+/* ── BACKGROUND PARTICLES ── */
 (function(){
   const cv=document.getElementById('bg-canvas'),cx=cv.getContext('2d');
   let W,H,t=0,pts=[];
@@ -390,7 +390,7 @@
   else { requestAnimationFrame(frame); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) requestAnimationFrame(frame); }); }
 })();
 
-/* â”€â”€ VB Syntax Highlighter â”€â”€ */
+/* ── VB Syntax Highlighter ── */
 function highlightVB(code) {
   const keywords = /\b(Sub|End Sub|Function|End Function|Dim|As|Integer|String|Boolean|Double|Long|Single|Date|Object|Variant|Byte|If|Then|Else|ElseIf|End If|For|To|Step|Next|Do|Loop|While|Wend|Until|Select|Case|End Select|With|End With|Class|End Class|Module|End Module|Property|Get|Set|Let|End Property|Return|Call|New|Nothing|True|False|Null|Empty|Me|MyBase|MyClass|Public|Private|Protected|Friend|Static|Shared|ReadOnly|Const|Enum|End Enum|Structure|End Structure|Interface|End Interface|Implements|Inherits|Imports|Namespace|End Namespace|Try|Catch|Finally|End Try|Throw|RaiseEvent|AddHandler|RemoveHandler|And|Or|Not|Xor|AndAlso|OrElse|Is|IsNot|Like|Mod|In|Of|ByVal|ByRef|Optional|ParamArray|Overrides|Overloads|Shadows|MustOverride|MustInherit|NotOverridable|NotInheritable|Handles|Delegate|Event|Declare|Extern|Exit|GoTo|Resume|On Error|Error|MsgBox|Print|Write|WriteLine|Input|Open|Close|Get|Put|Seek|Loc|LOF|EOF|FileLen|FreeFile|Dir|Kill|Name|MkDir|RmDir|ChDir|ChDrive|Shell|Environ|Format|CStr|CInt|CDbl|CBool|CLng|CSng|CByte|CDate|CObj|CType|TryCast|DirectCast|TypeOf|GetType|AddressOf)\b/g;
   return code.split('\n').map((line) => {
@@ -408,7 +408,7 @@ function highlightVB(code) {
 function renderCodePreview(code, maxLines=5) {
   const lines=highlightVB(code), shown=lines.slice(0,maxLines);
   return shown.map((l,i)=>`<div class="cr"><span class="ln">${i+1}</span><span class="lc">${l}</span></div>`).join('')
-    +(lines.length>maxLines?`<div class="cr"><span class="ln">â€¦</span><span class="lc" style="color:#2a2a42">+${lines.length-maxLines} more lines</span></div>`:'');
+    +(lines.length>maxLines?`<div class="cr"><span class="ln">…</span><span class="lc" style="color:#2a2a42">+${lines.length-maxLines} more lines</span></div>`:'');
 }
 function renderDetailCode(code) {
   return highlightVB(code).map((l,i)=>`<div class="cr"><span class="ln">${i+1}</span><span class="lc">${l}</span></div>`).join('');
@@ -447,8 +447,8 @@ function render(){
   const grid=document.getElementById('grid');
   if(!list.length){
     grid.innerHTML=total===0
-      ?`<div class="empty"><div class="empty-icon">ðŸ“œ</div><p>No spells inscribed yet.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ Inscribe Spell</strong> to begin your codex.</p></div>`
-      :`<div class="empty"><div class="empty-icon">ðŸ”</div><p>No spells match your search.</p></div>`;
+      ?`<div class="empty"><div class="empty-icon">📜</div><p>No spells inscribed yet.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ Inscribe Spell</strong> to begin your codex.</p></div>`
+      :`<div class="empty"><div class="empty-icon">🔍</div><p>No spells match your search.</p></div>`;
     return;
   }
   grid.innerHTML=list.map(s=>`
@@ -467,14 +467,14 @@ function render(){
         <div class="code-preview">${renderCodePreview(s.code||'')}</div>
       </div>
       <div class="card-actions">
-        <button class="btn-sm" onclick="openDetailGate('${s.id}')">ðŸ‘ View</button>
-        <button class="btn-sm" onclick="openEditGate('${s.id}')">âœŽ Edit</button>
-        <button class="btn-sm btn-danger" onclick="deleteSnippet('${s.id}')">ðŸ—‘ Delete</button>
+        <button class="btn-sm" onclick="openDetailGate('${s.id}')">👁 View</button>
+        <button class="btn-sm" onclick="openEditGate('${s.id}')">✎ Edit</button>
+        <button class="btn-sm btn-danger" onclick="deleteSnippet('${s.id}')">🗑 Delete</button>
       </div>
     </div>`).join('');
 }
 
-/* â”€â”€ SUBSCRIPTION GATE â”€â”€ */
+/* ── SUBSCRIPTION GATE ── */
 let subPendingAction = null; // 'view' or 'edit'
 let subPendingId = null;
 
@@ -548,7 +548,7 @@ function openDetail(id){
   document.getElementById('d-desc').textContent=s.desc||'';
   document.getElementById('d-code').innerHTML=renderDetailCode(s.code||'');
   document.getElementById('d-filename').textContent=(s.title||'snippet').replace(/[^a-z0-9_\-]/gi,'_').toLowerCase()+'.vb';
-  document.getElementById('copy-btn').textContent='ðŸ“‹ Copy code';
+  document.getElementById('copy-btn').textContent='📋 Copy code';
   document.getElementById('copy-ok').textContent='';
   document.getElementById('detail-modal').classList.add('open');
 }
@@ -556,7 +556,7 @@ function closeDetail(){document.getElementById('detail-modal').classList.remove(
 function editFromDetail(){if(detailId)openEdit(detailId);}
 function copyCode(){
   const s=snippets.find(x=>x.id===detailId);if(!s)return;
-  copyText(s.code||'',()=>{document.getElementById('copy-btn').textContent='âœ“ Copied!';document.getElementById('copy-ok').textContent='Code copied';setTimeout(()=>{document.getElementById('copy-btn').textContent='ðŸ“‹ Copy code';document.getElementById('copy-ok').textContent='';},2000);},()=>showToast('Copy failed.',true));
+  copyText(s.code||'',()=>{document.getElementById('copy-btn').textContent='✓ Copied!';document.getElementById('copy-ok').textContent='Code copied';setTimeout(()=>{document.getElementById('copy-btn').textContent='📋 Copy code';document.getElementById('copy-ok').textContent='';},2000);},()=>showToast('Copy failed.',true));
 }
 function copyText(text,onSuccess,onFail){if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(text).then(onSuccess).catch(()=>fallbackCopy(text,onSuccess,onFail));else fallbackCopy(text,onSuccess,onFail);}
 function fallbackCopy(text,onSuccess,onFail){try{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;';document.body.appendChild(ta);ta.focus();ta.setSelectionRange(0,ta.value.length);const ok=document.execCommand('copy');document.body.removeChild(ta);if(ok)onSuccess();else onFail();}catch(e){onFail();}}
@@ -573,12 +573,12 @@ function handleBgClick(e,id){if(e.target===document.getElementById(id))document.
 function showToast(msg,isError){const t=document.getElementById('toast');t.textContent=msg;t.className=isError?'error-toast show':'show';clearTimeout(t._timer);t._timer=setTimeout(()=>{t.className='';},2500);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDetail();closeSubModal();}if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();document.getElementById('search').focus();}});
 
-/* â”€â”€ PASSWORD LOCK â”€â”€ */
+/* ── PASSWORD LOCK ── */
 const SESSION_KEY='vb_vault_session';
 const authDoc=db.collection('_config').doc('auth');
 async function hashPass(pass){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass+'vb_vault_salt_2024'));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
-function toggleLockVis(){const inp=document.getElementById('lock-input'),btn=document.getElementById('lock-vis-btn');if(inp.type==='password'){inp.type='text';btn.textContent='ðŸ™ˆ';}else{inp.type='password';btn.textContent='ðŸ‘';}}
-function setLockLoading(on){const b=document.querySelector('.lock-btn');b.textContent=on?'Consulting the ether...':'Unlock Â· Inscribe';b.disabled=on;}
+function toggleLockVis(){const inp=document.getElementById('lock-input'),btn=document.getElementById('lock-vis-btn');if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}else{inp.type='password';btn.textContent='👁';}}
+function setLockLoading(on){const b=document.querySelector('.lock-btn');b.textContent=on?'Consulting the ether...':'Unlock · Inscribe';b.disabled=on;}
 async function unlock(){
   const input=document.getElementById('lock-input').value;
   if(!input){showLockError('Please enter a password.');return;}

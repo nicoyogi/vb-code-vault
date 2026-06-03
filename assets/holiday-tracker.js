@@ -1,6 +1,6 @@
-﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+�/* ════════════════════════════════════════════
    FIREBASE INIT
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 firebase.initializeApp(window.firebaseConfig);
 const db          = firebase.firestore();
 const peopleCol   = db.collection('wmf_holiday_people');
@@ -11,9 +11,9 @@ const pubHolCol   = db.collection('wmf_public_holidays');
 const userProfCol = db.collection('wmf_user_profiles');
 const settingsCol = db.collection('wmf_settings');
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    CONSTANTS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 const VACATION_DAYS_PER_YEAR = 12;
 const PALETTE = [
   { bg: '#6ee7b7', text: '#0e0f13' }, { bg: '#818cf8', text: '#0e0f13' },
@@ -21,21 +21,21 @@ const PALETTE = [
   { bg: '#34d399', text: '#0e0f13' }, { bg: '#a78bfa', text: '#0e0f13' },
   { bg: '#fbbf24', text: '#0e0f13' }, { bg: '#60a5fa', text: '#0e0f13' },
 ];
-const LEAVE_TYPE_ICONS = { vacation: 'ðŸŒ´', sick: 'ðŸ¤’', wfh: 'ðŸ ', training: 'ðŸ“š', parental: 'ðŸ‘¶', other: 'ðŸ“Œ' };
+const LEAVE_TYPE_ICONS = { vacation: '🌴', sick: '🤒', wfh: '🏠', training: '📚', parental: '👶', other: '📌' };
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const LOG_META = {
-  holiday_add:    { icon: 'ðŸŒ´', cls: 'add',    tag: 'ADDED',   tagColor: 'rgba(110,231,183,0.15)', tagText: 'var(--accent)' },
-  holiday_delete: { icon: 'ðŸ—‘', cls: 'delete', tag: 'DELETED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
-  vac_reset:      { icon: 'â†º',  cls: 'reset',  tag: 'RESET',   tagColor: 'rgba(245,158,11,0.15)',  tagText: 'var(--accent2)' },
-  person_add:     { icon: 'âž•', cls: 'person', tag: 'NEW',     tagColor: 'rgba(129,140,248,0.15)', tagText: 'var(--accent3)' },
-  person_remove:  { icon: 'âž–', cls: 'person', tag: 'REMOVED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
+  holiday_add:    { icon: '🌴', cls: 'add',    tag: 'ADDED',   tagColor: 'rgba(110,231,183,0.15)', tagText: 'var(--accent)' },
+  holiday_delete: { icon: '🗑', cls: 'delete', tag: 'DELETED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
+  vac_reset:      { icon: '↺',  cls: 'reset',  tag: 'RESET',   tagColor: 'rgba(245,158,11,0.15)',  tagText: 'var(--accent2)' },
+  person_add:     { icon: '➕', cls: 'person', tag: 'NEW',     tagColor: 'rgba(129,140,248,0.15)', tagText: 'var(--accent3)' },
+  person_remove:  { icon: '➖', cls: 'person', tag: 'REMOVED', tagColor: 'rgba(248,113,113,0.15)', tagText: 'var(--red)' },
 };
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    STATE
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 let currentUser    = null;
 let appStarted     = false;
 let people         = [];
@@ -49,25 +49,25 @@ let viewMonth      = new Date().getMonth();
 let currentView    = 'calendar';
 let deptFilter     = localStorage.getItem('ht_dept_filter') || '';
 
-// Derived caches â€” busted on data change
+// Derived caches — busted on data change
 let _pubHolSetCache = null;   // Set of public holiday ISO strings
 let _vacUsedCache   = {};     // Map<"personId:year", number>
 let _renderScheduled = false; // Debounce flag
 
-// â”€â”€â”€ REMOVED: _holidayIndexCache (the per-day explosion map) â”€â”€â”€
-// holidaysOnDate() now uses a simple .filter() â€” O(n entries) but
+// ─── REMOVED: _holidayIndexCache (the per-day explosion map) ───
+// holidaysOnDate() now uses a simple .filter() — O(n entries) but
 // avoids building a large Map on every snapshot. The calendar render
 // builds its own month-scoped byDay bucket in one pass instead.
 
 function bustCaches() {
   _pubHolSetCache = null;
   _vacUsedCache   = {};
-  // No holiday index to bust â€” nothing to do here for that path.
+  // No holiday index to bust — nothing to do here for that path.
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    SIMPLE AUTH
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function makeUid(name) {
   return name.toLowerCase().replace(/\s+/g, '_') + '_' + btoa(name).slice(0, 6);
 }
@@ -134,7 +134,7 @@ function setAuthLoading(btnId, spinnerId, loading) {
 
 async function loadPeopleForAuth() {
   const [loginSel, regSel] = ['loginEmail', 'registerPerson'].map(id => document.getElementById(id));
-  loginSel.innerHTML = regSel.innerHTML = '<option value="">â€” Loadingâ€¦ â€”</option>';
+  loginSel.innerHTML = regSel.innerHTML = '<option value="">— Loading… —</option>';
   try {
     const [peopleSnap, profSnap] = await Promise.all([
       peopleCol.orderBy('name').get(),
@@ -142,8 +142,8 @@ async function loadPeopleForAuth() {
     ]);
     const linkedIds = new Set(profSnap.docs.map(d => d.data().personId));
 
-    loginSel.innerHTML = '<option value="">â€” Select your name â€”</option>';
-    regSel.innerHTML   = '<option value="">â€” Select your name â€”</option>';
+    loginSel.innerHTML = '<option value="">— Select your name —</option>';
+    regSel.innerHTML   = '<option value="">— Select your name —</option>';
 
     peopleSnap.docs.forEach(d => {
       const opt = `<option value="${d.id}">${d.data().name} (${d.data().dept})</option>`;
@@ -151,10 +151,10 @@ async function loadPeopleForAuth() {
       if (linkedIds.has(d.id)) loginSel.insertAdjacentHTML('beforeend', opt);
       if (!linkedIds.has(d.id)) regSel.insertAdjacentHTML('beforeend', opt);
     });
-    if (loginSel.options.length === 1) loginSel.innerHTML = '<option value="">â€” No accounts yet â€” register first â€”</option>';
-    if (regSel.options.length === 1) regSel.innerHTML = '<option value="">â€” All members have accounts â€”</option>';
+    if (loginSel.options.length === 1) loginSel.innerHTML = '<option value="">— No accounts yet — register first —</option>';
+    if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— All members have accounts —</option>';
   } catch(e) {
-    loginSel.innerHTML = regSel.innerHTML = '<option value="">â€” Error loading â€”</option>';
+    loginSel.innerHTML = regSel.innerHTML = '<option value="">— Error loading —</option>';
   }
 }
 
@@ -220,17 +220,17 @@ async function doChangePassword() {
   } catch(e) { err.textContent = e.message; err.classList.add('show'); }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    PERMISSION HELPERS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 const isAdmin    = ()           => !!(currentUser && currentUser.isAdmin);
 const myPersonId = ()           => currentUser ? currentUser.personId : null;
 const canEdit    = personId     => isAdmin() || personId === myPersonId();
 const canDelete  = holiday      => isAdmin() || holiday.personId === myPersonId();
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    UI HELPERS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function setStatus(cls, label) {
   document.getElementById('statusDot').className = 'status-dot ' + (cls || '');
   document.getElementById('statusLabel').textContent = label;
@@ -263,9 +263,9 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    VIEW
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function setView(v) {
   currentView = v;
   document.getElementById('viewCalBtn').classList.toggle('active', v === 'calendar');
@@ -275,9 +275,9 @@ function setView(v) {
   render();
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    ACTIVITY LOG
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 async function writeLog(action, message, meta) {
   try {
     await activityCol.add({
@@ -330,7 +330,7 @@ function fmtLogTime(ts) {
   if (diff < 3600)  return Math.floor(diff / 60)   + 'm ago';
   if (diff < 86400) return Math.floor(diff / 3600)  + 'h ago';
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-       + ' Â· ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+       + ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
 function renderLogEntries() {
@@ -342,8 +342,8 @@ function renderLogEntries() {
   if (!display.length) { body.innerHTML = '<div class="log-loading">No entries for this filter</div>'; return; }
 
   const parts = display.map(log => {
-    const m = LOG_META[log.action] || { icon: 'ðŸ“Œ', cls: 'add', tag: log.action, tagColor: 'rgba(110,231,183,0.1)', tagText: 'var(--accent)' };
-    const byTag = log.byName ? `<span style="color:var(--text-muted);font-size:0.58rem;"> Â· ${log.byName}</span>` : '';
+    const m = LOG_META[log.action] || { icon: '📌', cls: 'add', tag: log.action, tagColor: 'rgba(110,231,183,0.1)', tagText: 'var(--accent)' };
+    const byTag = log.byName ? `<span style="color:var(--text-muted);font-size:0.58rem;"> · ${log.byName}</span>` : '';
     return `<div class="log-entry">
       <div class="log-icon ${m.cls}">${m.icon}</div>
       <div class="log-content">
@@ -355,9 +355,9 @@ function renderLogEntries() {
   body.innerHTML = parts.join('');
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    FIRESTORE LISTENERS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function startListeners() {
   setStatus('', 'Connecting...');
 
@@ -407,17 +407,17 @@ function startListeners() {
   }, () => {});
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    UTILS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-/** Memoized public holiday Set â€” computed once per data change. */
+════════════════════════════════════════════ */
+/** Memoized public holiday Set — computed once per data change. */
 function pubHolSet() {
   if (!_pubHolSetCache) _pubHolSetCache = new Set(publicHolidays.map(ph => ph.date));
   return _pubHolSetCache;
 }
 
 /**
- * PERF FIX 1: holidaysOnDate â€” O(n entries) filter instead of O(days) map lookup.
+ * PERF FIX 1: holidaysOnDate — O(n entries) filter instead of O(days) map lookup.
  * No index to build or bust. For typical team sizes (<200 entries) this is faster
  * overall because we avoid the expensive map-build on every snapshot.
  * Used by: searchByDate, renderAway, renderStats (via holidaysOnDate).
@@ -471,9 +471,9 @@ function entryDays(h) {
   return countWeekdays(h.start, h.end);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   VACATION UTILS â€” memoized per person+year
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ════════════════════════════════════════════
+   VACATION UTILS — memoized per person+year
+════════════════════════════════════════════ */
 function vacUsedByYear(personId, year) {
   const key = `${personId}:${year}`;
   if (_vacUsedCache[key] !== undefined) return _vacUsedCache[key];
@@ -506,9 +506,9 @@ function getConflicts(personId, start, end, excludeId) {
 
 function fmtDays(n) { return n % 1 !== 0 ? n.toFixed(1) : String(n); }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    DEPARTMENTS + FILTER
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 /** Union of admin-managed departments and any free-text depts on existing people. */
 function effectiveDepartments() {
   const set = new Set();
@@ -557,9 +557,9 @@ function updateDeptDatalists() {
   });
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    RENDER ORCHESTRATOR
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function render() {
   renderStats();
   if (currentView === 'calendar') renderCalendar();
@@ -587,9 +587,9 @@ function updateAdminUI() {
   document.getElementById('manageBtn').style.display  = admin ? '' : 'none';
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    STATS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function renderStats() {
   const today = dateStr(new Date());
   const visiblePeople = deptFilter ? people.filter(p => p.dept === deptFilter) : people;
@@ -608,9 +608,9 @@ function renderStats() {
      <div class="stat-box"><div class="stat-num" style="color:var(--accent3)">${thisMonth}</div><div class="stat-label">This Month</div></div>`;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    CALENDAR DRAG
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 let dragStart = null, dragEnd = null, isDragging = false;
 
 function startDrag(iso) { isDragging = true; dragStart = iso; dragEnd = iso; highlightDrag(); }
@@ -636,13 +636,13 @@ function highlightDrag() {
   });
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    CALENDAR RENDER
    PERF FIX 2: Build a month-scoped byDay bucket in ONE pass over holidays
    instead of using the global day-explosion index. This clamps the work to
    only the ~30 days visible rather than walking every day of every entry.
    DocumentFragment for single DOM append preserved.
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function renderCalendar() {
   document.getElementById('monthLabel').textContent = `${MONTHS[viewMonth]} ${viewYear}`;
 
@@ -654,11 +654,11 @@ function renderCalendar() {
   const phSet  = pubHolSet();
   const mPad   = String(viewMonth + 1).padStart(2, '0');
 
-  // â”€â”€ PERF FIX 2a: month boundaries for fast pre-filter â”€â”€
+  // ── PERF FIX 2a: month boundaries for fast pre-filter ──
   const monthStart = `${viewYear}-${mPad}-01`;
   const monthEnd   = `${viewYear}-${mPad}-${String(daysInMonth).padStart(2, '0')}`;
 
-  // â”€â”€ PERF FIX 2b: one pass over holidays, bucket into visible days only â”€â”€
+  // ── PERF FIX 2b: one pass over holidays, bucket into visible days only ──
   const byDay = {};
   for (const h of holidays) {
     // Skip entries that don't touch this month at all
@@ -731,11 +731,11 @@ function renderCalendar() {
   document.addEventListener('mouseup', () => { if (isDragging) endDrag(dragEnd); }, { once: true });
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    GANTT RENDER
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function renderGantt() {
-  document.getElementById('monthLabel').textContent = `${MONTHS_SHORT[viewMonth]} ${viewYear} â€” Timeline`;
+  document.getElementById('monthLabel').textContent = `${MONTHS_SHORT[viewMonth]} ${viewYear} — Timeline`;
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const today = dateStr(new Date());
@@ -774,8 +774,8 @@ function renderGantt() {
       const endDay   = parseInt(clipEnd.split('-')[2]) - 1;
       const left  = (startDay / daysInMonth) * 100;
       const width = ((endDay - startDay + 1) / daysInMonth) * 100;
-      const icon  = LEAVE_TYPE_ICONS[h.type] || 'ðŸ“Œ';
-      bars += `<div class="gantt-bar" style="left:${left}%;width:${width}%;background:${color.bg};" title="${icon} ${h.type} Â· ${fmtDate(h.start)} â†’ ${fmtDate(h.end)}${h.note?' Â· '+h.note:''}">${width > 8 ? icon : ''}</div>`;
+      const icon  = LEAVE_TYPE_ICONS[h.type] || '📌';
+      bars += `<div class="gantt-bar" style="left:${left}%;width:${width}%;background:${color.bg};" title="${icon} ${h.type} · ${fmtDate(h.start)} → ${fmtDate(h.end)}${h.note?' · '+h.note:''}">${width > 8 ? icon : ''}</div>`;
     });
     html += `<div class="gantt-person-row"><div class="gantt-person-name">${p.name.split(' ')[0]}</div><div class="gantt-cells" style="position:relative;">${cells}${bars}</div></div>`;
   });
@@ -783,9 +783,9 @@ function renderGantt() {
   document.getElementById('ganttGrid').innerHTML = html;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    VACATION BALANCE RENDER
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function renderVacBalance() {
   const year = viewYear;
   document.getElementById('vacYearTag').textContent = year;
@@ -807,9 +807,9 @@ function renderVacBalance() {
     else if (remaining <= 3) { remainClass = 'warn';  barColor = '#f59e0b'; }
     const bonus      = allot - VACATION_DAYS_PER_YEAR;
     const bonusBadge = bonus !== 0
-      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:${bonus > 0 ? 'var(--accent3)' : 'var(--red)'};margin-left:3px;">${bonus > 0 ? '+' : ''}${bonus}â†©</span>` : '';
+      ? `<span style="font-family:'DM Mono',monospace;font-size:0.58rem;color:${bonus > 0 ? 'var(--accent3)' : 'var(--red)'};margin-left:3px;">${bonus > 0 ? '+' : ''}${bonus}↩</span>` : '';
     const resetBtn = isAdmin()
-      ? `<button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name.replace(/'/g,"\\'")}',${year})" title="Adjust vacation bonus">â†º</button>` : '';
+      ? `<button class="reset-vac-btn" onclick="resetVacation('${p.id}','${p.name.replace(/'/g,"\\'")}',${year})" title="Adjust vacation bonus">↺</button>` : '';
     return `<div class="vac-row">
       <div class="avatar" style="width:30px;height:30px;font-size:0.65rem;background:${color.bg};color:${color.text};">${initials(p.name)}</div>
       <div class="vac-info">
@@ -828,22 +828,22 @@ function renderVacBalance() {
   }).join('');
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    AWAY + ALL LIST
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function renderAway() {
   const today = dateStr(new Date());
   const away  = holidaysOnDate(today).filter(h => passDeptFilter(h.personId));
   document.getElementById('awayCount').textContent = away.length;
   const list = document.getElementById('awayList');
-  if (!away.length) { list.innerHTML = `<div class="empty-state">${deptFilter ? `No one in ${deptFilter} is away today âœ“` : 'No one is away today âœ“'}</div>`; return; }
+  if (!away.length) { list.innerHTML = `<div class="empty-state">${deptFilter ? `No one in ${deptFilter} is away today ✓` : 'No one is away today ✓'}</div>`; return; }
   list.innerHTML = away.map(h => {
     const p = getPerson(h.personId); if (!p) return '';
     const color = getColor(h.personId);
     return `<div class="person-row">
       <div class="avatar" style="background:${color.bg};color:${color.text};">${initials(p.name)}</div>
       <div class="person-info"><div class="person-name">${p.name}</div><div class="person-dept">${p.dept}</div></div>
-      <span class="leave-badge chip" style="background:var(--accent-a08);color:var(--accent);">${LEAVE_TYPE_ICONS[h.type]||'ðŸ“Œ'}${h.halfDay?' Â½':''}</span>
+      <span class="leave-badge chip" style="background:var(--accent-a08);color:var(--accent);">${LEAVE_TYPE_ICONS[h.type]||'📌'}${h.halfDay?' ½':''}</span>
     </div>`;
   }).join('');
 }
@@ -857,18 +857,18 @@ function renderAllList() {
   list.innerHTML = sorted.map(h => {
     const p = getPerson(h.personId); if (!p) return '';
     const color   = getColor(h.personId);
-    const halfTag = h.halfDay ? ` Â· Â½ ${h.halfDayPart||''}` : '';
+    const halfTag = h.halfDay ? ` · ½ ${h.halfDayPart||''}` : '';
     const days    = entryDays(h);
     const canEd   = canEdit(h.personId);
     const edit    = canEd
-      ? `<button class="delete-btn" onclick="editHoliday('${h.id}')" title="Edit" style="color:var(--accent3);">âœŽ</button>` : '';
+      ? `<button class="delete-btn" onclick="editHoliday('${h.id}')" title="Edit" style="color:var(--accent3);">✎</button>` : '';
     const del     = canDelete(h)
-      ? `<button class="delete-btn" onclick="deleteHoliday('${h.id}')" title="Delete">âœ•</button>` : '';
+      ? `<button class="delete-btn" onclick="deleteHoliday('${h.id}')" title="Delete">✕</button>` : '';
     return `<div class="list-item-row">
       <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
       <div class="list-item-info">
-        <div class="list-item-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'ðŸ“Œ'}<span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:4px;">${fmtDays(days)}d</span></div>
-        <div class="list-item-date">${fmtDate(h.start)} â†’ ${fmtDate(h.end)}${halfTag}${h.note?' Â· '+h.note:''}</div>
+        <div class="list-item-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'📌'}<span style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-muted);margin-left:4px;">${fmtDays(days)}d</span></div>
+        <div class="list-item-date">${fmtDate(h.start)} → ${fmtDate(h.end)}${halfTag}${h.note?' · '+h.note:''}</div>
       </div>
       ${edit}
       ${del}
@@ -888,9 +888,9 @@ function renderLegend() {
     `<div class="legend-item"><div class="legend-dot" style="background:var(--surface3);border:1px solid var(--border);"></div>Weekend (not counted)</div>`;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    PEOPLE LIST (admin modal)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function renderPeopleList() {
   const list = document.getElementById('peopleList');
   if (!people.length) { list.innerHTML = '<div class="empty-state">No people added yet</div>'; return; }
@@ -898,25 +898,25 @@ function renderPeopleList() {
     const color = getColor(p.id);
     const prof  = userProfiles.find(u => u.personId === p.id);
     let badge = '';
-    if (prof && prof.isAdmin) badge = `<span class="account-badge admin">ðŸ‘‘ admin</span>`;
-    else if (prof)            badge = `<span class="account-badge linked">âœ“ account</span>`;
+    if (prof && prof.isAdmin) badge = `<span class="account-badge admin">👑 admin</span>`;
+    else if (prof)            badge = `<span class="account-badge linked">✓ account</span>`;
     else                      badge = `<span class="account-badge unlinked">no account</span>`;
     const toggleAdmin = prof
-      ? `<button class="btn btn-sm btn-ghost" onclick="toggleAdminStatus('${prof.uid}','${p.name}',${!!prof.isAdmin})" style="padding:4px 8px;font-size:0.65rem;">${prof.isAdmin?'â†“':'â†‘'}admin</button>`
+      ? `<button class="btn btn-sm btn-ghost" onclick="toggleAdminStatus('${prof.uid}','${p.name}',${!!prof.isAdmin})" style="padding:4px 8px;font-size:0.65rem;">${prof.isAdmin?'↓':'↑'}admin</button>`
       : '';
     return `<div class="list-item-row" style="flex-wrap:wrap;gap:6px;">
       <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
       <div class="list-item-info"><div class="list-item-name">${p.name}</div><div class="list-item-date">${p.dept}</div></div>
       ${badge}${toggleAdmin}
-      <button class="delete-btn" onclick="openEditPerson('${p.id}')" title="Edit name &amp; department" style="color:var(--accent3);">âœŽ</button>
-      <button class="delete-btn" onclick="removePerson('${p.id}')" title="Remove">âœ•</button>
+      <button class="delete-btn" onclick="openEditPerson('${p.id}')" title="Edit name &amp; department" style="color:var(--accent3);">✎</button>
+      <button class="delete-btn" onclick="removePerson('${p.id}')" title="Remove">✕</button>
     </div>`;
   }).join('');
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    PUBLIC HOLIDAYS (admin)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function openPublicHolidays() {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   renderPubHolList();
@@ -935,7 +935,7 @@ function renderPubHolList() {
     `<div class="pub-hol-item">
       <span style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text-dim);flex:0 0 110px;">${fmtDate(ph.date)}</span>
       <span style="font-size:0.82rem;flex:1;">${ph.name}</span>
-      <button class="delete-btn" onclick="deletePublicHoliday('${ph.id}')" title="Remove">âœ•</button>
+      <button class="delete-btn" onclick="deletePublicHoliday('${ph.id}')" title="Remove">✕</button>
     </div>`
   ).join('');
 }
@@ -975,14 +975,14 @@ async function fetchCountryHolidays() {
   const status  = document.getElementById('pubHolFetchStatus');
   const btn     = document.getElementById('pubHolFetchBtn');
 
-  if (!country) { status.textContent = 'âš  Select a country first.'; status.style.color = 'var(--red)'; return; }
+  if (!country) { status.textContent = '⚠ Select a country first.'; status.style.color = 'var(--red)'; return; }
   if (!Number.isInteger(year) || year < 2020 || year > 2099) {
-    status.textContent = 'âš  Enter a valid year (2020â€“2099).'; status.style.color = 'var(--red)'; return;
+    status.textContent = '⚠ Enter a valid year (2020–2099).'; status.style.color = 'var(--red)'; return;
   }
 
   btn.disabled = true;
   status.style.color = 'var(--text-muted)';
-  status.textContent = `Fetching ${country} ${year}â€¦`;
+  status.textContent = `Fetching ${country} ${year}…`;
 
   try {
     const url = `https://date.nager.at/api/v3/PublicHolidays/${year}/${country}`;
@@ -1008,7 +1008,7 @@ async function fetchCountryHolidays() {
     }
 
     showSaving(true);
-    // Firestore batches are limited to 500 ops â€” comfortably above any country's annual count
+    // Firestore batches are limited to 500 ops — comfortably above any country's annual count
     const batch = db.batch();
     const stamp = firebase.firestore.FieldValue.serverTimestamp();
     toAdd.forEach(e => {
@@ -1017,25 +1017,25 @@ async function fetchCountryHolidays() {
     await batch.commit();
 
     await writeLog('vac_reset',
-      `<strong>Public holidays</strong> â€” imported ${toAdd.length} ${country} ${year} holiday${toAdd.length === 1 ? '' : 's'}`,
+      `<strong>Public holidays</strong> — imported ${toAdd.length} ${country} ${year} holiday${toAdd.length === 1 ? '' : 's'}`,
       { country, year, added: toAdd.length });
 
     status.style.color = 'var(--accent)';
-    status.textContent = `âœ“ Imported ${toAdd.length} holiday${toAdd.length === 1 ? '' : 's'} (${entries.length - toAdd.length} already existed).`;
+    status.textContent = `✓ Imported ${toAdd.length} holiday${toAdd.length === 1 ? '' : 's'} (${entries.length - toAdd.length} already existed).`;
     showToast(`Imported ${toAdd.length} ${country} ${year} holidays!`);
     renderPubHolList();
   } catch(e) {
     status.style.color = 'var(--red)';
-    status.textContent = `âš  Fetch failed: ${e.message}`;
+    status.textContent = `⚠ Fetch failed: ${e.message}`;
   } finally {
     btn.disabled = false;
     showSaving(false);
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    VACATION RESET (admin)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 async function resetVacation(personId, personName, year) {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   const existing    = vacResets.find(r => r.personId === personId && r.year === year);
@@ -1069,7 +1069,7 @@ async function resetVacation(personId, personName, year) {
     const delta = newBonus - currentBonus;
     const sign  = delta >= 0 ? '+' : '';
     await writeLog('vac_reset',
-      `<strong>${personName}</strong> â€” ${year} bonus set to ${newBonus >= 0 ? '+' : ''}${newBonus} days (${sign}${delta} change Â· total ${newAllot}d)`,
+      `<strong>${personName}</strong> — ${year} bonus set to ${newBonus >= 0 ? '+' : ''}${newBonus} days (${sign}${delta} change · total ${newAllot}d)`,
       { personId, year, newBonus, previousBonus: currentBonus });
     showToast(`${personName}: ${year} allotment now ${newAllot} days`);
   } catch(e) { showToast('Reset failed: '+e.message, true); }
@@ -1089,9 +1089,9 @@ async function toggleAdminStatus(uid, personName, currentlyAdmin) {
   finally { showSaving(false); }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    NAVIGATION
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function changeMonth(dir) {
   viewMonth += dir;
   if (viewMonth > 11) { viewMonth = 0; viewYear++; }
@@ -1107,9 +1107,9 @@ function selectDate(iso) {
   render();
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    SEARCH
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function searchByDate() {
   const val = document.getElementById('searchDate').value;
   const res = document.getElementById('searchResults');
@@ -1118,7 +1118,7 @@ function searchByDate() {
   const pubHol = publicHolOnDate(val);
   let html = '';
   if (pubHol) html += `<div class="search-result-item" style="border-color:var(--accent3-a25);">
-    <div class="result-avatar" style="background:var(--accent3-a12);color:var(--accent3);">ðŸ—“</div>
+    <div class="result-avatar" style="background:var(--accent3-a12);color:var(--accent3);">🗓</div>
     <div class="result-info"><div class="result-name">${pubHol.name}</div><div class="result-dates">Public Holiday</div></div>
   </div>`;
   if (!hs.length && !pubHol) { res.innerHTML = '<div class="no-results">No one on leave this day</div>'; return; }
@@ -1128,17 +1128,17 @@ function searchByDate() {
     return `<div class="search-result-item">
       <div class="result-avatar" style="background:${color.bg};color:${color.text};">${initials(p.name)}</div>
       <div class="result-info">
-        <div class="result-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'ðŸ“Œ'}${h.halfDay?' Â½'+h.halfDayPart:''}</div>
-        <div class="result-dates">${fmtDate(h.start)} â†’ ${fmtDate(h.end)}${h.note?' Â· '+h.note:''}</div>
+        <div class="result-name">${p.name} ${LEAVE_TYPE_ICONS[h.type]||'📌'}${h.halfDay?' ½'+h.halfDayPart:''}</div>
+        <div class="result-dates">${fmtDate(h.start)} → ${fmtDate(h.end)}${h.note?' · '+h.note:''}</div>
       </div>
     </div>`;
   }).join('');
   res.innerHTML = html;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    ADD MODAL
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function toggleHalfDay() {
   const checked = document.getElementById('halfDayCheck').checked;
   document.getElementById('halfDaySelect').classList.toggle('visible', checked);
@@ -1185,16 +1185,16 @@ function openAddModal(keepDates, editH) {
 
   const sel = document.getElementById('formPerson');
   if (isAdmin()) {
-    sel.innerHTML = '<option value="">â€” Select person â€”</option>';
+    sel.innerHTML = '<option value="">— Select person —</option>';
     people.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name} (${p.dept})</option>`; });
     sel.disabled = false;
-    if (!editH) subEl.textContent = 'Record who\'s out and when Â· weekdays (Monâ€“Fri) only';
+    if (!editH) subEl.textContent = 'Record who\'s out and when · weekdays (Mon–Fri) only';
   } else {
     const myId = myPersonId();
     const me   = getPerson(myId);
-    sel.innerHTML = me ? `<option value="${myId}">${me.name} (${me.dept})</option>` : '<option value="">â€” Not linked to a person â€”</option>';
+    sel.innerHTML = me ? `<option value="${myId}">${me.name} (${me.dept})</option>` : '<option value="">— Not linked to a person —</option>';
     sel.disabled  = true;
-    if (!editH) subEl.textContent = `Adding holiday for you Â· ${me ? me.name : ''} Â· weekdays only`;
+    if (!editH) subEl.textContent = `Adding holiday for you · ${me ? me.name : ''} · weekdays only`;
   }
 
   if (editH) {
@@ -1248,9 +1248,9 @@ async function deleteFromEdit() {
   await deleteHoliday(id);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    WARNINGS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function updateWeekendWarn() {
   const start = document.getElementById('formStart').value;
   const end   = document.getElementById('formEnd').value;
@@ -1264,7 +1264,7 @@ function updateWeekendWarn() {
     warn.style.background = 'var(--red-a12)';
     warn.style.borderColor = 'var(--red-a25)';
     warn.style.color = 'var(--red)';
-    warn.textContent = 'â›” Selected dates are weekends or public holidays only â€” no weekdays to book.';
+    warn.textContent = '⛔ Selected dates are weekends or public holidays only — no weekdays to book.';
     return;
   }
 
@@ -1282,7 +1282,7 @@ function updateWeekendWarn() {
     warn.style.background = 'var(--accent2-a08)';
     warn.style.borderColor = 'rgba(245,158,11,0.25)';
     warn.style.color = 'var(--accent2)';
-    warn.textContent = `âš  Weekends are excluded â€” this range counts as ${wdays} weekday${wdays !== 1 ? 's' : ''} (Monâ€“Fri only).`;
+    warn.textContent = `⚠ Weekends are excluded — this range counts as ${wdays} weekday${wdays !== 1 ? 's' : ''} (Mon–Fri only).`;
   } else {
     warn.style.display = 'none';
   }
@@ -1297,8 +1297,8 @@ function updateConflictWarn() {
   const conflicts = getConflicts(personId, start, end, editingHolidayId);
   warn.style.display = conflicts.length ? 'block' : 'none';
   if (conflicts.length) {
-    const names = conflicts.map(h => `${LEAVE_TYPE_ICONS[h.type]||'ðŸ“Œ'} ${fmtDate(h.start)}â†’${fmtDate(h.end)}`).join(', ');
-    warn.textContent = `âš  Overlaps existing entry: ${names}`;
+    const names = conflicts.map(h => `${LEAVE_TYPE_ICONS[h.type]||'📌'} ${fmtDate(h.start)}→${fmtDate(h.end)}`).join(', ');
+    warn.textContent = `⚠ Overlaps existing entry: ${names}`;
   }
 }
 
@@ -1340,22 +1340,22 @@ function updateVacWarning() {
     const label     = years.length > 1 ? ` (${yr})` : '';
     if (after < 0) {
       worstClass = 'warn-error';
-      return `âš  ${deduction}d from ${yr}${label} â€” only ${remaining} left, ${Math.abs(after).toFixed(1)} over allotment`;
+      return `⚠ ${deduction}d from ${yr}${label} — only ${remaining} left, ${Math.abs(after).toFixed(1)} over allotment`;
     } else if (after <= 3) {
       if (worstClass !== 'warn-error') worstClass = 'warn-caution';
-      return `â„¹ ${fmtDays(deduction)}d from ${yr}${label} â€” ${fmtDays(after)} day${after !== 1 ? 's' : ''} remaining`;
+      return `ℹ ${fmtDays(deduction)}d from ${yr}${label} — ${fmtDays(after)} day${after !== 1 ? 's' : ''} remaining`;
     } else {
-      return `âœ“ ${fmtDays(deduction)}d from ${yr}${label} â€” ${fmtDays(after)} day${after !== 1 ? 's' : ''} remaining`;
+      return `✓ ${fmtDays(deduction)}d from ${yr}${label} — ${fmtDays(after)} day${after !== 1 ? 's' : ''} remaining`;
     }
   });
 
   warn.style.display = 'block';
   warn.className     = worstClass;
-  warn.textContent   = `${p.name}: ` + lines.join(' Â· ');
+  warn.textContent   = `${p.name}: ` + lines.join(' · ');
 }
 
 /**
- * Capacity warning â€” flags days in the proposed range where the number
+ * Capacity warning — flags days in the proposed range where the number
  * of DISTINCT people already off (excluding the person being booked and
  * the entry being edited) meets or exceeds the admin-configured threshold.
  */
@@ -1399,18 +1399,18 @@ function updateCapacityWarn() {
 
   const preview = hotDays.slice(0, 3)
     .map(d => `${fmtDate(d.iso)} (${d.totalIfBooked} people${d.names ? ': ' + d.names : ''})`)
-    .join(' Â· ');
-  const moreTag = hotDays.length > 3 ? ` Â· +${hotDays.length - 3} more day${hotDays.length - 3 === 1 ? '' : 's'}` : '';
+    .join(' · ');
+  const moreTag = hotDays.length > 3 ? ` · +${hotDays.length - 3} more day${hotDays.length - 3 === 1 ? '' : 's'}` : '';
   warn.style.display = 'block';
   warn.className     = 'warn-caution';
-  warn.textContent   = `âš  Team capacity: ${hotDays.length} day${hotDays.length === 1 ? '' : 's'} would hit â‰¥${threshold} people off â€” ${preview}${moreTag}`;
+  warn.textContent   = `⚠ Team capacity: ${hotDays.length} day${hotDays.length === 1 ? '' : 's'} would hit ≥${threshold} people off — ${preview}${moreTag}`;
 }
 
 async function saveCapacityThreshold() {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   const raw = document.getElementById('capacityThreshold').value.trim();
   const val = raw === '' ? 0 : Number(raw);
-  if (!Number.isFinite(val) || val < 0 || val > 20) { showToast('Enter a number 0â€“20.', true); return; }
+  if (!Number.isFinite(val) || val < 0 || val > 20) { showToast('Enter a number 0–20.', true); return; }
   showSaving(true);
   try {
     await settingsCol.doc('team').set({
@@ -1422,15 +1422,15 @@ async function saveCapacityThreshold() {
   finally { showSaving(false); }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    DEPARTMENT MANAGER (admin)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function renderDeptManager() {
   const list = document.getElementById('deptManagerList');
   if (!list) return;
   const depts = effectiveDepartments();
   if (!depts.length) {
-    list.innerHTML = '<div class="empty-state" style="padding:8px 0;">No departments yet â€” add one below or they appear automatically when you set a dept on a person.</div>';
+    list.innerHTML = '<div class="empty-state" style="padding:8px 0;">No departments yet — add one below or they appear automatically when you set a dept on a person.</div>';
     return;
   }
   list.innerHTML = depts.map(d => {
@@ -1438,8 +1438,8 @@ function renderDeptManager() {
     return `<div class="dept-chip">
       <span>${d}</span>
       <span class="dept-count" title="${count} ${count === 1 ? 'person' : 'people'}">${count}</span>
-      <button class="dept-chip-btn" onclick="renameDepartment(${JSON.stringify(d).replace(/"/g,'&quot;')})" title="Rename">âœŽ</button>
-      <button class="dept-chip-btn del" onclick="removeDepartment(${JSON.stringify(d).replace(/"/g,'&quot;')})" title="Remove">âœ•</button>
+      <button class="dept-chip-btn" onclick="renameDepartment(${JSON.stringify(d).replace(/"/g,'&quot;')})" title="Rename">✎</button>
+      <button class="dept-chip-btn del" onclick="removeDepartment(${JSON.stringify(d).replace(/"/g,'&quot;')})" title="Remove">✕</button>
     </div>`;
   }).join('');
 }
@@ -1502,7 +1502,7 @@ async function renameDepartment(oldName) {
       localStorage.setItem('ht_dept_filter', newName);
     }
     await writeLog('person_add',
-      `Department renamed: <strong>${oldName}</strong> â†’ <strong>${newName}</strong> (${affected.length} updated)`,
+      `Department renamed: <strong>${oldName}</strong> → <strong>${newName}</strong> (${affected.length} updated)`,
       { oldName, newName, affected: affected.length });
     showToast(`Renamed to "${newName}".`);
   } catch(e) { showToast('Failed: '+e.message, true); }
@@ -1540,9 +1540,9 @@ async function removeDepartment(name) {
   finally { showSaving(false); }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    SAVE / DELETE HOLIDAY
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 async function saveHoliday() {
   const personId    = document.getElementById('formPerson').value;
   let   start       = document.getElementById('formStart').value;
@@ -1563,8 +1563,8 @@ async function saveHoliday() {
   showSaving(true);
   try {
     const savedName = getPersonName(personId);
-    const icon      = LEAVE_TYPE_ICONS[type] || 'ðŸ“Œ';
-    const halfTag   = halfDay ? ` (Â½ ${halfDayPart})` : '';
+    const icon      = LEAVE_TYPE_ICONS[type] || '📌';
+    const halfTag   = halfDay ? ` (½ ${halfDayPart})` : '';
     const wdays     = halfDay ? 0.5 : countWeekdays(start, end);
 
     if (editingHolidayId) {
@@ -1573,7 +1573,7 @@ async function saveHoliday() {
       else         { update.halfDay = firebase.firestore.FieldValue.delete(); update.halfDayPart = firebase.firestore.FieldValue.delete(); }
       await holidaysCol.doc(editingHolidayId).update(update);
       await writeLog('holiday_add',
-        `<strong>${savedName}</strong> â€” ${icon} ${type}${halfTag} updated: ${fmtDate(start)} â†’ ${fmtDate(end)} (${wdays}d)${note?' Â· '+note:''}`,
+        `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} updated: ${fmtDate(start)} → ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`,
         { personId, start, end, type, edited: true }
       );
       closeModal(); showToast('Holiday updated!');
@@ -1582,7 +1582,7 @@ async function saveHoliday() {
       if (halfDay) { entry.halfDay = true; entry.halfDayPart = halfDayPart; }
       await holidaysCol.add(entry);
       await writeLog('holiday_add',
-        `<strong>${savedName}</strong> â€” ${icon} ${type}${halfTag} from ${fmtDate(start)} to ${fmtDate(end)} (${wdays}d)${note?' Â· '+note:''}`,
+        `<strong>${savedName}</strong> — ${icon} ${type}${halfTag} from ${fmtDate(start)} to ${fmtDate(end)} (${wdays}d)${note?' · '+note:''}`,
         { personId, start, end, type }
       );
       closeModal(); showToast('Holiday saved!');
@@ -1599,7 +1599,7 @@ async function deleteHoliday(id) {
   try {
     if (delH) {
       await writeLog('holiday_delete',
-        `<strong>${getPersonName(delH.personId)}</strong> â€” ${LEAVE_TYPE_ICONS[delH.type]||'ðŸ“Œ'} ${delH.type} (${fmtDate(delH.start)} â†’ ${fmtDate(delH.end)}) deleted`,
+        `<strong>${getPersonName(delH.personId)}</strong> — ${LEAVE_TYPE_ICONS[delH.type]||'📌'} ${delH.type} (${fmtDate(delH.start)} → ${fmtDate(delH.end)}) deleted`,
         { personId: delH.personId, start: delH.start, end: delH.end }
       );
     }
@@ -1609,9 +1609,9 @@ async function deleteHoliday(id) {
   finally { showSaving(false); }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    MANAGE PEOPLE (admin)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function openManage() {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   renderPeopleList();
@@ -1629,11 +1629,11 @@ async function addPerson() {
   const dept = document.getElementById('newPersonDept').value.trim() || 'Team';
   if (!name) { showToast('Enter a name.', true); return; }
 
-  // Duplicate detection â€” case-insensitive exact match on name
+  // Duplicate detection — case-insensitive exact match on name
   const normalized = name.toLowerCase();
   const dupe = people.find(p => p.name.toLowerCase() === normalized);
   if (dupe) {
-    if (!confirm(`âš  "${dupe.name}" already exists in ${dupe.dept}.\n\nAdd a second person with the same name anyway?`)) return;
+    if (!confirm(`⚠ "${dupe.name}" already exists in ${dupe.dept}.\n\nAdd a second person with the same name anyway?`)) return;
   }
 
   showSaving(true);
@@ -1707,7 +1707,7 @@ async function saveEditPerson() {
   const normalized = newName.toLowerCase();
   if (newName.toLowerCase() !== (person.name || '').toLowerCase()) {
     const dupe = people.find(p => p.id !== _editingPersonId && (p.name || '').toLowerCase() === normalized);
-    if (dupe && !confirm(`âš  "${dupe.name}" already exists in ${dupe.dept}.\n\nUse the same name anyway?`)) return;
+    if (dupe && !confirm(`⚠ "${dupe.name}" already exists in ${dupe.dept}.\n\nUse the same name anyway?`)) return;
   }
 
   const nameChanged = newName !== person.name;
@@ -1730,10 +1730,10 @@ async function saveEditPerson() {
     }
 
     const parts = [];
-    if (nameChanged) parts.push(`name: ${person.name} â†’ ${newName}`);
-    if (deptChanged) parts.push(`dept: ${person.dept} â†’ ${newDept}`);
+    if (nameChanged) parts.push(`name: ${person.name} → ${newName}`);
+    if (deptChanged) parts.push(`dept: ${person.dept} → ${newDept}`);
     await writeLog('person_add',
-      `<strong>${newName}</strong> updated (${parts.join(' Â· ')})`,
+      `<strong>${newName}</strong> updated (${parts.join(' · ')})`,
       { personId: _editingPersonId, oldName: person.name, newName, oldDept: person.dept, newDept });
 
     showToast('Person updated.');
@@ -1745,12 +1745,12 @@ async function saveEditPerson() {
   } finally { showSaving(false); }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    PROFILE MODAL
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function openProfileModal() {
   document.getElementById('profileTitle').textContent = currentUser.displayName;
-  document.getElementById('profileSub').textContent   = currentUser.isAdmin ? 'ðŸ‘‘ Admin' : 'Team member';
+  document.getElementById('profileSub').textContent   = currentUser.isAdmin ? '👑 Admin' : 'Team member';
   document.getElementById('newPw1').value = '';
   document.getElementById('newPw2').value = '';
   const err = document.getElementById('pwChangeError');
@@ -1759,9 +1759,9 @@ function openProfileModal() {
 }
 function closeProfileModal() { document.getElementById('profileModal').classList.remove('open'); }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    CSV EXPORT
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 function exportCSV() {
   if (!holidays.length) { showToast('No entries to export.', true); return; }
   const headers = ['Name','Department','Type','Start','End','Weekdays','Half Day','Note'];
@@ -1833,7 +1833,7 @@ function exportCSV() {
     }
 
     function resetInactivityTimer() {
-      // If the warning modal is showing, activity alone doesn't dismiss it â€”
+      // If the warning modal is showing, activity alone doesn't dismiss it —
       // user must click "Stay signed in". This prevents background events
       // (e.g. scroll from touch hover) from silently resetting the countdown.
       if (warningShown) return;
@@ -1864,15 +1864,15 @@ function exportCSV() {
     resetInactivityTimer();
   })();
  
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ════════════════════════════════════════════
    MODAL BACKDROP
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+════════════════════════════════════════════ */
 document.addEventListener('click', e => {
   if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
 });
-/* ════════════════════════════════════════════
+/* PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
    SUBTLE CANVAS BACKGROUND
-════════════════════════════════════════════ */
+PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP */
 (function() {
   if (window.Grimoire && window.Grimoire.reducedMotion) return;
   const cv = document.getElementById('bg-canvas');

@@ -2,7 +2,7 @@
 
 > *"The Malignant Grimoire — a codex of VB/VBA spells, forwarder rituals and arcane workspace tools."*
 
-A small, static collection of tools and reference pages for day-to-day VB/VBA work, QA, forwarder invoice processing, and other workspace rituals. Each page is a self-contained HTML file; there is no build step, no bundler, and no backend — just open a file and go.
+A small, static collection of tools and reference pages for day-to-day VB/VBA work, QA, forwarder invoice processing, and other workspace rituals. The HTML files are static, loading scripts and styles from `assets/`; there is no build step, no bundler, and no backend — just open a file and go.
 
 **Live site:** [codingkuh.my.id](https://codingkuh.my.id/)
 
@@ -86,15 +86,18 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 
 XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.20.3, loaded from the official `cdn.sheetjs.com` with an SRI hash) and [JSZip](https://stuk.github.io/jszip/); the XLSX is patched in-place — only the `Anmerkung` column (and optionally `Anmerkung_Reason`) is rewritten, leaving styles, merged cells, formulas, and drawings untouched.
 
-## Shared assets
+## Assets
 
 | File | Purpose |
 | --- | --- |
 | [`assets/grimoire-core.css`](assets/grimoire-core.css) | Shared tokens, base styles, skip-link, reduced-motion rules. |
 | [`assets/grimoire-core.js`](assets/grimoire-core.js) | Shared runtime: animated-canvas helpers (`densityScale`, `visibleRAF`, `shouldAnimate`) and the `Grimoire.Offline` module that registers the service worker, runs `PRECACHE` / `CACHE_STATUS` round-trips, and binds the "Download for offline" button. |
+| [`assets/grimoire-pages.css`](assets/grimoire-pages.css) | Shared styles for standard pages (cards, grids). |
 | [`assets/firebase-config.js`](assets/firebase-config.js) | Centralized Firebase config loaded by pages that need Firestore. |
 | [`assets/anmerkung.css`](assets/anmerkung.css) · [`assets/anmerkung.js`](assets/anmerkung.js) | Styling and rule engine for The Alchemist. |
 | [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) | Versioned release notes for the Anmerkung Processor. |
+| [`assets/holiday-tracker.css`](assets/holiday-tracker.css) · [`assets/holiday-tracker.js`](assets/holiday-tracker.js) | Styling and logic for the Holiday Tracker. |
+| [`assets/todo.css`](assets/todo.css) · [`assets/todo.js`](assets/todo.js) | Styling and logic for The Ledger. |
 | [`sw.js`](sw.js) | Service worker. Network-first for **same-origin** assets (always serve the latest deployed code when online), cache-first for cross-origin CDN libs. Cache acts purely as an offline fallback. |
 | [`manifest.webmanifest`](manifest.webmanifest) | PWA manifest for the Anmerkung Processor. |
 
@@ -176,8 +179,13 @@ vb-code-vault/
 ├── assets/
 │   ├── grimoire-core.css            # shared styling tokens
 │   ├── grimoire-core.js             # shared runtime (canvas + offline helpers)
+│   ├── grimoire-pages.css           # shared styles for standard pages
 │   ├── anmerkung.css                # Alchemist styles
 │   ├── anmerkung.js                 # Alchemist rule engine + UI glue
+│   ├── holiday-tracker.css          # Holiday Tracker styles
+│   ├── holiday-tracker.js           # Holiday Tracker logic
+│   ├── todo.css                     # The Ledger styles
+│   ├── todo.js                      # The Ledger logic
 │   ├── firebase-config.js           # centralized Firebase config
 │   └── anmerkung-changelog.json     # versioned release notes for The Alchemist
 ├── docs/
@@ -203,7 +211,7 @@ vb-code-vault/
 
 ## Contributing
 
-Each HTML file is **self-contained** (styles and scripts inline) apart from the handful of shared files in `assets/`. Conventions:
+The HTML files load their specific scripts and styles from the `assets/` folder. Conventions:
 
 - Keep shared visual tokens (colors, fonts, spacing, focus-ring rules) in [`assets/grimoire-core.css`](assets/grimoire-core.css) so the pages stay visually consistent.
 - Reuse [`Grimoire.Offline`](assets/grimoire-core.js) rather than wiring a service worker per page.

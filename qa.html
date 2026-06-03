@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#02020a">
-  <title>Q&A Knowledge Base Â· The Grimoire</title>
+  <title>Q&A Knowledge Base · The Grimoire</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -55,23 +55,23 @@
 
 <div id="lock-screen">
   <div class="lock-box">
-    <div class="lock-rune">á›Ÿ</div>
+    <div class="lock-rune">ᛟ</div>
     <div class="lock-title">Q&A Knowledge Base</div>
     <div class="lock-sub">// speak friend and enter</div>
     <div class="lock-input-wrap">
       <input class="lock-input" type="password" id="lock-input" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()">
-      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn">ðŸ‘</button>
+      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn">👁</button>
     </div>
-    <button class="lock-btn" onclick="unlock()">Unlock Â· Oracle</button>
+    <button class="lock-btn" onclick="unlock()">Unlock · Oracle</button>
     <div class="lock-error" id="lock-error"></div>
     <div class="lock-hint">Same password as your Code Vault.<br>Sealed in the Firebase ether.</div>
   </div>
 </div>
 
 <header>
-  <a href="index.html" class="logo-back">â† Grimoire</a>
+  <a href="index.html" class="logo-back">← Grimoire</a>
   <div class="logo" role="heading" aria-level="1">
-    <div class="logo-icon">ðŸ§ </div>
+    <div class="logo-icon">🧠</div>
     Knowledge Base
   </div>
   <div class="header-right">
@@ -79,22 +79,22 @@
       <div class="status-dot" id="status-dot"></div>
       <span id="status-label">Connecting...</span>
     </div>
-    <span id="total-badge">â€” scrolls</span>
-    <button class="btn-sm" onclick="lockApp()" title="Lock">ðŸ”’</button>
-    <button class="btn-lock" id="migrate-btn" disabled title="Migration complete" style="opacity:.3;cursor:not-allowed;">âŸ³ Migrate</button>
+    <span id="total-badge">— scrolls</span>
+    <button class="btn-sm" onclick="lockApp()" title="Lock">🔒</button>
+    <button class="btn-lock" id="migrate-btn" disabled title="Migration complete" style="opacity:.3;cursor:not-allowed;">⟳ Migrate</button>
     <button class="btn-primary" onclick="openAdd()">+ New Oracle Entry</button>
   </div>
 </header>
 
 <main id="main">
   <div class="page-head">
-    <div class="page-eyebrow">// Tome II Â· The Oracle</div>
+    <div class="page-eyebrow">// Tome II · The Oracle</div>
     <div class="page-title">Q&amp;A <span class="grad">Knowledge Base</span></div>
   </div>
-  <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">âœ¦ á›Ÿ âœ¦</div><div class="page-orn-line"></div></div>
+  <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᛟ ✦</div><div class="page-orn-line"></div></div>
 
   <div class="toolbar">
-    <input type="text" id="search" placeholder="âŒ•  Search questions or answers..." oninput="render()">
+    <input type="text" id="search" placeholder="⌕  Search questions or answers..." oninput="render()">
     <select id="filter-cat" onchange="render()"><option value="">All categories</option></select>
   </div>
   <div id="stats" class="stats"></div>
@@ -119,8 +119,8 @@
       <label>Images (optional)</label>
       <div class="img-upload-area" id="upload-area" onclick="document.getElementById('img-input').click()" ondragover="handleDrag(event,true)" ondragleave="handleDrag(event,false)" ondrop="handleDrop(event)">
         <input type="file" id="img-input" accept="image/*" multiple onchange="handleFiles(this.files)">
-        ðŸ“· Click to upload images or drag &amp; drop<br>
-        <span style="font-size:10px;opacity:0.6">PNG, JPG, GIF, WebP â€” max 5MB each</span>
+        📷 Click to upload images or drag &amp; drop<br>
+        <span style="font-size:10px;opacity:0.6">PNG, JPG, GIF, WebP — max 5MB each</span>
       </div>
       <div class="img-previews" id="img-previews"></div>
       <div class="upload-progress" id="upload-progress"></div>
@@ -140,16 +140,16 @@
     <div class="detail-images" id="d-images"></div>
     <div class="detail-a" id="d-a"></div>
     <div class="detail-actions">
-      <button class="btn-sm" id="copy-btn" onclick="copyAnswer()">ðŸ“‹ Copy answer</button>
-      <button class="btn-sm" onclick="editFromDetail()">âœŽ Edit</button>
-      <button class="btn-sm" onclick="closeDetail()">âœ• Close</button>
+      <button class="btn-sm" id="copy-btn" onclick="copyAnswer()">📋 Copy answer</button>
+      <button class="btn-sm" onclick="editFromDetail()">✎ Edit</button>
+      <button class="btn-sm" onclick="closeDetail()">✕ Close</button>
       <span class="copy-ok" id="copy-ok"></span>
     </div>
   </div>
 </div>
 
 <div id="lightbox" onclick="closeLightbox()">
-  <button id="lightbox-close" onclick="closeLightbox()">âœ•</button>
+  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="">
 </div>
 
@@ -160,7 +160,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js" integrity="sha384-6I0gWsz4FIAr30c0TxIxJnPQuJiZ1FfILdZrgJdjxTH3R8dgPGTvexbyqTvReV6Z" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/firebase-config.js"></script>
 <script>
-/* â”€â”€ BACKGROUND PARTICLES â”€â”€ */
+/* ── BACKGROUND PARTICLES ── */
 (function(){
   const cv=document.getElementById('bg-canvas'),cx=cv.getContext('2d');
   let W,H,t=0,pts=[];
@@ -185,7 +185,7 @@
 
 if(!firebase.apps.length)firebase.initializeApp(window.firebaseConfig);
 const db=firebase.firestore(),storage=firebase.storage();
-const col=db.collection('wmf_entries');  /* â”€â”€ WMF collection â”€â”€ */
+const col=db.collection('wmf_entries');  /* ── WMF collection ── */
 const authDoc=db.collection('_config').doc('auth');
 let entries=[],editId=null,detailId=null,saving=false,pendingImages=[];
 
@@ -215,24 +215,24 @@ function render(){
   document.getElementById('total-badge').textContent=total+' entr'+(total!==1?'ies':'y');
   document.getElementById('stats').textContent=(q||catF)?`Showing ${list.length} of ${total}`:total>0?`${total} entr${total!==1?'ies':'y'} in the oracle`:'';
   const grid=document.getElementById('grid');
-  if(!list.length){grid.innerHTML=total===0?`<div class="empty"><div class="empty-icon">ðŸ§ </div><p>The oracle is silent.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ New Oracle Entry</strong> to begin.</p></div>`:`<div class="empty"><div class="empty-icon">ðŸ”</div><p>No entries match your search.</p></div>`;return;}
+  if(!list.length){grid.innerHTML=total===0?`<div class="empty"><div class="empty-icon">🧠</div><p>The oracle is silent.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ New Oracle Entry</strong> to begin.</p></div>`:`<div class="empty"><div class="empty-icon">🔍</div><p>No entries match your search.</p></div>`;return;}
   grid.innerHTML=list.map(e=>{
     const tags=(e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
     const imgs=e.images||[];
     const thumbHtml=imgs.length>0?`<div style="display:grid;grid-template-columns:${imgs.length===1?'1fr':imgs.length===2?'1fr 1fr':'1fr 1fr 1fr'};gap:6px;margin-bottom:10px;">${imgs.map(url=>`<img src="${esc(url)}" style="width:100%;height:${imgs.length===1?'220px':'140px'};object-fit:contain;background:rgba(2,2,10,0.6);border-radius:8px;border:1px solid var(--border);cursor:pointer;" onclick="openDetail('${e.id}')" loading="lazy">`).join('')}</div>`:'';
-    return`<div class="qa-card"><div class="qa-card-header"><div class="q-icon">Q</div><div class="qa-question">${esc(e.question||'')}</div></div>${thumbHtml}<div class="qa-answer">${esc((e.answer||'').substring(0,220)+(e.answer&&e.answer.length>220?'...':''))}</div><div class="qa-meta"><span class="badge">${esc(e.category||'General')}</span>${tags.map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}<span class="date">${fmtDate(e.createdAt)}</span></div><div class="qa-actions"><button class="btn-sm" onclick="openDetail('${e.id}')">ðŸ‘ View</button><button class="btn-sm" onclick="openEdit('${e.id}')">âœŽ Edit</button><button class="btn-sm btn-danger" onclick="deleteEntry('${e.id}')">ðŸ—‘ Delete</button></div></div>`;
+    return`<div class="qa-card"><div class="qa-card-header"><div class="q-icon">Q</div><div class="qa-question">${esc(e.question||'')}</div></div>${thumbHtml}<div class="qa-answer">${esc((e.answer||'').substring(0,220)+(e.answer&&e.answer.length>220?'...':''))}</div><div class="qa-meta"><span class="badge">${esc(e.category||'General')}</span>${tags.map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}<span class="date">${fmtDate(e.createdAt)}</span></div><div class="qa-actions"><button class="btn-sm" onclick="openDetail('${e.id}')">👁 View</button><button class="btn-sm" onclick="openEdit('${e.id}')">✎ Edit</button><button class="btn-sm btn-danger" onclick="deleteEntry('${e.id}')">🗑 Delete</button></div></div>`;
   }).join('');
 }
 
 function handleDrag(e,on){e.preventDefault();document.getElementById('upload-area').classList.toggle('drag',on);}
 function handleDrop(e){e.preventDefault();document.getElementById('upload-area').classList.remove('drag');handleFiles(e.dataTransfer.files);}
 function handleFiles(files){for(const file of files){if(!file.type.startsWith('image/')){showToast('Only image files allowed.',true);continue;}if(file.size>5*1024*1024){showToast(`${file.name} is too large.`,true);continue;}const reader=new FileReader();reader.onload=ev=>{const id=Date.now()+Math.random();pendingImages.push({id,file,previewUrl:ev.target.result});renderPreviews();};reader.readAsDataURL(file);}}
-function renderPreviews(){document.getElementById('img-previews').innerHTML=pendingImages.map(img=>`<div class="img-preview-wrap"><img src="${img.previewUrl}" alt=""><button class="img-remove" onclick="removePreview('${img.id}')">âœ•</button></div>`).join('');}
+function renderPreviews(){document.getElementById('img-previews').innerHTML=pendingImages.map(img=>`<div class="img-preview-wrap"><img src="${img.previewUrl}" alt=""><button class="img-remove" onclick="removePreview('${img.id}')">✕</button></div>`).join('');}
 function removePreview(id){pendingImages=pendingImages.filter(i=>String(i.id)!==String(id));renderPreviews();}
 async function uploadImages(entryId){const urls=[],prog=document.getElementById('upload-progress');for(let i=0;i<pendingImages.length;i++){const img=pendingImages[i];prog.textContent=`Uploading image ${i+1} of ${pendingImages.length}...`;const path=`wmf_qa/${entryId}/${Date.now()}_${img.file.name}`;const ref=storage.ref(path);await ref.put(img.file);urls.push(await ref.getDownloadURL());}prog.textContent='';return urls;}
 
 function openAdd(){editId=null;pendingImages=[];document.getElementById('modal-title').textContent='New Oracle Entry';document.getElementById('f-q').value='';document.getElementById('f-a').value='';document.getElementById('f-tags').value='';document.getElementById('f-cat').value='K+N';document.getElementById('img-previews').innerHTML='';document.getElementById('upload-progress').textContent='';document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
-function openEdit(id){const e=entries.find(x=>x.id===id);if(!e)return;editId=id;pendingImages=[];document.getElementById('modal-title').textContent='Edit Oracle Entry';document.getElementById('f-q').value=e.question||'';document.getElementById('f-a').value=e.answer||'';document.getElementById('f-tags').value=e.tags||'';document.getElementById('f-cat').value=e.category||'K+N';const imgs=e.images||[];document.getElementById('img-previews').innerHTML=imgs.map((url,i)=>`<div class="img-preview-wrap"><img src="${esc(url)}" alt=""><button class="img-remove" onclick="removeExistingImg(${i},'${id}')">âœ•</button></div>`).join('');document.getElementById('upload-progress').textContent=imgs.length>0?`${imgs.length} existing image${imgs.length>1?'s':''} â€” upload more below`:'';closeDetail();document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
+function openEdit(id){const e=entries.find(x=>x.id===id);if(!e)return;editId=id;pendingImages=[];document.getElementById('modal-title').textContent='Edit Oracle Entry';document.getElementById('f-q').value=e.question||'';document.getElementById('f-a').value=e.answer||'';document.getElementById('f-tags').value=e.tags||'';document.getElementById('f-cat').value=e.category||'K+N';const imgs=e.images||[];document.getElementById('img-previews').innerHTML=imgs.map((url,i)=>`<div class="img-preview-wrap"><img src="${esc(url)}" alt=""><button class="img-remove" onclick="removeExistingImg(${i},'${id}')">✕</button></div>`).join('');document.getElementById('upload-progress').textContent=imgs.length>0?`${imgs.length} existing image${imgs.length>1?'s':''} — upload more below`:'';closeDetail();document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
 async function removeExistingImg(idx,entryId){const e=entries.find(x=>x.id===entryId);if(!e)return;const imgs=[...(e.images||[])];imgs.splice(idx,1);await col.doc(entryId).update({images:imgs});showToast('Image removed.');}
 function closeModal(){document.getElementById('form-modal').classList.remove('open');}
 async function saveEntry(){
@@ -247,24 +247,24 @@ async function saveEntry(){
   finally{saving=false;btn.disabled=false;btn.textContent='Seal Entry';}
 }
 
-function openDetail(id){const e=entries.find(x=>x.id===id);if(!e)return;detailId=id;document.getElementById('d-q').textContent=e.question||'';const tags=(e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);document.getElementById('d-meta').innerHTML=`<span class="badge">${esc(e.category||'General')}</span>${tags.map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}<span style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto">${fmtDate(e.createdAt)}</span>`;const imgs=e.images||[];const imgWrap=document.getElementById('d-images');if(imgs.length>0){imgWrap.style.display='grid';imgWrap.innerHTML=imgs.map(url=>`<img src="${esc(url)}" alt="image" loading="lazy" onclick="openLightbox('${esc(url)}')">`).join('');}else{imgWrap.style.display='none';imgWrap.innerHTML='';}document.getElementById('d-a').textContent=e.answer||'';document.getElementById('copy-btn').textContent='ðŸ“‹ Copy answer';document.getElementById('copy-ok').textContent='';document.getElementById('detail-modal').classList.add('open');}
+function openDetail(id){const e=entries.find(x=>x.id===id);if(!e)return;detailId=id;document.getElementById('d-q').textContent=e.question||'';const tags=(e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);document.getElementById('d-meta').innerHTML=`<span class="badge">${esc(e.category||'General')}</span>${tags.map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}<span style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto">${fmtDate(e.createdAt)}</span>`;const imgs=e.images||[];const imgWrap=document.getElementById('d-images');if(imgs.length>0){imgWrap.style.display='grid';imgWrap.innerHTML=imgs.map(url=>`<img src="${esc(url)}" alt="image" loading="lazy" onclick="openLightbox('${esc(url)}')">`).join('');}else{imgWrap.style.display='none';imgWrap.innerHTML='';}document.getElementById('d-a').textContent=e.answer||'';document.getElementById('copy-btn').textContent='📋 Copy answer';document.getElementById('copy-ok').textContent='';document.getElementById('detail-modal').classList.add('open');}
 function closeDetail(){document.getElementById('detail-modal').classList.remove('open');}
 function editFromDetail(){if(detailId)openEdit(detailId);}
 function openLightbox(url){document.getElementById('lightbox-img').src=url;document.getElementById('lightbox').classList.add('open');}
 function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
 function copyText(text,ok,fail){if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(text).then(ok).catch(()=>fallbackCopy(text,ok,fail));else fallbackCopy(text,ok,fail);}
 function fallbackCopy(text,ok,fail){try{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;';document.body.appendChild(ta);ta.focus();ta.setSelectionRange(0,ta.value.length);const r=document.execCommand('copy');document.body.removeChild(ta);if(r)ok();else fail();}catch(e){fail();}}
-function copyAnswer(){const e=entries.find(x=>x.id===detailId);if(!e)return;copyText(e.answer||'',()=>{document.getElementById('copy-btn').textContent='âœ“ Copied!';document.getElementById('copy-ok').textContent='Answer copied';setTimeout(()=>{document.getElementById('copy-btn').textContent='ðŸ“‹ Copy answer';document.getElementById('copy-ok').textContent='';},2000);},()=>showToast('Copy failed.',true));}
+function copyAnswer(){const e=entries.find(x=>x.id===detailId);if(!e)return;copyText(e.answer||'',()=>{document.getElementById('copy-btn').textContent='✓ Copied!';document.getElementById('copy-ok').textContent='Answer copied';setTimeout(()=>{document.getElementById('copy-btn').textContent='📋 Copy answer';document.getElementById('copy-ok').textContent='';},2000);},()=>showToast('Copy failed.',true));}
 async function deleteEntry(id){if(!confirm('Delete this oracle entry and all its images?'))return;try{const e=entries.find(x=>x.id===id);if(e&&e.images){for(const url of e.images){try{await storage.refFromURL(url).delete();}catch(e){}}}await col.doc(id).delete();showToast('Entry dissolved.');}catch(e){showToast('Delete failed.',true);}}
 function handleBgClick(e,id){if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');}
 function showToast(msg,isError){const t=document.getElementById('toast');t.textContent=msg;t.className=isError?'error-toast show':'show';clearTimeout(t._timer);t._timer=setTimeout(()=>{t.className='';},2500);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDetail();closeLightbox();}});
 
-/* â”€â”€ PASSWORD LOCK â”€â”€ */
+/* ── PASSWORD LOCK ── */
 const SESSION_KEY='vb_vault_session';
 async function hashPass(pass){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass+'vb_vault_salt_2024'));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
-function toggleLockVis(){const inp=document.getElementById('lock-input'),btn=document.getElementById('lock-vis-btn');if(inp.type==='password'){inp.type='text';btn.textContent='ðŸ™ˆ';}else{inp.type='password';btn.textContent='ðŸ‘';}}
-function setLockLoading(on){const b=document.querySelector('.lock-btn');b.textContent=on?'Consulting the oracle...':'Unlock Â· Oracle';b.disabled=on;}
+function toggleLockVis(){const inp=document.getElementById('lock-input'),btn=document.getElementById('lock-vis-btn');if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}else{inp.type='password';btn.textContent='👁';}}
+function setLockLoading(on){const b=document.querySelector('.lock-btn');b.textContent=on?'Consulting the oracle...':'Unlock · Oracle';b.disabled=on;}
 async function unlock(){
   const input=document.getElementById('lock-input').value;if(!input){showLockError('Please enter a password.');return;}
   setLockLoading(true);
@@ -277,7 +277,7 @@ function lockApp(){sessionStorage.removeItem(SESSION_KEY);document.getElementByI
 function checkAuth(){if(sessionStorage.getItem(SESSION_KEY)==='1'){grantAccess();return;}document.getElementById('lock-screen').classList.add('active');setTimeout(()=>document.getElementById('lock-input').focus(),100);}
 checkAuth();
 
-/* â”€â”€ ONE-TIME MIGRATION: qa_entries â†’ wmf_entries â”€â”€ */
+/* ── ONE-TIME MIGRATION: qa_entries → wmf_entries ── */
 async function migrateWMF(){
   const btn=document.getElementById('migrate-btn');
   if(!confirm('This will copy all WMF entries (no project field) from qa_entries into wmf_entries.\n\nRun migration?'))return;
@@ -292,13 +292,13 @@ async function migrateWMF(){
         copied++;
       } else { skipped++; }
     }
-    showToast(`âœ“ Migrated ${copied} WMF entries. Skipped ${skipped} SGP entries.`);
-    btn.textContent='âœ“ Done';
+    showToast(`✓ Migrated ${copied} WMF entries. Skipped ${skipped} SGP entries.`);
+    btn.textContent='✓ Done';
     btn.style.color='#34d399';
     setTimeout(()=>{btn.style.display='none';},3000);
   }catch(e){
     showToast('Migration failed: '+e.message,true);
-    btn.disabled=false;btn.textContent='âŸ³ Migrate';
+    btn.disabled=false;btn.textContent='⟳ Migrate';
   }
 }
 </script>
