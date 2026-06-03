@@ -1,4 +1,4 @@
-�/* ════════════════════════════════════════════
+/* ════════════════════════════════════════════
    FIREBASE INIT
 ════════════════════════════════════════════ */
 firebase.initializeApp(window.firebaseConfig);
@@ -49,20 +49,13 @@ let viewMonth      = new Date().getMonth();
 let currentView    = 'calendar';
 let deptFilter     = localStorage.getItem('ht_dept_filter') || '';
 
-// Derived caches — busted on data change
-let _pubHolSetCache = null;   // Set of public holiday ISO strings
-let _vacUsedCache   = {};     // Map<"personId:year", number>
-let _renderScheduled = false; // Debounce flag
-
-// ─── REMOVED: _holidayIndexCache (the per-day explosion map) ───
-// holidaysOnDate() now uses a simple .filter() — O(n entries) but
-// avoids building a large Map on every snapshot. The calendar render
-// builds its own month-scoped byDay bucket in one pass instead.
+let _pubHolSetCache  = null;
+let _vacUsedCache    = {};
+let _renderScheduled = false;
 
 function bustCaches() {
   _pubHolSetCache = null;
   _vacUsedCache   = {};
-  // No holiday index to bust — nothing to do here for that path.
 }
 
 /* ════════════════════════════════════════════
@@ -79,13 +72,25 @@ function saveSession(profile) { localStorage.setItem('ht_session', JSON.stringif
 function loadSession() { try { return JSON.parse(localStorage.getItem('ht_session')); } catch { return null; } }
 function clearSession() { localStorage.removeItem('ht_session'); }
 
+/* ─────────────────────────────────────────
+   FIX 1: initAuth — clear stale session on
+   any Firestore error instead of silently
+   swallowing it and leaving the UI stuck.
+───────────────────────────────────────── */
 async function initAuth() {
   const session = loadSession();
   if (session) {
     try {
       const snap = await userProfCol.doc(session.uid).get();
-      if (snap.exists) { currentUser = { uid: session.uid, ...snap.data() }; showApp(); return; }
-    } catch(e) {}
+      if (snap.exists) {
+        currentUser = { uid: session.uid, ...snap.data() };
+        showApp();
+        return;
+      }
+    } catch(e) {
+      // Network/Firestore error — clear stale session and fall through to auth gate
+      clearSession();
+    }
   }
   showAuthGate();
 }
@@ -96,7 +101,6 @@ function showApp() {
   saveSession(currentUser);
   updateUserChip();
   updateAdminUI();
-  // Restore dept filter UI state from localStorage (dropdown is populated later via snapshots)
   const wrap = document.getElementById('deptFilterWrap');
   if (wrap) wrap.classList.toggle('active', !!deptFilter);
   if (!appStarted) { appStarted = true; startListeners(); startLogListener(); }
@@ -132,9 +136,21 @@ function setAuthLoading(btnId, spinnerId, loading) {
   document.getElementById(spinnerId).style.display = loading ? 'inline-block' : 'none';
 }
 
+/* ─────────────────────────────────────────
+   FIX 2: loadPeopleForAuth — in-flight guard
+   prevents race condition when the user
+   switches tabs rapidly, and the catch block
+   resets any stuck loading state.
+───────────────────────────────────────── */
+let _authLoadInFlight = false;
 async function loadPeopleForAuth() {
-  const [loginSel, regSel] = ['loginEmail', 'registerPerson'].map(id => document.getElementById(id));
+  if (_authLoadInFlight) return;
+  _authLoadInFlight = true;
+
+  const loginSel = document.getElementById('loginEmail');
+  const regSel   = document.getElementById('registerPerson');
   loginSel.innerHTML = regSel.innerHTML = '<option value="">— Loading… —</option>';
+
   try {
     const [peopleSnap, profSnap] = await Promise.all([
       peopleCol.orderBy('name').get(),
@@ -147,50 +163,91 @@ async function loadPeopleForAuth() {
 
     peopleSnap.docs.forEach(d => {
       const opt = `<option value="${d.id}">${d.data().name} (${d.data().dept})</option>`;
-      // Only show people who have already created an account in the Sign In dropdown
-      if (linkedIds.has(d.id)) loginSel.insertAdjacentHTML('beforeend', opt);
+      if ( linkedIds.has(d.id)) loginSel.insertAdjacentHTML('beforeend', opt);
       if (!linkedIds.has(d.id)) regSel.insertAdjacentHTML('beforeend', opt);
     });
-    if (loginSel.options.length === 1) loginSel.innerHTML = '<option value="">— No accounts yet — register first —</option>';
-    if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— All members have accounts —</option>';
+
+    if (loginSel.options.length === 1)
+      loginSel.innerHTML = '<option value="">— No accounts yet — register first —</option>';
+    if (regSel.options.length === 1)
+      regSel.innerHTML   = '<option value="">— All members have accounts —</option>';
+
   } catch(e) {
-    loginSel.innerHTML = regSel.innerHTML = '<option value="">— Error loading —</option>';
+    loginSel.innerHTML = regSel.innerHTML =
+      '<option value="">— Error loading, refresh to retry —</option>';
+    // Ensure buttons aren't stuck disabled if this was called during a login attempt
+    setAuthLoading('loginBtn',    'loginSpinner',    false);
+    setAuthLoading('registerBtn', 'registerSpinner', false);
+  } finally {
+    _authLoadInFlight = false;
   }
 }
 
+/* ─────────────────────────────────────────
+   FIX 3: doLogin — validation now runs BEFORE
+   setAuthLoading so early-return paths don't
+   leave the button permanently disabled.
+   finally only resets UI if still on auth gate
+   (i.e. login didn't succeed and hide it).
+───────────────────────────────────────── */
 async function doLogin() {
-  const personId = document.getElementById('loginEmail').value.trim();
-  const pw = document.getElementById('loginPassword').value;
   clearAuthErrors();
-  if (!personId || !pw) { showAuthError('loginError', 'Enter your name and password.'); return; }
+  const personId = document.getElementById('loginEmail').value.trim();
+  const pw       = document.getElementById('loginPassword').value;
+
+  if (!personId || !pw) {
+    showAuthError('loginError', 'Enter your name and password.');
+    return;
+  }
+
   setAuthLoading('loginBtn', 'loginSpinner', true);
   try {
     const hash = await hashPassword(pw);
-    const snap = await userProfCol.where('personId','==',personId).where('passwordHash','==',hash).get();
-    if (snap.empty) { showAuthError('loginError', 'Incorrect name selection or password.'); return; }
+    const snap = await userProfCol
+      .where('personId', '==', personId)
+      .where('passwordHash', '==', hash)
+      .get();
+    if (snap.empty) {
+      showAuthError('loginError', 'Incorrect name selection or password.');
+      return;
+    }
     const doc = snap.docs[0];
     currentUser = { uid: doc.id, ...doc.data() };
     showApp();
-  } catch(e) { showAuthError('loginError', e.message); }
-  finally { setAuthLoading('loginBtn', 'loginSpinner', false); }
+  } catch(e) {
+    showAuthError('loginError', e.message);
+  } finally {
+    // Only reset if auth gate is still visible (success hides it)
+    if (document.getElementById('authGate').style.display !== 'none') {
+      setAuthLoading('loginBtn', 'loginSpinner', false);
+    }
+  }
 }
 
+/* ─────────────────────────────────────────
+   FIX 4: doRegister — same pattern as doLogin.
+   Validation before setAuthLoading, finally
+   guarded by gate visibility check.
+───────────────────────────────────────── */
 async function doRegister() {
+  clearAuthErrors();
   const personId = document.getElementById('registerPerson').value;
   const pw       = document.getElementById('registerPassword').value;
   const pw2      = document.getElementById('registerConfirm').value;
-  clearAuthErrors();
-  if (!personId)   { showAuthError('registerError', 'Select your name.'); return; }
+
+  if (!personId)     { showAuthError('registerError', 'Select your name.');                    return; }
   if (pw.length < 6) { showAuthError('registerError', 'Password must be at least 6 characters.'); return; }
-  if (pw !== pw2)  { showAuthError('registerError', 'Passwords do not match.'); return; }
+  if (pw !== pw2)    { showAuthError('registerError', 'Passwords do not match.');               return; }
+
   setAuthLoading('registerBtn', 'registerSpinner', true);
   try {
     const [existing, personSnap] = await Promise.all([
       userProfCol.where('personId','==',personId).get(),
       peopleCol.doc(personId).get()
     ]);
-    if (!existing.empty)  { showAuthError('registerError', 'This person already has an account.'); return; }
-    if (!personSnap.exists) { showAuthError('registerError', 'Person not found.'); return; }
+    if (!existing.empty)    { showAuthError('registerError', 'This person already has an account.'); return; }
+    if (!personSnap.exists) { showAuthError('registerError', 'Person not found.');                   return; }
+
     const displayName = personSnap.data().name;
     const uid  = makeUid(displayName);
     const hash = await hashPassword(pw);
@@ -200,24 +257,46 @@ async function doRegister() {
     });
     currentUser = { uid, personId, displayName, isAdmin: false };
     showApp();
-  } catch(e) { showAuthError('registerError', e.message); }
-  finally { setAuthLoading('registerBtn', 'registerSpinner', false); }
+  } catch(e) {
+    showAuthError('registerError', e.message);
+  } finally {
+    if (document.getElementById('authGate').style.display !== 'none') {
+      setAuthLoading('registerBtn', 'registerSpinner', false);
+    }
+  }
 }
 
 async function doSignOut()       { closeProfileModal(); clearSession(); showAuthGate(); showToast('Signed out.'); }
+
+/* ─────────────────────────────────────────
+   FIX 5: doChangePassword — added loading
+   state so the button doesn't stay clickable
+   / visually frozen during the Firestore call.
+───────────────────────────────────────── */
 async function doChangePassword() {
   const pw1 = document.getElementById('newPw1').value;
   const pw2 = document.getElementById('newPw2').value;
   const err = document.getElementById('pwChangeError');
   err.textContent = ''; err.classList.remove('show');
-  if (!pw1)        { err.textContent = 'Enter a new password.'; err.classList.add('show'); return; }
-  if (pw1.length < 6) { err.textContent = 'Min 6 characters.'; err.classList.add('show'); return; }
-  if (pw1 !== pw2) { err.textContent = 'Passwords do not match.'; err.classList.add('show'); return; }
+
+  if (!pw1)          { err.textContent = 'Enter a new password.';  err.classList.add('show'); return; }
+  if (pw1.length < 6){ err.textContent = 'Min 6 characters.';      err.classList.add('show'); return; }
+  if (pw1 !== pw2)   { err.textContent = 'Passwords do not match.';err.classList.add('show'); return; }
+
+  // Target the Update Password button inside the profile modal
+  const btn = document.querySelector('#profileModal .btn-primary');
+  if (btn) btn.disabled = true;
   try {
     const hash = await hashPassword(pw1);
     await userProfCol.doc(currentUser.uid).update({ passwordHash: hash });
-    closeProfileModal(); showToast('Password updated!');
-  } catch(e) { err.textContent = e.message; err.classList.add('show'); }
+    closeProfileModal();
+    showToast('Password updated!');
+  } catch(e) {
+    err.textContent = e.message;
+    err.classList.add('show');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 /* ════════════════════════════════════════════
@@ -410,18 +489,11 @@ function startListeners() {
 /* ════════════════════════════════════════════
    UTILS
 ════════════════════════════════════════════ */
-/** Memoized public holiday Set — computed once per data change. */
 function pubHolSet() {
   if (!_pubHolSetCache) _pubHolSetCache = new Set(publicHolidays.map(ph => ph.date));
   return _pubHolSetCache;
 }
 
-/**
- * PERF FIX 1: holidaysOnDate — O(n entries) filter instead of O(days) map lookup.
- * No index to build or bust. For typical team sizes (<200 entries) this is faster
- * overall because we avoid the expensive map-build on every snapshot.
- * Used by: searchByDate, renderAway, renderStats (via holidaysOnDate).
- */
 function holidaysOnDate(iso) {
   return holidays.filter(h => h.start <= iso && h.end >= iso);
 }
@@ -472,7 +544,7 @@ function entryDays(h) {
 }
 
 /* ════════════════════════════════════════════
-   VACATION UTILS — memoized per person+year
+   VACATION UTILS
 ════════════════════════════════════════════ */
 function vacUsedByYear(personId, year) {
   const key = `${personId}:${year}`;
@@ -509,7 +581,6 @@ function fmtDays(n) { return n % 1 !== 0 ? n.toFixed(1) : String(n); }
 /* ════════════════════════════════════════════
    DEPARTMENTS + FILTER
 ════════════════════════════════════════════ */
-/** Union of admin-managed departments and any free-text depts on existing people. */
 function effectiveDepartments() {
   const set = new Set();
   (teamSettings.departments || []).forEach(d => { if (d) set.add(d); });
@@ -517,7 +588,6 @@ function effectiveDepartments() {
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
-/** True if a person passes the current dept filter. */
 function passDeptFilter(personId) {
   if (!deptFilter) return true;
   const p = getPerson(personId);
@@ -537,7 +607,6 @@ function updateDeptFilterOptions() {
   if (!sel) return;
   const depts = effectiveDepartments();
   const current = deptFilter;
-  // If the filtered dept no longer exists, clear the filter
   if (current && !depts.includes(current)) {
     deptFilter = '';
     localStorage.removeItem('ht_dept_filter');
@@ -630,18 +699,14 @@ function highlightDrag() {
   document.querySelectorAll('.day-cell[data-iso]').forEach(cell => {
     const iso = cell.dataset.iso;
     cell.classList.remove('drag-range','drag-start','drag-end');
-    if (iso === s)             cell.classList.add('drag-start');
-    else if (iso === e)        cell.classList.add('drag-end');
+    if (iso === s)               cell.classList.add('drag-start');
+    else if (iso === e)          cell.classList.add('drag-end');
     else if (iso > s && iso < e) cell.classList.add('drag-range');
   });
 }
 
 /* ════════════════════════════════════════════
    CALENDAR RENDER
-   PERF FIX 2: Build a month-scoped byDay bucket in ONE pass over holidays
-   instead of using the global day-explosion index. This clamps the work to
-   only the ~30 days visible rather than walking every day of every entry.
-   DocumentFragment for single DOM append preserved.
 ════════════════════════════════════════════ */
 function renderCalendar() {
   document.getElementById('monthLabel').textContent = `${MONTHS[viewMonth]} ${viewYear}`;
@@ -654,18 +719,13 @@ function renderCalendar() {
   const phSet  = pubHolSet();
   const mPad   = String(viewMonth + 1).padStart(2, '0');
 
-  // ── PERF FIX 2a: month boundaries for fast pre-filter ──
   const monthStart = `${viewYear}-${mPad}-01`;
   const monthEnd   = `${viewYear}-${mPad}-${String(daysInMonth).padStart(2, '0')}`;
 
-  // ── PERF FIX 2b: one pass over holidays, bucket into visible days only ──
   const byDay = {};
   for (const h of holidays) {
-    // Skip entries that don't touch this month at all
     if (h.end < monthStart || h.start > monthEnd) continue;
-    // Apply dept filter
     if (!passDeptFilter(h.personId)) continue;
-    // Clamp to the visible month window
     const clampStart = h.start < monthStart ? monthStart : h.start;
     const clampEnd   = h.end   > monthEnd   ? monthEnd   : h.end;
     const cur = new Date(parseDate(clampStart));
@@ -694,7 +754,7 @@ function renderCalendar() {
     if (mo < 0)  { mo = 11; yr--; }
     if (mo > 11) { mo = 0;  yr++; }
     const iso    = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const hs     = byDay[iso] || [];  // O(1) lookup into our pre-built bucket
+    const hs     = byDay[iso] || [];
     const isToday = iso === today;
     const pubHol  = phSet.has(iso) ? publicHolidays.find(ph => ph.date === iso) : null;
     const dow     = parseDate(iso).getDay();
@@ -740,7 +800,7 @@ function renderGantt() {
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const today = dateStr(new Date());
   const mPad  = String(viewMonth+1).padStart(2,'0');
-  const DOW_LETTERS = ['S','M','T','W','T','F','S']; // Sun=0 .. Sat=6
+  const DOW_LETTERS = ['S','M','T','W','T','F','S'];
 
   let html = `<div class="gantt-header-row"><div class="gantt-name-col">Person</div><div class="gantt-days-header">`;
   for (let d = 1; d <= daysInMonth; d++) {
@@ -962,11 +1022,6 @@ async function deletePublicHoliday(id) {
   finally { showSaving(false); }
 }
 
-/**
- * Fetch a country's public holidays for a year from date.nager.at
- * and bulk-insert ones that aren't already in the collection.
- * API docs: https://date.nager.at/Api
- */
 async function fetchCountryHolidays() {
   if (!isAdmin()) { showToast('Admin only.', true); return; }
   const country = document.getElementById('pubHolCountry').value;
@@ -995,7 +1050,6 @@ async function fetchCountryHolidays() {
       return;
     }
 
-    // Skip duplicates: same date + same name already in our collection
     const existingKeys = new Set(publicHolidays.map(ph => `${ph.date}|${(ph.name||'').toLowerCase()}`));
     const toAdd = entries
       .map(e => ({ date: e.date, name: e.localName || e.name || 'Holiday' }))
@@ -1008,7 +1062,6 @@ async function fetchCountryHolidays() {
     }
 
     showSaving(true);
-    // Firestore batches are limited to 500 ops — comfortably above any country's annual count
     const batch = db.batch();
     const stamp = firebase.firestore.FieldValue.serverTimestamp();
     toAdd.forEach(e => {
@@ -1257,7 +1310,6 @@ function updateWeekendWarn() {
   const warn  = document.getElementById('weekendWarn');
   if (!start || !end || end < start) { warn.style.display = 'none'; return; }
 
-  // Check if the entire range is only weekends/public holidays
   const wdays = countWeekdays(start, end);
   if (wdays === 0) {
     warn.style.display = 'block';
@@ -1354,11 +1406,6 @@ function updateVacWarning() {
   warn.textContent   = `${p.name}: ` + lines.join(' · ');
 }
 
-/**
- * Capacity warning — flags days in the proposed range where the number
- * of DISTINCT people already off (excluding the person being booked and
- * the entry being edited) meets or exceeds the admin-configured threshold.
- */
 function updateCapacityWarn() {
   const warn     = document.getElementById('capacityWarn');
   const threshold = Number(teamSettings.capacityThreshold) || 0;
@@ -1372,7 +1419,7 @@ function updateCapacityWarn() {
   if (!personId || !start || !end || end < start) { warn.style.display = 'none'; return; }
 
   const phSet  = pubHolSet();
-  const hotDays = []; // array of { iso, names[] }
+  const hotDays = [];
   const rangeEnd = halfDay ? start : end;
   const cur = parseDate(start);
   const last = parseDate(rangeEnd);
@@ -1380,14 +1427,12 @@ function updateCapacityWarn() {
     const iso = dateStr(cur);
     cur.setDate(cur.getDate() + 1);
     if (!isWeekday(parseDate(iso)) || phSet.has(iso)) continue;
-    // People already off that day, excluding self & the entry we're editing
     const offIds = new Set();
     for (const h of holidays) {
       if (h.id === editingHolidayId) continue;
       if (h.personId === personId)   continue;
       if (h.start <= iso && h.end >= iso) offIds.add(h.personId);
     }
-    // Adding this person would push the count up by 1
     const totalIfBooked = offIds.size + 1;
     if (totalIfBooked >= threshold) {
       const names = [...offIds].map(getPersonName).join(', ');
@@ -1483,7 +1528,6 @@ async function renameDepartment(oldName) {
   showSaving(true);
   try {
     const batch = db.batch();
-    // Update settings list
     const managed = teamSettings.departments || [];
     const idx = managed.indexOf(oldName);
     const nextManaged = idx >= 0
@@ -1492,11 +1536,9 @@ async function renameDepartment(oldName) {
     batch.set(settingsCol.doc('team'),
       { departments: nextManaged, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
       { merge: true });
-    // Cascade to people
     affected.forEach(p => batch.update(peopleCol.doc(p.id), { dept: newName }));
     await batch.commit();
 
-    // If the currently-filtered dept was renamed, follow the rename
     if (deptFilter === oldName) {
       deptFilter = newName;
       localStorage.setItem('ht_dept_filter', newName);
@@ -1629,7 +1671,6 @@ async function addPerson() {
   const dept = document.getElementById('newPersonDept').value.trim() || 'Team';
   if (!name) { showToast('Enter a name.', true); return; }
 
-  // Duplicate detection — case-insensitive exact match on name
   const normalized = name.toLowerCase();
   const dupe = people.find(p => p.name.toLowerCase() === normalized);
   if (dupe) {
@@ -1703,7 +1744,6 @@ async function saveEditPerson() {
 
   if (!newName) { err.textContent = 'Name cannot be empty.'; err.classList.add('show'); return; }
 
-  // Duplicate name check (case-insensitive, excluding self)
   const normalized = newName.toLowerCase();
   if (newName.toLowerCase() !== (person.name || '').toLowerCase()) {
     const dupe = people.find(p => p.id !== _editingPersonId && (p.name || '').toLowerCase() === normalized);
@@ -1721,7 +1761,6 @@ async function saveEditPerson() {
     if (deptChanged) update.dept = newDept;
     await peopleCol.doc(_editingPersonId).update(update);
 
-    // Also update the linked user profile displayName so login shows the new name
     if (nameChanged) {
       const prof = userProfiles.find(u => u.personId === _editingPersonId);
       if (prof) {
@@ -1786,93 +1825,91 @@ function exportCSV() {
   URL.revokeObjectURL(url);
   showToast('CSV exported!');
 }
-// --- Auto-Logout on Inactivity ---
-  (function() {
-    const INACTIVITY_LIMIT   = 15 * 60 * 1000;  // 15 minutes
-    const WARNING_LEAD_TIME  = 60 * 1000;       // warn 60 seconds before logout
 
-    let idleTimer     = null;
-    let warningTimer  = null;
-    let countdownInt  = null;
-    let warningShown  = false;
+/* ════════════════════════════════════════════
+   AUTO-LOGOUT ON INACTIVITY
+════════════════════════════════════════════ */
+(function() {
+  const INACTIVITY_LIMIT  = 15 * 60 * 1000;
+  const WARNING_LEAD_TIME = 60 * 1000;
 
-    function isAppActive() {
-      const mainApp = document.getElementById('mainApp');
-      return mainApp && mainApp.style.display !== 'none';
-    }
+  let idleTimer    = null;
+  let warningTimer = null;
+  let countdownInt = null;
+  let warningShown = false;
 
-    function hideWarning() {
-      warningShown = false;
-      const modal = document.getElementById('inactivityModal');
-      if (modal) modal.classList.remove('open');
-      clearInterval(countdownInt); countdownInt = null;
-    }
+  function isAppActive() {
+    const mainApp = document.getElementById('mainApp');
+    return mainApp && mainApp.style.display !== 'none';
+  }
 
-    function showWarning() {
-      if (!isAppActive()) return;
-      warningShown = true;
-      const modal = document.getElementById('inactivityModal');
-      const secEl = document.getElementById('inactivitySeconds');
-      let remaining = Math.floor(WARNING_LEAD_TIME / 1000);
-      if (secEl) secEl.textContent = remaining;
-      if (modal) modal.classList.add('open');
+  function hideWarning() {
+    warningShown = false;
+    const modal = document.getElementById('inactivityModal');
+    if (modal) modal.classList.remove('open');
+    clearInterval(countdownInt); countdownInt = null;
+  }
 
-      clearInterval(countdownInt);
-      countdownInt = setInterval(() => {
-        remaining--;
-        if (secEl) secEl.textContent = Math.max(0, remaining);
-        if (remaining <= 0) {
-          clearInterval(countdownInt); countdownInt = null;
-          hideWarning();
-          if (isAppActive()) {
-            showToast('Signed out due to inactivity.', true);
-            doSignOut();
-          }
-        }
-      }, 1000);
-    }
+  function showWarning() {
+    if (!isAppActive()) return;
+    warningShown = true;
+    const modal = document.getElementById('inactivityModal');
+    const secEl = document.getElementById('inactivitySeconds');
+    let remaining = Math.floor(WARNING_LEAD_TIME / 1000);
+    if (secEl) secEl.textContent = remaining;
+    if (modal) modal.classList.add('open');
 
-    function resetInactivityTimer() {
-      // If the warning modal is showing, activity alone doesn't dismiss it —
-      // user must click "Stay signed in". This prevents background events
-      // (e.g. scroll from touch hover) from silently resetting the countdown.
-      if (warningShown) return;
-
-      clearTimeout(idleTimer);
-      clearTimeout(warningTimer);
-
-      warningTimer = setTimeout(showWarning, INACTIVITY_LIMIT - WARNING_LEAD_TIME);
-      idleTimer    = setTimeout(() => {
+    clearInterval(countdownInt);
+    countdownInt = setInterval(() => {
+      remaining--;
+      if (secEl) secEl.textContent = Math.max(0, remaining);
+      if (remaining <= 0) {
+        clearInterval(countdownInt); countdownInt = null;
+        hideWarning();
         if (isAppActive()) {
-          hideWarning();
           showToast('Signed out due to inactivity.', true);
           doSignOut();
         }
-      }, INACTIVITY_LIMIT);
-    }
+      }
+    }, 1000);
+  }
 
-    // Exposed so the "Stay signed in" button can reset everything cleanly.
-    window.dismissInactivityWarning = function() {
-      hideWarning();
-      resetInactivityTimer();
-    };
+  function resetInactivityTimer() {
+    if (warningShown) return;
+    clearTimeout(idleTimer);
+    clearTimeout(warningTimer);
+    warningTimer = setTimeout(showWarning, INACTIVITY_LIMIT - WARNING_LEAD_TIME);
+    idleTimer    = setTimeout(() => {
+      if (isAppActive()) {
+        hideWarning();
+        showToast('Signed out due to inactivity.', true);
+        doSignOut();
+      }
+    }, INACTIVITY_LIMIT);
+  }
 
-    ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(event => {
-      window.addEventListener(event, resetInactivityTimer, { passive: true });
-    });
-
+  window.dismissInactivityWarning = function() {
+    hideWarning();
     resetInactivityTimer();
-  })();
- 
+  };
+
+  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(event => {
+    window.addEventListener(event, resetInactivityTimer, { passive: true });
+  });
+
+  resetInactivityTimer();
+})();
+
 /* ════════════════════════════════════════════
    MODAL BACKDROP
 ════════════════════════════════════════════ */
 document.addEventListener('click', e => {
   if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
 });
-/* PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
+
+/* ════════════════════════════════════════════
    SUBTLE CANVAS BACKGROUND
-PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP */
+════════════════════════════════════════════ */
 (function() {
   if (window.Grimoire && window.Grimoire.reducedMotion) return;
   const cv = document.getElementById('bg-canvas');
@@ -1883,8 +1920,7 @@ PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP */
   function rs() { w = cv.width = window.innerWidth; h = cv.height = window.innerHeight; }
   window.addEventListener('resize', rs);
   rs();
-  // Fewer particles, subtle colors (muted accent/accent3)
-  for(let i=0; i<20; i++) {
+  for(let i = 0; i < 20; i++) {
     pts.push({
       x: Math.random()*w, y: Math.random()*h,
       vx: (Math.random()-0.5)*0.2, vy: (Math.random()-0.5)*0.2,
