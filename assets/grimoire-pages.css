@@ -1,4 +1,4 @@
-﻿    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #02020a;
       --surface: rgba(10,8,24,0.85);
@@ -239,7 +239,7 @@
     .lock-error { font-family: var(--mono); font-size: 11px; color: var(--red-text); min-height: 16px; text-align: center; }
     .lock-hint { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 1.2rem; text-align: center; line-height: 1.8; }
     @keyframes shake { 0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)} }
-
+    @media (max-width: 650px) {
       header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
       header .logo-back { flex-shrink: 0; }
       header .logo { flex-wrap: wrap; }
