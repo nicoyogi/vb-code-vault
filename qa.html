@@ -1,96 +1,18 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#02020a">
-  <title>Q&A Knowledge Base · The Grimoire</title>
+  <title>Q&A Knowledge Base Â· The Grimoire</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/grimoire-core.css">
   <script src="assets/grimoire-core.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #02020a;
-      --surface: rgba(10,8,24,0.85);
-      --surface2: rgba(16,14,32,0.9);
-      --border: rgba(212,175,100,0.1);
-      --border2: rgba(212,175,100,0.22);
-      --text: #ede8ff;
-      --text2: rgba(212,175,100,0.55);
-      --text3: rgba(212,175,100,0.28);
-      --accent: #a78bfa;
-      --accent-bg: rgba(167,139,250,0.1);
-      --accent-text: #c4b5fd;
-      --green-bg: rgba(52,211,153,0.1);
-      --green-text: #34d399;
-      --red-bg: rgba(248,113,113,0.08);
-      --red-text: #f87171;
-      --red-border: rgba(248,113,113,0.3);
-      --gold: rgba(212,175,100,1);
-      --gold-dim: rgba(212,175,100,0.35);
-      --cinzel: 'Cinzel', serif;
-      --syne: 'Syne', sans-serif;
-      --mono: 'DM Mono', monospace;
-      --radius: 10px;
-      --radius-lg: 16px;
-    }
-    html, body { min-height: 100vh; background: var(--bg); overflow-x: hidden; }
-    body { font-family: var(--syne); color: var(--text); font-size: 15px; line-height: 1.6; }
-
-    #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-    body::before {
-      content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none;
-      background-image: linear-gradient(rgba(212,175,100,0.018) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(212,175,100,0.018) 1px, transparent 1px);
-      background-size: 52px 52px;
-    }
-
-    header {
-      background: rgba(2,2,10,0.88); border-bottom: 1px solid var(--border);
-      padding: 0 1.5rem; display: flex; align-items: center; gap: 12px;
-      height: 60px; position: sticky; top: 0; z-index: 10;
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    }
-    header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,100,0.3), transparent); }
-    .logo-back { display: flex; align-items: center; gap: 6px; font-family: var(--cinzel); font-size: 11px; letter-spacing: .18em; color: var(--text3); text-decoration: none; padding: 5px 14px; border: 1px solid var(--border); border-radius: 20px; transition: color .2s, border-color .2s; }
-    .logo-back:hover { color: var(--gold-dim); border-color: var(--border2); }
-    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--cinzel); font-weight: 600; font-size: 15px; color: var(--text); text-decoration: none; letter-spacing: .06em; }
-    .logo-icon { width: 32px; height: 32px; background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.3); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #a78bfa; font-size: 16px; }
-    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-    #total-badge { font-family: var(--mono); font-size: 11px; background: rgba(212,175,100,0.06); border: 1px solid var(--border); border-radius: 20px; padding: 3px 12px; color: var(--text3); }
-    .status-wrap { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--text3); }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); transition: background .3s; }
-    .status-dot.online { background: #34d399; box-shadow: 0 0 8px #34d399; }
-    .status-dot.error { background: #f87171; }
-
-    .btn-primary { height: 34px; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); border-radius: 20px; padding: 0 18px; font-family: var(--cinzel); font-size: 11px; font-weight: 600; letter-spacing: .12em; color: var(--accent-text); cursor: pointer; white-space: nowrap; transition: background .2s, border-color .2s, box-shadow .2s; }
-    .btn-primary:hover { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.5); box-shadow: 0 0 20px rgba(167,139,250,0.2); }
-    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
-    .btn-sm { height: 30px; background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; font-family: var(--mono); font-size: 11px; cursor: pointer; color: var(--text3); transition: background .15s, border-color .15s, color .15s; white-space: nowrap; }
-    .btn-sm:hover { background: rgba(212,175,100,0.06); border-color: var(--border2); color: var(--text2); }
-    .btn-danger { color: var(--red-text); border-color: rgba(248,113,113,0.2); }
-    .btn-danger:hover { background: var(--red-bg); border-color: var(--red-border); }
-
-    main { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 5rem; position: relative; z-index: 2; }
-
-    .page-head { margin-bottom: 2rem; }
-    .page-eyebrow { font-family: var(--mono); font-size: 9.5px; letter-spacing: .28em; text-transform: uppercase; color: var(--text3); margin-bottom: .6rem; }
-    .page-title { font-family: var(--cinzel); font-size: clamp(1.6rem, 3.5vw, 2.4rem); font-weight: 900; letter-spacing: -.01em; line-height: 1.1; margin-bottom: .5rem; }
-    .page-title .grad { background: linear-gradient(120deg, #a78bfa 0%, #d4af64 60%, #f472b6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .page-orn { display: flex; align-items: center; gap: 12px; margin: 1rem 0 1.5rem; }
-    .page-orn-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,175,100,.18), transparent); }
-    .page-orn-sym { font-family: var(--cinzel); font-size: 12px; color: rgba(212,175,100,.22); }
-
-    .toolbar { display: flex; gap: 8px; margin-bottom: 1.2rem; flex-wrap: wrap; }
-    .toolbar input[type="text"] { flex: 1; min-width: 180px; height: 38px; border: 1px solid var(--border); border-radius: var(--radius); padding: 0 14px; font-family: var(--mono); font-size: 12px; background: var(--surface); color: var(--text); outline: none; transition: border-color .2s, box-shadow .2s; }
-    .toolbar input:focus { border-color: var(--border2); box-shadow: 0 0 0 3px rgba(212,175,100,0.07); }
-    .toolbar select { height: 38px; border: 1px solid var(--border); border-radius: var(--radius); padding: 0 12px; font-family: var(--mono); font-size: 12px; background: var(--surface); color: var(--text); outline: none; cursor: pointer; min-width: 140px; }
-    .stats { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-bottom: 1rem; }
-
-    .qa-grid { display: grid; gap: 12px; }
+    <link rel="stylesheet" href="assets/grimoire-pages.css">
+    <style>
     .qa-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.2rem 1.4rem; transition: border-color .2s, box-shadow .2s; backdrop-filter: blur(12px); position: relative; overflow: hidden; }
     .qa-card::before { content: ''; position: absolute; top: 0; left: 8%; right: 8%; height: 1px; background: linear-gradient(90deg, transparent, rgba(167,139,250,.3), transparent); opacity: 0; transition: opacity .3s; }
     .qa-card:hover { border-color: var(--border2); box-shadow: 0 8px 40px rgba(167,139,250,0.08); }
@@ -125,73 +47,7 @@
     #lightbox img { max-width: 100%; max-height: 90vh; border-radius: var(--radius); object-fit: contain; }
     #lightbox-close { position: absolute; top: 1rem; right: 1rem; background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: white; font-size: 20px; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-    .skeleton { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
-    .skel-line { background: rgba(212,175,100,0.05); border-radius: 4px; height: 13px; margin-bottom: 10px; animation: shimmer 1.6s ease-in-out infinite; }
-    @keyframes shimmer { 0%,100%{opacity:1}50%{opacity:.35} }
-
-    .empty { text-align: center; color: var(--text3); padding: 5rem 1rem; }
-    .empty-icon { font-size: 32px; margin-bottom: 14px; }
-    .empty p { font-family: var(--cinzel); font-size: 13px; letter-spacing: .08em; }
-
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(6px); }
-    .overlay.open { display: flex; }
-    .modal { background: #08081a; border: 1px solid var(--border2); border-radius: 20px; padding: 1.8rem; width: min(600px, 100%); max-height: 92vh; overflow-y: auto; position: relative; }
-    .modal::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px; background: linear-gradient(90deg,transparent,rgba(212,175,100,.4),transparent); }
-    .modal h2 { font-family: var(--cinzel); font-size: 15px; font-weight: 600; letter-spacing: .1em; margin-bottom: 1.4rem; color: var(--text); }
-    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
-    .field label { font-family: var(--cinzel); font-size: 9.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--text3); }
-    .field input[type="text"], .field select, .field textarea { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 13px; font-family: var(--mono); font-size: 12.5px; background: rgba(2,2,10,0.8); color: var(--text); outline: none; transition: border-color .2s; }
-    .field input:focus, .field select:focus, .field textarea:focus { border-color: rgba(167,139,250,0.4); box-shadow: 0 0 0 3px rgba(167,139,250,0.06); }
-    .field textarea { min-height: 140px; resize: vertical; line-height: 1.65; }
-    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.4rem; }
-
-    .detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(6px); }
-    .detail-overlay.open { display: flex; }
-    .detail-box { background: #08081a; border: 1px solid var(--border2); border-radius: 20px; padding: 1.5rem; width: min(720px, 100%); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-    .detail-box::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px; background: linear-gradient(90deg,transparent,rgba(167,139,250,.5),transparent); }
-    .detail-q { font-family: var(--cinzel); font-size: 16px; font-weight: 600; margin-bottom: 10px; line-height: 1.4; flex-shrink: 0; display: flex; gap: 10px; align-items: flex-start; letter-spacing: .03em; }
-    .detail-meta { display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-shrink: 0; flex-wrap: wrap; }
-    .detail-a { flex: 1; overflow-y: auto; background: rgba(2,2,10,0.7); border-radius: var(--radius); padding: 1rem 1.25rem; font-family: var(--mono); font-size: 12.5px; color: var(--text2); line-height: 1.8; white-space: pre-wrap; word-break: break-word; border-left: 3px solid rgba(167,139,250,0.4); min-height: 60px; }
-    .detail-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; flex-shrink: 0; }
-    .copy-ok { font-family: var(--mono); font-size: 11px; color: var(--green-text); }
-
-    #toast { position: fixed; bottom: 2.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: #0e0e1c; color: var(--text); border: 1px solid var(--border2); padding: 10px 22px; border-radius: 24px; font-family: var(--mono); font-size: 12px; opacity: 0; transition: all .25s; pointer-events: none; z-index: 999; white-space: nowrap; backdrop-filter: blur(10px); }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    #toast.error-toast { background: rgba(248,113,113,0.12); border-color: var(--red-border); color: var(--red-text); }
-
-    #lock-screen { display: none; position: fixed; inset: 0; background: #02020a; z-index: 1000; align-items: center; justify-content: center; flex-direction: column; }
-    #lock-screen.active { display: flex; }
-    #lock-screen::before { content: ''; position: fixed; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(212,175,100,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(212,175,100,0.018) 1px, transparent 1px); background-size: 52px 52px; }
-    .lock-box { background: rgba(8,8,26,0.95); border: 1px solid var(--border2); border-radius: 24px; padding: 2.8rem 2.2rem; width: min(380px, 92vw); display: flex; flex-direction: column; align-items: center; position: relative; backdrop-filter: blur(20px); }
-    .lock-box::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px; background: linear-gradient(90deg,transparent,rgba(167,139,250,.5),transparent); }
-    .lock-box::after { content: ''; position: absolute; top: 14px; left: 14px; width: 14px; height: 14px; border-top: 1px solid var(--border2); border-left: 1px solid var(--border2); }
-    .lock-rune { font-family: var(--cinzel); font-size: 30px; color: rgba(167,139,250,0.7); margin-bottom: 1rem; }
-    .lock-title { font-family: var(--cinzel); font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px; letter-spacing: .08em; }
-    .lock-sub { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-bottom: 1.6rem; text-align: center; letter-spacing: .06em; }
-    .lock-input-wrap { position: relative; width: 100%; margin-bottom: 12px; }
-    .lock-input { width: 100%; background: rgba(2,2,10,0.8); border: 1px solid var(--border); border-radius: 10px; padding: 11px 44px 11px 16px; font-family: var(--mono); font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
-    .lock-input:focus { border-color: rgba(167,139,250,0.5); box-shadow: 0 0 0 3px rgba(167,139,250,0.07); }
-    .lock-input.shake { animation: shake .35s ease; border-color: var(--red-text); }
-    .lock-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 4px; }
-    .lock-toggle:hover { color: var(--text2); }
-    .lock-btn { width: 100%; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); border-radius: 10px; padding: 12px; font-family: var(--cinzel); font-size: 12px; font-weight: 600; letter-spacing: .16em; color: var(--accent-text); cursor: pointer; transition: background .2s, box-shadow .2s; margin-bottom: 12px; text-transform: uppercase; }
-    .lock-btn:hover { background: rgba(167,139,250,0.2); box-shadow: 0 0 24px rgba(167,139,250,0.18); }
-    .lock-btn:disabled { opacity: .4; cursor: not-allowed; }
-    .lock-error { font-family: var(--mono); font-size: 11px; color: var(--red-text); min-height: 16px; text-align: center; }
-    .lock-hint { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 1.2rem; text-align: center; line-height: 1.8; }
-    @keyframes shake { 0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)} }
-
-    @media (max-width: 540px) {
-      header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
-      header .logo-back { flex-shrink: 0; }
-      header .logo { flex-wrap: wrap; }
-      .header-right { order: 3; width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
-      .header-right .btn-primary { flex: 1; min-width: 0; }
-      .toolbar input[type="text"] { min-width: 0; width: 100%; }
-      .toolbar select { min-width: 0; flex: 1; }
-      .page-title { font-size: 1.6rem !important; }
-    }
-  </style>
+    </style>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -199,23 +55,23 @@
 
 <div id="lock-screen">
   <div class="lock-box">
-    <div class="lock-rune">ᛟ</div>
+    <div class="lock-rune">á›Ÿ</div>
     <div class="lock-title">Q&A Knowledge Base</div>
     <div class="lock-sub">// speak friend and enter</div>
     <div class="lock-input-wrap">
       <input class="lock-input" type="password" id="lock-input" placeholder="Password" onkeydown="if(event.key==='Enter')unlock()">
-      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn">👁</button>
+      <button class="lock-toggle" onclick="toggleLockVis()" id="lock-vis-btn">ðŸ‘</button>
     </div>
-    <button class="lock-btn" onclick="unlock()">Unlock · Oracle</button>
+    <button class="lock-btn" onclick="unlock()">Unlock Â· Oracle</button>
     <div class="lock-error" id="lock-error"></div>
     <div class="lock-hint">Same password as your Code Vault.<br>Sealed in the Firebase ether.</div>
   </div>
 </div>
 
 <header>
-  <a href="index.html" class="logo-back">← Grimoire</a>
+  <a href="index.html" class="logo-back">â† Grimoire</a>
   <div class="logo" role="heading" aria-level="1">
-    <div class="logo-icon">🧠</div>
+    <div class="logo-icon">ðŸ§ </div>
     Knowledge Base
   </div>
   <div class="header-right">
@@ -223,22 +79,22 @@
       <div class="status-dot" id="status-dot"></div>
       <span id="status-label">Connecting...</span>
     </div>
-    <span id="total-badge">— scrolls</span>
-    <button class="btn-sm" onclick="lockApp()" title="Lock">🔒</button>
-    <button class="btn-lock" id="migrate-btn" disabled title="Migration complete" style="opacity:.3;cursor:not-allowed;">⟳ Migrate</button>
+    <span id="total-badge">â€” scrolls</span>
+    <button class="btn-sm" onclick="lockApp()" title="Lock">ðŸ”’</button>
+    <button class="btn-lock" id="migrate-btn" disabled title="Migration complete" style="opacity:.3;cursor:not-allowed;">âŸ³ Migrate</button>
     <button class="btn-primary" onclick="openAdd()">+ New Oracle Entry</button>
   </div>
 </header>
 
 <main id="main">
   <div class="page-head">
-    <div class="page-eyebrow">// Tome II · The Oracle</div>
+    <div class="page-eyebrow">// Tome II Â· The Oracle</div>
     <div class="page-title">Q&amp;A <span class="grad">Knowledge Base</span></div>
   </div>
-  <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᛟ ✦</div><div class="page-orn-line"></div></div>
+  <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">âœ¦ á›Ÿ âœ¦</div><div class="page-orn-line"></div></div>
 
   <div class="toolbar">
-    <input type="text" id="search" placeholder="⌕  Search questions or answers..." oninput="render()">
+    <input type="text" id="search" placeholder="âŒ•  Search questions or answers..." oninput="render()">
     <select id="filter-cat" onchange="render()"><option value="">All categories</option></select>
   </div>
   <div id="stats" class="stats"></div>
@@ -263,8 +119,8 @@
       <label>Images (optional)</label>
       <div class="img-upload-area" id="upload-area" onclick="document.getElementById('img-input').click()" ondragover="handleDrag(event,true)" ondragleave="handleDrag(event,false)" ondrop="handleDrop(event)">
         <input type="file" id="img-input" accept="image/*" multiple onchange="handleFiles(this.files)">
-        📷 Click to upload images or drag &amp; drop<br>
-        <span style="font-size:10px;opacity:0.6">PNG, JPG, GIF, WebP — max 5MB each</span>
+        ðŸ“· Click to upload images or drag &amp; drop<br>
+        <span style="font-size:10px;opacity:0.6">PNG, JPG, GIF, WebP â€” max 5MB each</span>
       </div>
       <div class="img-previews" id="img-previews"></div>
       <div class="upload-progress" id="upload-progress"></div>
@@ -284,16 +140,16 @@
     <div class="detail-images" id="d-images"></div>
     <div class="detail-a" id="d-a"></div>
     <div class="detail-actions">
-      <button class="btn-sm" id="copy-btn" onclick="copyAnswer()">📋 Copy answer</button>
-      <button class="btn-sm" onclick="editFromDetail()">✎ Edit</button>
-      <button class="btn-sm" onclick="closeDetail()">✕ Close</button>
+      <button class="btn-sm" id="copy-btn" onclick="copyAnswer()">ðŸ“‹ Copy answer</button>
+      <button class="btn-sm" onclick="editFromDetail()">âœŽ Edit</button>
+      <button class="btn-sm" onclick="closeDetail()">âœ• Close</button>
       <span class="copy-ok" id="copy-ok"></span>
     </div>
   </div>
 </div>
 
 <div id="lightbox" onclick="closeLightbox()">
-  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button id="lightbox-close" onclick="closeLightbox()">âœ•</button>
   <img id="lightbox-img" src="" alt="">
 </div>
 
@@ -304,7 +160,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js" integrity="sha384-6I0gWsz4FIAr30c0TxIxJnPQuJiZ1FfILdZrgJdjxTH3R8dgPGTvexbyqTvReV6Z" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/firebase-config.js"></script>
 <script>
-/* ── BACKGROUND PARTICLES ── */
+/* â”€â”€ BACKGROUND PARTICLES â”€â”€ */
 (function(){
   const cv=document.getElementById('bg-canvas'),cx=cv.getContext('2d');
   let W,H,t=0,pts=[];
@@ -329,7 +185,7 @@
 
 if(!firebase.apps.length)firebase.initializeApp(window.firebaseConfig);
 const db=firebase.firestore(),storage=firebase.storage();
-const col=db.collection('wmf_entries');  /* ── WMF collection ── */
+const col=db.collection('wmf_entries');  /* â”€â”€ WMF collection â”€â”€ */
 const authDoc=db.collection('_config').doc('auth');
 let entries=[],editId=null,detailId=null,saving=false,pendingImages=[];
 
@@ -359,24 +215,24 @@ function render(){
   document.getElementById('total-badge').textContent=total+' entr'+(total!==1?'ies':'y');
   document.getElementById('stats').textContent=(q||catF)?`Showing ${list.length} of ${total}`:total>0?`${total} entr${total!==1?'ies':'y'} in the oracle`:'';
   const grid=document.getElementById('grid');
-  if(!list.length){grid.innerHTML=total===0?`<div class="empty"><div class="empty-icon">🧠</div><p>The oracle is silent.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ New Oracle Entry</strong> to begin.</p></div>`:`<div class="empty"><div class="empty-icon">🔍</div><p>No entries match your search.</p></div>`;return;}
+  if(!list.length){grid.innerHTML=total===0?`<div class="empty"><div class="empty-icon">ðŸ§ </div><p>The oracle is silent.</p><p style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3)">Click <strong>+ New Oracle Entry</strong> to begin.</p></div>`:`<div class="empty"><div class="empty-icon">ðŸ”</div><p>No entries match your search.</p></div>`;return;}
   grid.innerHTML=list.map(e=>{
     const tags=(e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
     const imgs=e.images||[];
     const thumbHtml=imgs.length>0?`<div style="display:grid;grid-template-columns:${imgs.length===1?'1fr':imgs.length===2?'1fr 1fr':'1fr 1fr 1fr'};gap:6px;margin-bottom:10px;">${imgs.map(url=>`<img src="${esc(url)}" style="width:100%;height:${imgs.length===1?'220px':'140px'};object-fit:contain;background:rgba(2,2,10,0.6);border-radius:8px;border:1px solid var(--border);cursor:pointer;" onclick="openDetail('${e.id}')" loading="lazy">`).join('')}</div>`:'';
-    return`<div class="qa-card"><div class="qa-card-header"><div class="q-icon">Q</div><div class="qa-question">${esc(e.question||'')}</div></div>${thumbHtml}<div class="qa-answer">${esc((e.answer||'').substring(0,220)+(e.answer&&e.answer.length>220?'...':''))}</div><div class="qa-meta"><span class="badge">${esc(e.category||'General')}</span>${tags.map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}<span class="date">${fmtDate(e.createdAt)}</span></div><div class="qa-actions"><button class="btn-sm" onclick="openDetail('${e.id}')">👁 View</button><button class="btn-sm" onclick="openEdit('${e.id}')">✎ Edit</button><button class="btn-sm btn-danger" onclick="deleteEntry('${e.id}')">🗑 Delete</button></div></div>`;
+    return`<div class="qa-card"><div class="qa-card-header"><div class="q-icon">Q</div><div class="qa-question">${esc(e.question||'')}</div></div>${thumbHtml}<div class="qa-answer">${esc((e.answer||'').substring(0,220)+(e.answer&&e.answer.length>220?'...':''))}</div><div class="qa-meta"><span class="badge">${esc(e.category||'General')}</span>${tags.map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}<span class="date">${fmtDate(e.createdAt)}</span></div><div class="qa-actions"><button class="btn-sm" onclick="openDetail('${e.id}')">ðŸ‘ View</button><button class="btn-sm" onclick="openEdit('${e.id}')">âœŽ Edit</button><button class="btn-sm btn-danger" onclick="deleteEntry('${e.id}')">ðŸ—‘ Delete</button></div></div>`;
   }).join('');
 }
 
 function handleDrag(e,on){e.preventDefault();document.getElementById('upload-area').classList.toggle('drag',on);}
 function handleDrop(e){e.preventDefault();document.getElementById('upload-area').classList.remove('drag');handleFiles(e.dataTransfer.files);}
 function handleFiles(files){for(const file of files){if(!file.type.startsWith('image/')){showToast('Only image files allowed.',true);continue;}if(file.size>5*1024*1024){showToast(`${file.name} is too large.`,true);continue;}const reader=new FileReader();reader.onload=ev=>{const id=Date.now()+Math.random();pendingImages.push({id,file,previewUrl:ev.target.result});renderPreviews();};reader.readAsDataURL(file);}}
-function renderPreviews(){document.getElementById('img-previews').innerHTML=pendingImages.map(img=>`<div class="img-preview-wrap"><img src="${img.previewUrl}" alt=""><button class="img-remove" onclick="removePreview('${img.id}')">✕</button></div>`).join('');}
+function renderPreviews(){document.getElementById('img-previews').innerHTML=pendingImages.map(img=>`<div class="img-preview-wrap"><img src="${img.previewUrl}" alt=""><button class="img-remove" onclick="removePreview('${img.id}')">âœ•</button></div>`).join('');}
 function removePreview(id){pendingImages=pendingImages.filter(i=>String(i.id)!==String(id));renderPreviews();}
 async function uploadImages(entryId){const urls=[],prog=document.getElementById('upload-progress');for(let i=0;i<pendingImages.length;i++){const img=pendingImages[i];prog.textContent=`Uploading image ${i+1} of ${pendingImages.length}...`;const path=`wmf_qa/${entryId}/${Date.now()}_${img.file.name}`;const ref=storage.ref(path);await ref.put(img.file);urls.push(await ref.getDownloadURL());}prog.textContent='';return urls;}
 
 function openAdd(){editId=null;pendingImages=[];document.getElementById('modal-title').textContent='New Oracle Entry';document.getElementById('f-q').value='';document.getElementById('f-a').value='';document.getElementById('f-tags').value='';document.getElementById('f-cat').value='K+N';document.getElementById('img-previews').innerHTML='';document.getElementById('upload-progress').textContent='';document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
-function openEdit(id){const e=entries.find(x=>x.id===id);if(!e)return;editId=id;pendingImages=[];document.getElementById('modal-title').textContent='Edit Oracle Entry';document.getElementById('f-q').value=e.question||'';document.getElementById('f-a').value=e.answer||'';document.getElementById('f-tags').value=e.tags||'';document.getElementById('f-cat').value=e.category||'K+N';const imgs=e.images||[];document.getElementById('img-previews').innerHTML=imgs.map((url,i)=>`<div class="img-preview-wrap"><img src="${esc(url)}" alt=""><button class="img-remove" onclick="removeExistingImg(${i},'${id}')">✕</button></div>`).join('');document.getElementById('upload-progress').textContent=imgs.length>0?`${imgs.length} existing image${imgs.length>1?'s':''} — upload more below`:'';closeDetail();document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
+function openEdit(id){const e=entries.find(x=>x.id===id);if(!e)return;editId=id;pendingImages=[];document.getElementById('modal-title').textContent='Edit Oracle Entry';document.getElementById('f-q').value=e.question||'';document.getElementById('f-a').value=e.answer||'';document.getElementById('f-tags').value=e.tags||'';document.getElementById('f-cat').value=e.category||'K+N';const imgs=e.images||[];document.getElementById('img-previews').innerHTML=imgs.map((url,i)=>`<div class="img-preview-wrap"><img src="${esc(url)}" alt=""><button class="img-remove" onclick="removeExistingImg(${i},'${id}')">âœ•</button></div>`).join('');document.getElementById('upload-progress').textContent=imgs.length>0?`${imgs.length} existing image${imgs.length>1?'s':''} â€” upload more below`:'';closeDetail();document.getElementById('form-modal').classList.add('open');setTimeout(()=>document.getElementById('f-q').focus(),50);}
 async function removeExistingImg(idx,entryId){const e=entries.find(x=>x.id===entryId);if(!e)return;const imgs=[...(e.images||[])];imgs.splice(idx,1);await col.doc(entryId).update({images:imgs});showToast('Image removed.');}
 function closeModal(){document.getElementById('form-modal').classList.remove('open');}
 async function saveEntry(){
@@ -391,24 +247,24 @@ async function saveEntry(){
   finally{saving=false;btn.disabled=false;btn.textContent='Seal Entry';}
 }
 
-function openDetail(id){const e=entries.find(x=>x.id===id);if(!e)return;detailId=id;document.getElementById('d-q').textContent=e.question||'';const tags=(e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);document.getElementById('d-meta').innerHTML=`<span class="badge">${esc(e.category||'General')}</span>${tags.map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}<span style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto">${fmtDate(e.createdAt)}</span>`;const imgs=e.images||[];const imgWrap=document.getElementById('d-images');if(imgs.length>0){imgWrap.style.display='grid';imgWrap.innerHTML=imgs.map(url=>`<img src="${esc(url)}" alt="image" loading="lazy" onclick="openLightbox('${esc(url)}')">`).join('');}else{imgWrap.style.display='none';imgWrap.innerHTML='';}document.getElementById('d-a').textContent=e.answer||'';document.getElementById('copy-btn').textContent='📋 Copy answer';document.getElementById('copy-ok').textContent='';document.getElementById('detail-modal').classList.add('open');}
+function openDetail(id){const e=entries.find(x=>x.id===id);if(!e)return;detailId=id;document.getElementById('d-q').textContent=e.question||'';const tags=(e.tags||'').split(',').map(t=>t.trim()).filter(Boolean);document.getElementById('d-meta').innerHTML=`<span class="badge">${esc(e.category||'General')}</span>${tags.map(t=>`<span class="tag-pill">${esc(t)}</span>`).join('')}<span style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto">${fmtDate(e.createdAt)}</span>`;const imgs=e.images||[];const imgWrap=document.getElementById('d-images');if(imgs.length>0){imgWrap.style.display='grid';imgWrap.innerHTML=imgs.map(url=>`<img src="${esc(url)}" alt="image" loading="lazy" onclick="openLightbox('${esc(url)}')">`).join('');}else{imgWrap.style.display='none';imgWrap.innerHTML='';}document.getElementById('d-a').textContent=e.answer||'';document.getElementById('copy-btn').textContent='ðŸ“‹ Copy answer';document.getElementById('copy-ok').textContent='';document.getElementById('detail-modal').classList.add('open');}
 function closeDetail(){document.getElementById('detail-modal').classList.remove('open');}
 function editFromDetail(){if(detailId)openEdit(detailId);}
 function openLightbox(url){document.getElementById('lightbox-img').src=url;document.getElementById('lightbox').classList.add('open');}
 function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
 function copyText(text,ok,fail){if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(text).then(ok).catch(()=>fallbackCopy(text,ok,fail));else fallbackCopy(text,ok,fail);}
 function fallbackCopy(text,ok,fail){try{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;';document.body.appendChild(ta);ta.focus();ta.setSelectionRange(0,ta.value.length);const r=document.execCommand('copy');document.body.removeChild(ta);if(r)ok();else fail();}catch(e){fail();}}
-function copyAnswer(){const e=entries.find(x=>x.id===detailId);if(!e)return;copyText(e.answer||'',()=>{document.getElementById('copy-btn').textContent='✓ Copied!';document.getElementById('copy-ok').textContent='Answer copied';setTimeout(()=>{document.getElementById('copy-btn').textContent='📋 Copy answer';document.getElementById('copy-ok').textContent='';},2000);},()=>showToast('Copy failed.',true));}
+function copyAnswer(){const e=entries.find(x=>x.id===detailId);if(!e)return;copyText(e.answer||'',()=>{document.getElementById('copy-btn').textContent='âœ“ Copied!';document.getElementById('copy-ok').textContent='Answer copied';setTimeout(()=>{document.getElementById('copy-btn').textContent='ðŸ“‹ Copy answer';document.getElementById('copy-ok').textContent='';},2000);},()=>showToast('Copy failed.',true));}
 async function deleteEntry(id){if(!confirm('Delete this oracle entry and all its images?'))return;try{const e=entries.find(x=>x.id===id);if(e&&e.images){for(const url of e.images){try{await storage.refFromURL(url).delete();}catch(e){}}}await col.doc(id).delete();showToast('Entry dissolved.');}catch(e){showToast('Delete failed.',true);}}
 function handleBgClick(e,id){if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');}
 function showToast(msg,isError){const t=document.getElementById('toast');t.textContent=msg;t.className=isError?'error-toast show':'show';clearTimeout(t._timer);t._timer=setTimeout(()=>{t.className='';},2500);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeDetail();closeLightbox();}});
 
-/* ── PASSWORD LOCK ── */
+/* â”€â”€ PASSWORD LOCK â”€â”€ */
 const SESSION_KEY='vb_vault_session';
 async function hashPass(pass){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass+'vb_vault_salt_2024'));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
-function toggleLockVis(){const inp=document.getElementById('lock-input'),btn=document.getElementById('lock-vis-btn');if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}else{inp.type='password';btn.textContent='👁';}}
-function setLockLoading(on){const b=document.querySelector('.lock-btn');b.textContent=on?'Consulting the oracle...':'Unlock · Oracle';b.disabled=on;}
+function toggleLockVis(){const inp=document.getElementById('lock-input'),btn=document.getElementById('lock-vis-btn');if(inp.type==='password'){inp.type='text';btn.textContent='ðŸ™ˆ';}else{inp.type='password';btn.textContent='ðŸ‘';}}
+function setLockLoading(on){const b=document.querySelector('.lock-btn');b.textContent=on?'Consulting the oracle...':'Unlock Â· Oracle';b.disabled=on;}
 async function unlock(){
   const input=document.getElementById('lock-input').value;if(!input){showLockError('Please enter a password.');return;}
   setLockLoading(true);
@@ -421,7 +277,7 @@ function lockApp(){sessionStorage.removeItem(SESSION_KEY);document.getElementByI
 function checkAuth(){if(sessionStorage.getItem(SESSION_KEY)==='1'){grantAccess();return;}document.getElementById('lock-screen').classList.add('active');setTimeout(()=>document.getElementById('lock-input').focus(),100);}
 checkAuth();
 
-/* ── ONE-TIME MIGRATION: qa_entries → wmf_entries ── */
+/* â”€â”€ ONE-TIME MIGRATION: qa_entries â†’ wmf_entries â”€â”€ */
 async function migrateWMF(){
   const btn=document.getElementById('migrate-btn');
   if(!confirm('This will copy all WMF entries (no project field) from qa_entries into wmf_entries.\n\nRun migration?'))return;
@@ -436,13 +292,13 @@ async function migrateWMF(){
         copied++;
       } else { skipped++; }
     }
-    showToast(`✓ Migrated ${copied} WMF entries. Skipped ${skipped} SGP entries.`);
-    btn.textContent='✓ Done';
+    showToast(`âœ“ Migrated ${copied} WMF entries. Skipped ${skipped} SGP entries.`);
+    btn.textContent='âœ“ Done';
     btn.style.color='#34d399';
     setTimeout(()=>{btn.style.display='none';},3000);
   }catch(e){
     showToast('Migration failed: '+e.message,true);
-    btn.disabled=false;btn.textContent='⟳ Migrate';
+    btn.disabled=false;btn.textContent='âŸ³ Migrate';
   }
 }
 </script>
