@@ -1778,7 +1778,15 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
       let engineNow='',engineMatchesA=true,reason='',inputs={};
       if(processor&&colsA){
         try{
-          const p=processor(wsA,r,colsA);
+          /* Engine-now must answer "what would the engine emit from this
+             row's INPUTS?", so we hide slot A's existing Anmerkung from the
+             processor. Otherwise a preservation guard (e.g. WACKLER_PROTECTED
+             in processWackler reads cols.target and returns null on a protected
+             phrase) short-circuits against the engine's own prior output,
+             making engineNow come back empty and falsely flagging the row as
+             drift -> the "(empty)" cell. target:-1 makes cellStr return ''
+             so the guard is skipped and the engine recomputes from inputs. */
+          const p=processor(wsA,r,{...colsA,target:-1});
           engineNow=(p==null?'':String(p));
           /* Engine-drift is a PHRASE-SET comparison, not a raw-string one,
              matching the latest engine rule (v1.11.0): the Anmerkung column is
