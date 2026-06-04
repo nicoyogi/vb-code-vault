@@ -266,6 +266,7 @@ const PHRASES={
   avisTelefonisch:            'hätte Avisgebühr telefonisch abrechnen dürfen',
   hebebuehne:                 'hätte Hebebühne abrechnen dürfen',
   differenzAvisOk:            'Differenz avis, ok?',
+  differenzEnergiezuschlag:   'DifferenzEnergiezuschlag',
   returnOk:                   'Return, ok?',
   frachtDiff:                 'Frachtdifferenz',
 };
@@ -310,7 +311,7 @@ const PHRASE_LITERALS={
   'pauschalfracht, ok?'           :'lit_pauschalfrachtOk',          /* Wackler |SNK|>=tariff flat-rate */
   'terminzustellung, ok?'         :'lit_terminzustellungOk',        /* Wackler |SNK|≈180 */
   'zone korrekt?'                 :'lit_zoneKorrekt',               /* Wackler NL-FIX zone corollary */
-  'differenztreibstof'            :'lit_differenzTreibstofWackler', /* Wackler additive TZ */
+  'differenztreibstof'            :'lit_differenzTreibstofWackler', /* Wackler legacy fuel wording — superseded by PHRASES.differenzEnergiezuschlag; kept so older slot-A exports that used "DifferenzTreibstof" still resolve to a stable key */
 };
 
 /* Phrases that interpolate runtime values. The key identifies the
@@ -927,16 +928,23 @@ function processWackler(ws,r,cols){
   let snkCodeLabel=null;
   if(cols.snk_diff>=0){snkCodeLabel=wacklerSnkCode(snkVal);if(snkCodeLabel)res=join(res,snkCodeLabel);}
   /* 5. Gewichte / Bundling cascade. Decision tree (both weights real + FR delta):
-     ─ same rate tier (incl. identical weights) → "Wackler rechnet Frachtrate für <tier>kg ab"
+     ─ same rate tier + multi-ref bundle         → "hätte gebündelt werden müssen"
+                                                   (consignments that should have ridden one
+                                                    booking; bundling wins over the rate-card
+                                                    wording — AI-bundle rows 6/27/28/58:
+                                                    multi-ref, VKG==VKG_DL, large FR delta)
+     ─ same rate tier, single ref                → "Wackler rechnet Frachtrate für <tier>kg ab"
                                                    (terminal: Wackler billed the tier rate, so the
-                                                    FR/MT/TZ deltas are systemic rounding for that
+                                                    FR/TZ deltas are systemic rounding for that
                                                     tier — see wacklerRechnetFired suppression below)
      ─ different rate tier                       → "Differenz aufgrund abweichender Gewichte"
-                                                   (a genuine weight discrepancy; MT stays additive)
+                                                   (a genuine weight discrepancy)
      ─ no real weights + multi-ref + FR          → "hätte gebündelt werden müssen"   (legacy bundling)
      Note: a prior "cross-tier + far-apart → hätte gebündelt werden müssen" branch was removed —
      the auditor classifies far-apart multi-ref weight gaps as abweichende Gewichte, not bundling
-     (training rows 7 & 61), and only flags bundling when there is no weight signal at all. */
+     (training rows 7 & 61), and only flags bundling when the weights sit in one tier (or there is
+     no weight signal at all). MT and TZ stay additive on every branch except same-tier "Wackler
+     rechnet" (see rules 9 & 11). */
   let gewichteTriggered=false,wacklerRechnetFired=false;
   if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0&&frHasVal){
     const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl);
@@ -946,8 +954,16 @@ function processWackler(ws,r,cols){
     if(vkg>0&&vkgDl>0){
       const tA=wacklerGetTier(vkg),tB=wacklerGetTier(vkgDl);
       if(tA===tB){
-        res=join(res,'Wackler rechnet Frachtrate für '+wacklerTierLabel(tA)+'kg ab');
-        wacklerRechnetFired=true;
+        if(isBundle){
+          /* Same-tier weights but the row is a multi-reference bundle: the auditor reads it as
+             separate consignments that should have been combined onto a single booking, not a
+             single-shipment rate-card rounding. Do NOT set wacklerRechnetFired, so MT and TZ
+             stay additive below. */
+          res=join(res,P.buendelMuessen);
+        } else {
+          res=join(res,'Wackler rechnet Frachtrate für '+wacklerTierLabel(tA)+'kg ab');
+          wacklerRechnetFired=true;
+        }
       } else {
         res=join(res,'Differenz aufgrund abweichender Gewichte');
       }
@@ -966,9 +982,11 @@ function processWackler(ws,r,cols){
   if(cols.fr>=0&&!gewichteTriggered&&hasErr(frVal,T_WACKLER)&&!res.toLowerCase().includes('gebündelt')&&!res.toLowerCase().includes('return')){
     res=join(res,'Frachtdifferenz');
   }
-  /* 9. Mautdifferenz — toll delta is additive, UNLESS the row resolved to "Wackler rechnet"
-     (same-tier rate-card finding), where the MT delta is part of that tier's systemic rounding. */
-  if(cols.maut>=0&&hasErr(mtVal,T_WACKLER)&&!wacklerRechnetFired)res=join(res,'Mautdifferenz');
+  /* 9. Mautdifferenz — the toll delta is always additive whenever it clears the threshold.
+     (Previously suppressed on same-tier "Wackler rechnet" rows; the AI bundle shows the auditor
+     keeps Mautdifferenz on those rows too — it appears on 23 of the 46 ground-truth rows,
+     including every "Wackler rechnet …" case that carries an MT delta.) */
+  if(cols.maut>=0&&hasErr(mtVal,T_WACKLER))res=join(res,'Mautdifferenz');
   /* 10. SNK Differenz fallback — unknown SNK code, above noise floor, not bundled. */
   if(cols.snk_diff>=0&&!snkCodeLabel&&snkHasVal
      &&Math.abs(snkVal)>=WACKLER_SNK_NOISE
@@ -981,12 +999,17 @@ function processWackler(ws,r,cols){
     else
       res=join(res,'SNK Differenz');
   }
-  /* 11. DifferenzTreibstof — TZ is additive above the 2.0 threshold, BUT only when the fuel
-     delta stands on its own. When the row already carries BOTH a freight (FR) and a toll (MT)
-     delta, the TZ gap is the fuel surcharge computed on (freight + toll) — derived spillover,
-     not a separate classification (training rows 7/9/12/61 each show |TZ| ≈ 12% of |FR|+|MT|).
-     It is likewise absorbed when the row resolved to a same-tier "Wackler rechnet" finding. */
-  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!wacklerRechnetFired&&!(frHasVal&&mtHasVal))res=join(res,'DifferenzTreibstof');
+  /* 11. DifferenzEnergiezuschlag — the fuel/energy surcharge delta is additive above the 2.0
+     threshold. It is emitted whenever it clears that threshold, EXCEPT on same-tier "Wackler
+     rechnet" rows where the fuel gap is part of that tier's systemic rounding.
+     (Previously the phrase was also suppressed whenever the row carried BOTH an FR and an MT
+     delta, on the theory that TZ was derived spillover. The AI bundle disproves that: the
+     auditor lists the fuel surcharge as its own classification even when FR and MT are both
+     present, so the FR&MT suppression was removed.)
+     Wording: "DifferenzEnergiezuschlag" is the auditor's dominant fuel wording (17 of 21 fuel
+     rows across the bundle; the legacy "DifferenzTreibstof" survives only as a literal so older
+     exports still resolve — see PHRASE_LITERALS). */
+  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!wacklerRechnetFired)res=join(res,P.differenzEnergiezuschlag);
   /* 12. NL-FIX zone corollary: when NL-FIX fires AND there's an FR delta AND KOST/SACH are blank,
      the destination zone may be miscoded — surface "Zone korrekt?" up front and drop the
      Frachtdifferenz it triggered (the FR gap is the zone miscode, not a real freight discrepancy). */
@@ -999,8 +1022,8 @@ function processWackler(ws,r,cols){
   }
   /* 13. Kontierung? — both KOST and SACH blank/X. */
   if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}
-  /* 14. Pure TZ fallback — row had nothing but a fuel delta above the noise floor. */
-  if(res===''&&cols.tz>=0&&hasErr(tzVal,T_WACKLER))res='DifferenzTreibstof';
+  /* 14. Pure fuel fallback — row had nothing but a fuel/energy delta above the noise floor. */
+  if(res===''&&cols.tz>=0&&hasErr(tzVal,T_WACKLER))res=P.differenzEnergiezuschlag;
   return res;
 }
 

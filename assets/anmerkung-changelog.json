@@ -1,6 +1,17 @@
 {
-  "version": "1.15.0",
+  "version": "1.16.0",
   "entries": [
+    {
+      "ver": "1.16.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — fuel/energy surcharge wording changed from \"DifferenzTreibstof\" to \"DifferenzEnergiezuschlag\", now a first-class PHRASES entry (key `differenzEnergiezuschlag`). This is the auditor's dominant wording in the AI bundle (17 of 21 fuel rows). The legacy \"DifferenzTreibstof\" string is retained in PHRASE_LITERALS so older slot-A Diff-Mode exports still resolve to a stable key (`lit_differenzTreibstofWackler`).",
+        "Wackler — the fuel surcharge is no longer suppressed when a row carries BOTH a freight (FR) and a toll (MT) delta. The previous \"TZ is derived spillover of FR+MT\" assumption was disproved by the bundle: the auditor lists the energy surcharge as its own classification alongside FR and MT. The phrase is still absorbed on same-tier \"Wackler rechnet\" rows (systemic tier rounding).",
+        "Wackler — Mautdifferenz is now always additive when the toll delta clears the threshold, including on same-tier \"Wackler rechnet\" rows where it was previously suppressed. Mautdifferenz appears on roughly half of the bundle's ground-truth rows, including every \"Wackler rechnet …\" case that carries an MT delta.",
+        "Wackler — bundling now takes precedence over the same-tier rate-card wording. When both weights fall in one rate tier AND the row is a multi-reference bundle (comma-joined ReferenzNr) with an FR delta, the row classifies as \"hätte gebündelt werden müssen\" (consignments that should have shared one booking) instead of \"Wackler rechnet Frachtrate für <tier>kg ab\". Cross-tier multi-ref rows remain \"Differenz aufgrund abweichender Gewichte\".",
+        "Wackler — combined effect lifts the AI-bundle (2026-06-04, engine v1.13.0 export) Diff-Mode agreement from 19/46 to 28/46 correct with zero regressions on previously-correct rows. The residual mismatches are irreducible auditor variance: manual truck-capacity notes (\"Wackler berechnet 10to+7to\"), per-workbook fuel wording (one file still uses \"DifferenzTreibstof\"), hand-picked rate tiers that differ from the rate-card lookup, and a few Pauschalfracht edge cases."
+      ]
+    },
     {
       "ver": "1.15.0",
       "date": "2026-06-04",
