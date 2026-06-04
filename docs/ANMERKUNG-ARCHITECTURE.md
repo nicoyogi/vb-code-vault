@@ -125,7 +125,7 @@ flowchart TB
   FW1["Dachser engine<br/>resolveDachser + processDachser + daEvalSNK + daEvalEXP"]
   FW2["K+N engine<br/>resolveKN + processKN + KN_BP tier table"]
   FW3["DHL Express engine<br/>resolveDHL + processDHL"]
-  FW4["Wackler engine<br/>resolveWackler + processWackler + WACKLER_BP + protected phrases"]
+  FW4["Wackler engine<br/>resolveWackler + processWackler + WACKLER_BP (from wackler-ratecard.js)"]
   XLSX["XLSX patcher<br/>idxToCol/colToIdx · sharedStrings parser/builder · patchSheet"]
   RUN["runRules — main loop"]
   PREV["Preview renderer"]
@@ -445,6 +445,7 @@ flowchart LR
   CSS2["assets/anmerkung.css"]
   JS0["assets/grimoire-core.js"]
   JS1["assets/anmerkung.js"]
+  RC["assets/wackler-ratecard.js"]
   SW["sw.js"]
   CL["assets/anmerkung-changelog.json"]
   MAN["manifest.webmanifest"]
@@ -457,11 +458,13 @@ flowchart LR
   HTML -- "<link>" --> CSS2
   HTML -- "<link rel=manifest>" --> MAN
   HTML -- "<script>" --> JS0
+  HTML -- "<script defer>" --> RC
   HTML -- "<script>" --> JS1
   HTML -- "<script defer>" --> CDN1
   HTML -- "<script defer>" --> CDN2
   HTML -- "<link>" --> CDN3
   JS1 -- "fetch()" --> CL
+  JS1 -- "reads global WACKLER_RATECARD" --> RC
   JS1 -- "uses" --> JS0
   JS0 -- "navigator.serviceWorker.register" --> SW
   JS1 -- "XLSX.read / utils" --> CDN1
@@ -471,6 +474,7 @@ flowchart LR
   SW -- "precache + intercept" --> CSS2
   SW -- "precache + intercept" --> JS0
   SW -- "precache + intercept" --> JS1
+  SW -- "precache + intercept" --> RC
   SW -- "precache + intercept" --> MAN
   SW -- "precache + intercept" --> CL
   SW -- "runtime cache" --> CDN1
@@ -488,3 +492,4 @@ There are **no circular dependencies**: HTML wires CSS + JS, `anmerkung.js` cons
 - [`HOLIDAY-TEAMS-NOTIFIER.md`](HOLIDAY-TEAMS-NOTIFIER.md) — unrelated companion page, useful as a reference for the same static-PWA pattern.
 - `assets/anmerkung-changelog.json` — release history.
 - `assets/anmerkung.js` — the source of truth; rule logic deliberately lives in one file.
+- `assets/wackler-ratecard.js` — the Wackler international rate card (45 weight tiers × 42 destination zones), generated from `data/Wackler International Rate.xlsx` (sheet `Basis`). Loaded before `anmerkung.js`; the engine reads it via the global `WACKLER_RATECARD` for its tier table and the enriched `Wackler rechnet` rate note. Kept out of `anmerkung.js` so the rate matrix can be regenerated without touching rule logic.

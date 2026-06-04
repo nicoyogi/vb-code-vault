@@ -1,6 +1,16 @@
 {
-  "version": "1.16.0",
+  "version": "1.17.0",
   "entries": [
+    {
+      "ver": "1.17.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — the international freight rate card (data/Wackler International Rate.xlsx, sheet \"Basis\") now ships as a standalone asset, assets/wackler-ratecard.js, loaded via its own <script> tag before the engine. The full rate matrix (45 weight tiers × 42 destination zones) lives OUTSIDE assets/anmerkung.js; the engine reads it through the global `WACKLER_RATECARD`. Keeping the data out of the engine keeps anmerkung.js diff-able and lets the rate card be regenerated from the workbook without touching engine logic.",
+        "Wackler — the tier breakpoint table (`WACKLER_BP`) is now sourced from the rate card asset so the tier classifier and the rate lookup share a single source of truth. An identical inline fallback is retained for contexts where the asset isn't loaded (e.g. the unit-test harness without it), so the engine stays self-sufficient and deterministic.",
+        "Wackler — the same-tier \"Wackler rechnet Frachtrate für <tier>kg ab\" note is enriched with the booked rate-card amount when the row carries a resolvable destination zone, e.g. \"… für 150kg ab (FR2: 87,49 €)\". The auditor now sees the exact rate-card cell Wackler billed against, not just the bracket. Zone resolution accepts an explicit zone code (FR2, normalised from \"fr-2\") or a single-zone country (BE, NL, CZ); ambiguous multi-zone countries (CH, FR, …) and unknown/blank tokens fall back to the plain tier wording. Domestic rows and rows without a zone column are unchanged, and the enriched phrase still resolves to the `tpl_wacklerRechnet` template key in Diff-Mode exports.",
+        "Wackler — `resolveWackler` now also locates a destination-zone column, trying the headers Tarifzone / Empf.-Land / Bestimmungsland / Ländercode / Country / Zone / Land. When none is present the rate-note enrichment simply does not fire."
+      ]
+    },
     {
       "ver": "1.16.0",
       "date": "2026-06-04",

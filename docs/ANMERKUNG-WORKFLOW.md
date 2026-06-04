@@ -155,7 +155,7 @@ Resolution rules (first hit wins):
 
 1. **PHRASES catalog hit** → returns the catalog key (e.g. `snkAvis`, `frachtDiff`, `kontierungQ`). These are the keys an AI greps in source to find the rule branch.
 2. **`PHRASE_LITERALS` table hit** → returns a `lit_*` synthetic id for phrases hard-coded inside processors but not yet promoted to `PHRASES` (e.g. `lit_pauschalfrachtOk`, `lit_terminzustellungOk`, `lit_zoneKorrekt`, `lit_differenzHebebuehnen`, `lit_differenzTreibstofWackler`).
-3. **`PHRASE_TEMPLATES` regex match** → returns a template key for dynamic interpolating phrases (`zwPrefix` for Dachser ZW lines, `tpl_wacklerRechnet` for the Wackler same-tier `Wackler rechnet Frachtrate für <N>kg ab` template).
+3. **`PHRASE_TEMPLATES` regex match** → returns a template key for dynamic interpolating phrases (`zwPrefix` for Dachser ZW lines, `tpl_wacklerRechnet` for the Wackler same-tier `Wackler rechnet Frachtrate für <N>kg ab` template — the optional ` (<zone>: <amount> €)` rate-card suffix is part of the same template and still resolves to `tpl_wacklerRechnet`).
 4. **No match** → `?:<raw phrase>` so unmapped emissions are visible at a glance and easy to promote to `PHRASES`.
 
 Two more anchors per row:
@@ -455,7 +455,7 @@ no protected-phrase short-circuit; the rules below are the single source of trut
    - if `KOSTENSTELLE` and `SACHKONTO` are both empty or `X` → return `Kontierung?`
    - otherwise → return `null` (skipped).
 
-**Signals (Stat == 10 path):** `Total Kosten lt. Tarif · AVIS Diff · SNK Diff · FR Diff · MT · TZ · ReferenzNr · Volumen kg · Volumen kg DL · Empf.-PLZ · Empf.-Ort · KOSTENSTELLE · SACHKONTO`.
+**Signals (Stat == 10 path):** `Total Kosten lt. Tarif · AVIS Diff · SNK Diff · FR Diff · MT · TZ · ReferenzNr · Volumen kg · Volumen kg DL · Empf.-PLZ · Empf.-Ort · KOSTENSTELLE · SACHKONTO · Tarifzone/Empf.-Land (destination zone, optional)`.
 
 **Order:**
 
@@ -465,7 +465,7 @@ no protected-phrase short-circuit; the rules below are the single source of trut
 4. `SNK_Diff == -11.5` → `hätte B2C-Line abrechnen dürfen`
 5. `SNK_Diff == 22` → `2. Zustellung ok?`
 6. **Gewichte tier branch** — when VKG and VKG_DL differ AND FR errs:
-   - same Wackler tier → `Wackler rechnet` (systemic rounding)
+   - same Wackler tier → `Wackler rechnet` (systemic rounding). When the row carries a resolvable destination zone, the booked rate-card amount is appended, e.g. `Wackler rechnet Frachtrate für 150kg ab (FR2: 87,49 €)`.
    - cross tier → `Differenz aufgrund abweichender Gewichte`
    - sets `gewichteTriggered = true` (suppresses step 10).
 7. **Bundling** (only if step 6 didn't fire) — `ReferenzNr` contains `,` AND FR errs → `hätte gebündelt werden müssen`.
@@ -477,7 +477,7 @@ no protected-phrase short-circuit; the rules below are the single source of trut
 13. **Kontierung** — `KOSTENSTELLE` + `SACHKONTO` both empty/`X` → `Kontierung?`.
 14. **TZ fallback** — res still empty AND TZ errs → `Differenz treibstof`.
 
-**Wackler tier table** (`WACKLER_BP`) — `[50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, ..., 10000, 99999]`. Mirrors K+N structure but with Wackler's own breakpoints.
+**Wackler tier table** (`WACKLER_BP`) — `[50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, ..., 10000, 999999]`. Mirrors the K+N structure but with Wackler's own breakpoints. The table is **sourced from the standalone rate-card asset** `assets/wackler-ratecard.js` (generated from `data/Wackler International Rate.xlsx`, sheet `Basis`) so the tier classifier and the EUR rate lookup share one source of truth; an identical inline fallback covers contexts where the asset isn't loaded. The rate card exposes the global `WACKLER_RATECARD` with `tiers`, `zones`, the per-zone `basis` matrix, and helpers `getTier` / `tierLabel` / `rate(kg, zone)` / `resolveZone(token)` / `fmtEUR(n)`. The same-tier `Wackler rechnet` note uses `rate(tier, zone)` to append the booked amount when a destination zone resolves (explicit zone code like `FR2`, or a single-zone country like `BE`/`NL`; ambiguous multi-zone countries fall back to the plain wording).
 
 ---
 
