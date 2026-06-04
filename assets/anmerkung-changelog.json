@@ -1,6 +1,14 @@
 {
-  "version": "1.13.0",
+  "version": "1.14.0",
   "entries": [
+    {
+      "ver": "1.14.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — new \"Lagergeld\" (storage-fee) classification. When the booked tariff is BLANK (no freight tariff backing) and the only cost signal on the row is an SNK charge (no FR/MT/TZ delta, no AVIS surcharge code), the row is now classified as \"Lagergeld\" instead of falling through to the generic \"SNK Differenz\" fallback. The empty-tariff-with-FR/MT/TZ-signal case stays with Fremdnummer; this is the SNK-only remainder. Resolves AI-bundle training rows 24–41 (TARIF blank, SNK 3.95–300, German destinations, VKG == VKG_DL) — the single largest cluster in the bundle (18 mislabelled \"SNK Differenz\" + 1 previously missed row).",
+        "Wackler — new \"hätte Hebebühne abrechnen dürfen\" (liftgate-credit) classification. A large negative SNK ≈ -150 (±2.0) that matches no recognised SNK surcharge code is the auditor's liftgate-credit signature; it now emits the specific wording instead of the generic \"SNK Differenz\" fallback. Added \"hätte Hebebühne abrechnen dürfen\" to the PHRASES catalog so it resolves to a stable key (`hebebuehne`) in Diff-Mode exports (previously the unmapped `?:hätte Hebebühne abrechnen dürfen`). Resolves AI-bundle training rows 1 & 42 (SNK ≈ -150). The window is deliberately narrow so it never poaches real SNK Differenz residuals."
+      ]
+    },
     {
       "ver": "1.13.0",
       "date": "2026-06-04",

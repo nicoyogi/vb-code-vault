@@ -264,6 +264,7 @@ const PHRASES={
   b2cLine:                    'hätte B2C-Line abrechnen dürfen',
   buendelMuessen:             'hätte gebündelt werden müssen',
   avisTelefonisch:            'hätte Avisgebühr telefonisch abrechnen dürfen',
+  hebebuehne:                 'hätte Hebebühne abrechnen dürfen',
   differenzAvisOk:            'Differenz avis, ok?',
   returnOk:                   'Return, ok?',
   frachtDiff:                 'Frachtdifferenz',
@@ -835,6 +836,12 @@ const WACKLER_PAUSCHAL_RATIO=1.0;
 /* TZ additive threshold: TZ ≥ 2.0 fires DifferenzTreibstof alongside other classifications.
    Below 2.0 the TZ delta is fuel-on-toll math noise (typical FR/MT-percentage spill). */
 const WACKLER_TZ_ADDITIVE=2.0;
+/* Hebebühne (liftgate) credit signature: a large negative SNK ≈ -150 that matches no recognised
+   SNK code is the auditor's "should have been allowed to bill the Hebebühne (liftgate) surcharge"
+   finding — a specific classification, not a generic SNK gap. The window is deliberately narrow
+   so it never poaches real SNK Differenz residuals. Resolves AI-bundle training rows 1 & 42. */
+const WACKLER_HEBEBUEHNE_ABS=150;
+const WACKLER_HEBEBUEHNE_TOL=2.0;
 function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(const p of WACKLER_PROTECTED){if(existing.toLowerCase().includes(p.toLowerCase()))return null;}
   /* STAT gate: on stat≠10 only the Kontierung check runs; all other rules are skipped. */
   const statOk=(cols.stat<0)||(cellNum(ws,r,cols.stat)===10);
@@ -882,6 +889,24 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
   const frHasVal=Math.abs(frVal)>T_WACKLER;
   const mtHasVal=Math.abs(mtVal)>T_WACKLER;
   const snkHasVal=Math.abs(snkVal)>T_WACKLER;
+  /* 1b. Lagergeld — warehouse storage fee. Signature: the booked tariff is BLANK (no freight
+     tariff backing) and the ONLY cost signal on the row is an SNK charge (no FR/MT/TZ delta and
+     no AVIS surcharge code). A bare SNK gap on an un-tariffed row is a storage fee, not an SNK
+     surcharge discrepancy, so it must NOT fall through to the generic "SNK Differenz" fallback
+     (rule 10) — which is what these rows used to hit. The empty-tariff + FR/MT/TZ-signal case is
+     already claimed by Fremdnummer above; this is the SNK-only remainder. Terminal: the expected
+     wording is "Lagergeld" alone, so we early-return (still appending Kontierung? when KOST/SACH
+     are blank/X, mirroring Fremdnummer). Resolves AI-bundle training rows 24–41 (TARIF blank,
+     SNK 3.95–300, German destinations, VKG == VKG_DL). */
+  if(cols.tarif>=0&&cellStr(ws,r,cols.tarif)===''&&snkHasVal&&!frHasVal&&!mtHasVal
+     &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE&&!isWacklerAvisCode(avisVal)){
+    let out=P.lagergeld;
+    if(cols.kostenstelle>=0&&cols.sachkonto>=0){
+      const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
+      if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
+    }
+    return out;
+  }
   /* 2. Pauschalfracht — |SNK| ≥ tariff, no FR/MT/TZ, SNK not a known code, no AVIS surcharge.
      The booked tariff was a placeholder and the actual was a flat-rate freight charge. */
   if(cols.tarif>=0&&cols.snk_diff>=0&&snkHasVal&&!frHasVal&&!mtHasVal
@@ -945,7 +970,13 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
   if(cols.snk_diff>=0&&!snkCodeLabel&&snkHasVal
      &&Math.abs(snkVal)>=WACKLER_SNK_NOISE
      &&!res.toLowerCase().includes('gebündelt')){
-    res=join(res,'SNK Differenz');
+    /* A large negative SNK ≈ -150 with no recognised SNK code is the Hebebühne (liftgate)
+       credit signature: Wackler should have been allowed to bill the liftgate surcharge.
+       Specific wording instead of the generic SNK Differenz. Resolves training rows 1 & 42. */
+    if(snkVal<0&&Math.abs(Math.abs(snkVal)-WACKLER_HEBEBUEHNE_ABS)<=WACKLER_HEBEBUEHNE_TOL)
+      res=join(res,P.hebebuehne);
+    else
+      res=join(res,'SNK Differenz');
   }
   /* 11. DifferenzTreibstof — TZ is additive above the 2.0 threshold, BUT only when the fuel
      delta stands on its own. When the row already carries BOTH a freight (FR) and a toll (MT)
