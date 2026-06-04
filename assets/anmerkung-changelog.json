@@ -1,6 +1,16 @@
 {
-  "version": "1.11.1",
+  "version": "1.12.0",
   "entries": [
+    {
+      "ver": "1.12.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — new SNK surcharge code: |SNK| ≈ 25 (±0.5) now classifies as \"Terminzustellung\" (a flat timed-delivery surcharge) instead of falling through to the generic \"SNK Differenz\" fallback. Added \"Terminzustellung\" to the PHRASES catalog so it resolves to a stable key in Diff-Mode exports (previously emitted as the unmapped `?:Terminzustellung`). Resolves AI-bundle training rows 5 & 39 (SNK=25, Glasgow G5 0UG).",
+        "Wackler — `processWackler` weight/bundling cascade reworked. The branch that routed cross-tier, multi-reference, far-apart weight gaps to \"hätte gebündelt werden müssen\" was removed: the auditor classifies these as \"Differenz aufgrund abweichender Gewichte\" (training rows 7 & 61). Any cross-tier weight gap (with both VKG and VKG_DL carrying a real weight and an FR delta) now emits \"abweichender Gewichte\"; \"hätte gebündelt werden müssen\" is reserved for the legacy no-weight-signal + multi-ref + FR case.",
+        "Wackler — \"Wackler rechnet Frachtrate für <tier>kg ab\" now also fires when VKG and VKG_DL are identical (not just when they differ but land in the same rate tier), provided both carry a real weight and there is an FR delta. This is a terminal same-tier rate-card finding: the accompanying MT and TZ deltas are treated as systemic rounding for that tier and are suppressed (no Mautdifferenz / DifferenzTreibstof appended). Resolves training row 41 (VKG=VKG_DL=365, FR/MT/TZ all positive).",
+        "Wackler — additive DifferenzTreibstof (rule 11, TZ ≥ 2.0) is now suppressed when the row carries BOTH a freight (FR) and a toll (MT) delta. On such rows the TZ gap is the fuel surcharge computed on (freight + toll) — derived spillover, not a separate classification (training rows 7/9/12/61 each show |TZ| ≈ 12% of |FR|+|MT|). The standalone pure-TZ fallback and the TZ-only additive trigger are unchanged, so the legacy pure-fuel rows (data/Wackler-training.csv rows 4–19) still classify as DifferenzTreibstof."
+      ]
+    },
     {
       "ver": "1.11.1",
       "date": "2026-06-04",

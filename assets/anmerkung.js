@@ -260,6 +260,7 @@ const PHRASES={
   // Wackler
   fremdnummer:                'Fremdnummer Doppelt berechnet',
   nlFix:                      'NL-FIX',
+  terminzustellung:           'Terminzustellung',
   b2cLine:                    'hätte B2C-Line abrechnen dürfen',
   buendelMuessen:             'hätte gebündelt werden müssen',
   avisTelefonisch:            'hätte Avisgebühr telefonisch abrechnen dürfen',
@@ -807,6 +808,7 @@ const WACKLER_SNK_CODES=[
   {abs:38,   tol:0.5,  label:'NL-FIX'},
   {abs:11.5, tol:0.1,  label:'hätte B2C-Line abrechnen dürfen'},
   {abs:22,   tol:0.5,  label:'2. Zustellung ok?'},
+  {abs:25,   tol:0.5,  label:'Terminzustellung'},
   {abs:180,  tol:0.5,  label:'Terminzustellung, ok?'}
 ];
 function wacklerSnkCode(snk){const a=Math.abs(snk);for(const c of WACKLER_SNK_CODES)if(Math.abs(a-c.abs)<=c.tol)return c.label;return null;}
@@ -896,25 +898,28 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
   /* 4. SNK surcharge codes (NL-FIX / B2C / 2. Zustellung / Terminzustellung). */
   let snkCodeLabel=null;
   if(cols.snk_diff>=0){snkCodeLabel=wacklerSnkCode(snkVal);if(snkCodeLabel)res=join(res,snkCodeLabel);}
-  /* 5. Gewichte / Bundling cascade. Decision tree:
-     ─ same-tier + FR delta              → "Wackler rechnet Frachtrate für <tier>kg ab"
-     ─ cross-tier + multi-ref + far apart → "hätte gebündelt werden müssen"   (separate shipments)
-     ─ cross-tier + multi-ref + adjacent  → "Differenz aufgrund abweichender Gewichte" (rounding crossed one boundary)
-     ─ cross-tier + single-ref            → "Differenz aufgrund abweichender Gewichte"
-     ─ no weight diff + multi-ref + FR    → "hätte gebündelt werden müssen"   (legacy bundling)
-     The "far apart" cutoff is tier-index distance > 1: non-adjacent BP buckets imply genuinely
-     different shipments, not rounding spillover. */
-  let gewichteTriggered=false;
-  if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0){
+  /* 5. Gewichte / Bundling cascade. Decision tree (both weights real + FR delta):
+     ─ same rate tier (incl. identical weights) → "Wackler rechnet Frachtrate für <tier>kg ab"
+                                                   (terminal: Wackler billed the tier rate, so the
+                                                    FR/MT/TZ deltas are systemic rounding for that
+                                                    tier — see wacklerRechnetFired suppression below)
+     ─ different rate tier                       → "Differenz aufgrund abweichender Gewichte"
+                                                   (a genuine weight discrepancy; MT stays additive)
+     ─ no real weights + multi-ref + FR          → "hätte gebündelt werden müssen"   (legacy bundling)
+     Note: a prior "cross-tier + far-apart → hätte gebündelt werden müssen" branch was removed —
+     the auditor classifies far-apart multi-ref weight gaps as abweichende Gewichte, not bundling
+     (training rows 7 & 61), and only flags bundling when there is no weight signal at all. */
+  let gewichteTriggered=false,wacklerRechnetFired=false;
+  if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0&&frHasVal){
     const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl);
-    const vkgStr=cellStr(ws,r,cols.vkg),vkgDlStr=cellStr(ws,r,cols.vkg_dl);
-    const volDiff=(vkgStr!==vkgDlStr)&&(vkg!==vkgDl);
-    if(volDiff&&frHasVal){
+    /* Both VKG and VKG_DL must carry a real weight. When they do, an FR delta is always a
+       Wackler weight/rate-card finding — never a bare Frachtdifferenz. Blank weights
+       (vkg/vkgDl === 0) fall through to the Frachtdifferenz fallback in rule 8. */
+    if(vkg>0&&vkgDl>0){
       const tA=wacklerGetTier(vkg),tB=wacklerGetTier(vkgDl);
       if(tA===tB){
         res=join(res,'Wackler rechnet Frachtrate für '+wacklerTierLabel(tA)+'kg ab');
-      } else if(isBundle&&Math.abs(wacklerGetTierIdx(vkg)-wacklerGetTierIdx(vkgDl))>1){
-        res=join(res,'hätte gebündelt werden müssen');
+        wacklerRechnetFired=true;
       } else {
         res=join(res,'Differenz aufgrund abweichender Gewichte');
       }
@@ -933,17 +938,21 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
   if(cols.fr>=0&&!gewichteTriggered&&hasErr(frVal,T_WACKLER)&&!res.toLowerCase().includes('gebündelt')&&!res.toLowerCase().includes('return')){
     res=join(res,'Frachtdifferenz');
   }
-  /* 9. Mautdifferenz — toll delta is additive. */
-  if(cols.maut>=0&&hasErr(mtVal,T_WACKLER))res=join(res,'Mautdifferenz');
+  /* 9. Mautdifferenz — toll delta is additive, UNLESS the row resolved to "Wackler rechnet"
+     (same-tier rate-card finding), where the MT delta is part of that tier's systemic rounding. */
+  if(cols.maut>=0&&hasErr(mtVal,T_WACKLER)&&!wacklerRechnetFired)res=join(res,'Mautdifferenz');
   /* 10. SNK Differenz fallback — unknown SNK code, above noise floor, not bundled. */
   if(cols.snk_diff>=0&&!snkCodeLabel&&snkHasVal
      &&Math.abs(snkVal)>=WACKLER_SNK_NOISE
      &&!res.toLowerCase().includes('gebündelt')){
     res=join(res,'SNK Differenz');
   }
-  /* 11. DifferenzTreibstof — TZ is additive above the 2.0 threshold; below it the delta
-     is fuel-on-(freight+toll) math spillover, not a separate classification. */
-  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE)res=join(res,'DifferenzTreibstof');
+  /* 11. DifferenzTreibstof — TZ is additive above the 2.0 threshold, BUT only when the fuel
+     delta stands on its own. When the row already carries BOTH a freight (FR) and a toll (MT)
+     delta, the TZ gap is the fuel surcharge computed on (freight + toll) — derived spillover,
+     not a separate classification (training rows 7/9/12/61 each show |TZ| ≈ 12% of |FR|+|MT|).
+     It is likewise absorbed when the row resolved to a same-tier "Wackler rechnet" finding. */
+  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!wacklerRechnetFired&&!(frHasVal&&mtHasVal))res=join(res,'DifferenzTreibstof');
   /* 12. NL-FIX zone corollary: when NL-FIX fires AND there's an FR delta AND KOST/SACH are blank,
      the destination zone may be miscoded — surface "Zone korrekt?" up front and drop the
      Frachtdifferenz it triggered (the FR gap is the zone miscode, not a real freight discrepancy). */
