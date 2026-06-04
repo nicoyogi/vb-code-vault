@@ -29,7 +29,7 @@ flowchart TD
   D -- thresholds --> D2["Advanced thresholds<br/>per-forwarder, persisted locally"]
   D1 --> E
   D2 --> E
-  E --> F["Review stats + per-row table<br/>filled / empty / skipped / preserved"]
+  E --> F["Review stats + per-row table<br/>filled / empty / skipped"]
   F --> G{"Happy?"}
   G -- no --> D
   G -- yes --> H["Invoke the Ritual<br/>subscription gate"]
@@ -75,13 +75,12 @@ The file name + sheet count appear under the drop zone, and a timestamped log li
 Click **Preview — dry-run without writing**. No file is produced. You get:
 
 - **3-up stats**: rows scanned · anmerkung filled · skipped (stat ≠ 10)
-- **2 mini-stats**: empty (no trigger) · preserved (protected value, Wackler only)
+- **1 mini-stat**: empty (no trigger)
 - **Trigger breakdown** — bar chart of which rule fired how many times, sorted descending.
 - **Per-row table** (up to 200 rows) with color-coded status dots:
   - `filled` — a rule fired, this would be written
   - `empty` — row is in scope but no rule matched
   - `skipped` — out of scope (usually `Stat_Freigabe ≠ 10`)
-  - `preserved` — Wackler row whose existing Anmerkung is protected
 
 Preview is non-destructive — iterate thresholds/options freely.
 
@@ -232,7 +231,7 @@ flowchart TD
     S3 -- yes --> S4["for r = 3 to last row"]
     S4 --> S5["processor(ws, r, cols)"]
     S5 --> S6{"result"}
-    S6 -- null --> S7["classify skipped or preserved"]
+    S6 -- null --> S7["classify skipped (Stat ≠ 10)"]
     S6 -- string --> S8["splitTriggers, bump trigCounts<br/>buildReason into reasonMap"]
     S7 --> S9["push to previewRows"]
     S8 --> S9
@@ -446,17 +445,13 @@ flowchart TD
 
 ### Wackler — `resolveWackler` / `processWackler`
 
-**Gate (two-part):**
+**Gate (Stat only):**
 
-1. **Protected phrases** — if the existing `Anmerkung` already contains any of:
-   - `Fremdnummer Doppelt berechnet`
-   - `hätte gebündelt werden müssen`
-   - `Return, ok?`
-   - `Differenz aufgrund abweichender Gewichte`
-   - `Wackler rechnet`
+The Wackler engine is fully deterministic — it always recomputes the `Anmerkung`
+from the row's inputs and never preserves a value already in the cell. There is
+no protected-phrase short-circuit; the rules below are the single source of truth.
 
-   processor returns `null` and the row is classified `preserved` in stats.
-2. **Partial Stat gate** — on `Stat_Freigabe != 10`, the rest of the engine is silent except Kontierung:
+- **Stat gate** — on `Stat_Freigabe != 10`, the rest of the engine is silent except Kontierung:
    - if `KOSTENSTELLE` and `SACHKONTO` are both empty or `X` → return `Kontierung?`
    - otherwise → return `null` (skipped).
 

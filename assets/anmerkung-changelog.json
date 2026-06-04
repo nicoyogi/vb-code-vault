@@ -1,6 +1,16 @@
 {
-  "version": "1.14.0",
+  "version": "1.15.0",
   "entries": [
+    {
+      "ver": "1.15.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — the protected-phrase preservation mechanism was removed entirely. `processWackler` no longer reads the existing `Anmerkung` cell and no longer short-circuits to `null` when it already contains a \"protected\" phrase (Fremdnummer doppelt berechnet / hätte gebündelt werden müssen / hätte Avisgebühr telefonisch abrechnen dürfen / Return, ok? / Differenz aufgrund abweichender Gewichte / Wackler rechnet). The engine is now fully deterministic: every in-scope row is recomputed purely from its inputs, so the rules are the single source of truth for a row's output.",
+        "Weight cascade — cross-tier weights remain a genuine discrepancy: when `Volumen kg` and `Volumen kg DL` fall in different Wackler rate tiers (both carrying a real weight, with an FR delta) the row classifies as \"Differenz aufgrund abweichender Gewichte\"; same-tier (or identical) weights emit the terminal \"Wackler rechnet Frachtrate für <tier>kg ab\".",
+        "Diff Mode — the ENGINE NOW column no longer shows a false drift dot + \"(empty)\" on rows whose slot-A Anmerkung carried a protected phrase. With preservation gone, Engine-Now recomputes from the row inputs like every other cell, so genuine drift is the only thing the column flags.",
+        "Preview/stats — the \"preserved (protected)\" mini-stat and the per-row `preserved` status were retired (no protected case exists anymore). A `null` processor result now always means out-of-scope (Stat_Freigabe ≠ 10) and is counted as `skipped`. The Rule Tester's \"Protected existing\" preset was replaced with a \"Cross-tier weights\" preset."
+      ]
+    },
     {
       "ver": "1.14.0",
       "date": "2026-06-04",
