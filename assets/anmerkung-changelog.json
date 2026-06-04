@@ -1,6 +1,13 @@
 {
-  "version": "1.13.0",
+  "version": "1.14.0",
   "entries": [
+    {
+      "ver": "1.14.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — new \"Lagergeld\" classification for standalone storage fees. A bare SNK charge (no FR/MT/TZ/AVIS signal, and an SNK value that is NOT one of the known surcharge codes) booked to a Wackler warehousing line — cost centre matching 211FO… on G/L account 612100 — is now classified as \"Lagergeld\" instead of falling through to the generic \"SNK Differenz\" fallback (rule 10). Charges below the 5.0 SNK noise floor (e.g. SNK=3.95) previously emitted nothing and are now caught too. Implemented as a terminal branch (rule 2b) right after Pauschalfracht; the KOST+SACH booking-pair gate keeps it from poaching ordinary SNK residuals, which post to other accounts. Resolves AI-bundle training rows where SNK-only 211FO/612100 lines (SNK 3.95–300) were mislabelled \"SNK Differenz\" (17 rows) or left blank (1 row)."
+      ]
+    },
     {
       "ver": "1.13.0",
       "date": "2026-06-04",

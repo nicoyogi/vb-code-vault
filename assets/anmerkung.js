@@ -835,6 +835,13 @@ const WACKLER_PAUSCHAL_RATIO=1.0;
 /* TZ additive threshold: TZ ≥ 2.0 fires DifferenzTreibstof alongside other classifications.
    Below 2.0 the TZ delta is fuel-on-toll math noise (typical FR/MT-percentage spill). */
 const WACKLER_TZ_ADDITIVE=2.0;
+/* Lagergeld (storage fee) signature. A bare SNK charge — no freight/toll/fuel/AVIS signal and
+   not one of the known SNK surcharge codes — posted to a Wackler warehousing line is the storage
+   fee itself, not a generic "SNK Differenz" residual. The booking pair pins it down: the cost
+   centre belongs to the 211FO… storage operation and the charge lands on G/L account 612100.
+   Gated on BOTH so ordinary SNK residuals (which post elsewhere) keep falling through to rule 10. */
+const WACKLER_LAGER_KOST=/^211FO/;
+const WACKLER_LAGER_SACH='612100';
 function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(const p of WACKLER_PROTECTED){if(existing.toLowerCase().includes(p.toLowerCase()))return null;}
   /* STAT gate: on stat≠10 only the Kontierung check runs; all other rules are skipped. */
   const statOk=(cols.stat<0)||(cellNum(ws,r,cols.stat)===10);
@@ -890,6 +897,21 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
      &&!wacklerSnkCode(snkVal)
      &&!isWacklerAvisCode(avisVal)){
     return'Pauschalfracht, ok?';
+  }
+  /* 2b. Lagergeld — standalone storage fee. A bare SNK charge (no FR/MT/TZ/AVIS signal, SNK not
+     a known surcharge code) booked to a Wackler storage line (KOST 211FO…, SACH 612100). The SNK
+     amount IS the warehousing charge, so this is a terminal classification. Previously these rows
+     fell through to the generic "SNK Differenz" fallback (rule 10) or — when the charge sat below
+     the 5.0 SNK noise floor — emitted nothing at all. The KOST+SACH gate keeps it from poaching
+     ordinary SNK residuals, which post to other accounts. */
+  if(cols.snk_diff>=0&&cols.kostenstelle>=0&&cols.sachkonto>=0
+     &&snkHasVal&&!frHasVal&&!mtHasVal
+     &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE
+     &&!wacklerSnkCode(snkVal)
+     &&!isWacklerAvisCode(avisVal)){
+    const lagerKt=cellStr(ws,r,cols.kostenstelle).toUpperCase();
+    const lagerSk=cellStr(ws,r,cols.sachkonto).trim();
+    if(WACKLER_LAGER_KOST.test(lagerKt)&&lagerSk===WACKLER_LAGER_SACH)return'Lagergeld';
   }
   let res='';
   /* 3. AVIS surcharge codes (sign-insensitive: 7.5 / 8.5 / 6.5 / 8.7 ± credit).
