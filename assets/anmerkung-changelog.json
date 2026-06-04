@@ -1,6 +1,13 @@
 {
-  "version": "1.11.0",
+  "version": "1.11.1",
   "entries": [
+    {
+      "ver": "1.11.1",
+      "date": "2026-06-04",
+      "items": [
+        "Diff Mode — engine-drift detection is now phrase-SET aware, matching the v1.11.0 label logic. Previously the `engine drift` overlay (the drift chip, the amber engine cell, and the `engine_matches_a` column in Diff CSV / Training Set JSONL) compared the current engine's output to slot A with raw string equality, so a row where the engine emits the SAME phrases as the tool output but in a different order, casing, or with stray whitespace was wrongly flagged as drift. `runDiff` now compares the engine output and slot A as normalized phrase sets via `samePhraseSet(splitTriggers(...))` — the exact comparison `classifyDiff` and the engine's own `join()` dedup already use. Net effect: `engine drift` fires only when the rules have genuinely changed what phrases they emit since slot A was generated, so the drift chip count and the AI training exports stop surfacing cosmetic-only false positives."
+      ]
+    },
     {
       "ver": "1.11.0",
       "date": "2026-05-29",
