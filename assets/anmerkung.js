@@ -411,6 +411,7 @@ function fwKeydown(e){
     urls: window.Grimoire.Offline.defaultUrls().concat([
       './assets/anmerkung.css',
       './assets/anmerkung.js',
+      './assets/wackler-ratecard.js',
       './assets/anmerkung-changelog.json'
     ]),
     idleLabel:    'Download for offline',
@@ -799,11 +800,35 @@ function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.
    into a different bucket (→ "Differenz aufgrund abweichender Gewichte", real classification
    discrepancy). The matched tier is also reported in the output so the auditor sees which
    rate-card row Wackler billed against. */
-const WACKLER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
+/* Tier breakpoints are sourced from the standalone rate-card asset (assets/wackler-ratecard.js,
+   generated from data/Wackler International Rate.xlsx) so the tier table and the EUR rate lookup
+   share a single source of truth and the big rate matrix never has to live inside this engine.
+   The literal below is an identical fallback for when the rate-card asset isn't loaded (e.g. a
+   bare unit-test context), keeping the engine self-sufficient and deterministic. */
+const WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
+const WACKLER_BP=(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.length)
+  ? WACKLER_RC.tiers.slice()
+  : [50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
 function wacklerGetTier(kg){if(kg<=0)return 0;for(const b of WACKLER_BP)if(kg<=b)return b;return 999999;}
 function wacklerGetTierIdx(kg){if(kg<=0)return -1;for(let i=0;i<WACKLER_BP.length;i++)if(kg<=WACKLER_BP[i])return i;return WACKLER_BP.length-1;}
 /* Format a tier breakpoint for display: regular numbers as-is, the open ceiling as ">10000". */
 function wacklerTierLabel(tierKg){return tierKg>=999999?'>10000':String(tierKg);}
+/* Compose the same-tier "Wackler rechnet Frachtrate für <tier>kg ab" note. The weight-tier
+   wording always renders. When the row carries a resolvable destination zone (an international
+   shipment, per the Wackler International rate card) AND that tier+zone has a published rate,
+   the booked EUR amount is appended — e.g. "… für 150kg ab (FR2: 87,49 €)" — so the auditor
+   sees the exact rate-card cell Wackler billed against, not just the bracket. Falls back to the
+   plain tier wording (unchanged) whenever the rate card isn't loaded, no zone can be resolved,
+   or the cell is blank — so domestic rows and bare unit-test contexts behave exactly as before. */
+function wacklerRechnetNote(tierKg,ws,r,cols){
+  const base='Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
+  if(!WACKLER_RC||!cols||cols.zone==null||cols.zone<0)return base;
+  const zone=WACKLER_RC.resolveZone(cellStr(ws,r,cols.zone));
+  if(!zone)return base;
+  const eur=WACKLER_RC.rate(tierKg,zone);
+  if(!(eur>0))return base;
+  return base+' ('+zone+': '+WACKLER_RC.fmtEUR(eur)+')';
+}
 /* Wackler SNK surcharge code book — sign-insensitive (reversibles like NL-FIX show as ±value).
    Tolerance handles real-world rounding (NL-FIX seen as 38.00 / 38.08). */
 const WACKLER_SNK_CODES=[
@@ -823,7 +848,7 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
 /* Resolve the audit wording for a Wackler AVIS code. The 8.7 credit (negative) is the
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
-function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO')};}
+function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),zone:fcAny('Tarifzone','Empf.-Land','Bestimmungsland','Ländercode','Country','Zone','Land')};}
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
 const WACKLER_SNK_NOISE=5.0;
@@ -961,7 +986,7 @@ function processWackler(ws,r,cols){
              stay additive below. */
           res=join(res,P.buendelMuessen);
         } else {
-          res=join(res,'Wackler rechnet Frachtrate für '+wacklerTierLabel(tA)+'kg ab');
+          res=join(res,wacklerRechnetNote(tA,ws,r,cols));
           wacklerRechnetFired=true;
         }
       } else {

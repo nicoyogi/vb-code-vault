@@ -20,6 +20,7 @@ import vm from 'node:vm';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC = join(__dirname, '..', '..', 'assets', 'anmerkung.js');
+const SRC_RATECARD = join(__dirname, '..', '..', 'assets', 'wackler-ratecard.js');
 
 /* XLSX cell address encoding, matching XLSX.utils.encode_cell({r,c})
    (0-based r/c -> e.g. {r:0,c:0} => "A1", {r:1,c:2} => "C2"). */
@@ -131,6 +132,17 @@ export function loadEngine() {
   const ctx = vm.createContext(sandbox);
   const code = readFileSync(SRC, 'utf8');
 
+  /* Load the standalone Wackler rate card FIRST, in the same context, mirroring the
+     <script> order in anmerkung.html. It publishes WACKLER_RATECARD on the context
+     global, which the engine reads for its tier table and the enriched "Wackler rechnet"
+     rate note. It's optional by design — the engine falls back to its inline tier table
+     if this is absent — but loading it keeps the tests faithful to the browser runtime. */
+  try {
+    vm.runInContext(readFileSync(SRC_RATECARD, 'utf8'), ctx, { filename: 'wackler-ratecard.js' });
+  } catch (err) {
+    /* Non-fatal: the engine degrades gracefully without the rate card. */
+  }
+
   try {
     vm.runInContext(code, ctx, { filename: 'anmerkung.js' });
   } catch (err) {
@@ -147,6 +159,7 @@ export function loadEngine() {
     'processDachser', 'processKN', 'processDHL', 'processWackler',
     // tier helpers
     'dachserGetTier', 'knGetTier', 'wacklerGetTier', 'wacklerGetTierIdx', 'wacklerTierLabel',
+    'wacklerRechnetNote',
     // dachser surcharge helpers
     'daIsNonInteger', 'daDetectSurchargeFromDiff',
     // wackler code books
@@ -168,6 +181,7 @@ export function loadEngine() {
   }
 
   engine.encode_cell = encode_cell;
+  engine.WACKLER_RATECARD = sandbox.WACKLER_RATECARD || null;
   _engine = engine;
   return engine;
 }
