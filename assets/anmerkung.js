@@ -811,6 +811,11 @@ const WACKLER_BP=(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.
   : [50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
 function wacklerGetTier(kg){if(kg<=0)return 0;for(const b of WACKLER_BP)if(kg<=b)return b;return 999999;}
 function wacklerGetTierIdx(kg){if(kg<=0)return -1;for(let i=0;i<WACKLER_BP.length;i++)if(kg<=WACKLER_BP[i])return i;return WACKLER_BP.length-1;}
+/* Largest tier breakpoint at or below kg — the rate-card bracket a weight has already CLEARED
+   (the floor, as opposed to wacklerGetTier's ceiling). Used by the volumetric "Wackler rechnet"
+   note (rule 5) to report the lower tier Wackler billed against when VKG/VKG_DL are two
+   measurements of one consignment. Returns 0 when kg is below the first step. */
+function wacklerFloorTier(kg){let last=0;for(const b of WACKLER_BP){if(b<=kg)last=b;else break;}return last;}
 /* Format a tier breakpoint for display: regular numbers as-is, the open ceiling as ">10000". */
 function wacklerTierLabel(tierKg){return tierKg>=999999?'>10000':String(tierKg);}
 /* Compose the same-tier "Wackler rechnet Frachtrate für <tier>kg ab" note. The weight-tier
@@ -853,6 +858,21 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
 /* Resolve the audit wording for a Wackler AVIS code. The 8.7 credit (negative) is the
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
+/* International-destination signal. A domestic German Empf.-PLZ is purely numeric (5 digits), so
+   an alphabetic character in the postal code marks a foreign destination (e.g. UK "G5 0UG"). When
+   a zone/country token is present the rate card's zone division is also consulted, and any resolved
+   non-DE zone counts as international. Used to reclassify the SNK≈25 code (a DOMESTIC parcel
+   surcharge) as a flat-rate freight charge on international rows — see processWackler rule 4. */
+function wacklerIsInternational(ws,r,cols){
+  if(!cols)return false;
+  const plz=(cols.empf_plz!=null&&cols.empf_plz>=0)?cellStr(ws,r,cols.empf_plz):'';
+  if(/[A-Za-z]/.test(plz))return true;
+  if(WACKLER_RC&&cols.zone!=null&&cols.zone>=0){
+    const token=cellStr(ws,r,cols.zone);
+    if(token){const zone=WACKLER_RC.resolveZone(token,plz);if(zone&&!/^DE/i.test(zone))return true;}
+  }
+  return false;
+}
 function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),zone:fcAny('Tarifzone','Empf.-Land','Bestimmungsland','Ländercode','Country','Zone','Land')};}
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
@@ -956,7 +976,18 @@ function processWackler(ws,r,cols){
   if(cols.avis_diff>=0){const al=wacklerAvisLabel(avisVal);if(al)res=join(res,al);}
   /* 4. SNK surcharge codes (NL-FIX / B2C / 2. Zustellung / Terminzustellung). */
   let snkCodeLabel=null;
-  if(cols.snk_diff>=0){snkCodeLabel=wacklerSnkCode(snkVal);if(snkCodeLabel)res=join(res,snkCodeLabel);}
+  if(cols.snk_diff>=0){
+    snkCodeLabel=wacklerSnkCode(snkVal);
+    if(snkCodeLabel){
+      /* Terminzustellung (SNK≈25) is a DOMESTIC parcel-delivery surcharge. On an INTERNATIONAL
+         Wackler shipment the same round SNK is a flat-rate freight charge, so the auditor
+         classifies it as "Pauschalfracht, ok?" rather than "Terminzustellung" (AI-bundle training
+         rows 5 & 44: GB Glasgow destinations, SNK=25, no FR/MT/TZ deltas). The other SNK codes
+         (NL-FIX / B2C / 2. Zustellung) are unaffected. */
+      if(snkCodeLabel==='Terminzustellung'&&wacklerIsInternational(ws,r,cols))res=join(res,'Pauschalfracht, ok?');
+      else res=join(res,snkCodeLabel);
+    }
+  }
   /* 5. Gewichte / Bundling cascade. Decision tree (both weights real + FR delta):
      ─ same rate tier + multi-ref bundle         → "hätte gebündelt werden müssen"
                                                    (consignments that should have ridden one
@@ -984,12 +1015,24 @@ function processWackler(ws,r,cols){
     if(vkg>0&&vkgDl>0){
       const tA=wacklerGetTier(vkg),tB=wacklerGetTier(vkgDl);
       if(tA===tB){
-        if(isBundle){
-          /* Same-tier weights but the row is a multi-reference bundle: the auditor reads it as
-             separate consignments that should have been combined onto a single booking, not a
-             single-shipment rate-card rounding. Do NOT set wacklerRechnetFired, so MT and TZ
-             stay additive below. */
+        /* A multi-reference row whose two weights share a rate tier is normally separate
+           consignments that should have ridden one booking → "hätte gebündelt werden müssen".
+           EXCEPTION — a non-integer (volumetric) chargeable weight, e.g. VKG 3058,5 vs VKG_DL
+           3059: VKG/VKG_DL are then two measurements of ONE consignment, not distinct parcels.
+           Wackler simply billed that tier's rate and the FR gap is systemic rounding, so the row
+           reads as "Wackler rechnet Frachtrate für <tier>kg ab". The tier reported is the FLOOR
+           bracket the weight has cleared (3058,5 → 3000), reflecting the lower rate Wackler billed
+           against — AI-bundle training row 22 (3 refs, same tier, VKG 3058,5 / VKG_DL 3059). */
+        const volumetric=(vkg%1!==0)||(vkgDl%1!==0);
+        if(isBundle&&!volumetric){
+          /* Same-tier weights but the row is a multi-reference bundle of whole-kg parcels: the
+             auditor reads it as separate consignments that should have been combined onto a single
+             booking, not a single-shipment rate-card rounding. Do NOT set wacklerRechnetFired, so
+             MT and TZ stay additive below. */
           res=join(res,P.buendelMuessen);
+        } else if(isBundle&&volumetric){
+          res=join(res,wacklerRechnetNote(wacklerFloorTier(Math.max(vkg,vkgDl)),ws,r,cols));
+          wacklerRechnetFired=true;
         } else {
           res=join(res,wacklerRechnetNote(tA,ws,r,cols));
           wacklerRechnetFired=true;
