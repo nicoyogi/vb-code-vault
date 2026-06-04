@@ -1,6 +1,16 @@
 {
-  "version": "1.12.0",
+  "version": "1.13.0",
   "entries": [
+    {
+      "ver": "1.13.0",
+      "date": "2026-06-04",
+      "items": [
+        "Diff Mode — new Bulk sub-panel: compare MANY (predicted, expected) workbook pairs in one pass for a far wider training corpus than a single A/B file. Drop a set of predicted workbooks into A and the matching expected workbooks into B; files are auto-paired by filename (role words like \"predicted\"/\"expected\"/\"truth\"/\"output\" and a trailing a/b marker are ignored, so \"Dachser_Jan_predicted.xlsx\" pairs with \"Dachser-Jan-expected.xlsx\"). A live pairing preview shows every matched pair, flags name-collisions paired by sorted order (\"by order\" badge), and lists any unmatched files so nothing is silently dropped.",
+        "Diff Mode — all bulk pairs merge into the SAME results bundle, so the existing training breakdown chips, forwarder/sheet/search filters, the per-row table, Send-to-Tester, and every export (Diff CSV, Training Set CSV/JSONL, Rule Spec, AI Bundle) now operate on the combined multi-file corpus. The single-pair Train & Compare flow is unchanged.",
+        "Diff Mode — every row now carries provenance. A new \"source_file\" column is added to Diff CSV and Training Set CSV, the \"source_file\" field is added to Training Set JSONL records (and documented in the AI Bundle README), the diff table's Sheet cell shows the source pair on bulk runs, the row detail drawer lists source_file, and free-text search now matches on it. Single-pair runs leave source_file blank.",
+        "Diff Mode — row_uid now optionally namespaces by source pair (FNV-1a seed gains an \"@<pair-key>\" segment in bulk mode), so two rows that share forwarder/sheet/row/inputs across DIFFERENT source files stay distinct instead of being deduped into one. Single-pair row_uids are byte-for-byte unchanged, so training CSVs from the old single-file flow still join cleanly across runs."
+      ]
+    },
     {
       "ver": "1.12.0",
       "date": "2026-06-04",

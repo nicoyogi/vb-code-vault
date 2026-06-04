@@ -1392,6 +1392,13 @@ function runTester(){
 ══════════════════════════════════════════════════════════ */
 const diffState={a:null,b:null,results:null};
 
+/* Bulk Diff state — two SETS of workbooks (predicted A-set + expected
+   B-set) that get auto-paired by filename and compared pair-by-pair,
+   all rows feeding the SAME diffState.results so the chips / filters /
+   table / exports below operate on the combined, wider corpus. */
+const bulkDiffFiles={a:[],b:[]};
+let bulkDiffIdCounter=0;
+
 function onDiffDrag(e,slot,over){e.preventDefault();const el=document.getElementById('diffSlot'+slot.toUpperCase());if(el)el.classList.toggle('drag',over);}
 function onDiffDrop(e,slot){e.preventDefault();onDiffDrag(e,slot,false);const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)loadDiffFile(slot,f);}
 function onDiffFile(e,slot){const f=e.target.files&&e.target.files[0];if(f)loadDiffFile(slot,f);}
@@ -1433,6 +1440,8 @@ function clearDiff(){
   const fwSel=document.getElementById('diffFwFilter');if(fwSel)fwSel.innerHTML='<option value="all">all</option>';
   const shSel=document.getElementById('diffSheetFilter');if(shSel)shSel.innerHTML='<option value="all">all</option>';
   const q=document.getElementById('diffSearch');if(q)q.value='';
+  /* Also clear any bulk-diff file sets so a global Clear truly resets. */
+  if(typeof _resetBulkDiffInputs==='function')_resetBulkDiffInputs();
 }
 
 /* Locate the Anmerkung column by scanning row 3 (and row 2 as a fallback). */
@@ -1607,9 +1616,17 @@ function granularLabel(beforeRaw,afterRaw,pd){
    row_uid, so training CSVs from successive iterations can be
    joined / deduped / diffed across versions of the rule engine.
    FNV-1a 32-bit, hex-encoded — collision risk negligible at
-   workbook scale. */
-function rowUid(forwarder,sheet,row,inputs){
+   workbook scale.
+
+   `sourceTag` (optional) namespaces the hash by file pair. Single-pair
+   Diff Mode passes nothing, so its uids are unchanged (backward
+   compatible). Bulk Diff passes the pairing key so two rows that share
+   forwarder/sheet/row/inputs across DIFFERENT source files stay
+   distinct instead of being deduped into one — the whole point of
+   aggregating many pairs into one wider corpus. */
+function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
+  if(sourceTag)seedParts.push('@'+sourceTag);
   const keys=Object.keys(inputs||{}).sort();
   for(const k of keys)seedParts.push(k+'='+(inputs[k]==null?'':inputs[k]));
   const seed=seedParts.join('|');
@@ -1671,19 +1688,30 @@ function orderedInputKeys(rows){
   return ordered;
 }
 
-function runDiff(){
-  if(!diffState.a||!diffState.b){showLog('Diff — load both files first.','err');return;}
+/* Walk ONE (A, B) workbook pair and produce the enriched row set +
+   per-pair counters. Extracted from runDiff so that BOTH the
+   single-pair flow and the bulk many-pairs flow share one code path —
+   they only differ in how many pairs they feed through here and how the
+   results are merged (see finalizeDiff).
+
+   `source` is null for single-pair Diff Mode, or {tag,label} for bulk:
+     • tag   → namespaces row_uid so identical rows from different
+               source files stay distinct in the aggregated corpus.
+     • label → shown in the table's Sheet cell + exported as source_file
+               so every training row knows which file pair it came from. */
+function diffWorkbooks(wbA,nameA,wbB,nameB,source){
   const rows=[];
-  let added=0,removed=0,changed=0,total=0;
-  let wrong=0,missed=0,overfired=0,correct=0,drift=0;
+  let total=0,wrong=0,missed=0,overfired=0,correct=0,drift=0;
   const fwSet=new Set(),sheetSet=new Set();
-  const sheetsA=diffState.a.wb.SheetNames,sheetsB=diffState.b.wb.SheetNames;
+  const srcLabel=source?source.label:'';
+  const srcTag=source?source.tag:'';
+  const sheetsA=wbA.SheetNames,sheetsB=wbB.SheetNames;
   const allSheets=[...new Set([...sheetsA,...sheetsB])];
 
   for(const name of allSheets){
-    const wsA=diffState.a.wb.Sheets[name],wsB=diffState.b.wb.Sheets[name];
+    const wsA=wbA.Sheets[name],wsB=wbB.Sheets[name];
     if(!wsA||!wsB){
-      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw:'-',before:wsA?'(present)':'(missing in A)',after:wsB?'(present)':'(missing in B)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false});
+      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw:'-',before:wsA?'(present)':'(missing in A)',after:wsB?'(present)':'(missing in B)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false,source:srcLabel});
       sheetSet.add(name);
       continue;
     }
@@ -1694,7 +1722,7 @@ function runDiff(){
     const cA=colsA&&colsA.target>=0?colsA.target:findAnmerkungCol(wsA,rA);
     const cB=colsB&&colsB.target>=0?colsB.target:findAnmerkungCol(wsB,rB);
     if(cA<0||cB<0){
-      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw,before:cA<0?'(no Anmerkung col)':'(ok)',after:cB<0?'(no Anmerkung col)':'(ok)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false});
+      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw,before:cA<0?'(no Anmerkung col)':'(ok)',after:cB<0?'(no Anmerkung col)':'(ok)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false,source:srcLabel});
       sheetSet.add(name);
       continue;
     }
@@ -1783,19 +1811,189 @@ function runDiff(){
         /* === Source-code anchors === */
         processor            :processorName,
         applicable_threshold :applicableThreshold,
+        /* === Provenance (which file pair this row came from) === */
+        source               :srcLabel,
       };
-      rowObj.row_uid=rowUid(fw,name,r+1,inputs);
+      rowObj.row_uid=rowUid(fw,name,r+1,inputs,srcTag);
       rows.push(rowObj);
     }
   }
+  return{rows,fwSet,sheetSet,counters:{total,wrong,missed,overfired,correct,drift}};
+}
 
+/* Merge one-or-more per-pair results (from diffWorkbooks) into a single
+   diffState.results bundle and render. Single-pair Diff Mode feeds one
+   part; Bulk Diff feeds many. `metaText` is shown in the meta line;
+   `multiSource` toggles the per-row source label in the table. */
+function finalizeDiff(parts,metaText,multiSource){
+  const rows=[];const fwSet=new Set(),sheetSet=new Set();
+  let total=0,wrong=0,missed=0,overfired=0,correct=0,drift=0;
+  for(const p of parts){
+    for(const r of p.rows)rows.push(r);
+    p.fwSet.forEach(f=>fwSet.add(f));
+    p.sheetSet.forEach(s=>sheetSet.add(s));
+    total+=p.counters.total;wrong+=p.counters.wrong;missed+=p.counters.missed;
+    overfired+=p.counters.overfired;correct+=p.counters.correct;drift+=p.counters.drift;
+  }
   /* Keep classic tile semantics: "added" = missed (B filled, A empty),
      "removed" = overfired (A filled, B empty), "changed" = wrong. */
-  added=missed;removed=overfired;changed=wrong;
-
+  const added=missed,removed=overfired,changed=wrong;
   diffState.results={rows,total,added,removed,changed,wrong,missed,overfired,correct,drift,
-    forwarders:[...fwSet].sort(),sheets:[...sheetSet].sort()};
+    forwarders:[...fwSet].sort(),sheets:[...sheetSet].sort(),
+    meta:metaText||'',multiSource:!!multiSource};
   renderDiff();
+}
+
+/* Single-pair Diff Mode entry point (unchanged behavior). */
+function runDiff(){
+  if(!diffState.a||!diffState.b){showLog('Diff — load both files first.','err');return;}
+  const part=diffWorkbooks(diffState.a.wb,diffState.a.name,diffState.b.wb,diffState.b.name,null);
+  finalizeDiff([part],`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}`,false);
+}
+
+/* ══════════════════════════════════════════════════════════
+   BULK DIFF — compare many (predicted, expected) pairs at once
+   for a far wider training corpus than a single file pair. Drop
+   a set of predicted workbooks (A) + expected workbooks (B);
+   they're auto-paired by filename, every pair runs through
+   diffWorkbooks, and all rows merge into one diffState.results.
+══════════════════════════════════════════════════════════ */
+
+/* Normalise a filename to a pairing key: drop the extension + any
+   role words (predicted/expected/truth/output/…) + a trailing a/b
+   marker, then collapse separators. So "Dachser_Jan_predicted.xlsx"
+   and "Dachser-Jan-expected.xlsx" both key to "dachser jan" and pair
+   up. Falls back to the bare basename if stripping leaves nothing. */
+function bulkDiffKey(name){
+  const base=String(name||'').toLowerCase().replace(/\.[^.]+$/,'');
+  const roleWords=new Set(['predicted','prediction','expected','truth','groundtruth','ground','output','out','corrected','correct','actual','manual','tool','baseline','result','results']);
+  let toks=base.split(/[\s_\-.()]+/).filter(Boolean).filter(t=>!roleWords.has(t));
+  if(toks.length>1&&(toks[toks.length-1]==='a'||toks[toks.length-1]==='b'))toks.pop();
+  return toks.join(' ').trim()||base;
+}
+
+/* Pair the two sets by key. 1:1 keys become clean pairs; keys with
+   multiple files on a side are zipped by sorted name order (flagged
+   `ambiguous` so the UI can warn). Leftovers surface as unmatched. */
+function computeBulkDiffPairs(){
+  const aByKey=new Map(),bByKey=new Map();
+  const group=(arr,map)=>arr.forEach(f=>{const k=bulkDiffKey(f.name);if(!map.has(k))map.set(k,[]);map.get(k).push(f);});
+  group(bulkDiffFiles.a,aByKey);group(bulkDiffFiles.b,bByKey);
+  const pairs=[],unmatchedA=[],unmatchedB=[];
+  const keys=[...new Set([...aByKey.keys(),...bByKey.keys()])].sort();
+  for(const k of keys){
+    const as=(aByKey.get(k)||[]).slice().sort((x,y)=>x.name.localeCompare(y.name));
+    const bs=(bByKey.get(k)||[]).slice().sort((x,y)=>x.name.localeCompare(y.name));
+    const n=Math.min(as.length,bs.length);
+    const ambiguous=as.length>1||bs.length>1;
+    for(let i=0;i<n;i++)pairs.push({key:k,a:as[i],b:bs[i],ambiguous});
+    for(let i=n;i<as.length;i++)unmatchedA.push(as[i]);
+    for(let i=n;i<bs.length;i++)unmatchedB.push(bs[i]);
+  }
+  return{pairs,unmatchedA,unmatchedB};
+}
+
+function onBulkDiffDrag(e,slot,over){e.preventDefault();const el=document.getElementById('diffBulkSlot'+slot.toUpperCase());if(el)el.classList.toggle('drag',over);}
+function onBulkDiffDrop(e,slot){e.preventDefault();onBulkDiffDrag(e,slot,false);if(e.dataTransfer.files&&e.dataTransfer.files.length)addBulkDiffFiles(e.dataTransfer.files,slot);}
+function onBulkDiffFile(e,slot){if(e.target.files&&e.target.files.length)addBulkDiffFiles(e.target.files,slot);e.target.value='';}
+
+function addBulkDiffFiles(fileList,slot){
+  let added=0;
+  for(const file of fileList){
+    if(!file.name.toLowerCase().endsWith('.xlsx')){showLog('Bulk Diff — skipped non-xlsx: '+file.name,'err');continue;}
+    /* Read + parse synchronously-ish via FileReader so runBulkDiff can
+       stay a plain loop. Each entry holds the parsed workbook. */
+    const entry={id:++bulkDiffIdCounter,name:file.name,wb:null,slot};
+    bulkDiffFiles[slot].push(entry);
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{entry.wb=XLSX.read(ev.target.result,{type:'array',cellNF:true});}
+      catch(err){showLog('Bulk Diff — could not read '+file.name+': '+err.message,'err');
+        const i=bulkDiffFiles[slot].indexOf(entry);if(i>=0)bulkDiffFiles[slot].splice(i,1);}
+      renderBulkDiffPairs();
+    };
+    r.readAsArrayBuffer(file);
+    added++;
+  }
+  if(added)showLog('Bulk Diff — added '+added+' file(s) to set '+slot.toUpperCase()+'.','ok');
+  renderBulkDiffPairs();
+}
+
+function removeBulkDiffFile(slot,id){
+  const arr=bulkDiffFiles[slot];const i=arr.findIndex(f=>f.id===id);
+  if(i>=0)arr.splice(i,1);
+  renderBulkDiffPairs();
+}
+
+/* Reset only the bulk inputs/preview (leaves any rendered results from a
+   previous run untouched — the global Clear button wipes everything). */
+function _resetBulkDiffInputs(){
+  bulkDiffFiles.a=[];bulkDiffFiles.b=[];
+  ['A','B'].forEach(s=>{
+    const el=document.getElementById('diffBulkSlot'+s);if(el)el.classList.remove('loaded','drag');
+    const nm=document.getElementById('diffBulkName'+s);if(nm)nm.textContent='Click or drop .xlsx files';
+    const inp=document.getElementById('diffBulkInput'+s);if(inp)inp.value='';
+  });
+  renderBulkDiffPairs();
+}
+function clearBulkDiff(){_resetBulkDiffInputs();showLog('Bulk Diff — cleared file sets.','ok');}
+
+function renderBulkDiffPairs(){
+  /* Slot loaded-state + count labels */
+  ['a','b'].forEach(s=>{
+    const S=s.toUpperCase();
+    const el=document.getElementById('diffBulkSlot'+S);
+    const nm=document.getElementById('diffBulkName'+S);
+    const n=bulkDiffFiles[s].length;
+    if(el)el.classList.toggle('loaded',n>0);
+    if(nm)nm.textContent=n?(n+' file(s) loaded'):'Click or drop .xlsx files';
+  });
+  const box=document.getElementById('diffBulkPairs');
+  if(!box)return;
+  const{pairs,unmatchedA,unmatchedB}=computeBulkDiffPairs();
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let html='';
+  if(pairs.length){
+    html+=`<div class="bdp-section-label">${pairs.length} matched pair(s)</div>`;
+    html+=pairs.map(p=>
+      `<div class="bdp-pair">
+        <span class="bdp-file bdp-a" title="${esc(p.a.name)}">${esc(p.a.name)}</span>
+        <span class="bdp-arrow">\u2194</span>
+        <span class="bdp-file bdp-b" title="${esc(p.b.name)}">${esc(p.b.name)}</span>
+        ${p.ambiguous?'<span class="bdp-badge" title="Multiple files share this name key — paired by sorted name order. Rename for an exact 1:1 match if this is wrong.">by order</span>':''}
+        <button type="button" class="bdp-rm" title="Remove this A file" onclick="removeBulkDiffFile('a',${p.a.id})">\u2715</button>
+      </div>`).join('');
+  }
+  const unmatched=[...unmatchedA.map(f=>({f,slot:'a'})),...unmatchedB.map(f=>({f,slot:'b'}))];
+  if(unmatched.length){
+    html+=`<div class="bdp-section-label">${unmatched.length} unmatched \u2014 no partner found</div>`;
+    html+=unmatched.map(({f,slot})=>
+      `<div class="bdp-unmatched">
+        <span class="bdp-file" title="${esc(f.name)}">${slot.toUpperCase()}: ${esc(f.name)}</span>
+        <button type="button" class="bdp-rm" title="Remove" onclick="removeBulkDiffFile('${slot}',${f.id})">\u2715</button>
+      </div>`).join('');
+  }
+  box.innerHTML=html;
+  const btn=document.getElementById('btnBulkDiffRun');
+  if(btn)btn.disabled=pairs.length===0;
+  const ct=document.getElementById('ctBulkDiff');
+  if(ct)ct.textContent=pairs.length?('\u00b7 '+pairs.length):'';
+}
+
+function runBulkDiff(){
+  const{pairs}=computeBulkDiffPairs();
+  if(!pairs.length){showLog('Bulk Diff — no matched A/B pairs. Name predicted & expected files alike (role words like "predicted"/"expected" are ignored).','err');return;}
+  const notReady=pairs.filter(p=>!p.a.wb||!p.b.wb);
+  if(notReady.length){showLog('Bulk Diff — '+notReady.length+' file(s) still parsing, try again in a moment.','err');return;}
+  const parts=[];
+  for(const p of pairs){
+    const base=p.a.name.replace(/\.[^.]+$/,'');
+    const source={tag:p.key||base,label:base};
+    parts.push(diffWorkbooks(p.a.wb,p.a.name,p.b.wb,p.b.name,source));
+  }
+  finalizeDiff(parts,`Bulk diff \u00b7 ${pairs.length} file pair(s)`,true);
+  showLog(`Bulk Diff — compared ${pairs.length} pair(s) into one corpus. Use the chips, filters, and exports below on the combined set.`,'ok');
+  document.getElementById('diffResults').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 /* Collect the structured input cells the rules actually read. Mirrors
@@ -1858,7 +2056,7 @@ function filterDiffRows(){
     if(fw!=='all'&&r.fw!==fw)return false;
     if(sheet!=='all'&&r.sheet!==sheet)return false;
     if(needle){
-      const hay=((r.before||'')+' '+(r.after||'')+' '+(r.reason||'')+' '+(r.engineNow||'')).toLowerCase();
+      const hay=((r.before||'')+' '+(r.after||'')+' '+(r.reason||'')+' '+(r.engineNow||'')+' '+(r.source||'')).toLowerCase();
       if(!hay.includes(needle))return false;
     }
     return true;
@@ -1938,8 +2136,9 @@ function refreshDiffView(){
   const MAX=500;
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+  const metaPrefix=diffState.results.meta||(diffState.a&&diffState.b?`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}`:'');
   document.getElementById('diffMeta').textContent=
-    `A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}  \u00b7  ${total} rows scanned across ${forwarders.length||1} forwarder(s)`;
+    `${metaPrefix}  \u00b7  ${total} rows scanned across ${forwarders.length||1} forwarder(s)`;
 
   const tbody=document.querySelector('#diffTable tbody');
   const slice=filtered.slice(0,MAX);
@@ -1971,13 +2170,17 @@ function refreshDiffView(){
 }
 
 function renderDiffRow(r,i,esc){
+  const multi=diffState.results&&diffState.results.multiSource;
+  const sheetCell=multi&&r.source
+    ? `<span class="df-src" title="Source file pair">${esc(r.source)}</span>${esc(r.sheet)}`
+    : esc(r.sheet);
   if(r.change==='sheet'){
-    return `<tr class="df-sheet"><td>${esc(r.sheet)}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-sheet">sheet</span></td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td><td class="df-engine"></td><td class="df-actions"></td></tr>`;
+    return `<tr class="df-sheet"><td>${sheetCell}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-sheet">sheet</span></td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td><td class="df-engine"></td><td class="df-actions"></td></tr>`;
   }
   const labelCls=LABEL_CLASS[r.label]||'';
   const engine=renderEngineCell(r,esc);
   const actions=`<button type="button" class="df-expand-btn" aria-expanded="false" title="Show inputs + reason trace" onclick="toggleDiffDetail(${i})">›</button>`;
-  return `<tr class="${labelCls}" data-row-i="${i}"><td>${esc(r.sheet)}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-${r.label}">${r.label}</span></td><td class="df-before">${esc(r.before||'\u2014')}</td><td class="df-after">${esc(r.after||'\u2014')}</td>${engine}<td class="df-actions">${actions}</td></tr>`;
+  return `<tr class="${labelCls}" data-row-i="${i}"><td>${sheetCell}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-${r.label}">${r.label}</span></td><td class="df-before">${esc(r.before||'\u2014')}</td><td class="df-after">${esc(r.after||'\u2014')}</td>${engine}<td class="df-actions">${actions}</td></tr>`;
 }
 
 function renderEngineCell(r,esc){
@@ -2001,9 +2204,12 @@ function toggleDiffDetail(i){
   const filtered=filterDiffRows();const r=filtered[i];if(!r)return;
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const keys=Object.keys(r.inputs||{});
-  const kv=keys.length
+  const srcKv=(diffState.results&&diffState.results.multiSource&&r.source)
+    ? `<div class="df-detail-kv"><span class="kv-k">source_file</span><span class="kv-v" title="${esc(r.source)}">${esc(r.source)}</span></div>`
+    : '';
+  const kv=srcKv+(keys.length
     ? keys.map(k=>`<div class="df-detail-kv"><span class="kv-k">${esc(k)}</span><span class="kv-v" title="${esc(r.inputs[k])}">${esc(r.inputs[k])}</span></div>`).join('')
-    : '<div class="df-detail-kv empty"><span class="kv-k">inputs</span><span class="kv-v">(no rule-visible cells captured — unknown forwarder)</span></div>';
+    : '<div class="df-detail-kv empty"><span class="kv-k">inputs</span><span class="kv-v">(no rule-visible cells captured — unknown forwarder)</span></div>');
   /* Phrase-level diff visualisation. Only render when meaningful — for
      `correct` rows there's nothing to show; for missed/overfired/wrong
      the breakdown is the whole point of the precision pass. */
@@ -2147,7 +2353,7 @@ function downloadDiffCsv(){
   const trainable=rows.filter(r=>r.change!=='sheet');
   const inputKeys=orderedInputKeys(trainable);
   const header=[
-    'row_uid','sheet','row','forwarder','processor','applicable_threshold',
+    'row_uid','source_file','sheet','row','forwarder','processor','applicable_threshold',
     'label','granular_label','change',
     'before','after','engine_now','engine_matches_a','phrase_jaccard',
     'predicted_phrases','expected_phrases','common_phrases',
@@ -2163,6 +2369,7 @@ function downloadDiffCsv(){
     const isSheet=r.change==='sheet';
     const base=[
       isSheet?'':(r.row_uid||''),
+      r.source||'',
       r.sheet,r.row,r.fw,
       isSheet?'':(r.processor||''),
       isSheet?'':(r.applicable_threshold==null?'':r.applicable_threshold),
@@ -2353,6 +2560,7 @@ function buildTrainingSet(){
     if(r.row_uid)seenUids.add(r.row_uid);
     records.push({
       row_uid:r.row_uid||'',
+      source_file:r.source||'',
       sheet:r.sheet,
       row:r.row,
       forwarder:r.fw,
@@ -2407,7 +2615,7 @@ function downloadTrainingSet(format){
     const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
     const joinPhr=arr=>Array.isArray(arr)?arr.join(' | '):'';
     const header=[
-      'row_uid','sheet','row','forwarder','processor','applicable_threshold',
+      'row_uid','source_file','sheet','row','forwarder','processor','applicable_threshold',
       'label','granular_label',
       'predicted','expected','rule_engine_now','engine_matches_a',
       'phrase_jaccard',
@@ -2422,7 +2630,7 @@ function downloadTrainingSet(format){
     const lines=[header.join(',')];
     for(const r of records){
       const row=[
-        r.row_uid,r.sheet,r.row,r.forwarder,
+        r.row_uid,r.source_file||'',r.sheet,r.row,r.forwarder,
         r.processor||'',
         r.applicable_threshold==null?'':r.applicable_threshold,
         r.label,r.granular_label||'',
@@ -2702,6 +2910,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope){
   lines.push('| `inputs` | per-row map of cell values the rules read; keys explained in `rule_spec.forwarders.<fw>.input_glossary` |');
   lines.push('| `reason` | trigger trace (raw cell values that fired branches) |');
   lines.push('| `row_uid` | stable hash for joining across runs |');
+  lines.push('| `source_file` | which predicted/expected file pair this row came from (set when exported from Bulk Diff; blank for a single-pair run) |');
   lines.push('');
   lines.push('Synthetic key prefixes:');
   lines.push('- `lit_*` — phrase string is hard-coded inside a processor (not yet in `PHRASES`). Promote it to `PHRASES` if you need to fire it from a new branch.');

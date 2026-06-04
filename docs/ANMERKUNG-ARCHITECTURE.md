@@ -101,7 +101,7 @@ Notable structural sections (the IDs are the integration contract with the runti
 | Output | `#previewWrap`, `#stats-wrap`, `#trigList`, `#log` |
 | Bulk | `#bulkPanel`, `#bulkFileInput`, `#bulkList`, `#btnBulkRun`, `#btnBulkDlAll` |
 | Tester | `#testerPanel`, `#testerFields`, `#testerOutput`, `#testerPresets` |
-| Diff / Training | `#diffPanel`, `#diffSlotA`/`#diffSlotB`, `#diffTable`, `#trainChips`, `#diffFwFilter` / `#diffSheetFilter` / `#diffSearch` |
+| Diff / Training | `#diffPanel`, `#diffSlotA`/`#diffSlotB`, `#diffTable`, `#trainChips`, `#diffFwFilter` / `#diffSheetFilter` / `#diffSearch`. Bulk sub-panel: `#diffBulk`, `#diffBulkSlotA`/`#diffBulkSlotB`, `#diffBulkPairs`, `#btnBulkDiffRun` |
 | Modals | `#cl-overlay` (changelog), `#sub-overlay` (subscription gate) |
 
 ### 3.2 Client runtime — `assets/anmerkung.js`
