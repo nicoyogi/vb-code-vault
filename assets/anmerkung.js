@@ -823,7 +823,6 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
 function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO')};}
-const WACKLER_PROTECTED=['Fremdnummer doppelt berechnet','hätte gebündelt werden müssen','hätte Avisgebühr telefonisch abrechnen dürfen','Return, ok?','Differenz aufgrund abweichender Gewichte','Wackler rechnet'];
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
 const WACKLER_SNK_NOISE=5.0;
@@ -842,7 +841,11 @@ const WACKLER_TZ_ADDITIVE=2.0;
    so it never poaches real SNK Differenz residuals. Resolves AI-bundle training rows 1 & 42. */
 const WACKLER_HEBEBUEHNE_ABS=150;
 const WACKLER_HEBEBUEHNE_TOL=2.0;
-function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(const p of WACKLER_PROTECTED){if(existing.toLowerCase().includes(p.toLowerCase()))return null;}
+/* The engine is fully deterministic: every Anmerkung is recomputed from the
+   row's inputs, regardless of any value already sitting in the target cell.
+   There is no "preserve existing / protected phrase" short-circuit — the rules
+   below are the single source of truth for a row's output. */
+function processWackler(ws,r,cols){
   /* STAT gate: on stat≠10 only the Kontierung check runs; all other rules are skipped. */
   const statOk=(cols.stat<0)||(cellNum(ws,r,cols.stat)===10);
   if(!statOk){
@@ -1081,7 +1084,7 @@ function buildReason(fw,ws,r,cols){
 
 /* Run rules across the workbook without mutating files. Returns in-memory results + stats. */
 function runRules(){
-  let total=0,filled=0,skipped=0,empty=0,preserved=0,unreachable=0;
+  let total=0,filled=0,skipped=0,empty=0,unreachable=0;
   const allResults={};
   const trigCounts=new Map();
   const previewRows=[];
@@ -1099,17 +1102,10 @@ function runRules(){
       const excelRow=r+1;
       const result=fn(ws,r,cols);
       if(result===null){
-        let isPreserved=false;
-        /* For Wackler, processor returns null for both stat≠10 and protected existing value.
-           Distinguish via current Stat_Freigabe. */
-        if(selectedFW==='wackler'){
-          const statOk=cols.stat<0||cellNum(ws,r,cols.stat)===10;
-          if(statOk){isPreserved=true;preserved++;}
-          else{skipped++;}
-        } else {
-          skipped++;
-        }
-        previewRows.push({sheet:name,row:excelRow,status:isPreserved?'preserved':'skipped',value:'',reason:''});
+        /* null === out of scope (Stat_Freigabe ≠ 10). No protected/preserved
+           case anymore — the engine always recomputes in-scope rows. */
+        skipped++;
+        previewRows.push({sheet:name,row:excelRow,status:'skipped',value:'',reason:''});
         continue;
       }
       rowMap.set(excelRow,result);
@@ -1122,8 +1118,8 @@ function runRules(){
     }
     allResults[name]={targetCol,rowMap,reasonMap,targetIdx:cols.target};
   }
-  /* previewRows already has status flags set inline above (filled/empty/skipped/preserved). */
-  return{total,filled,skipped,empty,preserved,unreachable,allResults,trigCounts,previewRows};
+  /* previewRows already has status flags set inline above (filled/empty/skipped). */
+  return{total,filled,skipped,empty,unreachable,allResults,trigCounts,previewRows};
 }
 
 /* ── PREVIEW (#1) ── */
@@ -1135,7 +1131,7 @@ function runPreview(){
     const rep=runRules();
     renderStats(rep);
     renderPreview(rep);
-    showLog(`Dry-run — ${rep.filled} would be filled, ${rep.skipped} skipped, ${rep.empty} empty, ${rep.preserved} preserved.`,'ok');
+    showLog(`Dry-run — ${rep.filled} would be filled, ${rep.skipped} skipped, ${rep.empty} empty.`,'ok');
   }catch(e){showLog('Preview failed: '+e.message,'err');console.error(e);}
   btn.disabled=false;btn.textContent='Preview — dry-run without writing';
 }
@@ -1160,7 +1156,6 @@ function renderStats(rep){
   document.getElementById('sFilled').textContent=rep.filled;
   document.getElementById('sSkipped').textContent=rep.skipped;
   document.getElementById('sEmpty').textContent=rep.empty;
-  document.getElementById('sPreserved').textContent=rep.preserved;
   const list=document.getElementById('trigList');
   const entries=[...rep.trigCounts.entries()].sort((a,b)=>b[1]-a[1]);
   if(!entries.length){list.innerHTML='<div class="trig-empty">No triggers fired — all clean.</div>';}
@@ -1215,7 +1210,7 @@ async function runProcess(){
     resultBlob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE',compressionOptions:{level:6}});
     setProgress(100);
     renderStats(rep);
-    showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (Stat_Freigabe ≠ 10)${rep.preserved?`, ${rep.preserved} preserved`:''}${wantReason?' · reason column written':''}.`,'ok');
+    showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (Stat_Freigabe ≠ 10)${wantReason?' · reason column written':''}.`,'ok');
     document.getElementById('btnDl').style.display='block';
   }catch(e){showLog('Ritual failed: '+e.message+'\n'+e.stack,'err');console.error(e);}
   btn.disabled=false;btn.textContent='Invoke the Ritual';
@@ -1302,7 +1297,7 @@ const TESTER_PRESETS={
     {name:'Fremdnummer dup',values:{stat:10,tarif:'0'}},
   ],
   wackler:[
-    {name:'Protected existing',values:{stat:10,target:'Return, ok?'}},
+    {name:'Cross-tier weights',values:{stat:10,fr:5,vkg:120,vkg_dl:400,tarif:'100,00',kostenstelle:'1',sachkonto:'2'}},
     {name:'AVIS 7.5',values:{stat:10,avis_diff:7.5,tarif:'60,00'}},
     {name:'Riedlingen return',values:{stat:10,fr:10,empf_plz:'88499',empf_ort:'Riedlingen',tarif:'70,00'}},
     {name:'NL-FIX SNK 38',values:{stat:10,snk_diff:38,tarif:'80,00'}},
@@ -1406,7 +1401,7 @@ function runTester(){
   const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   let body;
   if(result===null){
-    body='<div class="to-null">null — row would be skipped (Stat_Freigabe ≠ 10 or protected existing value).</div>';
+    body='<div class="to-null">null — row would be skipped (Stat_Freigabe ≠ 10).</div>';
   } else if(result===''){
     body='<div class="to-empty">empty — no trigger fired, row would be filled with blank.</div>';
   } else {
@@ -1778,15 +1773,7 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
       let engineNow='',engineMatchesA=true,reason='',inputs={};
       if(processor&&colsA){
         try{
-          /* Engine-now must answer "what would the engine emit from this
-             row's INPUTS?", so we hide slot A's existing Anmerkung from the
-             processor. Otherwise a preservation guard (e.g. WACKLER_PROTECTED
-             in processWackler reads cols.target and returns null on a protected
-             phrase) short-circuits against the engine's own prior output,
-             making engineNow come back empty and falsely flagging the row as
-             drift -> the "(empty)" cell. target:-1 makes cellStr return ''
-             so the guard is skipped and the engine recomputes from inputs. */
-          const p=processor(wsA,r,{...colsA,target:-1});
+          const p=processor(wsA,r,colsA);
           engineNow=(p==null?'':String(p));
           /* Engine-drift is a PHRASE-SET comparison, not a raw-string one,
              matching the latest engine rule (v1.11.0): the Anmerkung column is

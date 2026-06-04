@@ -184,9 +184,15 @@ const W_COLS = {
   kostenstelle: 63, sachkonto: 64,
 };
 
-test('processWackler: protected existing annotation -> null (left untouched)', () => {
-  const ws = makeRow(R, { 50: 'Return, ok?' });
-  assert.equal(e.processWackler(ws, R, W_COLS), null);
+test('processWackler: existing annotation is ignored — output recomputed from inputs', () => {
+  // target cell already holds a phrase, but the engine never preserves it:
+  // VKG=120 and VKG_DL=130 both fall in the 150 kg bucket -> same-tier wording,
+  // proving the pre-existing "Differenz aufgrund abweichender Gewichte" is discarded.
+  const ws = makeRow(R, {
+    50: 'Differenz aufgrund abweichender Gewichte',
+    51: 10, 52: '100', 55: '5', 59: '120', 60: '130', 63: '1', 64: '2',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 150kg ab');
 });
 
 test('processWackler: STAT != 10 with blank KOST/SACH -> Kontierung?', () => {
@@ -228,6 +234,12 @@ test('processWackler: same-tier weight diff + FR -> "Wackler rechnet Frachtrate 
   // VKG=120 and VKG_DL=130 both fall in the 150 kg bucket
   const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 59: '120', 60: '130', 63: '1', 64: '2' });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 150kg ab');
+});
+
+test('processWackler: cross-tier weights + FR -> Differenz aufgrund abweichender Gewichte', () => {
+  // VKG=120 (tier 150) vs VKG_DL=400 (tier 400) fall in different rate buckets
+  const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 59: '120', 60: '400', 63: '1', 64: '2' });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 });
 
 test('processWackler: bare FR delta -> Frachtdifferenz', () => {
