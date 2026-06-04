@@ -252,7 +252,39 @@ test('processWackler: blank KOST/SACH only -> Kontierung?', () => {
   assert.equal(e.processWackler(ws, R, W_COLS), 'Kontierung?');
 });
 
-test('processWackler: TZ >= 2.0 alone -> DifferenzTreibstof', () => {
+test('processWackler: TZ >= 2.0 alone -> DifferenzEnergiezuschlag', () => {
   const ws = makeRow(R, { 51: 10, 52: '100', 57: '5', 63: '1', 64: '2' });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'DifferenzTreibstof');
+  assert.equal(e.processWackler(ws, R, W_COLS), 'DifferenzEnergiezuschlag');
+});
+
+test('processWackler: Mautdifferenz stays additive on a same-tier "Wackler rechnet" row', () => {
+  // VKG=120 / VKG_DL=130 share the 150 kg tier (single ref) -> "Wackler rechnet";
+  // an MT delta must still surface (previously it was suppressed on these rows).
+  const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 56: '3', 59: '120', 60: '130', 63: '1', 64: '2' });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 150kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: same-tier weights but multi-ref bundle -> hätte gebündelt werden müssen', () => {
+  // Both weights in the 150 kg tier, ReferenzNr is a comma-joined bundle, FR delta present.
+  // Bundling wins over the "Wackler rechnet" wording, and MT/TZ stay additive.
+  const ws = makeRow(R, {
+    51: 10, 52: '100', 55: '5', 56: '3', 57: '5',
+    58: '111,222', 59: '120', 60: '130', 63: '1', 64: '2',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'hätte gebündelt werden müssen // Mautdifferenz // DifferenzEnergiezuschlag'
+  );
+});
+
+test('processWackler: cross-tier weights + FR + MT + TZ -> Gewichte // Maut // Energiezuschlag', () => {
+  // The fuel phrase is no longer suppressed when FR and MT are both present.
+  const ws = makeRow(R, { 51: 10, 52: '100', 55: '50', 56: '5', 57: '8', 59: '120', 60: '400', 63: '1', 64: '2' });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Differenz aufgrund abweichender Gewichte // Mautdifferenz // DifferenzEnergiezuschlag'
+  );
 });
