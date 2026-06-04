@@ -496,6 +496,34 @@ body.theme-light .diff-table td { border-bottom-color: rgba(80,55,20,0.05); }
 .diff-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 8px; }
 .diff-empty { font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; padding: 20px 0; }
 
+/* ── BULK DIFF (many pairs → wider training corpus) ── */
+.diff-bulk { margin-top: 14px; padding: 12px 14px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.diff-bulk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.diff-bulk-title { font-family: var(--cinzel); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--text2); }
+.diff-bulk-tag { font-family: var(--mono); font-size: 9px; letter-spacing: .06em; color: rgba(91,156,246,0.85); background: rgba(91,156,246,0.1); border: 1px solid rgba(91,156,246,0.3); padding: 2px 8px; border-radius: 10px; }
+.diff-bulk-intro { font-family: var(--mono); font-size: 10px; color: var(--text3); line-height: 1.6; margin-bottom: 10px; }
+.diff-bulk-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.diff-bulk-slot { background: var(--surface2); border: 1.5px dashed var(--border); border-radius: 12px; padding: .9rem 1rem; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+.diff-bulk-slot:hover, .diff-bulk-slot.drag { border-color: rgba(91,156,246,0.4); background: rgba(91,156,246,0.04); }
+.diff-bulk-slot.loaded { border-color: rgba(91,156,246,0.5); background: rgba(91,156,246,0.06); border-style: solid; }
+.diff-bulk-slot.loaded .diff-slot-name { color: #a8c7fa; }
+.diff-bulk-pairs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.diff-bulk-pairs:empty { display: none; }
+.bdp-section-label { font-family: var(--cinzel); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--text3); margin: 6px 0 1px; }
+.bdp-section-label:first-child { margin-top: 0; }
+.bdp-pair { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 7px 10px; font-family: var(--mono); font-size: 10.5px; color: var(--text2); }
+.bdp-pair .bdp-a { color: #a8c7fa; }
+.bdp-pair .bdp-b { color: var(--accent); }
+.bdp-arrow { color: var(--text3); flex-shrink: 0; }
+.bdp-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
+.bdp-badge { font-family: var(--mono); font-size: 8.5px; letter-spacing: .05em; color: #fbbf24; border: 1px solid rgba(251,191,36,0.35); border-radius: 8px; padding: 1px 6px; flex-shrink: 0; }
+.bdp-unmatched { display: flex; align-items: center; gap: 8px; background: rgba(248,113,113,0.05); border: 1px solid rgba(248,113,113,0.2); border-radius: 10px; padding: 6px 10px; font-family: var(--mono); font-size: 10px; color: var(--danger); }
+.bdp-unmatched .bdp-file { max-width: 85%; }
+.bdp-rm { margin-left: auto; background: none; border: 1px solid var(--border); color: var(--text3); width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 10px; line-height: 1; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: color .15s, border-color .15s; }
+.bdp-rm:hover { color: var(--danger); border-color: rgba(248,113,113,0.4); }
+/* Per-row source-file label in the diff table's Sheet cell (bulk runs only) */
+.df-src { display: block; font-size: 8.5px; color: rgba(91,156,246,0.75); letter-spacing: .03em; margin-bottom: 1px; word-break: break-all; }
+
 /* ── CHANGELOG MODAL (#24) ── */
 #cl-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 600; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(8px); }
 body.theme-light #cl-overlay { background: rgba(244,239,227,0.82); }

@@ -179,6 +179,17 @@ Output:
   - `↓ Rule Spec (JSON)` — self-describing schema sidecar. Lists every PHRASES key (key → German string), every `PHRASE_LITERALS` entry, every `PHRASE_TEMPLATES` regex, per-forwarder thresholds, gate condition, processor + resolver symbol, canonical input order, and an English glossary entry for every input key. Engine version stamped from the changelog. Pair with any Training Set export and an AI consumer has the complete rule contract.
   - `✦ AI Bundle (ZIP)` — one-click bundle of `training.jsonl` + `rule_spec.json` + `README.md` (with prompt template). The README walks an AI assistant through the rule-update workflow: read the spec, group records by `forwarder` and `missing_phrase_keys`/`extra_phrase_keys`, locate the branch in `process<Forwarder>`, loosen/tighten gates using `inputs.*`, re-run Train & Compare to verify. Recommended export for AI-driven rule updates — drop into any AI assistant and it has everything to propose a patch to `assets/anmerkung.js` without reading the source.
 
+#### Bulk — many pairs at once (#25)
+
+The single A/B slots compare exactly one workbook pair. The **Bulk** sub-panel (inside Diff Mode) compares *many* pairs in one pass, so the training corpus spans every file at once instead of one:
+
+1. Drop a set of **predicted** workbooks into the **A — Predicted set** zone and the matching **expected** workbooks into **B — Expected set** (both accept multi-select + drag-drop).
+2. Files auto-pair by a normalized filename key (`bulkDiffKey`): the extension, common role words (`predicted` / `expected` / `truth` / `groundtruth` / `output` / `corrected` / `actual` / `manual` / `tool` / `baseline` / `result`), and a trailing `a`/`b` marker are stripped, then separators collapse. So `Dachser_Jan_predicted.xlsx` and `Dachser-Jan-expected.xlsx` both key to `dachser jan` and pair up.
+3. The live pairing preview lists every matched pair, badges name-collisions that had to be paired by sorted order (`by order`), and shows any **unmatched** files so nothing is silently dropped. Remove a file with its `✕`.
+4. **✦ Train & Compare All** runs `diffWorkbooks` for every pair and merges all rows into the same `diffState.results` via `finalizeDiff`. From there the chips, filters, table, Send-to-Tester, and every export work on the combined set exactly as in single-pair mode.
+
+Provenance: every bulk row carries a **`source_file`** (the predicted file's basename) — surfaced in the table's Sheet cell, the row detail drawer, and the free-text search, and exported as a `source_file` column in Diff CSV / Training Set CSV and a `source_file` field in Training Set JSONL. The row's `row_uid` is also namespaced by the pair key (`@<key>` segment in the FNV-1a seed) so identical rows from *different* source files stay distinct rather than being deduped into one. Single-pair runs leave `source_file` blank and produce byte-identical `row_uid`s to before.
+
 ---
 
 ## Part C — Engine Workflow
@@ -535,6 +546,8 @@ any                drift    (if engineNow != before; overlay on top)
 The UI chips filter the in-memory result list; every export button (`Diff CSV`, `Training Set CSV`, `Training Set JSONL`) re-serializes whatever the filter currently selects. The button counters always reflect the post-filter row count.
 
 **Send to Tester** uses the `inputs` payload: it flips the forwarder tile, renders tester fields for that forwarder, copies matching keys into the inputs, calls `runTester()`, and scrolls the page. One click from diff-row to interactive rule playground.
+
+**Single vs. bulk.** The per-pair walk lives in `diffWorkbooks(wbA, nameA, wbB, nameB, source)`, which returns `{rows, fwSet, sheetSet, counters}` and never touches the DOM. `runDiff()` calls it once (single A/B slots, `source = null`); `runBulkDiff()` calls it once per auto-matched file pair (`source = {tag, label}`) and feeds every part to `finalizeDiff(parts, metaText, multiSource)`, which sums the counters, unions the forwarder/sheet sets, and assigns `diffState.results` (now also carrying `meta` and `multiSource`). Because both paths converge on the same `diffState.results`, `renderDiff` / `refreshDiffView` / the exports are identical for one pair or fifty. In bulk mode `source.tag` is appended to the `row_uid` seed and `source.label` is stored on each row as `source` (exported as `source_file`).
 
 ---
 
