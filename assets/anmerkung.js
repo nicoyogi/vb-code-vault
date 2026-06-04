@@ -1712,7 +1712,16 @@ function runDiff(){
         try{
           const p=processor(wsA,r,colsA);
           engineNow=(p==null?'':String(p));
-          engineMatchesA=engineNow===(vA||'');
+          /* Engine-drift is a PHRASE-SET comparison, not a raw-string one,
+             matching the latest engine rule (v1.11.0): the Anmerkung column is
+             an order-independent, case/whitespace-insensitively-deduped list of
+             ' // '-joined phrases (see join / normPhrase / classifyDiff). So the
+             engine has only genuinely "drifted" from slot A when it emits a
+             DIFFERENT phrase set — reordering, recasing, or respacing the same
+             phrases is not drift. Using samePhraseSet here keeps the drift
+             overlay, the drift chip, and the engine_matches_a export column
+             consistent with how classifyDiff scores wrong/missed/overfired. */
+          engineMatchesA=samePhraseSet(splitTriggers(engineNow),splitTriggers(vA||''));
           if(!engineMatchesA)drift++;
           try{reason=buildReason(fw,wsA,r,colsA)||'';}catch(_){reason='';}
           inputs=collectInputsForRow(fw,wsA,r,colsA);
