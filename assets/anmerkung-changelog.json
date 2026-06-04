@@ -1,6 +1,16 @@
 {
-  "version": "1.17.0",
+  "version": "1.18.0",
   "entries": [
+    {
+      "ver": "1.18.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — the official zone division (Zoneneinteilung) now ships inside the rate-card asset, generated from data/Zoneneinteilung_national_international_01.07.24.xlsx (sheet \"Gesamt\") as `WACKLER_RATECARD.zoneDivision`. It maps a destination country + postal prefix to a rate-card zone for 13 countries (AT, CH, DE, ES, FI, FR, GB, GR, IT, NO, PL, PT, SE) — the data needed to resolve multi-zone countries that a bare country code cannot disambiguate.",
+        "Wackler — new `WACKLER_RATECARD.resolveZoneByPostal(country, postal)` resolves a destination to its sub-zone via the zone division: numeric countries key on the first two postal digits (leading zeros preserved, e.g. IT \"00\"), GB keys on the alphabetic postcode area (longest-first, so \"EH\" wins over \"E\"), and ES carries the source's \"AD\"/\"GI\" tokens. Returns null for unknown countries, blank postals, or unmatched prefixes.",
+        "Wackler — `resolveZone` now takes an optional second argument, the destination postal code, and consults it only when the token alone is ambiguous. This lets multi-zone countries (CH/FR/ES/IT/NO/PL) resolve to the correct sub-zone — e.g. resolveZone(\"CH\", \"8001\") → \"CH1\" — while existing single-argument callers (explicit zone codes like FR2, single-zone countries like BE/NL) are unaffected.",
+        "Wackler — the same-tier \"Wackler rechnet Frachtrate für <tier>kg ab\" note now resolves the rate-card zone from the destination country (Empf.-Land etc.) combined with Empf.-PLZ when no explicit zone token is present, so the booked EUR amount is appended for multi-zone international destinations too (e.g. a Swiss row with PLZ 8001 → CH1). Domestic rows, rows without a destination, and bare unit-test contexts are unchanged, and the enriched phrase still resolves to the `tpl_wacklerRechnet` template key."
+      ]
+    },
     {
       "ver": "1.17.0",
       "date": "2026-06-04",

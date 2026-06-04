@@ -1,6 +1,9 @@
 // AUTO-GENERATED — do not edit by hand.
-// Source: data/Wackler International Rate.xlsx (sheet "Basis").
-// Wackler international freight rate card: per destination-zone EUR rate by chargeable-weight tier.
+// Sources:
+//   • data/Wackler International Rate.xlsx (sheet "Basis")            → rate matrix (TIERS/ZONES/BASIS)
+//   • data/Zoneneinteilung_national_international_01.07.24.xlsx (sheet "Gesamt") → zone division (ZONE_DIVISION)
+// Wackler international freight rate card: per destination-zone EUR rate by chargeable-weight tier,
+// plus the official zone division that maps a destination country + postal prefix to a rate-card zone.
 // Loaded as a standalone asset (see anmerkung.html) so the rate matrix lives OUTSIDE assets/anmerkung.js;
 // the Anmerkung engine consumes it through the global WACKLER_RATECARD (graceful no-op when absent).
 (function (root) {
@@ -62,6 +65,38 @@
     'XI': [64.04,95.75,133.78,146.4,179.62,189.2,190.76,197.81,223.85,238.78,257.99,277.2,303.85,330.39,362.83,438.2,466.68,490.95,514.2,545.49,588.3,619.75,649.13,676.72,716.93,788.89,923.01,1057.14,1191.26,1325.38,1459.5,1593.62,1727.74,1861.87,1995.99,2130.11,2264.23,2398.35,2532.48,2666.6,2800.72,2934.84,3068.96,3203.13,3203.13],
   };
 
+  // ── Zone division (Zoneneinteilung) ──────────────────────────────────────────────────
+  // Maps a destination COUNTRY → { postal-prefix → 3-stellig zone code } from the official
+  // "Gesamt" sheet of data/Zoneneinteilung_national_international_01.07.24.xlsx. This is how a
+  // multi-zone country (CH1/CH2/CH3, FR1/2/3, ES/IT/NO/PL …) is resolved from a bare country +
+  // postal code, which a plain country code alone cannot disambiguate.
+  //
+  // Key conventions (mirrors the source "Leitcode" column):
+  //   • Most countries: the FIRST TWO digits of the postal code, kept as 2-char strings so
+  //     leading zeros survive (e.g. IT "00", DE "08").
+  //   • GB: the alphabetic postcode-area prefix (1–2 letters, e.g. "EC", "M", "SW") — UK
+  //     postcodes are alphanumeric, so there is no numeric Leitcode.
+  //   • ES carries two non-numeric tokens from the source: "AD" (Andorra) and "GI" (Gibraltar).
+  //
+  // Some countries here (DE, FI, GR, PT) have no published cell in BASIS above — their zones
+  // resolve but rate() returns 0, exactly like the all-zero rate columns. That keeps the zone
+  // map a faithful copy of the source while the rate lookup stays driven by BASIS.
+  var ZONE_DIVISION = {
+    'AT': {'10':'AT1','11':'AT1','12':'AT1','20':'AT1','21':'AT1','22':'AT1','23':'AT1','24':'AT1','25':'AT1','26':'AT1','27':'AT1','28':'AT1','30':'AT1','31':'AT1','32':'AT1','33':'AT1','34':'AT1','35':'AT1','36':'AT1','37':'AT1','38':'AT1','39':'AT1','40':'AT1','41':'AT1','42':'AT1','43':'AT1','44':'AT1','45':'AT1','46':'AT1','47':'AT1','48':'AT1','49':'AT1','50':'AT1','51':'AT1','52':'AT1','53':'AT1','54':'AT1','55':'AT1','56':'AT1','57':'AT1','60':'AT1','61':'AT1','62':'AT1','63':'AT1','64':'AT1','65':'AT1','66':'AT1','67':'AT1','68':'AT1','69':'AT1','70':'AT2','71':'AT2','72':'AT2','73':'AT2','74':'AT2','75':'AT2','80':'AT1','81':'AT1','82':'AT1','83':'AT1','84':'AT1','85':'AT1','86':'AT1','87':'AT1','88':'AT1','89':'AT1','90':'AT1','91':'AT1','92':'AT1','93':'AT1','94':'AT1','95':'AT1','96':'AT1','97':'AT1','98':'AT1','99':'AT1'},
+    'CH': {'10':'CH2','11':'CH2','12':'CH3','13':'CH2','14':'CH2','15':'CH2','16':'CH2','17':'CH2','18':'CH3','19':'CH3','20':'CH2','21':'CH2','22':'CH2','23':'CH2','24':'CH2','25':'CH2','26':'CH2','27':'CH2','28':'CH2','29':'CH2','30':'CH2','31':'CH2','32':'CH2','33':'CH2','34':'CH2','35':'CH2','36':'CH2','37':'CH2','38':'CH2','39':'CH3','40':'CH1','41':'CH1','42':'CH1','43':'CH1','44':'CH1','45':'CH1','46':'CH1','47':'CH1','48':'CH1','49':'CH1','50':'CH1','51':'CH1','52':'CH1','53':'CH1','54':'CH1','55':'CH1','56':'CH1','57':'CH1','60':'CH2','61':'CH2','62':'CH2','63':'CH2','64':'CH2','65':'CH3','66':'CH3','67':'CH3','68':'CH3','69':'CH3','70':'CH2','71':'CH2','72':'CH2','73':'CH1','74':'CH2','75':'CH2','76':'CH3','77':'CH3','80':'CH1','81':'CH1','82':'CH1','83':'CH1','84':'CH1','85':'CH1','86':'CH1','87':'CH1','88':'CH1','89':'CH1','90':'CH1','91':'CH1','92':'CH1','93':'CH1','94':'CH1','95':'CH1','96':'CH1'},
+    'DE': {'01':'DE7','02':'DE7','03':'DE8','04':'DE7','06':'DE6','07':'DE6','08':'DE5','09':'DE6','10':'DE8','12':'DE8','13':'DE8','14':'DE8','15':'DE8','16':'DE9','17':'DE9','18':'DE9','19':'DE9','20':'DE9','21':'DE9','22':'DE9','23':'DE9','24':'DE9','25':'DE9','26':'DE9','27':'DE9','28':'DE8','29':'DE8','30':'DE7','31':'DE7','32':'DE7','33':'DE7','34':'DE6','35':'DE5','36':'DE5','37':'DE6','38':'DE7','39':'DE7','40':'DE7','41':'DE7','42':'DE6','44':'DE7','45':'DE7','46':'DE7','47':'DE7','48':'DE8','49':'DE8','50':'DE6','51':'DE6','52':'DE7','53':'DE6','54':'DE6','55':'DE5','56':'DE5','57':'DE6','58':'DE7','59':'DE7','60':'DE5','61':'DE5','63':'DE4','64':'DE4','65':'DE4','66':'DE5','67':'DE4','68':'DE4','69':'DE3','70':'DE2','71':'DE2','72':'DE2','73':'DE1','74':'DE2','75':'DE2','76':'DE3','77':'DE4','78':'DE3','79':'DE4','80':'DE4','81':'DE4','82':'DE4','83':'DE5','84':'DE5','85':'DE4','86':'DE3','87':'DE3','88':'DE2','89':'DE1','90':'DE3','91':'DE3','92':'DE4','93':'DE5','94':'DE5','95':'DE5','96':'DE5','97':'DE3','98':'DE5','99':'DE6'},
+    'ES': {'01':'ES1','02':'ES2','03':'ES2','04':'ES2','05':'ES2','06':'ES2','07':'ES3','08':'ES1','09':'ES1','10':'ES2','11':'ES2','12':'ES1','13':'ES2','14':'ES2','15':'ES2','16':'ES2','17':'ES1','18':'ES2','19':'ES1','20':'ES1','21':'ES2','22':'ES1','23':'ES2','24':'ES2','25':'ES1','26':'ES1','27':'ES2','28':'ES1','29':'ES2','30':'ES2','31':'ES1','32':'ES2','33':'ES2','34':'ES2','35':'ES3','36':'ES2','37':'ES2','38':'ES3','39':'ES2','40':'ES1','41':'ES2','42':'ES1','43':'ES1','44':'ES1','45':'ES1','46':'ES2','47':'ES2','48':'ES1','49':'ES2','50':'ES1','51':'ES2','52':'ES3','AD':'ES1','GI':'ES3'},
+    'FI': {'00':'FI1','01':'FI1','02':'FI1','03':'FI1','04':'FI1','05':'FI1','06':'FI1','07':'FI1','08':'FI1','09':'FI1','10':'FI1','11':'FI1','12':'FI1','13':'FI1','14':'FI1','15':'FI1','16':'FI1','17':'FI1','18':'FI1','19':'FI1','20':'FI1','21':'FI1','22':'FI1','23':'FI1','24':'FI1','25':'FI1','26':'FI1','27':'FI1','28':'FI1','29':'FI1','30':'FI1','31':'FI1','32':'FI1','33':'FI1','34':'FI1','35':'FI1','36':'FI1','37':'FI1','38':'FI1','39':'FI1','40':'FI2','41':'FI2','42':'FI2','43':'FI2','44':'FI2','45':'FI1','46':'FI1','47':'FI1','48':'FI1','49':'FI1','50':'FI2','51':'FI2','52':'FI2','53':'FI2','54':'FI2','55':'FI2','56':'FI2','57':'FI2','58':'FI2','59':'FI2','60':'FI2','61':'FI2','62':'FI2','63':'FI2','64':'FI2','65':'FI2','66':'FI2','67':'FI2','68':'FI2','69':'FI2','70':'FI2','71':'FI2','72':'FI2','73':'FI2','74':'FI2','75':'FI2','76':'FI2','77':'FI2','78':'FI2','79':'FI2','80':'FI2','81':'FI2','82':'FI2','83':'FI2','84':'FI2','85':'FI2','86':'FI2','87':'FI2','88':'FI2','89':'FI2','90':'FI2','91':'FI2','92':'FI2','93':'FI2','94':'FI2','95':'FI2','96':'FI2','97':'FI2','98':'FI2','99':'FI2'},
+    'FR': {'02':'FR2','03':'FR3','04':'FR3','05':'FR3','06':'FR3','07':'FR3','08':'FR2','09':'FR3','10':'FR2','11':'FR3','12':'FR3','13':'FR3','14':'FR2','15':'FR3','16':'FR3','17':'FR3','18':'FR3','19':'FR3','20':'FR3','21':'FR2','22':'FR3','23':'FR3','24':'FR3','25':'FR2','26':'FR3','27':'FR2','28':'FR2','29':'FR3','30':'FR3','31':'FR3','32':'FR3','33':'FR3','34':'FR3','35':'FR3','36':'FR3','37':'FR3','38':'FR3','39':'FR3','40':'FR3','41':'FR3','42':'FR2','43':'FR3','44':'FR3','45':'FR2','46':'FR3','47':'FR3','48':'FR3','49':'FR3','50':'FR2','51':'FR2','52':'FR1','53':'FR3','54':'FR1','55':'FR1','56':'FR3','57':'FR1','58':'FR3','59':'FR2','60':'FR2','61':'FR2','62':'FR2','63':'FR3','64':'FR3','65':'FR3','66':'FR3','67':'FR1','68':'FR1','69':'FR2','70':'FR1','71':'FR2','72':'FR3','73':'FR3','74':'FR3','75':'FR1','76':'FR2','77':'FR1','78':'FR1','79':'FR3','80':'FR2','81':'FR3','82':'FR3','83':'FR3','84':'FR3','85':'FR3','86':'FR3','87':'FR3','88':'FR1','89':'FR3','90':'FR1','91':'FR1','92':'FR1','93':'FR1','94':'FR1','95':'FR1'},
+    'GB': {'AB':'GB3','AL':'GB2','B':'GB2','BA':'GB2','BB':'GB2','BD':'GB2','BH':'GB2','BL':'GB2','BN':'GB2','BR':'GB1','BS':'GB3','BT':'GB3','CA':'GB3','CB':'GB2','CF':'GB2','CH':'GB2','CM':'GB2','CO':'GB2','CR':'GB1','CT':'GB3','CV':'GB2','CW':'GB2','DA':'GB1','DD':'GB3','DE':'GB2','DG':'GB3','DH':'GB2','DL':'GB2','DN':'GB2','DT':'GB2','DY':'GB2','E':'GB1','EC':'GB1','EH':'GB3','EN':'GB1','EX':'GB2','FK':'GB3','FY':'GB2','G':'GB3','GL':'GB2','GU':'GB2','GY':'GB3','HA':'GB1','HD':'GB2','HG':'GB2','HP':'GB2','HR':'GB2','HS':'GB3','HU':'GB2','HX':'GB2','IG':'GB1','IM':'GB3','IP':'GB2','IV':'GB3','JE':'GB3','KA':'GB3','KT':'GB1','KW':'GB3','KY':'GB3','L':'GB2','LA':'GB2','LD':'GB2','LE':'GB2','LL':'GB2','LN':'GB2','LS':'GB2','LU':'GB2','M':'GB2','ME':'GB2','MK':'GB2','ML':'GB3','N':'GB1','NE':'GB3','NG':'GB2','NN':'GB2','NP':'GB2','NR':'GB2','NW':'GB1','OL':'GB3','OX':'GB2','PA':'GB3','PE':'GB2','PH':'GB3','PL':'GB2','PO':'GB2','PR':'GB2','RG':'GB2','RH':'GB2','RM':'GB1','S':'GB2','SA':'GB2','SE':'GB1','SG':'GB2','SK':'GB2','SL':'GB2','SM':'GB1','SN':'GB2','SO':'GB2','SP':'GB2','SR':'GB2','SS':'GB3','ST':'GB2','SW':'GB1','SY':'GB2','TA':'GB2','TD':'GB3','TF':'GB2','TN':'GB2','TQ':'GB2','TR':'GB2','TS':'GB2','TW':'GB1','UB':'GB1','W':'GB1','WA':'GB2','WC':'GB1','WD':'GB1','WF':'GB2','WN':'GB3','WR':'GB2','WS':'GB2','WV':'GB2','YO':'GB2','ZE':'GB3'},
+    'GR': {'10':'GR1','11':'GR1','12':'GR1','13':'GR1','14':'GR1','15':'GR1','16':'GR1','17':'GR1','18':'GR1','19':'GR1','20':'GR2','21':'GR2','22':'GR2','23':'GR2','24':'GR2','25':'GR2','26':'GR2','27':'GR2','28':'GR3','29':'GR3','30':'GR2','31':'GR3','32':'GR2','33':'GR2','34':'GR2','35':'GR2','36':'GR2','37':'GR2','38':'GR2','39':'GR2','40':'GR2','41':'GR2','42':'GR2','43':'GR2','44':'GR2','45':'GR2','46':'GR2','47':'GR2','48':'GR2','49':'GR3','50':'GR2','51':'GR2','52':'GR2','53':'GR2','54':'GR1','55':'GR1','56':'GR1','57':'GR1','58':'GR2','59':'GR2','60':'GR2','61':'GR2','62':'GR2','63':'GR2','64':'GR2','65':'GR2','66':'GR2','67':'GR2','68':'GR2','69':'GR2','70':'GR3','71':'GR3','72':'GR3','73':'GR3','74':'GR3','80':'GR3','81':'GR3','82':'GR3','83':'GR3','84':'GR3','85':'GR3'},
+    'IT': {'00':'IT2','01':'IT2','02':'IT2','03':'IT2','04':'IT2','05':'IT2','06':'IT2','07':'IT3','08':'IT3','09':'IT3','10':'IT1','11':'IT1','12':'IT1','13':'IT1','14':'IT1','15':'IT1','16':'IT1','17':'IT1','18':'IT1','19':'IT1','20':'IT1','21':'IT1','22':'IT1','23':'IT1','24':'IT1','25':'IT1','26':'IT1','27':'IT1','28':'IT1','29':'IT1','30':'IT1','31':'IT1','32':'IT1','33':'IT1','34':'IT1','35':'IT1','36':'IT1','37':'IT1','38':'IT1','39':'IT1','40':'IT1','41':'IT1','42':'IT1','43':'IT1','44':'IT1','45':'IT1','46':'IT1','47':'IT1','48':'IT1','50':'IT2','51':'IT2','52':'IT2','53':'IT2','54':'IT2','55':'IT2','56':'IT2','57':'IT2','58':'IT2','59':'IT2','60':'IT2','61':'IT2','62':'IT2','63':'IT2','64':'IT2','65':'IT2','66':'IT2','67':'IT2','68':'IT2','69':'IT2','70':'IT2','71':'IT2','72':'IT2','73':'IT2','74':'IT2','75':'IT2','76':'IT2','77':'IT2','78':'IT2','79':'IT2','80':'IT2','81':'IT2','82':'IT2','83':'IT2','84':'IT2','85':'IT2','86':'IT2','87':'IT3','88':'IT3','89':'IT3','90':'IT3','91':'IT3','92':'IT3','93':'IT3','94':'IT3','95':'IT3','96':'IT3','97':'IT3','98':'IT3'},
+    'NO': {'00':'NO1','01':'NO1','02':'NO1','03':'NO1','04':'NO1','05':'NO1','06':'NO1','07':'NO1','08':'NO1','09':'NO1','10':'NO1','11':'NO1','12':'NO1','13':'NO1','14':'NO1','15':'NO1','16':'NO1','17':'NO1','18':'NO1','19':'NO1','20':'NO1','21':'NO1','22':'NO1','23':'NO1','24':'NO1','25':'NO1','26':'NO1','27':'NO1','28':'NO1','29':'NO1','30':'NO1','31':'NO1','32':'NO1','33':'NO1','34':'NO1','35':'NO1','36':'NO1','37':'NO1','38':'NO1','39':'NO1','40':'NO2','41':'NO2','42':'NO2','43':'NO2','44':'NO2','45':'NO2','46':'NO2','47':'NO2','48':'NO2','49':'NO2','50':'NO2','51':'NO2','52':'NO2','53':'NO2','54':'NO2','55':'NO2','56':'NO2','57':'NO2','58':'NO2','59':'NO2','60':'NO2','61':'NO2','62':'NO2','63':'NO2','64':'NO2','65':'NO2','66':'NO2','67':'NO2','68':'NO2','69':'NO2','70':'NO2','71':'NO2','72':'NO2','73':'NO2','74':'NO2','75':'NO2','76':'NO2','77':'NO3','78':'NO3','79':'NO3','80':'NO3','81':'NO3','82':'NO3','83':'NO3','84':'NO3','85':'NO3','86':'NO3','87':'NO3','88':'NO3','89':'NO3','90':'NO3','91':'NO3','92':'NO3','93':'NO3','94':'NO3','95':'NO3','96':'NO3','97':'NO3','98':'NO3','99':'NO3'},
+    'PL': {'01':'PL2','02':'PL2','03':'PL2','04':'PL2','05':'PL2','06':'PL2','07':'PL2','08':'PL2','09':'PL2','10':'PL3','11':'PL3','12':'PL3','13':'PL3','14':'PL3','15':'PL3','16':'PL3','17':'PL3','18':'PL3','19':'PL3','20':'PL3','21':'PL3','22':'PL3','23':'PL3','24':'PL3','25':'PL3','26':'PL3','27':'PL3','28':'PL3','29':'PL3','30':'PL1','31':'PL1','32':'PL1','33':'PL1','34':'PL1','35':'PL1','36':'PL1','37':'PL1','38':'PL1','39':'PL1','40':'PL1','41':'PL1','42':'PL1','43':'PL1','44':'PL1','45':'PL1','46':'PL1','47':'PL1','48':'PL1','49':'PL1','50':'PL1','51':'PL1','52':'PL1','53':'PL1','54':'PL1','55':'PL1','56':'PL1','57':'PL1','58':'PL1','59':'PL1','60':'PL1','61':'PL1','62':'PL1','63':'PL1','64':'PL1','65':'PL1','66':'PL1','67':'PL1','68':'PL1','69':'PL1','70':'PL2','71':'PL2','72':'PL2','73':'PL2','74':'PL2','75':'PL2','76':'PL2','77':'PL2','78':'PL2','80':'PL3','81':'PL3','82':'PL3','83':'PL3','84':'PL3','85':'PL3','86':'PL3','87':'PL3','88':'PL3','89':'PL3','90':'PL2','91':'PL2','92':'PL2','93':'PL2','94':'PL2','95':'PL2','96':'PL2','97':'PL2','98':'PL2','99':'PL2'},
+    'PT': {'00':'PT1','01':'PT1','02':'PT1','03':'PT1','04':'PT1','05':'PT1','06':'PT1','07':'PT1','08':'PT1','09':'PT1','10':'PT1','11':'PT1','12':'PT1','13':'PT1','14':'PT1','15':'PT1','16':'PT1','17':'PT1','18':'PT1','19':'PT1','20':'PT1','21':'PT1','22':'PT1','23':'PT1','24':'PT1','25':'PT1','26':'PT1','27':'PT1','28':'PT1','29':'PT1','30':'PT1','31':'PT1','32':'PT1','33':'PT1','34':'PT1','35':'PT1','36':'PT1','37':'PT1','38':'PT1','39':'PT1','40':'PT1','41':'PT1','42':'PT1','43':'PT1','44':'PT1','45':'PT1','46':'PT1','47':'PT1','48':'PT1','49':'PT1','50':'PT1','51':'PT1','52':'PT1','53':'PT1','54':'PT1','55':'PT1','56':'PT1','57':'PT1','58':'PT1','59':'PT1','60':'PT1','61':'PT1','62':'PT1','63':'PT1','64':'PT1','65':'PT1','66':'PT1','67':'PT1','68':'PT1','69':'PT1','70':'PT2','71':'PT2','72':'PT2','73':'PT2','74':'PT2','75':'PT2','76':'PT2','77':'PT2','78':'PT2','79':'PT2','80':'PT2','81':'PT2','82':'PT2','83':'PT2','84':'PT2','85':'PT2','86':'PT2','87':'PT2','88':'PT2','89':'PT2','90':'PT2','91':'PT2','92':'PT2','93':'PT2','94':'PT2','95':'PT2','96':'PT2','97':'PT2','98':'PT2','99':'PT2'},
+    'SE': {'00':'SE1','01':'SE1','02':'SE1','03':'SE1','04':'SE1','05':'SE1','06':'SE1','07':'SE1','08':'SE1','09':'SE1','10':'SE1','11':'SE1','12':'SE1','13':'SE1','14':'SE1','15':'SE1','16':'SE1','17':'SE1','18':'SE1','19':'SE1','20':'SE1','21':'SE1','22':'SE1','23':'SE1','24':'SE1','25':'SE1','26':'SE1','27':'SE1','28':'SE1','29':'SE1','30':'SE1','31':'SE1','32':'SE1','33':'SE1','34':'SE1','35':'SE1','36':'SE1','37':'SE1','38':'SE1','39':'SE1','40':'SE1','41':'SE1','42':'SE1','43':'SE1','44':'SE1','45':'SE1','46':'SE1','47':'SE1','48':'SE1','49':'SE1','50':'SE1','51':'SE1','52':'SE1','53':'SE1','54':'SE1','55':'SE1','56':'SE1','57':'SE1','58':'SE1','59':'SE1','60':'SE1','61':'SE1','62':'SE1','63':'SE1','64':'SE1','65':'SE2','66':'SE2','67':'SE2','68':'SE2','69':'SE2','70':'SE2','71':'SE2','72':'SE2','73':'SE2','74':'SE2','75':'SE2','76':'SE2','77':'SE2','78':'SE2','79':'SE2','80':'SE2','81':'SE2','82':'SE2','83':'SE2','84':'SE2','85':'SE2','86':'SE2','87':'SE2','88':'SE2','89':'SE2','90':'SE2','91':'SE2','92':'SE2','93':'SE2','94':'SE2','95':'SE2','96':'SE2','97':'SE2','98':'SE2','99':'SE2'},
+  };
+
 
   // ── Country → zone index (built from ZONES by stripping the trailing sub-zone digit) ──
   // Lets a bare country code resolve to a zone ONLY when that country has a single zone
@@ -111,12 +146,52 @@
     return typeof v === 'number' && v > 0 ? v : 0;
   }
 
-  // Resolve an invoice destination token to a rate-card zone code.
-  //   "FR2" / "fr 2" / "FR-2"  -> "FR2"      (explicit zone, normalised)
-  //   "BE" / "be"              -> "BE"       (single-zone country)
-  //   "CH" / "FR"              -> null       (ambiguous: multiple sub-zones)
-  //   "" / unknown             -> null
-  function resolveZone(raw) {
+  // Resolve a destination COUNTRY + postal code to a rate-card zone via the zone division
+  // (ZONE_DIVISION). This is what disambiguates multi-zone countries (CH1/2/3, FR1/2/3, ES, IT,
+  // NO, PL …) that a bare country code cannot, since each maps to several sub-zones.
+  //   resolveZoneByPostal('CH', '8001')   -> 'CH1'   (numeric 2-digit prefix)
+  //   resolveZoneByPostal('IT', '00100')  -> 'IT2'   (leading-zero prefix preserved)
+  //   resolveZoneByPostal('GB', 'EC1A 1BB') -> 'GB1' (UK postcode area, longest-first)
+  //   resolveZoneByPostal('XX', …) / blank PLZ / no match -> null
+  function resolveZoneByPostal(country, postal) {
+    if (country == null) return null;
+    var c = String(country).trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+    var map = ZONE_DIVISION[c];
+    if (!map) return null;
+    var p = postal == null ? '' : String(postal).trim().toUpperCase();
+    if (!p) return null;
+    if (c === 'GB') {
+      // UK postcodes are alphanumeric; ZONE_DIVISION['GB'] is keyed by the 1–2 letter postcode
+      // AREA. Take the leading letters of the outward code and match longest-first so a 2-letter
+      // area ("EH", "EC") wins over its 1-letter neighbour ("E").
+      var m = p.match(/^[A-Z]+/);
+      if (!m) return null;
+      var area = m[0];
+      while (area.length) {
+        if (map.hasOwnProperty(area)) return map[area];
+        area = area.slice(0, -1);
+      }
+      return null;
+    }
+    var digits = p.replace(/[^0-9]/g, '');
+    if (!digits) {
+      // Non-numeric token carried straight from the source (e.g. ES "AD" / "GI").
+      return map.hasOwnProperty(p) ? map[p] : null;
+    }
+    // First two digits, left-padding a single digit so leading-zero prefixes still match.
+    var pref = digits.length >= 2 ? digits.slice(0, 2) : ('0' + digits);
+    return map.hasOwnProperty(pref) ? map[pref] : null;
+  }
+
+  // Resolve an invoice destination to a rate-card zone code.
+  //   resolveZone("FR2" / "fr 2" / "FR-2")  -> "FR2"   (explicit zone, normalised)
+  //   resolveZone("BE" / "be")              -> "BE"    (single-zone country)
+  //   resolveZone("CH", "8001")             -> "CH1"   (multi-zone country resolved via postal)
+  //   resolveZone("CH" / "FR")              -> null    (ambiguous: multiple sub-zones, no postal)
+  //   resolveZone("" / unknown)             -> null
+  // The optional second argument is the destination postal code (Empf.-PLZ); it is consulted
+  // only when the token alone is ambiguous, so existing single-argument callers are unaffected.
+  function resolveZone(raw, plz) {
     if (raw == null) return null;
     var s = String(raw).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (!s) return null;
@@ -124,7 +199,7 @@
     var country = s.replace(/[0-9]+$/, '');
     var zs = COUNTRY_ZONES[country];
     if (zs && zs.length === 1) return zs[0];
-    return null;
+    return resolveZoneByPostal(country, plz);
   }
 
   // German-style currency rendering, e.g. 72.04 -> "72,04 €".
@@ -135,16 +210,19 @@
 
   var RC = {
     source: 'data/Wackler International Rate.xlsx (Basis)',
+    zoneSource: 'data/Zoneneinteilung_national_international_01.07.24.xlsx (Gesamt)',
     tiers: TIERS,
     zones: ZONES,
     basis: BASIS,
     countryZones: COUNTRY_ZONES,
+    zoneDivision: ZONE_DIVISION,
     getTierIdx: getTierIdx,
     getTier: getTier,
     tierLabel: tierLabel,
     hasZone: hasZone,
     rate: rate,
     resolveZone: resolveZone,
+    resolveZoneByPostal: resolveZoneByPostal,
     fmtEUR: fmtEUR,
   };
 

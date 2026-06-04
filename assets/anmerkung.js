@@ -819,11 +819,16 @@ function wacklerTierLabel(tierKg){return tierKg>=999999?'>10000':String(tierKg);
    the booked EUR amount is appended — e.g. "… für 150kg ab (FR2: 87,49 €)" — so the auditor
    sees the exact rate-card cell Wackler billed against, not just the bracket. Falls back to the
    plain tier wording (unchanged) whenever the rate card isn't loaded, no zone can be resolved,
-   or the cell is blank — so domestic rows and bare unit-test contexts behave exactly as before. */
+   or the cell is blank — so domestic rows and bare unit-test contexts behave exactly as before.
+   The zone is resolved from an explicit Tarifzone/Zone token when present, else from the
+   destination country (Empf.-Land etc.) combined with the Empf.-PLZ via the rate card's zone
+   division (Zoneneinteilung) — which is how multi-zone countries (CH/FR/ES/IT/NO/PL) resolve. */
 function wacklerRechnetNote(tierKg,ws,r,cols){
   const base='Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
-  if(!WACKLER_RC||!cols||cols.zone==null||cols.zone<0)return base;
-  const zone=WACKLER_RC.resolveZone(cellStr(ws,r,cols.zone));
+  if(!WACKLER_RC||!cols)return base;
+  const token=(cols.zone!=null&&cols.zone>=0)?cellStr(ws,r,cols.zone):'';
+  const plz=(cols.empf_plz!=null&&cols.empf_plz>=0)?cellStr(ws,r,cols.empf_plz):'';
+  const zone=WACKLER_RC.resolveZone(token,plz);
   if(!zone)return base;
   const eur=WACKLER_RC.rate(tierKg,zone);
   if(!(eur>0))return base;
