@@ -305,10 +305,18 @@ Returned by `resolveDachser` / `resolveKN` / `resolveDHL` / `resolveWackler`. Al
 {
   sheet, row, fw,
   before, after,                       // strings from A / B Anmerkung cells
-  engineNow, engineMatchesA,           // current rule engine prediction for A's inputs
+  engineNow, engineMatchesA, hasDrift,  // current rule engine prediction for A's inputs (+ drift vs A)
+  engineMatchesB,                       // does the current engine match ground truth B? (null = not evaluated)
   inputs: { [key]: value },            // same payload as the Why? column
-  triggers: [phrase, ...],             // for engineNow
-  label: 'wrong'|'missed'|'overfired'|'correct'|'drift'
+  reason,                              // trigger trace for engineNow
+  // A-vs-B phrase diff (tool output vs truth):
+  predicted_phrases, expected_phrases, common_phrases,
+  missing_phrases, extra_phrases, phrase_jaccard, granular,
+  // engine-vs-truth (#26) — the precise fix target (current engine vs truth B):
+  engine_label, engine_granular, engine_vs_expected_jaccard,
+  engine_missing_phrases, engine_extra_phrases,
+  // ...plus the parallel *_phrase_keys arrays, processor, applicable_threshold, source, row_uid
+  label: 'wrong'|'missed'|'overfired'|'correct'   // 'drift' is a pseudo-label/overlay via hasDrift
 }
 ```
 

@@ -180,6 +180,8 @@ export function loadEngine() {
     'normPhrase', 'samePhraseSet', 'splitTriggers',
     'idxToCol', 'colToIdx',
     'phraseToKey', 'phraseKeysFor',
+    // diff-mode labeling / training-output primitives
+    'classifyDiff', 'computePhraseDiff', 'granularLabel', 'rowUid',
   ];
   const engine = {};
   const missing = [];

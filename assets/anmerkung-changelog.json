@@ -1,6 +1,17 @@
 {
-  "version": "1.19.0",
+  "version": "1.20.0",
   "entries": [
+    {
+      "ver": "1.20.0",
+      "date": "2026-06-05",
+      "items": [
+        "Diff Mode / Rule Training — every diff row now carries an engine-vs-truth comparison: how the CURRENT engine (process<Forwarder>) scores against ground truth B, not just how slot A (your tool's output) compares to B. New per-row + export fields: engine_label, engine_matches_b, engine_granular, engine_vs_expected_jaccard, engine_missing_phrases/-_phrase_keys (branches to ADD/loosen) and engine_extra_phrases/-_phrase_keys (branches to GUARD/tighten). Since slot A may be stale or from a different tool, this engine-vs-truth view is the precise target for rule fixes, and a fix is complete when engine_matches_b flips to true.",
+        "Diff Mode — a row where the tool was right (label=correct, A==B) but the current engine disagrees with truth (engine_matches_b=false) is now KEPT in the default table view and the default training export instead of being hidden as a positive. These engine regressions were previously only visible with \"Include matching rows\" ticked. Pure positives (engine also matches truth) stay opt-in as before.",
+        "Diff Mode — the row detail drawer gained an \"engine vs truth\" block (should add / should remove phrase chips with the engine's own label + Jaccard) whenever the current engine disagrees with truth. The Diff CSV, Training Set CSV/JSONL, AI Bundle README, and Rule Spec instructions all document and emit the new engine_* fields.",
+        "Diff Mode — removed the dead legacy helper cluster (FW_RESOLVERS / tsResolverScore / tsDetectForwarder / tsLabelFor / tsCollectInputs / tsRunRule) left over from before the unified diffWorkbooks walk. The copies had silently drifted from the live path (their K+N input collector dropped the tarif feature), so collapsing to one code path removes a source of corrupted training rows.",
+        "Tests — added tests/diff.test.mjs covering classifyDiff, computePhraseDiff, granularLabel, rowUid, and the engine-vs-truth derivation; exposed those primitives from the test harness. Full suite: 69 passing."
+      ]
+    },
     {
       "ver": "1.19.0",
       "date": "2026-06-05",

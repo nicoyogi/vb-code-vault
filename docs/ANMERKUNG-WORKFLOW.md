@@ -128,7 +128,7 @@ Click **✦ Train & Compare**. The engine walks both files in one pass and label
 | `missed` | A empty, B filled — rule should have fired |
 | `overfired` | A filled, B empty — rule fired when it shouldn't |
 | `drift` | Current engine would disagree with slot A → rules changed since A was generated |
-| `correct` | A and B carry the same phrase set, ignoring order/case/whitespace (positive example; off by default, opt-in) |
+| `correct` | A and B carry the same phrase set, ignoring order/case/whitespace (positive example; off by default, opt-in) — **except** when the current engine disagrees with truth on that row (`engine_matches_b = false`), in which case it is surfaced and exported as an engine-vs-truth regression |
 
 The Anmerkung column is a list of `' // '`-joined phrases, so every row also carries a **phrase-level diff** (`computePhraseDiff`):
 
@@ -165,14 +165,29 @@ Two more anchors per row:
 
 Each row also gets a stable **`row_uid`** (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`), so identical rows across multiple Train & Compare runs share the same hash. Useful for joining/deduping/diffing training CSVs across rule-engine iterations.
 
+#### Engine-vs-truth — the precise fix target (#26)
+
+The top-level `label` and the `*_phrase(_keys)` arrays above compare **slot A (your tool's output) against truth B**. But the thing you actually iterate on in the Rule Tester is the **current engine** (`process<Forwarder>`), and slot A may be stale or come from a different tool entirely. So every row also carries a parallel comparison of **what the current engine emits today vs ground truth B**:
+
+- `engine_label` — `correct` / `wrong` / `missed` / `overfired` of the *current engine* against truth (same phrase-set semantics as the top-level label, but with `engine_now` on the predicted side). **This is the authoritative target for rule edits.**
+- `engine_matches_b` — `true` once the current engine matches truth. `null` when the engine wasn't evaluated (unknown forwarder / engine error). A fix is done when this flips to `true`.
+- `engine_granular` — the granular sub-label of engine-now vs truth.
+- `engine_vs_expected_jaccard` — phrase-set similarity of engine-now vs truth (`1.0` = solved).
+- `engine_missing_phrases` / `engine_missing_phrase_keys` — phrases truth wants that the current engine fails to emit → a branch to **add / loosen**.
+- `engine_extra_phrases` / `engine_extra_phrase_keys` — phrases the current engine emits that truth rejects → a branch to **guard / tighten**.
+
+This closes the gap that previously existed: the export told you how the *tool* differed from truth, but not how the *engine being trained* differs from truth. When a row is `label = correct` (the tool was right) yet `engine_label ≠ correct` (the engine regressed on it), it is now **kept in the default training export** and **shown in the default table view** — these engine-vs-truth regressions used to be dropped unless "Include matching rows" was ticked. Pure positives (engine also matches truth) stay opt-in as before.
+
+> When fixing rules, prefer `engine_missing_phrase_keys` / `engine_extra_phrase_keys` over the A-vs-B `missing_`/`extra_phrase_keys`. Fall back to the A-vs-B keys only when `engine_label` is blank (e.g. unknown forwarder).
+
 Output:
 
 - **Click-to-filter chips** (all / wrong / missed / overfired / drift / correct) — the table, counts, and *export buttons* all honor the active filter.
 - **Filter bar** — by forwarder, by sheet, and free-text search (scans before/after/reason/engine-now).
-- **Per-row expansion** — chevron reveals the exact input cells the engine read, the granular-label badge, the Jaccard score, the row_uid, the missing/extra/common phrase chips, and the trigger trace.
+- **Per-row expansion** — chevron reveals the exact input cells the engine read, the granular-label badge, the Jaccard score, the row_uid, the missing/extra/common phrase chips, an **engine-vs-truth** block (`should add` / `should remove` chips with the engine's own label + jaccard, shown whenever the current engine disagrees with truth), and the trigger trace.
 - **Send to Tester** (✦ on any row) — switches to that forwarder, opens the Rule Tester, pre-fills every matching field with the row's inputs, auto-evaluates, and scrolls you there. Tighten the rule → re-run Train & Compare.
 - **Exports** (filter-scoped; buttons carry live `· N` counters):
-  - `↓ Diff CSV` — `row_uid` + classic before/after + forwarder + label + `granular_label` + engine_now + engine_matches_a + `phrase_jaccard` + the five phrase columns + the five phrase-key columns + engine_phrases + engine_phrase_keys + `processor` + `applicable_threshold` + trigger trace + one column per rule-visible input cell. Columns appear in canonical per-forwarder order so successive exports diff cleanly.
+  - `↓ Diff CSV` — `row_uid` + classic before/after + forwarder + label + `granular_label` + engine_now + engine_matches_a + `phrase_jaccard` + the five phrase columns + the five phrase-key columns + engine_phrases + engine_phrase_keys + the engine-vs-truth columns (`engine_label`, `engine_matches_b`, `engine_granular`, `engine_vs_expected_jaccard`, `engine_missing_phrases`, `engine_extra_phrases`, `engine_missing_phrase_keys`, `engine_extra_phrase_keys`) + `processor` + `applicable_threshold` + trigger trace + one column per rule-visible input cell. Columns appear in canonical per-forwarder order so successive exports diff cleanly.
   - `↓ Training Set (CSV)` — same precision payload, padding rows dropped, deduped by `row_uid`. Phrase arrays serialise as `' | '`-joined strings.
   - `↓ Training Set (JSONL)` — one JSON record per line; phrase arrays remain native JSON arrays. ML-friendly.
   - `↓ Rule Spec (JSON)` — self-describing schema sidecar. Lists every PHRASES key (key → German string), every `PHRASE_LITERALS` entry, every `PHRASE_TEMPLATES` regex, per-forwarder thresholds, gate condition, processor + resolver symbol, canonical input order, and an English glossary entry for every input key. Engine version stamped from the changelog. Pair with any Training Set export and an AI consumer has the complete rule contract.
@@ -537,6 +552,8 @@ before   after    →  label
   !=""    !=""    correct   (if before == after)
 any                drift    (if engineNow != before; overlay on top)
 ```
+
+Alongside that A-vs-B label it also computes the **engine-vs-truth** view (#26) — the same classifier run on `(engineNow, after)` instead of `(before, after)` — yielding `engine_label`, `engine_matches_b`, `engine_vs_expected_jaccard`, and the `engine_missing_phrases` / `engine_extra_phrases` (+ key) arrays. This is the gap a rule fix must close, since the engine (not slot A) is what's being trained. A `correct` row whose `engine_matches_b` is `false` (tool right, engine regressed) is retained in the default view and export rather than hidden.
 
 The UI chips filter the in-memory result list; every export button (`Diff CSV`, `Training Set CSV`, `Training Set JSONL`) re-serializes whatever the filter currently selects. The button counters always reflect the post-filter row count.
 
