@@ -181,7 +181,7 @@ test('processDHL: only a fuel delta -> "Differenz treibstof"', () => {
 const W_COLS = {
   target: 50, stat: 51, tarif: 52, avis_diff: 53, snk_diff: 54, fr: 55, maut: 56,
   tz: 57, referenz: 58, vkg: 59, vkg_dl: 60, empf_plz: 61, empf_ort: 62,
-  kostenstelle: 63, sachkonto: 64,
+  kostenstelle: 63, sachkonto: 64, zone: 65, empf_land: 66, abg_land: 67, abg_plz: 68,
 };
 
 test('processWackler: existing annotation is ignored — output recomputed from inputs', () => {
@@ -347,10 +347,27 @@ test('processWackler: blank tariff + code-less SNK still falls through to Lagerg
   assert.equal(e.processWackler(ws, R, W_COLS), 'Lagergeld');
 });
 
-test('processWackler: same-tier multi-ref with near-equal weights -> Wackler rechnet (MT additive)', () => {
-  // Bundle row f04300d4: 2 refs, VKG 6840 / VKG_DL 6862 (~0.3% apart) share the 7000 kg tier.
-  // Near-equal weights read as one shared tier rate, not a "should have been bundled" finding;
-  // the negative FR credit absorbs the fuel note, and Maut stays additive.
+test('processWackler: same-tier multi-ref near-equal weights -> billed-tier from FR delta (MT additive)', () => {
+  // Bundle row e40698ee (was f04300d4): 2 refs, VKG 6840 / VKG_DL 6862 (~0.3% apart) weigh into
+  // the 7000 kg tier, but FR=-59.34 is EXACTLY rate(7500,TR)-rate(7000,TR) -> Wackler billed the
+  // 7500 tier, so the note names 7500, not the raw weight tier. Near-equal weights still read as
+  // one shared tier rate (not "should have been bundled"); the FR credit absorbs the fuel note,
+  // and Maut stays additive. The destination zone (TR) is what lets the rate card re-tier it.
+  const ws = makeRow(R, {
+    51: 10, 52: '2041.03', 54: '-0.24', 55: '-59.34', 56: '-1.94', 57: '-7.71',
+    58: '2543245539,2543245558', 59: '6840', 60: '6862',
+    61: '41400', 62: 'GEBZE KOCAELI', 63: '211FG004', 64: '612110', 65: 'TR',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 7500kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: same-tier near-equal weights without a resolvable zone keep the weight tier', () => {
+  // Guard: the billed-tier re-tiering only fires when the destination zone resolves against the
+  // rate card. With no zone token the note degrades to the plain weight-tier wording (7000),
+  // exactly as before the rate-card lookup was added.
   const ws = makeRow(R, {
     51: 10, 52: '2041.03', 54: '-0.24', 55: '-59.34', 56: '-1.94', 57: '-7.71',
     58: '2543245539,2543245558', 59: '6840', 60: '6862',
@@ -360,6 +377,96 @@ test('processWackler: same-tier multi-ref with near-equal weights -> Wackler rec
     e.processWackler(ws, R, W_COLS),
     'Wackler rechnet Frachtrate für 7000kg ab // Mautdifferenz'
   );
+});
+
+test('processWackler: DOMESTIC billed-tier uses the national rate card (DE2 150 -> 200 via FR)', () => {
+  // Domestic German row, zone DE2: VKG 148 / VKG_DL 149 weigh into the 150 kg tier (national rate
+  // 29,50 €), but FR=-2.96 is exactly rate(200,DE2)-rate(150,DE2)=32,46-29,50 -> Wackler billed
+  // the 200 kg tier. The re-tiering now reads the NATIONAL card (the international card leaves DE
+  // cells blank), and the note is enriched with the domestic EUR rate it billed against.
+  const ws = makeRow(R, {
+    51: 10, 52: '32.46', 55: '-2.96',
+    58: '2543200001', 59: '148', 60: '149',
+    61: '80331', 62: 'München', 63: '211FO002', 64: '612110', 65: 'DE2',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 200kg ab (DE2: 32,46 €)'
+  );
+});
+
+test('processWackler: Empf.-Land classifies the international lane (TR export, no explicit zone token)', () => {
+  // Same TR export as above, but the destination is given ONLY by Abg.-Land=DE / Empf.-Land=TR
+  // (no Tarifzone column). The lane classifier reads Empf.-Land=TR -> international, resolves the
+  // zone from the country code + Empf.-PLZ, and re-tiers 7000 -> 7500 off the FR delta.
+  const ws = makeRow(R, {
+    51: 10, 52: '2041.03', 54: '-0.24', 55: '-59.34', 56: '-1.94', 57: '-7.71',
+    58: '2543245539,2543245558', 59: '6840', 60: '6862',
+    61: '41400', 62: 'GEBZE KOCAELI', 63: '211FG004', 64: '612110',
+    66: 'TR', 67: 'DE',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 7500kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: Abg.-Land=DE & Empf.-Land=DE classify domestic; zone comes from Empf.-PLZ', () => {
+  // No explicit DEn token: the row is classified domestic purely from Abg.-Land=DE / Empf.-Land=DE,
+  // and the German rate zone (DE2) is resolved from the Stuttgart PLZ 70173 — safe precisely
+  // because the country is known to be DE. FR=-2.96 re-tiers 150 -> 200 on the national card.
+  const ws = makeRow(R, {
+    51: 10, 52: '32.46', 55: '-2.96',
+    58: '2543200001', 59: '148', 60: '149',
+    61: '70173', 62: 'Stuttgart', 63: '211FO002', 64: '612110',
+    66: 'DE', 67: 'DE',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 200kg ab (DE2: 32,46 €)'
+  );
+});
+
+test('processWackler: foreign Empf.-Land with a German-looking PLZ gets no spurious DE EUR suffix', () => {
+  // Empf.-Land=HR (Croatia): the PLZ 10450 looks like a German prefix (would have mis-resolved to
+  // DE8 under the old bare-PLZ fallback), but Empf.-Land=HR classifies the row international, so it
+  // never resolves a German zone and the "Wackler rechnet" note stays free of any "(DEn: … €)".
+  const ws = makeRow(R, {
+    51: 10, 52: '500', 55: '30',
+    58: '2543299001', 59: '9760', 60: '9760',
+    61: '10450', 62: 'Zagreb', 63: '211FO002', 64: '612110',
+    66: 'HR', 67: 'DE',
+  });
+  const out = e.processWackler(ws, R, W_COLS);
+  assert.ok(
+    /Wackler rechnet Frachtrate für/.test(out) && !/\(DE\d/.test(out),
+    `expected a plain (no German-zone EUR) Wackler rechnet note, got: ${out}`
+  );
+});
+
+test('processWackler: Hebebühne credit + fuel delta -> "hätte Hebebühne abrechnen dürfen // Dieselzuschlag ok?"', () => {
+  // Bundle row ce9f73d9: SNK=-150.6 (Hebebühne/liftgate credit) + TZ=-19.5, no FR. On a Hebebühne
+  // row the fuel delta is the auditor's "Dieselzuschlag ok?" query, not a generic
+  // "Differenz Energiezuschlag".
+  const ws = makeRow(R, {
+    51: 10, 52: '762.28', 54: '-150.6', 57: '-19.5',
+    58: '2543248405', 59: '1869', 60: '2850',
+    61: '4703 TB', 62: 'Roosendaal', 63: '211FO002', 64: '612110',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'hätte Hebebühne abrechnen dürfen // Dieselzuschlag ok?'
+  );
+});
+
+test('processWackler: Hebebühne credit with no fuel delta stays a bare Hebebühne note', () => {
+  // Guard: the Dieselzuschlag wording only appears when a fuel delta accompanies the Hebebühne
+  // credit. Without TZ the row is just "hätte Hebebühne abrechnen dürfen".
+  const ws = makeRow(R, {
+    51: 10, 52: '762.28', 54: '-150.6',
+    58: '2543248405', 61: '4703 TB', 62: 'Roosendaal', 63: '211FO002', 64: '612110',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'hätte Hebebühne abrechnen dürfen');
 });
 
 test('processWackler: same-tier multi-ref with UNEQUAL weights stays "hätte gebündelt werden müssen"', () => {
