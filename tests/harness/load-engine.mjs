@@ -21,6 +21,7 @@ import vm from 'node:vm';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC = join(__dirname, '..', '..', 'assets', 'anmerkung.js');
 const SRC_RATECARD = join(__dirname, '..', '..', 'assets', 'wackler-ratecard.js');
+const SRC_NAT_RATECARD = join(__dirname, '..', '..', 'assets', 'wackler-national-ratecard.js');
 
 /* XLSX cell address encoding, matching XLSX.utils.encode_cell({r,c})
    (0-based r/c -> e.g. {r:0,c:0} => "A1", {r:1,c:2} => "C2"). */
@@ -143,6 +144,16 @@ export function loadEngine() {
     /* Non-fatal: the engine degrades gracefully without the rate card. */
   }
 
+  /* Then the national rate card, again mirroring the <script> order. It publishes
+     WACKLER_NATIONAL_RATECARD and (for postal→zone resolution) reads the international
+     WACKLER_RATECARD loaded just above. Optional by design — the "Wackler rechnet" note
+     simply falls back to the plain tier wording when it's absent. */
+  try {
+    vm.runInContext(readFileSync(SRC_NAT_RATECARD, 'utf8'), ctx, { filename: 'wackler-national-ratecard.js' });
+  } catch (err) {
+    /* Non-fatal: the engine degrades gracefully without the national rate card. */
+  }
+
   try {
     vm.runInContext(code, ctx, { filename: 'anmerkung.js' });
   } catch (err) {
@@ -182,6 +193,7 @@ export function loadEngine() {
 
   engine.encode_cell = encode_cell;
   engine.WACKLER_RATECARD = sandbox.WACKLER_RATECARD || null;
+  engine.WACKLER_NATIONAL_RATECARD = sandbox.WACKLER_NATIONAL_RATECARD || null;
   _engine = engine;
   return engine;
 }

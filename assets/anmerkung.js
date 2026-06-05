@@ -38,40 +38,6 @@
 })();
 
 /* ══════════════════════════════════════════════════════════
-   SUBSCRIPTION GATE
-══════════════════════════════════════════════════════════ */
-let subPendingAction = null;
-
-function openRunGate() {
-  subPendingAction = 'run';
-  openSubModal();
-}
-function openSubModal() {
-  document.getElementById('sub-default').style.display = '';
-  document.getElementById('sub-thankyou').classList.remove('show');
-  document.getElementById('sub-overlay').classList.add('open');
-}
-function closeSubModal() {
-  document.getElementById('sub-overlay').classList.remove('open');
-  subPendingAction = null;
-}
-function handleSubBgClick(e) {
-  if (e.target === document.getElementById('sub-overlay')) closeSubModal();
-}
-function handleBuySubscription() {
-  document.getElementById('sub-default').style.display = 'none';
-  document.getElementById('sub-thankyou').classList.add('show');
-}
-function proceedAfterPurchase() {
-  document.getElementById('sub-overlay').classList.remove('open');
-  const action = subPendingAction;
-  subPendingAction = null;
-  if (action === 'run') runProcess();
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSubModal(); });
-
-/* ══════════════════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════════════════ */
 let selectedFW=null,rawFileBytes=null,workbook=null,resultBlob=null,originalFileName='';
@@ -412,6 +378,7 @@ function fwKeydown(e){
       './assets/anmerkung.css',
       './assets/anmerkung.js',
       './assets/wackler-ratecard.js',
+      './assets/wackler-national-ratecard.js',
       './assets/anmerkung-changelog.json'
     ]),
     idleLabel:    'Download for offline',
@@ -806,6 +773,12 @@ function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.
    The literal below is an identical fallback for when the rate-card asset isn't loaded (e.g. a
    bare unit-test context), keeping the engine self-sufficient and deterministic. */
 const WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
+/* National (domestic German) rate card — standalone asset assets/wackler-national-ratecard.js,
+   generated from data/Wackler National Rate.xlsx. It carries the EUR rates for the German zones
+   DE1‑DE9 that the international card leaves blank, and is what enriches the "Wackler rechnet"
+   note with the actual domestic rate Wackler billed against. Optional: null when not loaded
+   (e.g. a bare unit-test context), in which case the note degrades to the plain tier wording. */
+const WACKLER_NAT_RC=(typeof WACKLER_NATIONAL_RATECARD!=='undefined'&&WACKLER_NATIONAL_RATECARD)?WACKLER_NATIONAL_RATECARD:null;
 const WACKLER_BP=(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.length)
   ? WACKLER_RC.tiers.slice()
   : [50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
@@ -818,12 +791,38 @@ function wacklerGetTierIdx(kg){if(kg<=0)return -1;for(let i=0;i<WACKLER_BP.lengt
 function wacklerFloorTier(kg){let last=0;for(const b of WACKLER_BP){if(b<=kg)last=b;else break;}return last;}
 /* Format a tier breakpoint for display: regular numbers as-is, the open ceiling as ">10000". */
 function wacklerTierLabel(tierKg){return tierKg>=999999?'>10000':String(tierKg);}
-/* Compose the same-tier "Wackler rechnet Frachtrate für <tier>kg ab" note. The note is the
-   plain weight-tier wording only — the auditor wants the bracket, not the booked EUR amount.
-   (The rate-card EUR enrichment, e.g. "… für 150kg ab (NL: 482,60 €)", was removed per auditor
-   feedback.) ws/r/cols are retained in the signature for call-site compatibility. */
+/* Resolve a row's destination to a German national rate zone (DE1..DE9), or null when it is not
+   a resolvable domestic shipment. Tries an explicit zone token first (Tarifzone/Land column),
+   then the Empf.-PLZ via the national card (which borrows the international card's German postal
+   map). Used purely to enrich the "Wackler rechnet" note — never to classify a row. */
+function wacklerResolveNatZone(ws,r,cols){
+  if(!WACKLER_NAT_RC||!cols)return null;
+  if(cols.zone!=null&&cols.zone>=0){
+    const z=WACKLER_NAT_RC.normalizeZone(cellStr(ws,r,cols.zone));
+    if(z)return z;
+  }
+  const plz=(cols.empf_plz!=null&&cols.empf_plz>=0)?cellStr(ws,r,cols.empf_plz):'';
+  if(plz)return WACKLER_NAT_RC.resolveZone('DE',plz);
+  return null;
+}
+/* Compose the same-tier "Wackler rechnet Frachtrate für <tier>kg ab" note. On a DOMESTIC German
+   shipment the note is now enriched with the actual national rate Wackler billed against, e.g.
+   "Wackler rechnet Frachtrate für 150kg ab (DE2: 29,50 €)", sourced from the standalone national
+   rate card (data/Wackler National Rate.xlsx). The auditor still gets the weight bracket; the
+   EUR makes it instantly checkable against the rate card. Enrichment only appears when the zone
+   resolves AND the national card has a published rate for that tier — international rows and
+   rows without a usable destination keep the plain tier wording (the earlier international-card
+   EUR enrichment that the auditor rejected stays gone). */
 function wacklerRechnetNote(tierKg,ws,r,cols){
-  return 'Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
+  let note='Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
+  if(WACKLER_NAT_RC){
+    const zone=wacklerResolveNatZone(ws,r,cols);
+    if(zone){
+      const eur=WACKLER_NAT_RC.rate(tierKg,zone);
+      if(eur>0)note+=' ('+zone+': '+WACKLER_NAT_RC.fmtEUR(eur)+')';
+    }
+  }
+  return note;
 }
 /* Wackler SNK surcharge code book — sign-insensitive (reversibles like NL-FIX show as ±value).
    Tolerance handles real-world rounding (NL-FIX seen as 38.00 / 38.08). */
