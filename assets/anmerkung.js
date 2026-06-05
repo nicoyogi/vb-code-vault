@@ -232,7 +232,7 @@ const PHRASES={
   avisTelefonisch:            'hätte Avisgebühr telefonisch abrechnen dürfen',
   hebebuehne:                 'hätte Hebebühne abrechnen dürfen',
   differenzAvisOk:            'Differenz avis, ok?',
-  differenzEnergiezuschlag:   'DifferenzEnergiezuschlag',
+  differenzEnergiezuschlag:   'Differenz Energiezuschlag',
   returnOk:                   'Return, ok?',
   frachtDiff:                 'Frachtdifferenz',
 };
@@ -278,6 +278,7 @@ const PHRASE_LITERALS={
   'terminzustellung, ok?'         :'lit_terminzustellungOk',        /* Wackler |SNK|≈180 */
   'zone korrekt?'                 :'lit_zoneKorrekt',               /* Wackler NL-FIX zone corollary */
   'differenztreibstof'            :'lit_differenzTreibstofWackler', /* Wackler legacy fuel wording — superseded by PHRASES.differenzEnergiezuschlag; kept so older slot-A exports that used "DifferenzTreibstof" still resolve to a stable key */
+  'differenzenergiezuschlag'      :'differenzEnergiezuschlag',      /* Wackler legacy no-space fuel wording — the canonical phrase is now "Differenz Energiezuschlag" (with a space, matching the auditor's ground truth); this maps the older glued spelling onto the SAME catalog key so historic exports stay mappable */
 };
 
 /* Phrases that interpolate runtime values. The key identifies the
@@ -792,17 +793,20 @@ function wacklerFloorTier(kg){let last=0;for(const b of WACKLER_BP){if(b<=kg)las
 /* Format a tier breakpoint for display: regular numbers as-is, the open ceiling as ">10000". */
 function wacklerTierLabel(tierKg){return tierKg>=999999?'>10000':String(tierKg);}
 /* Resolve a row's destination to a German national rate zone (DE1..DE9), or null when it is not
-   a resolvable domestic shipment. Tries an explicit zone token first (Tarifzone/Land column),
-   then the Empf.-PLZ via the national card (which borrows the international card's German postal
-   map). Used purely to enrich the "Wackler rechnet" note — never to classify a row. */
+   a resolvable domestic shipment. Resolution is via an EXPLICIT zone/country token only
+   (Tarifzone/Empf.-Land column normalising to a DEn zone). The earlier Empf.-PLZ fallback was
+   removed: a bare numeric postal code cannot be told apart from a foreign numeric one (Croatia
+   "10450", Sweden "556 52" both look like German prefixes and falsely resolved to DE8 / DE5),
+   so it tagged international "Wackler rechnet" rows with a bogus "(DEn: … €)" suffix the auditor
+   never wants — AI-bundle 2026-06-05 rows 68959963 (HR) & d97ce4ec (SE). Enrichment now only
+   fires when the row carries a real German zone token. Used purely to enrich the note — never to
+   classify a row. */
 function wacklerResolveNatZone(ws,r,cols){
   if(!WACKLER_NAT_RC||!cols)return null;
   if(cols.zone!=null&&cols.zone>=0){
     const z=WACKLER_NAT_RC.normalizeZone(cellStr(ws,r,cols.zone));
     if(z)return z;
   }
-  const plz=(cols.empf_plz!=null&&cols.empf_plz>=0)?cellStr(ws,r,cols.empf_plz):'';
-  if(plz)return WACKLER_NAT_RC.resolveZone('DE',plz);
   return null;
 }
 /* Compose the same-tier "Wackler rechnet Frachtrate für <tier>kg ab" note. On a DOMESTIC German
@@ -831,7 +835,21 @@ const WACKLER_SNK_CODES=[
   {abs:11.5, tol:0.1,  label:'hätte B2C-Line abrechnen dürfen'},
   {abs:22,   tol:0.5,  label:'2. Zustellung ok?'},
   {abs:25,   tol:0.5,  label:'Terminzustellung'},
-  {abs:180,  tol:0.5,  label:'Terminzustellung, ok?'}
+  /* SNK≈170 is the same Terminzustellung surcharge billed at the higher (multi-stop / heavier)
+     parcel rate — the auditor classifies it as plain "Terminzustellung", not as the ", ok?"
+     query variant. Sits alongside an AVIS code on these rows (AI-bundle 2026-06-05 rows
+     27104fc7 / 7d69dfc0: AVIS=7.5, SNK=170, FR domestic destinations → "Avis, ok? // Terminzustellung"). */
+  {abs:170,  tol:0.5,  label:'Terminzustellung'},
+  {abs:180,  tol:0.5,  label:'Terminzustellung, ok?'},
+  /* SNK≈43 with no freight tariff backing is the auditor's "2.Zustellung ok?" finding — a second
+     delivery attempt billed as a bare surcharge on an un-tariffed row (AI-bundle rows b7111e68 /
+     fa68e7cb: TARIF blank, SNK=43, German destination). Note the spelling has no space after the
+     dot ("2.Zustellung"), distinct from the freight-side "2. Zustellung ok?" code above. */
+  {abs:43,   tol:0.5,  label:'2.Zustellung ok?'},
+  /* SNK≈289 with no freight tariff backing is an "Umverfügung" (re-disposition / re-routing fee)
+     billed as a bare surcharge on an un-tariffed row (AI-bundle row 0f1d3d96: TARIF blank,
+     SNK=289, AT destination Pasching). */
+  {abs:289,  tol:0.5,  label:'Umverfügung'}
 ];
 function wacklerSnkCode(snk){const a=Math.abs(snk);for(const c of WACKLER_SNK_CODES)if(Math.abs(a-c.abs)<=c.tol)return c.label;return null;}
 /* Wackler AVIS surcharge codes — sign-insensitive (a credit AVIS=-6.5 is the same code as 6.5).
@@ -843,21 +861,6 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
 /* Resolve the audit wording for a Wackler AVIS code. The 8.7 credit (negative) is the
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
-/* International-destination signal. A domestic German Empf.-PLZ is purely numeric (5 digits), so
-   an alphabetic character in the postal code marks a foreign destination (e.g. UK "G5 0UG"). When
-   a zone/country token is present the rate card's zone division is also consulted, and any resolved
-   non-DE zone counts as international. Used to reclassify the SNK≈25 code (a DOMESTIC parcel
-   surcharge) as a flat-rate freight charge on international rows — see processWackler rule 4. */
-function wacklerIsInternational(ws,r,cols){
-  if(!cols)return false;
-  const plz=(cols.empf_plz!=null&&cols.empf_plz>=0)?cellStr(ws,r,cols.empf_plz):'';
-  if(/[A-Za-z]/.test(plz))return true;
-  if(WACKLER_RC&&cols.zone!=null&&cols.zone>=0){
-    const token=cellStr(ws,r,cols.zone);
-    if(token){const zone=WACKLER_RC.resolveZone(token,plz);if(zone&&!/^DE/i.test(zone))return true;}
-  }
-  return false;
-}
 function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),zone:fcAny('Tarifzone','Empf.-Land','Bestimmungsland','Ländercode','Country','Zone','Land')};}
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
@@ -930,15 +933,18 @@ function processWackler(ws,r,cols){
   const snkHasVal=Math.abs(snkVal)>T_WACKLER;
   /* 1b. Lagergeld — warehouse storage fee. Signature: the booked tariff is BLANK (no freight
      tariff backing) and the ONLY cost signal on the row is an SNK charge (no FR/MT/TZ delta and
-     no AVIS surcharge code). A bare SNK gap on an un-tariffed row is a storage fee, not an SNK
-     surcharge discrepancy, so it must NOT fall through to the generic "SNK Differenz" fallback
-     (rule 10) — which is what these rows used to hit. The empty-tariff + FR/MT/TZ-signal case is
-     already claimed by Fremdnummer above; this is the SNK-only remainder. Terminal: the expected
-     wording is "Lagergeld" alone, so we early-return (still appending Kontierung? when KOST/SACH
-     are blank/X, mirroring Fremdnummer). Resolves AI-bundle training rows 24–41 (TARIF blank,
-     SNK 3.95–300, German destinations, VKG == VKG_DL). */
+     no AVIS surcharge code) that does NOT match a recognised SNK code. A bare, code-less SNK gap
+     on an un-tariffed row is a storage fee, not an SNK surcharge discrepancy, so it must NOT fall
+     through to the generic "SNK Differenz" fallback (rule 10) — which is what these rows used to
+     hit. The empty-tariff + FR/MT/TZ-signal case is already claimed by Fremdnummer above; this is
+     the SNK-only remainder. The `!wacklerSnkCode(snkVal)` guard hands recognised bare-SNK codes
+     (2.Zustellung ok? @43, Umverfügung @289, …) to the SNK code book in rule 4 instead — AI-bundle
+     rows 0f1d3d96 (SNK=289 → Umverfügung) and b7111e68 / fa68e7cb (SNK=43 → 2.Zustellung ok?) were
+     previously swallowed here as Lagergeld. Terminal: the expected wording is "Lagergeld" alone, so
+     we early-return (still appending Kontierung? when KOST/SACH are blank/X, mirroring Fremdnummer). */
   if(cols.tarif>=0&&cellStr(ws,r,cols.tarif)===''&&snkHasVal&&!frHasVal&&!mtHasVal
-     &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE&&!isWacklerAvisCode(avisVal)){
+     &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE&&!isWacklerAvisCode(avisVal)
+     &&!wacklerSnkCode(snkVal)){
     let out=P.lagergeld;
     if(cols.kostenstelle>=0&&cols.sachkonto>=0){
       const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
@@ -959,19 +965,11 @@ function processWackler(ws,r,cols){
   /* 3. AVIS surcharge codes (sign-insensitive: 7.5 / 8.5 / 6.5 / 8.7 ± credit).
      AVIS=-8.7 is the "should have billed telephonically" signature → specific wording. */
   if(cols.avis_diff>=0){const al=wacklerAvisLabel(avisVal);if(al)res=join(res,al);}
-  /* 4. SNK surcharge codes (NL-FIX / B2C / 2. Zustellung / Terminzustellung). */
+  /* 4. SNK surcharge codes (NL-FIX / B2C / 2. Zustellung / Terminzustellung / Umverfügung). */
   let snkCodeLabel=null;
   if(cols.snk_diff>=0){
     snkCodeLabel=wacklerSnkCode(snkVal);
-    if(snkCodeLabel){
-      /* Terminzustellung (SNK≈25) is a DOMESTIC parcel-delivery surcharge. On an INTERNATIONAL
-         Wackler shipment the same round SNK is a flat-rate freight charge, so the auditor
-         classifies it as "Pauschalfracht, ok?" rather than "Terminzustellung" (AI-bundle training
-         rows 5 & 44: GB Glasgow destinations, SNK=25, no FR/MT/TZ deltas). The other SNK codes
-         (NL-FIX / B2C / 2. Zustellung) are unaffected. */
-      if(snkCodeLabel==='Terminzustellung'&&wacklerIsInternational(ws,r,cols))res=join(res,'Pauschalfracht, ok?');
-      else res=join(res,snkCodeLabel);
-    }
+    if(snkCodeLabel)res=join(res,snkCodeLabel);
   }
   /* 5. Gewichte / Bundling cascade. Decision tree (both weights real + FR delta):
      ─ same rate tier + multi-ref bundle         → "hätte gebündelt werden müssen"
@@ -1009,12 +1007,30 @@ function processWackler(ws,r,cols){
            bracket the weight has cleared (3058,5 → 3000), reflecting the lower rate Wackler billed
            against — AI-bundle training row 22 (3 refs, same tier, VKG 3058,5 / VKG_DL 3059). */
         const volumetric=(vkg%1!==0)||(vkgDl%1!==0);
-        if(isBundle&&!volumetric){
-          /* Same-tier weights but the row is a multi-reference bundle of whole-kg parcels: the
-             auditor reads it as separate consignments that should have been combined onto a single
-             booking, not a single-shipment rate-card rounding. Do NOT set wacklerRechnetFired, so
-             MT and TZ stay additive below. */
+        /* "Near-equal" weights: the two measurements differ by at most 1% of the larger (with a
+           1 kg floor). At or below that, the references rode one shared tier rate — the gap is
+           rounding, not two distinct parcels — so the row reads as "Wackler rechnet". Above it,
+           a multi-ref row is separate consignments that should have been bundled. The 1% band
+           keeps the genuine-bundle case intact (e.g. 120 vs 130 kg, ~8% apart → bundling) while
+           catching AI-bundle row f04300d4 (6840 vs 6862 kg, 0.3% apart → one 7000 kg tier rate). */
+        const sameWeight=Math.abs(vkg-vkgDl)<=Math.max(1,0.01*Math.max(vkg,vkgDl));
+        if(isBundle&&!volumetric&&!sameWeight){
+          /* Same-tier but materially UNEQUAL whole-kg weights on a multi-reference row: the auditor
+             reads it as separate consignments that should have been combined onto a single booking,
+             not a single-shipment rate-card rounding. Do NOT set wacklerRechnetFired, so MT and TZ
+             stay additive below. */
           res=join(res,P.buendelMuessen);
+        } else if(isBundle&&!volumetric&&sameWeight){
+          /* Same-tier multi-reference row whose two weights are (near-)IDENTICAL whole-kg values:
+             the references were billed against one shared tier rate, so the auditor classifies it
+             as "Wackler rechnet Frachtrate für <tier>kg ab" rather than a "should have been bundled"
+             finding. Crucially we do NOT set wacklerRechnetFired here — unlike the single-shipment
+             rounding case below — because the auditor still itemises the Maut and (positive-FR)
+             Energiezuschlag deltas on these rows (AI-bundle 2026-06-05 rows 08a0d985: 9000kg / 3 refs
+             / AVIS=1 / MT+TZ kept, d97ce4ec: 10000kg / 2 refs / AVIS=6.5 / MT+TZ kept, and f04300d4:
+             ~6850kg / 2 refs / MT kept, fuel absorbed by the FR credit). Tier = ceiling bracket the
+             shared weight falls in. */
+          res=join(res,wacklerRechnetNote(tA,ws,r,cols));
         } else if(isBundle&&volumetric){
           res=join(res,wacklerRechnetNote(wacklerFloorTier(Math.max(vkg,vkgDl)),ws,r,cols));
           wacklerRechnetFired=true;
