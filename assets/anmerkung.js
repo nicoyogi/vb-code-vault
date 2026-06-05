@@ -1850,8 +1850,11 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
       else if(label==='overfired'){overfired++;}
 
       /* Engine-now prediction + trigger trace: only meaningful when we
-         have a resolver AND the row isn't a null-sheet error entry. */
-      let engineNow='',engineMatchesA=true,reason='',inputs={};
+         have a resolver AND the row isn't a null-sheet error entry.
+         `engineMatchesB` / `enginePd` stay null until the engine actually
+         runs, so consumers can tell "engine not evaluated" (null) apart
+         from "engine ran and matched/mismatched truth" (true/false). */
+      let engineNow='',engineMatchesA=true,engineMatchesB=null,enginePd=null,reason='',inputs={};
       if(processor&&colsA){
         try{
           const p=processor(wsA,r,colsA);
@@ -1867,6 +1870,16 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
              consistent with how classifyDiff scores wrong/missed/overfired. */
           engineMatchesA=samePhraseSet(splitTriggers(engineNow),splitTriggers(vA||''));
           if(!engineMatchesA)drift++;
+          /* Engine-vs-TRUTH (#26) — the precise training target. The rows
+             being trained run the CURRENT engine, so what an AI (or human)
+             must act on when fixing process<Forwarder> is how engineNow
+             compares to GROUND TRUTH B, not how the (possibly stale, or
+             foreign-tool) slot-A output compares to B. Same phrase-set
+             semantics as classifyDiff so the engine_label below scores
+             wrong/missed/overfired/correct identically to the A-vs-B label,
+             just with engineNow on the predicted side. */
+          engineMatchesB=samePhraseSet(splitTriggers(engineNow),splitTriggers(vB||''));
+          enginePd=computePhraseDiff(engineNow,vB);
           try{reason=buildReason(fw,wsA,r,colsA)||'';}catch(_){reason='';}
           inputs=collectInputsForRow(fw,wsA,r,colsA);
         }catch(e){engineNow='';reason='engine error: '+(e.message||e);}
@@ -1894,11 +1907,23 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
         ?('process'+fw[0].toUpperCase()+fw.slice(1))
         :'';
       const applicableThreshold=(TH&&TH[fw]!=null)?TH[fw]:null;
+      /* Engine-vs-truth (#26) derived signal. Only populated when the
+         engine actually ran (enginePd!=null); otherwise the row carries
+         empty/null so a consumer can skip it the same way it skips an
+         empty engineNow. `engine_missing_phrases` = phrases ground truth
+         wants that the CURRENT engine fails to emit (→ a branch to add /
+         loosen); `engine_extra_phrases` = phrases the CURRENT engine emits
+         that truth rejects (→ a branch to guard / tighten). */
+      const engineLabel   =enginePd?classifyDiff(engineNow,vB):'';
+      const engineGranular=enginePd?granularLabel(engineNow,vB,enginePd):'';
+      const engineMissing =enginePd?enginePd.missing_phrases:[];
+      const engineExtra   =enginePd?enginePd.extra_phrases:[];
       const rowObj={
         sheet:name,row:r+1,label,
         change:label==='missed'?'added':(label==='overfired'?'removed':(label==='wrong'?'changed':'correct')),
         fw,before:vA,after:vB,
         engineNow,engineMatchesA,hasDrift:!engineMatchesA,
+        engineMatchesB,
         reason,inputs,
         predicted_phrases:phraseDiff.predicted_phrases,
         expected_phrases :phraseDiff.expected_phrases,
@@ -1915,6 +1940,15 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
         extra_phrase_keys    :phraseKeysFor(phraseDiff.extra_phrases),
         engine_phrases       :enginePhrases,
         engine_phrase_keys   :phraseKeysFor(enginePhrases),
+        /* === Engine-vs-truth payload (#26) — the current engine's gap
+           against ground truth, the precise target for rule fixes. === */
+        engine_label              :engineLabel,
+        engine_granular           :engineGranular,
+        engine_vs_expected_jaccard:enginePd?enginePd.phrase_jaccard:null,
+        engine_missing_phrases    :engineMissing,
+        engine_extra_phrases      :engineExtra,
+        engine_missing_phrase_keys:phraseKeysFor(engineMissing),
+        engine_extra_phrase_keys  :phraseKeysFor(engineExtra),
         /* === Source-code anchors === */
         processor            :processorName,
         applicable_threshold :applicableThreshold,
@@ -2103,8 +2137,11 @@ function runBulkDiff(){
   document.getElementById('diffResults').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-/* Collect the structured input cells the rules actually read. Mirrors
-   tsCollectInputs but keyed directly by forwarder for the runDiff pass. */
+/* Collect the structured input cells the rules actually read, keyed by
+   forwarder. This is the SINGLE source of input features for the whole
+   Diff Mode pipeline — table detail drawer, diff CSV, and training set
+   all read `row.inputs` produced here, so there is no second collector to
+   drift out of sync. */
 function collectInputsForRow(fw,ws,r,cols){
   const o={};
   const get=(k,c)=>{if(c===undefined||c<0)return;const v=cellStr(ws,r,c);if(v!=='')o[k]=v;};
@@ -2159,7 +2196,12 @@ function filterDiffRows(){
     if(r.change==='sheet')return label==='all'&&fw==='all'&&(sheet==='all'||sheet===r.sheet);
     if(label==='drift'){if(!r.hasDrift)return false;}
     else if(label!=='all'){if(r.label!==label)return false;}
-    else {if(r.label==='correct'&&!includeMatches)return false;}
+    /* In the default 'all' view, hide `correct` (A==B) rows — EXCEPT when
+       the current engine disagrees with ground truth (engine_matches_b===
+       false): the tool was right but the engine being trained is wrong, so
+       surface it. Pure positives (engine also matches truth, or not
+       evaluated → null) stay hidden until "Include matching rows" is on. */
+    else {if(r.label==='correct'&&!includeMatches&&r.engineMatchesB!==false)return false;}
     if(fw!=='all'&&r.fw!==fw)return false;
     if(sheet!=='all'&&r.sheet!==sheet)return false;
     if(needle){
@@ -2340,6 +2382,26 @@ function toggleDiffDetail(i){
          ${phrSection('common' ,r.common_phrases ,'phr-common')}
        </div>`
     : '';
+  /* Engine-vs-truth (#26): how the CURRENT engine compares to ground
+     truth B — the actionable target for a rule fix. Rendered whenever the
+     engine ran AND disagrees with truth (engine_label set and not
+     'correct'), including the case where the tool (A) was right but the
+     engine drifted. "should add" = phrases truth wants the engine to emit;
+     "should remove" = phrases the engine emits that truth rejects. */
+  const engineRan=r.engine_label!=='' && r.engine_label!=null;
+  const engineWrong=engineRan && r.engine_label!=='correct';
+  const evtBlock=engineWrong
+    ? `<div class="df-phr-block df-evt-block">
+         <div class="df-phr-head">
+           <span class="df-phr-title" title="Current engine output vs ground truth B — this is what a rule fix must close">engine vs truth</span>
+           <span class="lbl-pill lbl-${esc(r.engine_label)}">${esc(r.engine_label)}</span>
+           ${r.engine_granular?`<span class="df-gran-badge df-gran-${esc(r.engine_granular)}">${esc(r.engine_granular.replace(/_/g,' '))}</span>`:''}
+           ${r.engine_vs_expected_jaccard!=null?`<span class="df-phr-jac" title="Jaccard similarity of the CURRENT engine's output vs ground-truth phrase sets (1.0 = identical, 0 = disjoint)">jaccard ${(r.engine_vs_expected_jaccard).toFixed(2)}</span>`:''}
+         </div>
+         ${phrSection('should add'   ,r.engine_missing_phrases,'phr-missing')}
+         ${phrSection('should remove',r.engine_extra_phrases  ,'phr-extra')}
+       </div>`
+    : '';
   const reasonHtml=r.reason
     ? `<div class="df-reason-block"><span class="rb-label">trigger trace</span>${esc(r.reason)}</div>`
     : '<div class="df-reason-block empty"><span class="rb-label">trigger trace</span>(engine produced no reason — either no rule fired or forwarder unknown)</div>';
@@ -2349,7 +2411,7 @@ function toggleDiffDetail(i){
     : '';
   const tr=document.createElement('tr');
   tr.className='df-detail';tr.dataset.for=String(i);
-  tr.innerHTML=`<td colspan="8"><div class="df-detail-wrap"><div class="df-detail-grid">${kv}${phrBlock}${reasonHtml}</div>${sendBtn?`<div>${sendBtn}</div>`:''}</div></td>`;
+  tr.innerHTML=`<td colspan="8"><div class="df-detail-wrap"><div class="df-detail-grid">${kv}${phrBlock}${evtBlock}${reasonHtml}</div>${sendBtn?`<div>${sendBtn}</div>`:''}</div></td>`;
   mainTr.after(tr);
   btn.classList.add('open');btn.setAttribute('aria-expanded','true');btn.textContent='\u00b7';
 }
@@ -2468,6 +2530,9 @@ function downloadDiffCsv(){
     'predicted_phrase_keys','expected_phrase_keys','common_phrase_keys',
     'missing_phrase_keys','extra_phrase_keys',
     'engine_phrases','engine_phrase_keys',
+    'engine_label','engine_matches_b','engine_granular','engine_vs_expected_jaccard',
+    'engine_missing_phrases','engine_extra_phrases',
+    'engine_missing_phrase_keys','engine_extra_phrase_keys',
     'reason',
     ...inputKeys.map(k=>'in_'+k),
   ];
@@ -2495,6 +2560,14 @@ function downloadDiffCsv(){
       isSheet?'':joinPhr(r.extra_phrase_keys),
       isSheet?'':joinPhr(r.engine_phrases),
       isSheet?'':joinPhr(r.engine_phrase_keys),
+      isSheet?'':(r.engine_label||''),
+      isSheet?'':(r.engineMatchesB==null?'':(r.engineMatchesB?'true':'false')),
+      isSheet?'':(r.engine_granular||''),
+      isSheet?'':(r.engine_vs_expected_jaccard==null?'':r.engine_vs_expected_jaccard),
+      isSheet?'':joinPhr(r.engine_missing_phrases),
+      isSheet?'':joinPhr(r.engine_extra_phrases),
+      isSheet?'':joinPhr(r.engine_missing_phrase_keys),
+      isSheet?'':joinPhr(r.engine_extra_phrase_keys),
       r.reason||'',
     ];
     for(const k of inputKeys){const v=isSheet?'':(r.inputs||{})[k];base.push(v==null?'':v);}
@@ -2526,109 +2599,17 @@ function downloadDiffCsv(){
    the most known columns; falls back to the currently-selected forwarder.
 ══════════════════════════════════════════════════════════ */
 
-const FW_RESOLVERS={dachser:resolveDachser,kn:resolveKN,dhl:resolveDHL,wackler:resolveWackler};
-
-/* Count how many known columns a resolver finds for a given sheet.
-   More matches = better confidence that this is the right forwarder. */
-function tsResolverScore(resolveFn,ws,range){
-  try{
-    const cols=resolveFn(ws,range);
-    let score=0;
-    for(const k of Object.keys(cols))if(cols[k]>=0)score++;
-    return score;
-  }catch(_){return 0;}
-}
-
-/* Pick the best forwarder for a sheet. Requires target (Anmerkung) col present.
-   Ties broken in this order: dachser, kn, dhl, wackler (most-specific first). */
-function tsDetectForwarder(ws,range){
-  const order=['dachser','kn','dhl','wackler'];
-  let best=null,bestScore=-1;
-  for(const fw of order){
-    const cols=FW_RESOLVERS[fw](ws,range);
-    if(cols.target<0)continue;
-    const score=tsResolverScore(FW_RESOLVERS[fw],ws,range);
-    if(score>bestScore){bestScore=score;best=fw;}
-  }
-  if(best)return best;
-  return selectedFW||'unknown';
-}
-
-/* Classify a mismatch — see comment block above for the label taxonomy. */
-function tsLabelFor(before,after){
-  const a=(before||'').trim(),b=(after||'').trim();
-  if(a===b)return 'correct';
-  if(!a&&b)return 'missed';
-  if(a&&!b)return 'overfired';
-  return 'wrong';
-}
-
-/* Collect structured (key -> value) input features for a single row,
-   joined by forwarder. Returns an ordered array of {key,value} pairs
-   so column order is stable in CSV output. */
-function tsCollectInputs(fw,ws,r,cols){
-  const pairs=[];
-  const push=(k,c)=>{
-    if(c===undefined||c<0)return;
-    const v=cellStr(ws,r,c);
-    pairs.push({key:k,value:v});
-  };
-  if(fw==='dachser'){
-    push('stat',cols.stat);push('tarif',cols.tarif);
-    push('fr_diff',cols.fr);
-    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
-    push('snk_dl',cols.snk_dl);push('snk_diff',cols.snk_diff);push('snk_tarif',cols.snk_tar);
-    push('zz_diff',cols.zz);push('sam_diff',cols.sam);push('dgr_diff',cols.dgr);
-    push('exp_diff',cols.exp);push('exp_dl',cols.exp_dl);
-    push('maut_diff',cols.maut);push('sbfu_diff',cols.sbfu);push('tz_diff',cols.tz);
-    push('lg_diff',cols.lg_diff);push('av_diff',cols.av_diff);
-    /* Hard-coded Dachser columns (position-based, same as processor). */
-    pairs.push({key:'referenz3',value:cellStr(ws,r,DA_COL_REFERENZ3)});
-    pairs.push({key:'empf_plz', value:cellStr(ws,r,DA_COL_EMPF_PLZ)});
-    pairs.push({key:'empf_ort', value:cellStr(ws,r,DA_COL_EMPF_ORT)});
-    pairs.push({key:'anz_sdg',  value:cellStr(ws,r,DA_COL_ANZ_SDG)});
-    pairs.push({key:'serv_art', value:cellStr(ws,r,DA_COL_SERV_ART)});
-    pairs.push({key:'sachkonto',value:cellStr(ws,r,DA_COL_SACHKONTO)});
-  } else if(fw==='kn'){
-    push('stat',cols.stat);
-    push('fr_diff',cols.fr);push('exp_diff',cols.exp);push('mt_diff',cols.toll);push('tz_diff',cols.fuel);
-    push('snk_dl',cols.snk_dl);push('snk_diff',cols.snk_diff);
-    push('referenz',cols.referenz);push('recip',cols.recip);
-    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
-    push('kostenstelle',cols.kost);push('sachkonto',cols.sach);
-  } else if(fw==='dhl'){
-    push('stat',cols.stat);push('tarif',cols.tarif);
-    push('fr_diff',cols.addr);push('pal_diff',cols.stack);push('ow_diff',cols.weight);
-    push('yo_diff',cols.conv);push('yl_diff',cols.irr);push('nd_diff',cols.neut);push('sf_diff',cols.sign);
-    push('snk_diff',cols.snk);push('ac_diff',cols.diff);push('mt_diff',cols.maut);
-    push('nx_diff',cols.surc);push('os_diff',cols.over);push('tz_diff',cols.tz);
-    push('kostenstelle',cols.kost);push('sachkonto',cols.sach);
-  } else if(fw==='wackler'){
-    push('stat',cols.stat);push('tarif',cols.tarif);push('existing_anmerkung',cols.target);
-    push('avis_diff',cols.avis_diff);push('snk_diff',cols.snk_diff);push('fr_diff',cols.fr);
-    push('mt_diff',cols.maut);push('tz_diff',cols.tz);
-    push('referenz',cols.referenz);
-    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
-    push('empf_plz',cols.empf_plz);push('empf_ort',cols.empf_ort);
-    push('kostenstelle',cols.kostenstelle);push('sachkonto',cols.sachkonto);
-  }
-  return pairs;
-}
-
-/* Re-run the actual production processor on slot-A's row to capture
-   the trigger trace + verify what the rule engine would produce right
-   now. This is how we recover the "reason" / "why" for training data. */
-function tsRunRule(fw,ws,r,cols){
-  try{
-    let predicted=null;
-    if(fw==='dachser')predicted=processDachser(ws,r,cols);
-    else if(fw==='kn')predicted=processKN(ws,r,cols);
-    else if(fw==='dhl')predicted=processDHL(ws,r,cols);
-    else if(fw==='wackler')predicted=processWackler(ws,r,cols);
-    const reason=buildReason(fw,ws,r,cols);
-    return{predicted,reason};
-  }catch(e){return{predicted:null,reason:'error: '+(e.message||e)};}
-}
+/* NOTE: the legacy per-sheet helpers that used to live here
+   (FW_RESOLVERS / tsResolverScore / tsDetectForwarder / tsLabelFor /
+   tsCollectInputs / tsRunRule) were removed once Diff Mode unified on the
+   single `diffWorkbooks` walk. Forwarder detection now goes through
+   `detectForwarderForSheet`, labels through `classifyDiff`, input capture
+   through `collectInputsForRow`, and the engine re-run is inline in
+   `diffWorkbooks`. The old copies had silently drifted from the live path
+   (e.g. their K+N input collector dropped the `tarif` feature), which is
+   exactly the kind of split-brain that corrupts the exported training set —
+   so there is now ONE code path that the table, the detail drawer, and every
+   export read from. */
 
 /* Build the training-set records directly from the enriched rows
    produced by runDiff — no second sheet walk. Honors the current
@@ -2657,7 +2638,13 @@ function buildTrainingSet(){
   const seenUids=new Set();
   for(const r of scope){
     if(r.change==='sheet')continue;
-    if(r.label==='correct'&&!includeMatches)continue;
+    /* Keep a `correct` (A==B) row when the CURRENT engine disagrees with
+       ground truth (engine_matches_b===false): the tool was coincidentally
+       right but the engine being trained is wrong here — a prime training
+       case that would otherwise be dropped. Pure positives (engine also
+       matches truth, or engine not evaluated → null) stay gated behind the
+       "Include matching rows" toggle. */
+    if(r.label==='correct'&&!includeMatches&&r.engineMatchesB!==false)continue;
     /* Drop padding rows: nothing on either side, no inputs, no engine. */
     const hasInputs=Object.keys(r.inputs||{}).length>0;
     const hasContent=(r.before||'').trim()!==''||(r.after||'').trim()!==''||(r.engineNow||'').trim()!=='';
@@ -2698,6 +2685,19 @@ function buildTrainingSet(){
       extra_phrase_keys    :r.extra_phrase_keys||[],
       engine_phrases       :r.engine_phrases||[],
       engine_phrase_keys   :r.engine_phrase_keys||[],
+      /* Engine-vs-truth (#26): how the CURRENT engine compares to ground
+         truth B — the precise target for rule fixes. `engine_label` scores
+         the engine (not the tool) against truth; `engine_missing_phrase_keys`
+         are PHRASES branches to ADD/loosen, `engine_extra_phrase_keys` are
+         branches to GUARD/tighten. Null/empty when the engine wasn't run. */
+      engine_label              :r.engine_label||'',
+      engine_matches_b          :r.engineMatchesB==null?null:!!r.engineMatchesB,
+      engine_granular           :r.engine_granular||'',
+      engine_vs_expected_jaccard:r.engine_vs_expected_jaccard==null?null:r.engine_vs_expected_jaccard,
+      engine_missing_phrases    :r.engine_missing_phrases||[],
+      engine_extra_phrases      :r.engine_extra_phrases||[],
+      engine_missing_phrase_keys:r.engine_missing_phrase_keys||[],
+      engine_extra_phrase_keys  :r.engine_extra_phrase_keys||[],
       inputs:r.inputs||{},
     });
   }
@@ -2731,6 +2731,9 @@ function downloadTrainingSet(format){
       'predicted_phrase_keys','expected_phrase_keys','common_phrase_keys',
       'missing_phrase_keys','extra_phrase_keys',
       'engine_phrases','engine_phrase_keys',
+      'engine_label','engine_matches_b','engine_granular','engine_vs_expected_jaccard',
+      'engine_missing_phrases','engine_extra_phrases',
+      'engine_missing_phrase_keys','engine_extra_phrase_keys',
       'reason',
       ...inputKeys.map(k=>'in_'+k),
     ];
@@ -2755,6 +2758,14 @@ function downloadTrainingSet(format){
         joinPhr(r.extra_phrase_keys),
         joinPhr(r.engine_phrases),
         joinPhr(r.engine_phrase_keys),
+        r.engine_label||'',
+        r.engine_matches_b==null?'':(r.engine_matches_b?'true':'false'),
+        r.engine_granular||'',
+        r.engine_vs_expected_jaccard==null?'':r.engine_vs_expected_jaccard,
+        joinPhr(r.engine_missing_phrases),
+        joinPhr(r.engine_extra_phrases),
+        joinPhr(r.engine_missing_phrase_keys),
+        joinPhr(r.engine_extra_phrase_keys),
         r.reason,
       ];
       for(const k of inputKeys)row.push(r.inputs[k]==null?'':r.inputs[k]);
@@ -2944,17 +2955,18 @@ function buildRuleSpec(){
     },
     forwarders,
     instructions:{
-      summary:'Each training record describes one rule-engine output vs ground truth. Use forwarder + processor to find the function in assets/anmerkung.js. Use missing_phrase_keys / extra_phrase_keys to know which PHRASES branches to add or guard. Use inputs.* as the gating signals.',
+      summary:'Each training record describes one rule-engine output vs ground truth. Use forwarder + processor to find the function in assets/anmerkung.js. The CURRENT engine\'s gap against truth is carried by engine_missing_phrase_keys (branches to ADD/loosen) and engine_extra_phrase_keys (branches to GUARD/tighten) — prefer these over the A-vs-B missing_/extra_phrase_keys when fixing rules, because A may be a stale or foreign-tool output. Use inputs.* as the gating signals.',
       edit_target:'process<Forwarder> functions in assets/anmerkung.js (resolver columns are already wired; add/edit branches inside the processor).',
       phrase_catalog_target:'PHRASES object near the top of assets/anmerkung.js — add new entries here, then reference via P.<key> with join().',
       threshold_helper:'hasErr(value, T_FORWARDER) — returns true when |value| > threshold. Use this as the gating predicate on numeric *_diff inputs.',
+      engine_vs_truth:'engine_label / engine_matches_b / engine_missing_phrase_keys / engine_extra_phrase_keys / engine_vs_expected_jaccard compare what process<Forwarder> emits TODAY against ground truth B — this is the precise fix target. The top-level label (and missing_/extra_phrase_keys) compare slot A (the tool output) against B and can differ from the engine\'s own gap; when label=="correct" but engine_label!="correct" the engine has regressed on a row the tool got right. Treat engine_label as authoritative for rule edits; a fix is complete when engine_matches_b flips to true and engine_missing/extra_phrase_keys are empty.',
       rule_update_workflow:[
-        '1. Group records by forwarder, then by missing_phrase_keys / extra_phrase_keys patterns.',
-        '2. For missed rows: locate the existing branch that emits the missing key (or add one). Loosen its gate using the inputs.* signals on the failing rows.',
-        '3. For overfired rows: locate the branch that emits the extra key. Tighten its gate so the inputs.* signature on these rows no longer matches.',
-        '4. For wrong rows: handle the missing and extra key sets independently.',
+        '1. Group records by forwarder, then by engine_missing_phrase_keys / engine_extra_phrase_keys patterns (fall back to missing_/extra_phrase_keys when engine_label is blank, e.g. unknown forwarder).',
+        '2. For engine_missing (engine UNDER-fired vs truth): locate the existing branch that emits the missing key (or add one). Loosen its gate using the inputs.* signals on the failing rows.',
+        '3. For engine_extra (engine OVER-fired vs truth): locate the branch that emits the extra key. Tighten its gate so the inputs.* signature on these rows no longer matches.',
+        '4. For rows that are both: handle the missing and extra key sets independently.',
         '5. Preserve the join() pattern — phrases are de-duplicated case-insensitively automatically.',
-        '6. After editing, the user re-runs Train & Compare; engine_drift turns into "correct" when fixed.',
+        '6. After editing, the user re-runs Train & Compare; engine_matches_b flips to true and the row drops out of the wrong/missed/overfired (and engine-drift) buckets.',
       ],
     },
   };
@@ -3014,10 +3026,17 @@ function buildAiBundleReadme(spec,recordCount,filterScope){
   lines.push('| `missing_phrase_keys` | in expected, NOT in predicted → engine UNDER-fired |');
   lines.push('| `extra_phrase_keys` | in predicted, NOT in expected → engine OVER-fired |');
   lines.push('| `engine_phrase_keys` | what `process<Forwarder>` would output today (drift detector) |');
+  lines.push('| `engine_label` | how the CURRENT engine scores against ground truth B (`correct`/`wrong`/`missed`/`overfired`) — **the authoritative fix target** |');
+  lines.push('| `engine_matches_b` | `true` once the current engine matches truth; the goal is to flip this to `true` |');
+  lines.push('| `engine_missing_phrase_keys` | in truth, NOT in the current engine output → branch to **add / loosen** |');
+  lines.push('| `engine_extra_phrase_keys` | in the current engine output, NOT in truth → branch to **guard / tighten** |');
+  lines.push('| `engine_vs_expected_jaccard` | phrase-set similarity of current engine output vs truth (1.0 = solved) |');
   lines.push('| `inputs` | per-row map of cell values the rules read; keys explained in `rule_spec.forwarders.<fw>.input_glossary` |');
   lines.push('| `reason` | trigger trace (raw cell values that fired branches) |');
   lines.push('| `row_uid` | stable hash for joining across runs |');
   lines.push('| `source_file` | which predicted/expected file pair this row came from (set when exported from Bulk Diff; blank for a single-pair run) |');
+  lines.push('');
+  lines.push('> **Use the `engine_*` fields, not the plain `predicted`/`missing`/`extra` fields, to drive rule edits.** The plain fields compare slot A (your tool output, which may be stale or from another tool) against truth B; the `engine_*` fields compare what `process<Forwarder>` emits *today* against truth B. When `label == "correct"` but `engine_label != "correct"`, the tool was right but the current engine regressed on that row — fix it.');
   lines.push('');
   lines.push('Synthetic key prefixes:');
   lines.push('- `lit_*` — phrase string is hard-coded inside a processor (not yet in `PHRASES`). Promote it to `PHRASES` if you need to fire it from a new branch.');
@@ -3046,7 +3065,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope){
   lines.push('- Treat the missing and extra sets independently. Often a single branch picked the wrong phrase: change the phrase emitted, not the gate.');
   lines.push('');
   lines.push('### 5. Verify');
-  lines.push('Re-run Diff Mode → Train & Compare. The chip counts should move from `wrong`/`missed`/`overfired` toward `correct`. `engine drift` rows turn into `correct` once the rule emits what slot A says.');
+  lines.push('Re-run Diff Mode → Train & Compare. Each fixed row\'s `engine_matches_b` flips to `true`, its `engine_missing_phrase_keys` / `engine_extra_phrase_keys` empty out, and the `engine drift` overlay clears. Watch the chip counts move from `wrong`/`missed`/`overfired` toward `correct`.');
   return lines.join('\n')+'\n';
 }
 
