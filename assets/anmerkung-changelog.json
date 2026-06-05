@@ -1,6 +1,17 @@
 {
-  "version": "1.20.0",
+  "version": "1.21.0",
   "entries": [
+    {
+      "ver": "1.21.0",
+      "date": "2026-06-05",
+      "items": [
+        "Wackler — added the `Dieselzuschlag ok?` phrase (new `PHRASES.dieselzuschlag`). On a Hebebühne (liftgate) credit row (SNK ≈ -150, the `hätte Hebebühne abrechnen dürfen` branch), a co-occurring TZ/fuel delta is now emitted as the auditor's `Dieselzuschlag ok?` query instead of the generic `Differenz Energiezuschlag`. The fuel gate itself is unchanged — only the wording switches when the Hebebühne branch fired. Resolves AI-bundle 2026-06-05 row ce9f73d9.",
+        "Wackler — the `Wackler rechnet Frachtrate für <tier>kg ab` note now reports the tier Wackler ACTUALLY billed, not just the chargeable-weight tier. When the FR Differenz equals a clean rate-card gap between two neighbouring tiers, `wacklerBilledTier` reads the destination's published rate, computes the billed freight (systemRate(weightTier) - FR), and matches it back to the tier whose rate fits within a tight EUR tolerance. It degrades to the weight tier when the rate card / destination zone is unavailable or the FR gap is a genuine rounding residual rather than a clean tier step. Resolves AI-bundle 2026-06-05 row e40698ee (TR: 6840/6862 kg weigh into the 7000 tier, but FR=-59.34 = rate(7500)-rate(7000), so Wackler billed the 7500 tier).",
+        "Wackler — billed-tier re-tiering and the booked-EUR enrichment are now card-agnostic via a single `wacklerRateProbe` that binds a row to its rate card + zone. The national DE card (DE1-DE9) is tried first (the international card leaves those cells blank), then the international card, so domestic German `Wackler rechnet` rows re-tier off the national rate matrix too — not just international ones.",
+        "Wackler — national vs. international is now classified from the `Abg.-Land` / `Empf.-Land` country columns (`wacklerLand` / `wacklerLane`): DE→DE is domestic (zone resolved from the numeric Empf.-PLZ), while a foreign end is an international lane keyed by the non-German country + that side's PLZ (Empf.-PLZ on an export, Abg.-PLZ on an import). Because the country is known, a numeric PLZ is unambiguous, so the conservative bare-PLZ guard is lifted: domestic zones resolve straight from the PLZ, while foreign rows carrying German-looking postal codes (HR, SE, …) classify as international and no longer pick up a bogus `(DEn: … €)` suffix. `resolveWackler` now captures `abg_land` / `empf_land` / `abg_plz` and narrows the `zone` column to explicit rate-zone tokens (Tarifzone / Tarifgebiet / Zone).",
+        "Tests — added Wackler cases for the Dieselzuschlag wording (with/without a fuel delta), billed-tier re-tiering (explicit zone token, no-zone fallback, and via Empf.-Land), domestic national re-tiering with the zone resolved from Empf.-PLZ, and the foreign-Empf.-Land / German-looking-PLZ guard. Full suite: 85 passing."
+      ]
+    },
     {
       "ver": "1.20.0",
       "date": "2026-06-05",
