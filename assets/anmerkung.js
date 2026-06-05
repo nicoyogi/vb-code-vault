@@ -233,6 +233,7 @@ const PHRASES={
   hebebuehne:                 'hätte Hebebühne abrechnen dürfen',
   differenzAvisOk:            'Differenz avis, ok?',
   differenzEnergiezuschlag:   'Differenz Energiezuschlag',
+  dieselzuschlag:             'Dieselzuschlag ok?',
   returnOk:                   'Return, ok?',
   frachtDiff:                 'Frachtdifferenz',
 };
@@ -792,21 +793,46 @@ function wacklerGetTierIdx(kg){if(kg<=0)return -1;for(let i=0;i<WACKLER_BP.lengt
 function wacklerFloorTier(kg){let last=0;for(const b of WACKLER_BP){if(b<=kg)last=b;else break;}return last;}
 /* Format a tier breakpoint for display: regular numbers as-is, the open ceiling as ">10000". */
 function wacklerTierLabel(tierKg){return tierKg>=999999?'>10000':String(tierKg);}
-/* Resolve a row's destination to a German national rate zone (DE1..DE9), or null when it is not
-   a resolvable domestic shipment. Resolution is via an EXPLICIT zone/country token only
-   (Tarifzone/Empf.-Land column normalising to a DEn zone). The earlier Empf.-PLZ fallback was
-   removed: a bare numeric postal code cannot be told apart from a foreign numeric one (Croatia
-   "10450", Sweden "556 52" both look like German prefixes and falsely resolved to DE8 / DE5),
-   so it tagged international "Wackler rechnet" rows with a bogus "(DEn: … €)" suffix the auditor
-   never wants — AI-bundle 2026-06-05 rows 68959963 (HR) & d97ce4ec (SE). Enrichment now only
-   fires when the row carries a real German zone token. Used purely to enrich the note — never to
-   classify a row. */
+/* Origin/destination country token for a row, normalised to its leading two letters
+   ('DE','FR','PL','TR'…); '' when the column is absent or blank. */
+function wacklerLand(ws,r,col){
+  if(col==null||col<0)return'';
+  return String(cellStr(ws,r,col)||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,2);
+}
+/* Classify a row from Abg.-Land / Empf.-Land into the lane that decides which rate card + zone its
+   freight is published under. A German forwarder's DOMESTIC tariff applies when both ends are in
+   Germany (the origin may be blank — a German destination dominates); a foreign end means an
+   INTERNATIONAL lane, keyed by the NON-German country (the destination on an export, the origin on
+   an import) and that side's PLZ. Returns {scope:'national'|'international',country,postal} or null
+   when neither Land is known. Knowing the country here is what makes the numeric PLZ safe to read:
+   a 'DE' classification guarantees a German postal code, so the old foreign-PLZ false positives
+   (HR "10450"→DE8, SE "556 52"→DE5) can no longer happen — those rows now classify as
+   international and never resolve a German zone. */
+function wacklerLane(ws,r,cols){
+  if(!cols)return null;
+  const abg=wacklerLand(ws,r,cols.abg_land),empf=wacklerLand(ws,r,cols.empf_land);
+  const plzOf=c=>(c!=null&&c>=0)?cellStr(ws,r,c):'';
+  if(empf==='DE'&&(abg===''||abg==='DE'))return{scope:'national',country:'DE',postal:plzOf(cols.empf_plz)};
+  if(empf&&empf!=='DE')return{scope:'international',country:empf,postal:plzOf(cols.empf_plz)};
+  if(empf==='DE'&&abg&&abg!=='DE')return{scope:'international',country:abg,postal:plzOf(cols.abg_plz)};
+  return null;
+}
+/* Resolve a row's destination to a German national rate zone (DE1..DE9), or null when it is not a
+   resolvable domestic shipment. An explicit DEn token (Tarifzone) wins; otherwise we trust the
+   Abg.-Land/Empf.-Land classification — only a genuinely domestic (DE→DE) lane resolves a zone
+   from the numeric Empf.-PLZ. Because the country is known to be DE, that postal code is
+   unambiguously German: this is the country-guarded successor to the bare-PLZ fallback that was
+   removed for mis-tagging foreign rows (AI-bundle 2026-06-05 rows 68959963 HR & d97ce4ec SE),
+   which now classify as international and never reach here. Used to enrich the note AND, via the
+   rate probe, to re-tier "Wackler rechnet". */
 function wacklerResolveNatZone(ws,r,cols){
   if(!WACKLER_NAT_RC||!cols)return null;
   if(cols.zone!=null&&cols.zone>=0){
     const z=WACKLER_NAT_RC.normalizeZone(cellStr(ws,r,cols.zone));
     if(z)return z;
   }
+  const lane=wacklerLane(ws,r,cols);
+  if(lane&&lane.scope==='national')return WACKLER_NAT_RC.resolveZone('DE',lane.postal);
   return null;
 }
 /* Compose the same-tier "Wackler rechnet Frachtrate für <tier>kg ab" note. On a DOMESTIC German
@@ -827,6 +853,87 @@ function wacklerRechnetNote(tierKg,ws,r,cols){
     }
   }
   return note;
+}
+/* ── International rate-card zone + actually-billed tier ──────────────────────────────────────
+   The "Wackler rechnet Frachtrate für <tier>kg ab" note must name the tier Wackler ACTUALLY
+   billed against — which is not always the tier the chargeable weight falls in. When the FR
+   Differenz is exactly the rate-card gap between two neighbouring tiers, Wackler billed the
+   *other* tier's rate (a half-tonne up or down), and the auditor reports that tier. Translating
+   the FR delta back into a tier needs the destination's published rate, so we resolve the
+   international rate-card zone and read WACKLER_RATECARD. */
+/* EUR tolerance when matching an implied billed-rate back to a rate-card tier (covers cent
+   rounding in the published cells). Tight on purpose: only a clean tier-step FR gap re-tiers the
+   note; an arbitrary rounding residual leaves the weight tier untouched. */
+const WACKLER_RATE_TOL=0.5;
+/* Resolve a row to an INTERNATIONAL rate-card zone (AT1/CH2/FR3/TR/…). Primary path is the
+   Abg.-Land/Empf.-Land classification: an international lane resolves via its non-German country
+   code + that side's PLZ (Empf.-PLZ on an export, Abg.-PLZ on an import), which is exactly
+   WACKLER_RATECARD.resolveZone's contract — a single-zone country resolves from the code alone,
+   a multi-zone one (CH/FR/ES/PL…) is disambiguated by the postal code. Falls back to an explicit
+   Tarifzone token when no Land columns are present. Returns null when the rate card isn't loaded
+   or nothing resolves; a bare numeric PLZ is never trusted without a country (a foreign code can
+   masquerade as a German prefix). */
+function wacklerResolveIntlZone(ws,r,cols){
+  if(!WACKLER_RC||typeof WACKLER_RC.resolveZone!=='function'||!cols)return null;
+  const lane=wacklerLane(ws,r,cols);
+  if(lane&&lane.scope==='international'){
+    const z=WACKLER_RC.resolveZone(lane.country,lane.postal);
+    if(z)return z;
+  }
+  if(cols.zone!=null&&cols.zone>=0){
+    const raw=cellStr(ws,r,cols.zone);
+    if(raw){
+      const plz=(cols.empf_plz!=null&&cols.empf_plz>=0)?cellStr(ws,r,cols.empf_plz):'';
+      const z=WACKLER_RC.resolveZone(raw,plz);
+      if(z)return z;
+    }
+  }
+  return null;
+}
+/* Bind a row to the rate card + zone its freight is published under, returned as a
+   {rateAt(kg),tiers} probe so the billed-tier math is card-agnostic. The NATIONAL DE card is
+   tried first (DE1‑DE9 — the international card leaves those cells blank) using the SAME
+   explicit-zone-token guard wacklerResolveNatZone documents (a bare numeric PLZ is never trusted,
+   so a foreign code can't masquerade as a German zone); then the international card
+   (AT/CH/FR/TR/…). This is what lets the "Wackler rechnet" billed-tier re-tiering work for
+   DOMESTIC German shipments too — not just international ones. Returns null when neither resolves
+   or the rate cards aren't loaded. */
+function wacklerRateProbe(ws,r,cols){
+  const natZone=wacklerResolveNatZone(ws,r,cols);
+  if(natZone&&WACKLER_NAT_RC)return{rateAt:kg=>WACKLER_NAT_RC.rate(kg,natZone),tiers:WACKLER_NAT_RC.tiers||WACKLER_BP};
+  const intlZone=wacklerResolveIntlZone(ws,r,cols);
+  if(intlZone&&WACKLER_RC)return{rateAt:kg=>WACKLER_RC.rate(kg,intlZone),tiers:WACKLER_BP};
+  return null;
+}
+/* The rate-card tier whose published rate sits within WACKLER_RATE_TOL of targetRate, or null
+   when none is close enough. `probe` (from wacklerRateProbe) carries the card-specific rate
+   lookup AND tier list, so this resolves against the national and international cards alike. */
+function wacklerTierByRate(probe,targetRate){
+  if(!probe||!(targetRate>0))return null;
+  let best=null,bestDiff=Infinity;
+  for(const b of probe.tiers){
+    const rt=probe.rateAt(b);
+    if(rt>0){const d=Math.abs(rt-targetRate);if(d<bestDiff){bestDiff=d;best=b;}}
+  }
+  return(best!=null&&bestDiff<=WACKLER_RATE_TOL)?best:null;
+}
+/* The tier Wackler actually billed against on a "Wackler rechnet" row. The chargeable weight
+   puts the shipment in `weightTierKg` (rate-card ceiling); the signed FR Differenz reveals when
+   a neighbouring tier's rate was billed instead. FR Differenz is tariff − billed (a negative FR
+   is an over-bill / credit), so the billed freight is systemRate(weightTier) − frVal, and the
+   tier whose published rate matches that is the one to report. Falls back to weightTierKg when
+   the rate card or destination zone is unavailable, or when the implied billed rate lands on no
+   tier (a genuine rounding residual, not a clean tier step). Resolves AI-bundle 2026-06-05 row
+   e40698ee: TR, VKG 6840 / VKG_DL 6862 weigh into the 7000 tier, but FR=−59.34 is exactly
+   rate(7500,TR)−rate(7000,TR), so Wackler billed the 7500 tier. */
+function wacklerBilledTier(weightTierKg,frVal,ws,r,cols){
+  if(!(Math.abs(frVal)>T_WACKLER))return weightTierKg;
+  const probe=wacklerRateProbe(ws,r,cols);
+  if(!probe)return weightTierKg;
+  const systemRate=probe.rateAt(weightTierKg);
+  if(!(systemRate>0))return weightTierKg;
+  const billed=wacklerTierByRate(probe,systemRate-frVal);
+  return billed!=null?billed:weightTierKg;
 }
 /* Wackler SNK surcharge code book — sign-insensitive (reversibles like NL-FIX show as ±value).
    Tolerance handles real-world rounding (NL-FIX seen as 38.00 / 38.08). */
@@ -861,7 +968,7 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
 /* Resolve the audit wording for a Wackler AVIS code. The 8.7 credit (negative) is the
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
-function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),zone:fcAny('Tarifzone','Empf.-Land','Bestimmungsland','Ländercode','Country','Zone','Land')};}
+function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),abg_land:fcAny('Abg.-Land','Absenderland','Versandland'),empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),abg_plz:fcAny('Abg.-PLZ','Absender-PLZ','Versand-PLZ'),zone:fcAny('Tarifzone','Tarifgebiet','Zone')};}
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
 const WACKLER_SNK_NOISE=5.0;
@@ -989,7 +1096,7 @@ function processWackler(ws,r,cols){
      (training rows 7 & 61), and only flags bundling when the weights sit in one tier (or there is
      no weight signal at all). MT and TZ stay additive on every branch except same-tier "Wackler
      rechnet" (see rules 9 & 11). */
-  let gewichteTriggered=false,wacklerRechnetFired=false;
+  let gewichteTriggered=false,wacklerRechnetFired=false,hebebuehneFired=false;
   if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0&&frHasVal){
     const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl);
     /* Both VKG and VKG_DL must carry a real weight. When they do, an FR delta is always a
@@ -997,6 +1104,11 @@ function processWackler(ws,r,cols){
        (vkg/vkgDl === 0) fall through to the Frachtdifferenz fallback in rule 8. */
     if(vkg>0&&vkgDl>0){
       const tA=wacklerGetTier(vkg),tB=wacklerGetTier(vkgDl);
+      /* The weight tier is the rate-card ceiling of the chargeable weight; a signed FR delta can
+         reveal Wackler billed a neighbouring tier's rate, so report THAT tier in the "Wackler
+         rechnet" note. Degrades to tA when the rate card / destination zone can't translate the
+         FR gap into a clean tier step (AI-bundle row e40698ee: 7000 weight tier → billed 7500). */
+      const reportTier=wacklerBilledTier(tA,frVal,ws,r,cols);
       if(tA===tB){
         /* A multi-reference row whose two weights share a rate tier is normally separate
            consignments that should have ridden one booking → "hätte gebündelt werden müssen".
@@ -1030,12 +1142,12 @@ function processWackler(ws,r,cols){
              / AVIS=1 / MT+TZ kept, d97ce4ec: 10000kg / 2 refs / AVIS=6.5 / MT+TZ kept, and f04300d4:
              ~6850kg / 2 refs / MT kept, fuel absorbed by the FR credit). Tier = ceiling bracket the
              shared weight falls in. */
-          res=join(res,wacklerRechnetNote(tA,ws,r,cols));
+          res=join(res,wacklerRechnetNote(reportTier,ws,r,cols));
         } else if(isBundle&&volumetric){
           res=join(res,wacklerRechnetNote(wacklerFloorTier(Math.max(vkg,vkgDl)),ws,r,cols));
           wacklerRechnetFired=true;
         } else {
-          res=join(res,wacklerRechnetNote(tA,ws,r,cols));
+          res=join(res,wacklerRechnetNote(reportTier,ws,r,cols));
           wacklerRechnetFired=true;
         }
       } else {
@@ -1068,8 +1180,10 @@ function processWackler(ws,r,cols){
     /* A large negative SNK ≈ -150 with no recognised SNK code is the Hebebühne (liftgate)
        credit signature: Wackler should have been allowed to bill the liftgate surcharge.
        Specific wording instead of the generic SNK Differenz. Resolves training rows 1 & 42. */
-    if(snkVal<0&&Math.abs(Math.abs(snkVal)-WACKLER_HEBEBUEHNE_ABS)<=WACKLER_HEBEBUEHNE_TOL)
+    if(snkVal<0&&Math.abs(Math.abs(snkVal)-WACKLER_HEBEBUEHNE_ABS)<=WACKLER_HEBEBUEHNE_TOL){
       res=join(res,P.hebebuehne);
+      hebebuehneFired=true;
+    }
     else
       res=join(res,'SNK Differenz');
   }
@@ -1093,7 +1207,12 @@ function processWackler(ws,r,cols){
      "DifferenzTreibstof" survives only as a literal so older exports still resolve (see
      PHRASE_LITERALS). */
   const frIsCredit=frHasVal&&frVal<0;
-  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!wacklerRechnetFired&&!frIsCredit)res=join(res,P.differenzEnergiezuschlag);
+  /* On a Hebebühne (liftgate) credit row the auditor QUERIES the diesel surcharge
+     ("Dieselzuschlag ok?") rather than flatly flagging a generic "Differenz Energiezuschlag" —
+     AI-bundle 2026-06-05 row ce9f73d9 (SNK≈-150 Hebebühne credit + TZ=-19.5, no FR). The fuel
+     gate itself is unchanged; only the wording switches when the Hebebühne branch fired. */
+  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!wacklerRechnetFired&&!frIsCredit)
+    res=join(res,hebebuehneFired?P.dieselzuschlag:P.differenzEnergiezuschlag);
   /* 12. NL-FIX zone corollary: when NL-FIX fires AND there's an FR delta AND KOST/SACH are blank,
      the destination zone may be miscoded — surface "Zone korrekt?" up front and drop the
      Frachtdifferenz it triggered (the FR gap is the zone miscode, not a real freight discrepancy). */
