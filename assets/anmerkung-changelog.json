@@ -1,6 +1,13 @@
 {
-  "version": "1.18.0",
+  "version": "1.19.0",
   "entries": [
+    {
+      "ver": "1.19.0",
+      "date": "2026-06-05",
+      "items": [
+        "Wackler — the \"Wackler rechnet Frachtrate für <tier>kg ab\" note no longer appends the booked rate-card EUR amount (e.g. the previous \"… für 3000kg ab (NL: 482,60 €)\" now renders as plain \"… für 3000kg ab\"). Per auditor feedback the note should carry only the weight-tier bracket, so `wacklerRechnetNote` returns the plain wording and the zone/EUR enrichment added in 1.17.0–1.18.0 is dropped. The phrase still resolves to the `tpl_wacklerRechnet` template key, and any joined classifications (e.g. \"// Mautdifferenz\") are unaffected."
+      ]
+    },
     {
       "ver": "1.18.0",
       "date": "2026-06-04",

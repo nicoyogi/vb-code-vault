@@ -818,26 +818,12 @@ function wacklerGetTierIdx(kg){if(kg<=0)return -1;for(let i=0;i<WACKLER_BP.lengt
 function wacklerFloorTier(kg){let last=0;for(const b of WACKLER_BP){if(b<=kg)last=b;else break;}return last;}
 /* Format a tier breakpoint for display: regular numbers as-is, the open ceiling as ">10000". */
 function wacklerTierLabel(tierKg){return tierKg>=999999?'>10000':String(tierKg);}
-/* Compose the same-tier "Wackler rechnet Frachtrate für <tier>kg ab" note. The weight-tier
-   wording always renders. When the row carries a resolvable destination zone (an international
-   shipment, per the Wackler International rate card) AND that tier+zone has a published rate,
-   the booked EUR amount is appended — e.g. "… für 150kg ab (FR2: 87,49 €)" — so the auditor
-   sees the exact rate-card cell Wackler billed against, not just the bracket. Falls back to the
-   plain tier wording (unchanged) whenever the rate card isn't loaded, no zone can be resolved,
-   or the cell is blank — so domestic rows and bare unit-test contexts behave exactly as before.
-   The zone is resolved from an explicit Tarifzone/Zone token when present, else from the
-   destination country (Empf.-Land etc.) combined with the Empf.-PLZ via the rate card's zone
-   division (Zoneneinteilung) — which is how multi-zone countries (CH/FR/ES/IT/NO/PL) resolve. */
+/* Compose the same-tier "Wackler rechnet Frachtrate für <tier>kg ab" note. The note is the
+   plain weight-tier wording only — the auditor wants the bracket, not the booked EUR amount.
+   (The rate-card EUR enrichment, e.g. "… für 150kg ab (NL: 482,60 €)", was removed per auditor
+   feedback.) ws/r/cols are retained in the signature for call-site compatibility. */
 function wacklerRechnetNote(tierKg,ws,r,cols){
-  const base='Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
-  if(!WACKLER_RC||!cols)return base;
-  const token=(cols.zone!=null&&cols.zone>=0)?cellStr(ws,r,cols.zone):'';
-  const plz=(cols.empf_plz!=null&&cols.empf_plz>=0)?cellStr(ws,r,cols.empf_plz):'';
-  const zone=WACKLER_RC.resolveZone(token,plz);
-  if(!zone)return base;
-  const eur=WACKLER_RC.rate(tierKg,zone);
-  if(!(eur>0))return base;
-  return base+' ('+zone+': '+WACKLER_RC.fmtEUR(eur)+')';
+  return 'Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
 }
 /* Wackler SNK surcharge code book — sign-insensitive (reversibles like NL-FIX show as ±value).
    Tolerance handles real-world rounding (NL-FIX seen as 38.00 / 38.08). */
