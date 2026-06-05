@@ -132,7 +132,7 @@
 
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
   <button class="btn-preview" id="btnPreview" disabled onclick="runPreview()">Preview — dry-run without writing</button>
-  <button class="btn-run" id="btnRun" disabled onclick="openRunGate()">Invoke the Ritual</button>
+  <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Invoke the Ritual</button>
   <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Transmuted Scroll ↓</button>
 
   <div class="preview-wrap" id="previewWrap" role="region" aria-label="Preview of proposed annotations">
@@ -391,39 +391,8 @@
   </div>
 </div>
 
-<!-- Subscription Modal -->
-<div id="sub-overlay" onclick="handleSubBgClick(event)">
-  <div class="sub-box" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="subTitle">
-    <div id="sub-default">
-      <div class="sub-sparkle" aria-hidden="true">💎</div>
-      <div class="sub-title" id="subTitle">You must buy a<br><span class="grad">Subscription</span></div>
-      <div class="sub-tagline">// unlock the full grimoire</div>
-      <div class="sub-perks">
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Run the transmutation ritual</div>
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Process unlimited scrolls</div>
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> All forwarder engines unlocked</div>
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Download transmuted files</div>
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Dark arts support (24/7)</div>
-      </div>
-      <div class="sub-price">$9.99 <span>/ month</span></div>
-      <div class="sub-note">Cancel anytime · No dark rituals required</div>
-      <button class="sub-buy-btn" onclick="handleBuySubscription()">✦ Buy Subscription ✦</button>
-      <button class="sub-cancel-btn" onclick="closeSubModal()">Maybe later</button>
-    </div>
-    <div class="sub-thankyou" id="sub-thankyou">
-      <div class="sub-thankyou-icon" aria-hidden="true">🎉</div>
-      <div class="sub-thankyou-title">Thank you for your purchase!</div>
-      <div class="sub-thankyou-msg">
-        Welcome to the inner sanctum, Archmage.<br>
-        All spells are now unlocked. May your code<br>
-        compile on the first attempt. ✨
-      </div>
-      <button class="sub-continue-btn" onclick="proceedAfterPurchase()">✦ Begin the Ritual ✦</button>
-    </div>
-  </div>
-</div>
-
 <script src="assets/wackler-ratecard.js" defer></script>
+<script src="assets/wackler-national-ratecard.js" defer></script>
 <script src="assets/anmerkung.js" defer></script>
 </body>
 </html>
