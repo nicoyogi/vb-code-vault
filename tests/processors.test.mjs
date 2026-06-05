@@ -252,9 +252,9 @@ test('processWackler: blank KOST/SACH only -> Kontierung?', () => {
   assert.equal(e.processWackler(ws, R, W_COLS), 'Kontierung?');
 });
 
-test('processWackler: TZ >= 2.0 alone -> DifferenzEnergiezuschlag', () => {
+test('processWackler: TZ >= 2.0 alone -> Differenz Energiezuschlag', () => {
   const ws = makeRow(R, { 51: 10, 52: '100', 57: '5', 63: '1', 64: '2' });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'DifferenzEnergiezuschlag');
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz Energiezuschlag');
 });
 
 test('processWackler: Mautdifferenz stays additive on a same-tier "Wackler rechnet" row', () => {
@@ -276,7 +276,7 @@ test('processWackler: same-tier weights but multi-ref bundle -> hätte gebündel
   });
   assert.equal(
     e.processWackler(ws, R, W_COLS),
-    'hätte gebündelt werden müssen // Mautdifferenz // DifferenzEnergiezuschlag'
+    'hätte gebündelt werden müssen // Mautdifferenz // Differenz Energiezuschlag'
   );
 });
 
@@ -285,6 +285,121 @@ test('processWackler: cross-tier weights + FR + MT + TZ -> Gewichte // Maut // E
   const ws = makeRow(R, { 51: 10, 52: '100', 55: '50', 56: '5', 57: '8', 59: '120', 60: '400', 63: '1', 64: '2' });
   assert.equal(
     e.processWackler(ws, R, W_COLS),
-    'Differenz aufgrund abweichender Gewichte // Mautdifferenz // DifferenzEnergiezuschlag'
+    'Differenz aufgrund abweichender Gewichte // Mautdifferenz // Differenz Energiezuschlag'
+  );
+});
+
+
+/* ──────────────────────────────────────────────────────────
+   WACKLER — AI-bundle 2026-06-05 rule updates
+   Regression coverage for the rule changes derived from
+   data/_bundle_extract (training.jsonl). Each test pins one
+   ground-truth behaviour the engine previously got wrong.
+─────────────────────────────────────────────────────────── */
+
+test('processWackler: SNK=25 on an international row -> Terminzustellung (no Pauschalfracht reclassification)', () => {
+  // Bundle rows 53130bae / e0a51926 / 7dab26f7 / b27bcf81: GB Glasgow, SNK=25, no FR/MT/TZ.
+  // The old engine reclassified the SNK=25 code to "Pauschalfracht, ok?" on foreign PLZ; the
+  // auditor keeps the plain domestic "Terminzustellung" code regardless of destination.
+  const ws = makeRow(R, {
+    51: 10, 52: '112.24', 54: '25', 59: '100', 60: '100',
+    61: 'G5 0UG', 62: 'Glasgow', 63: '201FO008', 64: '612100',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Terminzustellung');
+});
+
+test('processWackler: SNK=170 alongside an AVIS code -> Avis, ok? // Terminzustellung', () => {
+  // Bundle rows 27104fc7 / 7d69dfc0: AVIS=7.5, SNK=170. SNK=170 is the Terminzustellung
+  // surcharge billed at the higher rate; it must resolve to a code, not the generic SNK Differenz.
+  const ws = makeRow(R, {
+    51: 10, 52: '175.67', 53: '7.5', 54: '170', 59: '274', 60: '274',
+    61: '38090', 62: 'VILLEFONTAINE', 63: '211FO002', 64: '612110',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Avis, ok? // Terminzustellung');
+});
+
+test('processWackler: blank tariff + SNK=289 -> Umverfügung (not Lagergeld)', () => {
+  // Bundle row 0f1d3d96: TARIF blank, SNK=289. A recognised bare-SNK code must beat the
+  // Lagergeld catch-all for un-tariffed SNK-only rows.
+  const ws = makeRow(R, {
+    51: 10, 54: '289', 59: '922', 60: '922',
+    61: '4061', 62: 'Pasching', 63: '211FO998', 64: '612100',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Umverfügung');
+});
+
+test('processWackler: blank tariff + SNK=43 -> 2.Zustellung ok? (not Lagergeld)', () => {
+  // Bundle rows b7111e68 / fa68e7cb: TARIF blank, SNK=43.
+  const ws = makeRow(R, {
+    51: 10, 54: '43', 59: '308', 60: '308',
+    61: '48607', 62: 'Ochtrup', 63: '211FO998', 64: '612100',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), '2.Zustellung ok?');
+});
+
+test('processWackler: blank tariff + code-less SNK still falls through to Lagergeld', () => {
+  // Guard: the new SNK-code escape must not break the Lagergeld catch-all for un-tariffed,
+  // code-less SNK gaps (SNK=60 matches no code).
+  const ws = makeRow(R, {
+    51: 10, 54: '60', 59: '500', 60: '500',
+    61: '12345', 62: 'Musterstadt', 63: '211FO998', 64: '612100',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Lagergeld');
+});
+
+test('processWackler: same-tier multi-ref with near-equal weights -> Wackler rechnet (MT additive)', () => {
+  // Bundle row f04300d4: 2 refs, VKG 6840 / VKG_DL 6862 (~0.3% apart) share the 7000 kg tier.
+  // Near-equal weights read as one shared tier rate, not a "should have been bundled" finding;
+  // the negative FR credit absorbs the fuel note, and Maut stays additive.
+  const ws = makeRow(R, {
+    51: 10, 52: '2041.03', 54: '-0.24', 55: '-59.34', 56: '-1.94', 57: '-7.71',
+    58: '2543245539,2543245558', 59: '6840', 60: '6862',
+    61: '41400', 62: 'GEBZE KOCAELI', 63: '211FG004', 64: '612110',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 7000kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: same-tier multi-ref with UNEQUAL weights stays "hätte gebündelt werden müssen"', () => {
+  // Guard for the near-equal band: 120 vs 130 kg (~8% apart) share the 150 kg tier but are
+  // materially different weights -> genuine bundling, MT/TZ additive.
+  const ws = makeRow(R, {
+    51: 10, 52: '100', 55: '5', 56: '3', 57: '5',
+    58: '111,222', 59: '120', 60: '130', 63: '1', 64: '2',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'hätte gebündelt werden müssen // Mautdifferenz // Differenz Energiezuschlag'
+  );
+});
+
+test('processWackler: equal-weight multi-ref bundle with positive FR -> Wackler rechnet // AVIS // Maut // fuel', () => {
+  // Bundle row 08a0d985: 3 refs, VKG==VKG_DL==8565 (9000 kg tier), AVIS=1, positive FR.
+  // Equal weights -> "Wackler rechnet"; positive FR keeps the fuel note; AVIS=1 + MT additive.
+  const ws = makeRow(R, {
+    51: 10, 52: '1245.4', 53: '1', 54: '4.05', 55: '1103.6', 56: '70.11', 57: '131.77',
+    58: '2543338466,2543310205,2543309624', 59: '8565', 60: '8565',
+    61: '11-015', 62: 'Olsztynek', 63: '211FO011', 64: '612100',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 9000kg ab // Differenz avis, ok? // Mautdifferenz // Differenz Energiezuschlag'
+  );
+});
+
+test('processWackler: foreign numeric PLZ does not get a spurious German-zone EUR suffix', () => {
+  // Bundle row d97ce4ec: Swedish PLZ "556 52" must NOT resolve to a German rate zone. The
+  // "Wackler rechnet" note stays plain (no "(DEn: … €)") for international destinations.
+  const ws = makeRow(R, {
+    51: 10, 52: '2631.25', 53: '6.5', 54: '1.65', 55: '412.34', 56: '32.27', 57: '53.6',
+    58: '2543325830,2543325837', 59: '9760', 60: '9760',
+    61: '556 52', 62: 'Jönköping', 63: '211FG004', 64: '612110',
+  });
+  const out = e.processWackler(ws, R, W_COLS);
+  assert.ok(
+    out.includes('Wackler rechnet Frachtrate für 10000kg ab') && !/\(DE\d/.test(out),
+    `expected a plain Wackler-rechnet note with no DE-zone EUR suffix, got: ${out}`
   );
 });
