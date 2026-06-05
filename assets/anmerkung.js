@@ -1058,16 +1058,26 @@ function processWackler(ws,r,cols){
       res=join(res,'SNK Differenz');
   }
   /* 11. DifferenzEnergiezuschlag — the fuel/energy surcharge delta is additive above the 2.0
-     threshold. It is emitted whenever it clears that threshold, EXCEPT on same-tier "Wackler
-     rechnet" rows where the fuel gap is part of that tier's systemic rounding.
-     (Previously the phrase was also suppressed whenever the row carried BOTH an FR and an MT
-     delta, on the theory that TZ was derived spillover. The AI bundle disproves that: the
-     auditor lists the fuel surcharge as its own classification even when FR and MT are both
-     present, so the FR&MT suppression was removed.)
-     Wording: "DifferenzEnergiezuschlag" is the auditor's dominant fuel wording (17 of 21 fuel
-     rows across the bundle; the legacy "DifferenzTreibstof" survives only as a literal so older
-     exports still resolve — see PHRASE_LITERALS). */
-  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!wacklerRechnetFired)res=join(res,P.differenzEnergiezuschlag);
+     threshold. It is emitted whenever it clears that threshold, EXCEPT:
+       (a) same-tier "Wackler rechnet" rows, where the fuel gap is part of that tier's
+           systemic rounding (wacklerRechnetFired), and
+       (b) rows that carry a negative FR Differenz (an FR *credit*: frHasVal && frVal < 0).
+           When Wackler over-billed the freight, the TZ gap is just the fuel percentage riding
+           on that freight credit — it is absorbed into the freight/weight finding and the
+           auditor does NOT list it as its own classification. (AI bundle 2026-06-05 rows
+           f8ce2bae / 3aaa6bed / b47976d1 / 9de2427a / 8b5ae67c / f04300d4: every one carries a
+           negative FR delta with a proportional TZ delta, and the ground truth has no fuel
+           note.) A POSITIVE FR delta is different — the auditor itemises the fuel surcharge
+           there (bundle rows 3ac4d429 / 89025060 / b8d93cb3), so only the credit case is
+           suppressed.
+     (A blanket FR&MT suppression was tried earlier and removed because the auditor keeps the
+     fuel note when FR/MT are present on undercharge rows; the credit-only gate below is the
+     correct, sign-aware refinement.)
+     Wording: "DifferenzEnergiezuschlag" is the engine's canonical fuel wording; the legacy
+     "DifferenzTreibstof" survives only as a literal so older exports still resolve (see
+     PHRASE_LITERALS). */
+  const frIsCredit=frHasVal&&frVal<0;
+  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!wacklerRechnetFired&&!frIsCredit)res=join(res,P.differenzEnergiezuschlag);
   /* 12. NL-FIX zone corollary: when NL-FIX fires AND there's an FR delta AND KOST/SACH are blank,
      the destination zone may be miscoded — surface "Zone korrekt?" up front and drop the
      Frachtdifferenz it triggered (the FR gap is the zone miscode, not a real freight discrepancy). */
