@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -20,9 +20,124 @@
   <span class="theme-label" id="theme-label">Dark</span>
 </button>
 
-<!-- COMPLETE TASK MODAL -->
-<div class="modal-overlay" id="complete-modal">
-  <div class="modal-box">
+<!-- HEADER & SHELL -->
+<div class="shell" id="main">
+  <header class="ledger-header">
+    <a class="nav-back" href="index.html">
+      <svg class="nav-back-arr" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <span>Return to Grimoire</span>
+    </a>
+    <div class="page-eyebrow">Tome IV &middot; WMF Arcane Workspace</div>
+    <h1 class="page-title">
+      <span class="pt-sub">Forwarder</span>
+      <span class="pt-main">Task Ledger</span>
+    </h1>
+    <div class="page-tagline">Track open tasks &middot; Bound by forwarder &middot; Sealed when done</div>
+    <div class="orn" aria-hidden="true">
+      <div class="orn-line"></div>
+      <div class="orn-diamond"></div>
+      <div class="orn-text">I &mdash; Inscribe a new task</div>
+      <div class="orn-diamond"></div>
+      <div class="orn-line"></div>
+    </div>
+  </header>
+
+  <section class="dashboard" aria-label="Task Statistics">
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-label" id="status-label">Connecting to ether...</span>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-num" id="st-total">&mdash;</div><div class="stat-lbl">Total tasks</div></div>
+      <div class="stat"><div class="stat-num s-pending" id="st-pending">&mdash;</div><div class="stat-lbl">Pending</div></div>
+      <div class="stat"><div class="stat-num s-overdue" id="st-overdue">&mdash;</div><div class="stat-lbl">Overdue</div></div>
+      <div class="stat"><div class="stat-num s-done" id="st-done">&mdash;</div><div class="stat-lbl">Done</div></div>
+      <div class="stat"><div class="stat-num s-fwds" id="st-fwds">&mdash;</div><div class="stat-lbl">Forwarders</div></div>
+    </div>
+  </section>
+
+  <form class="add-ritual" id="add-ritual-form" onsubmit="event.preventDefault(); addTask();">
+    <div class="ritual-top"></div>
+    <legend class="form-label-head">Inscribe a new task into the ledger</legend>
+    <fieldset class="form-grid" style="border:none;padding:0;margin:0;">
+      <div class="form-field"><label>Task title</label><input type="text" id="inp-title" placeholder="e.g. Chase AWB status" required /></div>
+      <div class="form-field">
+        <label>Forwarder</label>
+        <select id="inp-fwd" onchange="onFwdChange()" required>
+          <option value="">&mdash; select &mdash;</option>
+        </select>
+        <div class="new-fwd-wrap" id="new-fwd-wrap">
+          <input type="text" id="inp-new-fwd" placeholder="New forwarder name..." maxlength="40" />
+          <button type="button" class="btn-fwd-mini btn-fwd-save" onclick="saveNewForwarder()">&#10003; Add</button>
+          <button type="button" class="btn-fwd-mini btn-fwd-cancel" onclick="cancelNewForwarder()">&#10005;</button>
+        </div>
+      </div>
+      <div class="form-field"><label>Total data</label><input type="text" id="inp-total" placeholder="e.g. 3 AWBs &middot; 120 kg" /></div>
+      <div class="form-field"><label>Due date (optional)</label><input type="date" id="inp-due" /></div>
+      <div class="form-field form-full"><label>Notes</label><textarea id="inp-notes" placeholder="Any additional details, references, or remarks..."></textarea></div>
+    </fieldset>
+    <button type="submit" class="btn-inscribe" id="btn-inscribe">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+      <span>Inscribe Task</span>
+    </button>
+  </form>
+
+  <nav class="control-center" aria-label="Ledger Controls" style="width:100%;">
+    <!-- VIEW TOGGLE -->
+    <div class="view-toggle-row">
+      <button class="view-btn active" id="btn-view-fwd" onclick="setView('forwarder')">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        By Forwarder
+      </button>
+      <button class="view-btn" id="btn-view-scribes" onclick="setView('scribes')">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Hall of Scribes
+      </button>
+      <button class="view-btn" id="btn-view-chronicle" onclick="setView('chronicle')">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        The Chronicle
+      </button>
+      <div class="view-sep"></div>
+    </div>
+
+    <!-- SEARCH BAR -->
+    <div class="search-wrap" id="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input class="search-input" id="search-input" type="text" placeholder="Search tasks by title, notes, forwarder, scribe..." autocomplete="off" oninput="onSearch()" />
+      <span class="search-count" id="search-count"></span>
+      <button class="search-clear" id="search-clear" onclick="clearSearch()" title="Clear search" aria-label="Clear Search">
+        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- FORWARDER VIEW TOOLBAR -->
+  <div class="fwd-view-toolbar" id="fwd-toolbar">
+    <span class="fwd-view-toolbar-label">&#9672; Tasks grouped by forwarder</span>
+    <button class="btn-del-month-trigger" onclick="openDelMonthModal()" title="Delete all tasks from a specific month">
+      <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+      Delete by Month
+    </button>
+  </div>
+
+  <main class="ledger-views" style="width:100%;">
+    <div id="fwd-view" style="width:100%;flex-direction:column;gap:8px;animation:rise .9s .42s ease both;display:flex"></div>
+    <div id="scribes-view" style="display:none;width:100%;flex-direction:column;gap:0">
+      <div class="scribe-detail" id="scribe-detail" style="display:none"></div>
+    </div>
+    <div id="chronicle-view" style="display:none;width:100%"></div>
+  </main>
+
+  <div class="sigil-div"><div class="sdl2"></div><div class="sigil-sym">&#10022; &#5807; &#10022;</div><div class="sdl2"></div></div>
+  <footer>
+    codingkuh.my.id<span class="fsep">&middot;</span>Firebase + GitHub Pages<br>
+    <a href="index.html">The Grimoire</a><span class="fsep">&#10022;</span><a href="code.html">The Vault</a><span class="fsep">&#10022;</span><a href="qa.html">The Oracle</a><span class="fsep">&#10022;</span><a href="anmerkung.html">The Alchemist</a>
+  </footer>
+</div>
+
+<!-- MODALS MOVED TO BOTTOM FOR CLEANER DOM/ACCESSIBILITY -->
+<div class="modal-overlay" id="complete-modal" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-modal="true">
     <div class="modal-corner tl"></div>
     <div class="modal-corner br"></div>
     <div class="modal-shine"></div>
@@ -45,9 +160,8 @@
   </div>
 </div>
 
-<!-- EDIT TASK MODAL -->
-<div class="modal-overlay edit-modal" id="edit-modal">
-  <div class="modal-box">
+<div class="modal-overlay edit-modal" id="edit-modal" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-modal="true">
     <div class="modal-corner tl"></div>
     <div class="modal-corner br"></div>
     <div class="modal-shine"></div>
@@ -88,9 +202,8 @@
   </div>
 </div>
 
-<!-- DELETE BY MONTH MODAL -->
-<div class="del-month-overlay" id="del-month-modal">
-  <div class="del-month-box">
+<div class="del-month-overlay" id="del-month-modal" aria-hidden="true">
+  <div class="del-month-box" role="dialog" aria-modal="true">
     <div class="del-month-corner tl"></div>
     <div class="del-month-corner br"></div>
     <div class="del-month-shine"></div>
@@ -107,94 +220,6 @@
       <button class="modal-btn btn-del-month-confirm" id="btn-del-month-confirm" onclick="execDelByMonth()" disabled>&#10005; Dissolve All</button>
     </div>
   </div>
-</div>
-
-<div class="shell" id="main">
-  <a class="nav-back" href="index.html">
-    <span class="nav-back-arr">&#10232;</span>
-    <span>Return to Grimoire</span>
-  </a>
-  <div class="page-eyebrow">Tome IV &middot; WMF Arcane Workspace</div>
-  <h1 class="page-title">
-    <span class="pt-sub">Forwarder</span>
-    <span class="pt-main">Task Ledger</span>
-  </h1>
-  <div class="page-tagline">Track open tasks &middot; Bound by forwarder &middot; Sealed when done</div>
-  <div class="orn">
-    <div class="orn-line"></div>
-    <div class="orn-diamond"></div>
-    <div class="orn-text">I &mdash; Inscribe a new task</div>
-    <div class="orn-diamond"></div>
-    <div class="orn-line"></div>
-  </div>
-  <div class="status-bar">
-    <div class="status-dot" id="status-dot"></div>
-    <span class="status-label" id="status-label">Connecting to ether...</span>
-  </div>
-  <div class="stats-row">
-    <div class="stat"><div class="stat-num" id="st-total">&mdash;</div><div class="stat-lbl">Total tasks</div></div>
-    <div class="stat"><div class="stat-num s-pending" id="st-pending">&mdash;</div><div class="stat-lbl">Pending</div></div>
-    <div class="stat"><div class="stat-num s-overdue" id="st-overdue">&mdash;</div><div class="stat-lbl">Overdue</div></div>
-    <div class="stat"><div class="stat-num s-done" id="st-done">&mdash;</div><div class="stat-lbl">Done</div></div>
-    <div class="stat"><div class="stat-num s-fwds" id="st-fwds">&mdash;</div><div class="stat-lbl">Forwarders</div></div>
-  </div>
-  <div class="add-ritual">
-    <div class="ritual-top"></div>
-    <div class="form-label-head">Inscribe a new task into the ledger</div>
-    <div class="form-grid">
-      <div class="form-field"><label>Task title</label><input type="text" id="inp-title" placeholder="e.g. Chase AWB status" /></div>
-      <div class="form-field">
-        <label>Forwarder</label>
-        <select id="inp-fwd" onchange="onFwdChange()">
-          <option value="">&mdash; select &mdash;</option>
-        </select>
-        <div class="new-fwd-wrap" id="new-fwd-wrap">
-          <input type="text" id="inp-new-fwd" placeholder="New forwarder name..." maxlength="40" />
-          <button type="button" class="btn-fwd-mini btn-fwd-save" onclick="saveNewForwarder()">&#10003; Add</button>
-          <button type="button" class="btn-fwd-mini btn-fwd-cancel" onclick="cancelNewForwarder()">&#10005;</button>
-        </div>
-      </div>
-      <div class="form-field"><label>Total data</label><input type="text" id="inp-total" placeholder="e.g. 3 AWBs &middot; 120 kg" /></div>
-      <div class="form-field"><label>Due date (optional)</label><input type="date" id="inp-due" /></div>
-      <div class="form-field form-full"><label>Notes</label><textarea id="inp-notes" placeholder="Any additional details, references, or remarks..."></textarea></div>
-    </div>
-    <button class="btn-inscribe" id="btn-inscribe" onclick="addTask()"><span>&#10022;</span><span>Inscribe Task</span></button>
-  </div>
-
-  <!-- VIEW TOGGLE â€” 3 views -->
-  <div class="view-toggle-row">
-    <button class="view-btn active" id="btn-view-fwd" onclick="setView('forwarder')"><span>&#9672;</span> By Forwarder</button>
-    <button class="view-btn" id="btn-view-scribes" onclick="setView('scribes')"><span>&#8853;</span> Hall of Scribes</button>
-    <button class="view-btn" id="btn-view-chronicle" onclick="setView('chronicle')"><span>&#9775;</span> The Chronicle</button>
-    <div class="view-sep"></div>
-  </div>
-
-  <!-- SEARCH BAR â€” always visible across views -->
-  <div class="search-wrap" id="search-wrap">
-    <span class="search-icon">&#9906;</span>
-    <input class="search-input" id="search-input" type="text" placeholder="Search tasks by title, notes, forwarder, scribe..." autocomplete="off" oninput="onSearch()" />
-    <span class="search-count" id="search-count"></span>
-    <button class="search-clear" id="search-clear" onclick="clearSearch()" title="Clear search">&#10005;</button>
-  </div>
-
-  <!-- FORWARDER VIEW TOOLBAR â€” Delete by Month lives here -->
-  <div class="fwd-view-toolbar" id="fwd-toolbar">
-    <span class="fwd-view-toolbar-label">&#9672; Tasks grouped by forwarder</span>
-    <button class="btn-del-month-trigger" onclick="openDelMonthModal()" title="Delete all tasks from a specific month">
-      <span>&#9904;</span> Delete by Month
-    </button>
-  </div>
-
-  <div id="fwd-view" style="width:100%;flex-direction:column;gap:8px;animation:rise .9s .42s ease both;display:flex"></div>
-  <div id="scribes-view" style="display:none;width:100%;flex-direction:column;gap:0">
-    <div class="scribe-detail" id="scribe-detail" style="display:none"></div>
-  </div>
-  <div id="chronicle-view" style="display:none;width:100%"></div>
-  <div class="sigil-div"><div class="sdl2"></div><div class="sigil-sym">&#10022; &#5807; &#10022;</div><div class="sdl2"></div></div>
-  <footer>
-    codingkuh.my.id<span class="fsep">&middot;</span>Firebase + GitHub Pages<br>
-    <a href="index.html">The Grimoire</a><span class="fsep">&#10022;</span><a href="code.html">The Vault</a><span class="fsep">&#10022;</span><a href="qa.html">The Oracle</a><span class="fsep">&#10022;</span><a href="anmerkung.html">The Alchemist</a>
-  </footer>
 </div>
 <div id="toast"></div>
 
