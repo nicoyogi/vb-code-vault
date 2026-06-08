@@ -1,8 +1,33 @@
 /* ════════════════════════════════════════════
    FIREBASE INIT
 ════════════════════════════════════════════ */
+/* Guard: if the Firebase CDN didn't load (blocked by a corporate
+   firewall / ad-blocker, offline, or an SRI mismatch), `firebase`
+   is undefined. Without this guard the next line throws and the
+   whole script dies silently — leaving the auth dropdown frozen on
+   "— Loading… —". Instead, surface a clear, actionable error. */
+if (typeof firebase === 'undefined' || !firebase.initializeApp) {
+  document.addEventListener('DOMContentLoaded', () => {
+    ['loginEmail', 'registerPerson'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<option value="">— Can\u2019t reach Firebase \u2014 check connection / ad-blocker —</option>';
+    });
+  });
+  throw new Error('Firebase SDK failed to load — check network, ad-blocker, or CDN access.');
+}
+
 firebase.initializeApp(window.firebaseConfig);
 const db          = firebase.firestore();
+
+/* Auto-detect long-polling. The default WebChannel/streaming transport
+   silently hangs behind some corporate proxies, firewalls and VPNs
+   (Firestore get()/onSnapshot never resolve and never reject), which is
+   the classic "stuck on Loading…" symptom. Long-polling falls back to
+   plain HTTP requests that those networks allow. Must run before any
+   other Firestore call that starts the network. */
+try {
+  db.settings({ experimentalAutoDetectLongPolling: true });
+} catch (e) { /* settings already applied — safe to ignore */ }
 const peopleCol   = db.collection('wmf_holiday_people');
 const holidaysCol = db.collection('wmf_holidays');
 const vacResetCol = db.collection('wmf_vac_resets');
@@ -72,6 +97,18 @@ function saveSession(profile) { localStorage.setItem('ht_session', JSON.stringif
 function loadSession() { try { return JSON.parse(localStorage.getItem('ht_session')); } catch { return null; } }
 function clearSession() { localStorage.removeItem('ht_session'); }
 
+/* Reject a hanging promise after `ms` so a stuck Firestore read can never
+   leave the UI frozen forever. Resolves/rejects with the underlying promise
+   if it settles first. */
+function withTimeout(promise, ms = 12000, label = 'Request') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(label + ' timed out. Check your connection and retry.')), ms)
+    )
+  ]);
+}
+
 /* ─────────────────────────────────────────
    FIX 1: initAuth — clear stale session on
    any Firestore error instead of silently
@@ -81,14 +118,15 @@ async function initAuth() {
   const session = loadSession();
   if (session) {
     try {
-      const snap = await userProfCol.doc(session.uid).get();
+      const snap = await withTimeout(userProfCol.doc(session.uid).get(), 12000, 'Sign-in check');
       if (snap.exists) {
         currentUser = { uid: session.uid, ...snap.data() };
         showApp();
         return;
       }
     } catch(e) {
-      // Network/Firestore error — clear stale session and fall through to auth gate
+      // Network/Firestore error or timeout — clear stale session and fall
+      // through to the auth gate instead of hanging on a blank screen.
       clearSession();
     }
   }
@@ -143,6 +181,7 @@ function setAuthLoading(btnId, spinnerId, loading) {
    resets any stuck loading state.
 ───────────────────────────────────────── */
 let _authLoadInFlight = false;
+let _authLoadRetried  = false;
 async function loadPeopleForAuth() {
   if (_authLoadInFlight) return;
   _authLoadInFlight = true;
@@ -152,10 +191,10 @@ async function loadPeopleForAuth() {
   loginSel.innerHTML = regSel.innerHTML = '<option value="">— Loading… —</option>';
 
   try {
-    const [peopleSnap, profSnap] = await Promise.all([
+    const [peopleSnap, profSnap] = await withTimeout(Promise.all([
       peopleCol.orderBy('name').get(),
       userProfCol.get()
-    ]);
+    ]), 12000, 'Loading team');
     const linkedIds = new Set(profSnap.docs.map(d => d.data().personId));
 
     loginSel.innerHTML = '<option value="">— Select your name —</option>';
@@ -174,10 +213,20 @@ async function loadPeopleForAuth() {
 
   } catch(e) {
     loginSel.innerHTML = regSel.innerHTML =
-      '<option value="">— Error loading, refresh to retry —</option>';
+      '<option value="">— Couldn\u2019t load \u2014 retrying\u2026 —</option>';
     // Ensure buttons aren't stuck disabled if this was called during a login attempt
     setAuthLoading('loginBtn',    'loginSpinner',    false);
     setAuthLoading('registerBtn', 'registerSpinner', false);
+    // One-shot auto-retry to recover from a transient hang/timeout without
+    // forcing the user to manually refresh the page.
+    if (!_authLoadRetried) {
+      _authLoadRetried = true;
+      _authLoadInFlight = false;
+      setTimeout(loadPeopleForAuth, 2500);
+      return;
+    }
+    loginSel.innerHTML = regSel.innerHTML =
+      '<option value="">— Error loading \u2014 refresh to retry —</option>';
   } finally {
     _authLoadInFlight = false;
   }
