@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -14,10 +14,10 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Anmerkung Processor · The Alchemist">
 <meta name="twitter:description" content="Transmute forwarder invoices with dynamic Anmerkung rules, entirely in your browser.">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='120' fill='url(%23g)'/><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%2300f2fe'/><stop offset='100%' stop-color='%234facfe'/></linearGradient></defs><text x='256' y='360' font-family='sans-serif' font-size='280' font-weight='900' text-anchor='middle' fill='%23ffffff'>A</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%2302020a'/><text x='256' y='346' font-family='Georgia,serif' font-size='300' font-weight='900' text-anchor='middle' fill='%2334d399'>%E2%9C%A6</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="assets/grimoire-core.css">
 <link rel="stylesheet" href="assets/anmerkung.css">
@@ -26,8 +26,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 </head>
 <body>
-<div class="ambient-glow glow-1" aria-hidden="true"></div>
-<div class="ambient-glow glow-2" aria-hidden="true"></div>
 <a class="skip-link" href="#main">Skip to content</a>
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
@@ -39,13 +37,13 @@
     <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3v2.8l1.6 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
     News
   </button>
-  <button type="button" class="hdr-btn" id="btnTheme" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme" aria-pressed="false" style="display:none">
+  <button type="button" class="hdr-btn" id="btnTheme" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme" aria-pressed="false">
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" id="themeIcon"><path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.5 2.5l.7.7M8.8 8.8l.7.7M2.5 9.5l.7-.7M8.8 3.2l.7-.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="6" r="2.3" stroke="currentColor" stroke-width="1.1"/></svg>
     <span id="themeLabel">Dark</span>
   </button>
-  <button type="button" class="hdr-btn" id="btnStyle" onclick="toggleStyle()" title="Switch to professional style" aria-label="Toggle professional / mystic style" aria-pressed="false" style="display:none">
+  <button type="button" class="hdr-btn" id="btnStyle" onclick="toggleStyle()" title="Switch to professional style" aria-label="Toggle professional / mystic style" aria-pressed="false">
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><rect x="1.5" y="2.5" width="9" height="7" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M3.3 5h5.4M3.3 7h3.4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-    <span id="styleLabel">Editorial</span>
+    <span id="styleLabel">Mystic</span>
   </button>
   <button type="button" class="hdr-btn" id="btnOffline" title="Download all Grimoire pages for offline use" aria-label="Download for offline use">
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.5v6.3M3.3 5.3L6 8l2.7-2.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.8 9.2v.6c0 .4.3.7.7.7h7c.4 0 .7-.3.7-.7v-.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
@@ -56,10 +54,10 @@
 </header>
 
 <main class="container" id="main">
-  <div class="page-eyebrow">Data Processing Utility</div>
+  <div class="page-eyebrow">// Tome III · The Alchemist</div>
   <h1 class="page-title">Anmerkung <span class="grad">Processor</span></h1>
-  <div class="page-sub">Transmute forwarder invoices via dynamic rules.</div>
-  <div class="page-orn"></div>
+  <div class="page-sub">Upload · select forwarder · transmute · download</div>
+  <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᚦ ✦</div><div class="page-orn-line"></div></div>
 
   <h2 class="section-label" id="fwLabel">I — Select Forwarder</h2>
   <div class="fw-grid" role="radiogroup" aria-labelledby="fwLabel" id="fwGroup">
@@ -133,9 +131,9 @@
   </div>
 
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
-  <button class="btn-preview" id="btnPreview" disabled onclick="runPreview()">Preview</button>
-  <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Transmute</button>
-  <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Output</button>
+  <button class="btn-preview" id="btnPreview" disabled onclick="runPreview()">Preview — dry-run without writing</button>
+  <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Invoke the Ritual</button>
+  <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Transmuted Scroll ↓</button>
 
   <div class="preview-wrap" id="previewWrap" role="region" aria-label="Preview of proposed annotations">
     <div class="preview-head">
@@ -193,8 +191,8 @@
       <ul class="bulk-list" id="bulkList"></ul>
 
       <div class="bulk-progress" id="bulkProgress"><div class="bulk-progress-fill" id="bulkProgressFill"></div></div>
-      <button class="btn-bulk-run" id="btnBulkRun" disabled onclick="runBulkProcess()">Transmute All</button>
-      <button class="btn-bulk-dl-all" id="btnBulkDlAll" onclick="downloadAllBulk()">Download All as ZIP</button>
+      <button class="btn-bulk-run" id="btnBulkRun" disabled onclick="runBulkProcess()">Transmute All Scrolls</button>
+      <button class="btn-bulk-dl-all" id="btnBulkDlAll" onclick="downloadAllBulk()">Download All as ZIP ↓</button>
     </div>
   </div>
 
