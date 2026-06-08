@@ -14,10 +14,10 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Anmerkung Processor · The Alchemist">
 <meta name="twitter:description" content="Transmute forwarder invoices with dynamic Anmerkung rules, entirely in your browser.">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='0' fill='%230a0a0a'/><text x='256' y='380' font-family='serif' font-size='360' font-weight='900' text-anchor='middle' fill='%23d92d20'>A</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='120' fill='url(%23g)'/><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%2300f2fe'/><stop offset='100%' stop-color='%234facfe'/></linearGradient></defs><text x='256' y='360' font-family='sans-serif' font-size='280' font-weight='900' text-anchor='middle' fill='%23ffffff'>A</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..122,400..900;1,6..122,400..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="assets/grimoire-core.css">
 <link rel="stylesheet" href="assets/anmerkung.css">
@@ -26,6 +26,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 </head>
 <body>
+<div class="ambient-glow glow-1" aria-hidden="true"></div>
+<div class="ambient-glow glow-2" aria-hidden="true"></div>
 <a class="skip-link" href="#main">Skip to content</a>
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
@@ -54,10 +56,10 @@
 </header>
 
 <main class="container" id="main">
-  <div class="page-eyebrow">NO. 03 &mdash; THE ALCHEMIST</div>
-  <h1 class="page-title">ANMERKUNG<br>PROCESSOR</h1>
+  <div class="page-eyebrow">Data Processing Utility</div>
+  <h1 class="page-title">Anmerkung <span class="grad">Processor</span></h1>
   <div class="page-sub">Transmute forwarder invoices via dynamic rules.</div>
-  <div class="page-orn"><div class="page-orn-line"></div></div>
+  <div class="page-orn"></div>
 
   <h2 class="section-label" id="fwLabel">I — Select Forwarder</h2>
   <div class="fw-grid" role="radiogroup" aria-labelledby="fwLabel" id="fwGroup">
