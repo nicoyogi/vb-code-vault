@@ -19,19 +19,16 @@ if (typeof firebase === 'undefined' || !firebase.initializeApp) {
 firebase.initializeApp(window.firebaseConfig);
 const db          = firebase.firestore();
 
-/* FORCE long-polling. The default WebChannel/streaming transport silently
-   hangs behind many corporate proxies, firewalls and VPNs — Firestore
-   get()/onSnapshot never resolve and never reject, which is the classic
-   "stuck on Loading…" symptom this app's users hit on the office network.
-   `experimentalAutoDetectLongPolling` is NOT enough here: the auto-detect
-   probe itself rides the streaming channel and can hang on exactly those
-   networks, so detection never completes. Forcing long-polling makes every
-   request a plain HTTP round-trip (which we verified those networks allow),
-   eliminating the hang outright. Must run before any other Firestore call
-   that starts the network. */
-try {
-  db.settings({ experimentalForceLongPolling: true });
-} catch (e) { /* settings already applied — safe to ignore */ }
+/* Use the DEFAULT Firestore transport (WebChannel) — no db.settings() override.
+   Every other app in this project (todo.js, anmerkung.js, grimoire-core.js)
+   uses the default transport and connects reliably on this network, while the
+   holiday tracker was the ONLY app carrying an `experimentalAutoDetectLongPolling`
+   override AND the only one that hung on a cold page load ("stuck on Loading…").
+   Auto-detect fires a transport-probe round-trip before the first read; combined
+   with the one-time .get() calls on the cold-start auth path it could stall the
+   very first request, which is why a fresh refresh hung while an already-warm
+   in-session connection worked. Matching the working apps (plain default) removes
+   that probe and fixes the cold-start hang. */
 const peopleCol   = db.collection('wmf_holiday_people');
 const holidaysCol = db.collection('wmf_holidays');
 const vacResetCol = db.collection('wmf_vac_resets');
