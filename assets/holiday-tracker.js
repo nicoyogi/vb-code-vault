@@ -151,7 +151,16 @@ function showAuthGate() {
   loadPeopleForAuth();
 }
 
-initAuth();
+/* NOTE: initAuth() is intentionally invoked at the very BOTTOM of this file,
+   not here. On the logged-out path initAuth() runs fully synchronously
+   (no await executes) straight into loadPeopleForAuth(), which reads the
+   `let _authLoadInFlight` / `_authLoadRetried` state declared further down.
+   Calling it here accessed those `let` bindings before their declaration ran
+   → Temporal Dead Zone "Cannot access '_authLoadInFlight' before
+   initialization", which killed the script and froze the dropdown on
+   "Loading…". Deferring the call until after all top-level declarations are
+   initialized avoids the TDZ. The script is loaded at the end of <body>, so
+   the DOM is already parsed by then. */
 
 function switchAuthTab(tab) {
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
@@ -1992,3 +2001,14 @@ document.addEventListener('click', e => {
   }
   loop();
 })();
+
+
+/* ════════════════════════════════════════════
+   BOOT
+   Kick off auth LAST, after every top-level let/const above has been
+   initialized. On the logged-out path initAuth() runs synchronously into
+   loadPeopleForAuth(), which reads `_authLoadInFlight`/`_authLoadRetried`;
+   invoking it earlier hit a Temporal Dead Zone and froze the dropdown on
+   "Loading…". The script tag sits at the end of <body>, so the DOM is ready.
+════════════════════════════════════════════ */
+initAuth();
