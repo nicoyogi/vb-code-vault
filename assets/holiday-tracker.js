@@ -19,15 +19,16 @@ if (typeof firebase === 'undefined' || !firebase.initializeApp) {
 firebase.initializeApp(window.firebaseConfig);
 const db          = firebase.firestore();
 
-/* Auto-detect long-polling. The default WebChannel/streaming transport
-   silently hangs behind some corporate proxies, firewalls and VPNs
-   (Firestore get()/onSnapshot never resolve and never reject), which is
-   the classic "stuck on Loading…" symptom. Long-polling falls back to
-   plain HTTP requests that those networks allow. Must run before any
-   other Firestore call that starts the network. */
-try {
-  db.settings({ experimentalAutoDetectLongPolling: true });
-} catch (e) { /* settings already applied — safe to ignore */ }
+/* Use the DEFAULT Firestore transport (WebChannel) — no db.settings() override.
+   Every other app in this project (todo.js, anmerkung.js, grimoire-core.js)
+   uses the default transport and connects reliably on this network, while the
+   holiday tracker was the ONLY app carrying an `experimentalAutoDetectLongPolling`
+   override AND the only one that hung on a cold page load ("stuck on Loading…").
+   Auto-detect fires a transport-probe round-trip before the first read; combined
+   with the one-time .get() calls on the cold-start auth path it could stall the
+   very first request, which is why a fresh refresh hung while an already-warm
+   in-session connection worked. Matching the working apps (plain default) removes
+   that probe and fixes the cold-start hang. */
 const peopleCol   = db.collection('wmf_holiday_people');
 const holidaysCol = db.collection('wmf_holidays');
 const vacResetCol = db.collection('wmf_vac_resets');
@@ -150,7 +151,16 @@ function showAuthGate() {
   loadPeopleForAuth();
 }
 
-initAuth();
+/* NOTE: initAuth() is intentionally invoked at the very BOTTOM of this file,
+   not here. On the logged-out path initAuth() runs fully synchronously
+   (no await executes) straight into loadPeopleForAuth(), which reads the
+   `let _authLoadInFlight` / `_authLoadRetried` state declared further down.
+   Calling it here accessed those `let` bindings before their declaration ran
+   → Temporal Dead Zone "Cannot access '_authLoadInFlight' before
+   initialization", which killed the script and froze the dropdown on
+   "Loading…". Deferring the call until after all top-level declarations are
+   initialized avoids the TDZ. The script is loaded at the end of <body>, so
+   the DOM is already parsed by then. */
 
 function switchAuthTab(tab) {
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
@@ -1991,3 +2001,14 @@ document.addEventListener('click', e => {
   }
   loop();
 })();
+
+
+/* ════════════════════════════════════════════
+   BOOT
+   Kick off auth LAST, after every top-level let/const above has been
+   initialized. On the logged-out path initAuth() runs synchronously into
+   loadPeopleForAuth(), which reads `_authLoadInFlight`/`_authLoadRetried`;
+   invoking it earlier hit a Temporal Dead Zone and froze the dropdown on
+   "Loading…". The script tag sits at the end of <body>, so the DOM is ready.
+════════════════════════════════════════════ */
+initAuth();
