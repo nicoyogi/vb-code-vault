@@ -32,3 +32,9 @@ build/
 .cache/
 *.tmp
 fix-encoding.js
+
+# Local Testing & AI Tools
+claude-skills/
+diff.txt
+.gemini/
+.claude/
