@@ -3,816 +3,553 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="The Malignant Grimoire — a codex of VB/VBA spells, forwarder rituals and arcane workspace tools.">
-<meta name="theme-color" content="#030305">
+<meta name="description" content="The Grimoire — a codex of VB/VBA spells, forwarder rituals and arcane workspace tools.">
+<meta name="theme-color" content="#06060c">
 <title>The Grimoire</title>
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;500;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/grimoire-core.css">
 <script src="assets/grimoire-core.js"></script>
 <style>
-  /* Editorial Arcane Styles & Premium Glassmorphism */
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  :root {
-    /* Color Tokens */
-    --color-bg: #030305;
-    --color-fg: #f4f0e6;
-    --color-gold-base: #d4af64;
-    --color-gold-dim: rgba(212, 175, 100, 0.5);
-    --color-gold-faint: rgba(212, 175, 100, 0.1);
-    --color-indigo-glow: rgba(75, 45, 140, 0.35);
-    
-    /* Surface Tokens */
-    --surface-glass: rgba(20, 20, 25, 0.4);
-    --surface-glass-hover: rgba(35, 30, 50, 0.65);
-    --surface-seal: rgba(0, 0, 0, 0.3);
-    --border-glass: rgba(212, 175, 100, 0.15);
-    --border-base: rgba(212, 175, 100, 0.25);
-    
-    /* Spacing Tokens */
-    --space-xs: 8px;
-    --space-sm: 16px;
-    --space-md: 24px;
-    --space-lg: 32px;
-    --space-xl: 48px;
-    --space-section: 80px;
 
-    /* Typography Tokens */
-    --font-cinzel: 'Cinzel', serif;
-    --font-syne: 'Syne', sans-serif;
-    --font-mono: 'DM Mono', monospace;
-    --fluid-h1: clamp(2.5rem, 1rem + 5vw, 5.5rem);
-    --fluid-h2: clamp(1.5rem, 1rem + 2vw, 2.5rem);
-    --fluid-body: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
-    
-    /* Interactive Tokens */
-    --focus-ring: 2px solid var(--color-gold-base);
-    --focus-offset: 4px;
-  }
-  html, body { width: 100%; min-height: 100vh; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-syne); overflow-x: hidden; position: relative; }
-  
-  /* Focus States */
-  :focus:not(:focus-visible) { outline: none; }
-  :focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); border-radius: 6px; box-shadow: 0 0 15px rgba(212, 175, 100, 0.4); }
-  
-  /* Ambient Mystical Glow */
-  body::before {
-    content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
-    background: radial-gradient(circle at 50% 50%, var(--color-indigo-glow) 0%, transparent 40%),
-                radial-gradient(circle at 80% 20%, var(--color-gold-faint) 0%, transparent 30%);
-    z-index: 0; pointer-events: none; opacity: 0.6;
-    animation: ambientShift 20s ease-in-out infinite alternate;
-  }
-  @keyframes ambientShift {
-    0% { transform: scale(1) translate(0, 0); }
-    100% { transform: scale(1.1) translate(-2%, 2%); }
+  :root{
+    /* Palette */
+    --bg:#06060c;
+    --bg-soft:#0b0b16;
+    --ink:#f3efe3;
+    --muted:rgba(243,239,227,0.60);
+    --faint:rgba(243,239,227,0.40);
+
+    --gold:#d8b56e;
+    --gold-2:#f0dca6;
+    --gold-dim:rgba(216,181,110,0.55);
+    --gold-faint:rgba(216,181,110,0.10);
+    --violet:rgba(110,80,200,0.30);
+
+    /* Surfaces */
+    --glass:rgba(20,20,30,0.45);
+    --glass-2:rgba(34,30,52,0.62);
+    --line:rgba(216,181,110,0.18);
+    --line-soft:rgba(243,239,227,0.08);
+
+    /* Scale */
+    --xs:8px; --sm:14px; --md:22px; --lg:34px; --xl:52px; --section:84px;
+
+    --f-display:'Cinzel',serif;
+    --f-body:'Syne',sans-serif;
+    --f-mono:'DM Mono',monospace;
+
+    --h1:clamp(2.6rem,1.2rem+5vw,5rem);
+    --h2:clamp(1.35rem,1rem+1.4vw,2rem);
+    --body:clamp(1rem,0.96rem+0.2vw,1.1rem);
+
+    --ease:cubic-bezier(0.2,0.8,0.2,1);
+    --radius:14px;
   }
 
-  /* CSS Noise overlay for physical texture */
-  body::after {
-    content: ''; position: fixed; inset: 0; z-index: 50; pointer-events: none;
-    background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
-    opacity: 0.05; mix-blend-mode: overlay;
+  html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--f-body);overflow-x:hidden;position:relative;scroll-behavior:smooth}
+
+  :focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
+
+  /* Ambient field */
+  body::before{
+    content:'';position:fixed;inset:-50%;z-index:0;pointer-events:none;opacity:0.7;
+    background:
+      radial-gradient(circle at 22% 18%, var(--violet) 0%, transparent 38%),
+      radial-gradient(circle at 82% 8%, var(--gold-faint) 0%, transparent 34%),
+      radial-gradient(circle at 60% 100%, rgba(60,40,120,0.20) 0%, transparent 50%);
+    animation:drift 24s ease-in-out infinite alternate;
+  }
+  @keyframes drift{0%{transform:scale(1) translate(0,0)}100%{transform:scale(1.12) translate(-2%,2%)}}
+
+  body::after{
+    content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:0.045;mix-blend-mode:overlay;
+    background-image:url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)"/%3E%3C/svg%3E');
   }
 
-  canvas#bg { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.5; }
+  canvas#bg{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.45}
 
-  .shell { position: relative; z-index: 3; width: 100%; max-width: 900px; margin: 0 auto; padding: var(--space-section) var(--space-md); display: flex; flex-direction: column; }
+  .sigil-defs{position:absolute;width:0;height:0;overflow:hidden}
+  .ico{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 
-  /* Hero / Header */
-  header { margin-bottom: var(--space-section); border-bottom: 1px solid var(--border-base); padding-bottom: var(--space-xl); position: relative; animation: slideUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-  .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--color-gold-dim); margin-bottom: var(--space-sm); }
-  
-  h1 { 
-    font-family: var(--font-cinzel); 
-    font-size: var(--fluid-h1); 
-    font-weight: 400; 
-    line-height: 0.9; 
-    letter-spacing: -0.02em; 
-    text-transform: uppercase; 
-    text-shadow: 0 0 40px rgba(212,175,100,0.15);
+  /* ── Top bar ─────────────────────────────────────────── */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    background:linear-gradient(180deg, rgba(6,6,12,0.86) 0%, rgba(6,6,12,0.45) 100%);
+    border-bottom:1px solid var(--line-soft);
   }
-  .t-mal { display: block; font-size: 0.4em; letter-spacing: 0.2em; color: var(--color-gold-dim); margin-bottom: 0.2rem; }
-  
-  @keyframes shimmer {
-    0% { background-position: -200% center; }
-    100% { background-position: 200% center; }
-  }
-  .t-grim { 
-    display: block; 
-    background: linear-gradient(135deg, #f3e7c8 0%, var(--color-gold-base) 20%, #ffffff 50%, var(--color-gold-base) 80%, #8b6b27 100%);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 4px 25px rgba(212,175,100,0.3);
-    animation: shimmer 8s linear infinite;
-  }
-  .tagline { font-family: var(--font-mono); font-size: 13px; color: var(--color-gold-dim); letter-spacing: 0.15em; margin-top: var(--space-md); text-transform: uppercase; }
+  .topbar-inner{max-width:1040px;margin:0 auto;padding:14px var(--md);display:flex;align-items:center;gap:var(--md);flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+  .brand-mark{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:9px;color:var(--gold);background:rgba(0,0,0,0.35)}
+  .brand-name{font-family:var(--f-display);font-size:15px;letter-spacing:0.22em;text-transform:uppercase}
+  .brand-name b{font-weight:600;color:var(--gold)}
 
-  /* Ledger Rows */
-  .ledger-section { margin-bottom: var(--space-section); animation: slideUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both; }
-  .section-title { font-family: var(--font-cinzel); font-size: 14px; letter-spacing: 0.4em; color: var(--color-gold-base); text-transform: uppercase; margin-bottom: var(--space-md); display: flex; align-items: center; gap: var(--space-sm); }
-  .section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-base) 0%, transparent 100%); }
+  .switcher{margin-left:auto;display:flex;align-items:center;gap:6px;padding:5px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,0.35)}
+  .switch-label{font-family:var(--f-mono);font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--faint);padding:0 6px}
+  .seg{
+    appearance:none;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;
+    font-family:var(--f-mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;
+    padding:9px 14px;border-radius:9px;display:inline-flex;align-items:center;gap:8px;transition:all .35s var(--ease)
+  }
+  .seg kbd{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--gold-dim)}
+  .seg:hover{color:var(--ink);border-color:var(--line)}
+  .seg[aria-pressed="true"]{background:var(--gold);color:#0a0a12;border-color:var(--gold);box-shadow:0 0 18px rgba(216,181,110,0.4)}
+  .seg[aria-pressed="true"] kbd{color:#0a0a12;border-color:rgba(0,0,0,0.3)}
 
-  .arcane-ledger { display: flex; flex-direction: column; gap: var(--space-xs); }
-  
-  .pcard { 
-    position: relative; display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: var(--space-lg); 
-    padding: var(--space-md) var(--space-sm); border: 1px solid transparent; border-bottom-color: var(--border-base); 
-    cursor: pointer; text-decoration: none; color: inherit; 
-    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-    background: transparent;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  
-  .pcard::after {
-    content: ''; position: absolute; inset: 0; border-radius: 8px;
-    padding: 1px; background: linear-gradient(135deg, rgba(212,175,100,0.6) 0%, transparent 50%, rgba(212,175,100,0.1) 100%);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0; transition: opacity 0.5s ease; pointer-events: none;
-  }
+  /* ── Shell ───────────────────────────────────────────── */
+  .shell{position:relative;z-index:3;width:100%;max-width:1040px;margin:0 auto;padding:var(--xl) var(--md) var(--section)}
 
-  .pcard:hover::after, .pcard.selected::after { opacity: 1; }
-  .pcard:hover, .pcard.selected { 
-    background: var(--surface-glass); 
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    padding-left: var(--space-lg); 
-    border-color: transparent;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255,255,255,0.1);
+  header.hero{padding:var(--lg) 0 var(--xl);border-bottom:1px solid var(--line);margin-bottom:var(--xl);animation:rise .9s var(--ease) both}
+  .eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:var(--sm)}
+  h1{font-family:var(--f-display);font-size:var(--h1);font-weight:400;line-height:0.92;letter-spacing:-0.01em;text-transform:uppercase}
+  .t-sub{display:block;font-size:0.36em;letter-spacing:0.24em;color:var(--gold-dim);margin-bottom:0.25rem}
+  @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+  .t-main{
+    display:block;
+    background:linear-gradient(135deg,#f3e7c8 0%,var(--gold) 22%,#ffffff 50%,var(--gold) 78%,#8b6b27 100%);
+    background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    text-shadow:0 4px 30px rgba(216,181,110,0.25);animation:shimmer 9s linear infinite;
   }
-  
-  .pseal { 
-    width: 56px; height: 56px; font-family: var(--font-cinzel); font-size: 16px; color: var(--color-gold-base); 
-    border: 1px solid var(--border-base); display: flex; align-items: center; justify-content: center; 
-    border-radius: 4px; transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-    background: var(--surface-seal);
-    position: relative;
-    overflow: hidden;
-  }
-  .pseal::before {
-    content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-    background: radial-gradient(circle, rgba(212,175,100,0.2) 0%, transparent 60%);
-    opacity: 0; transition: opacity 0.5s;
-  }
-  .pcard:hover .pseal { border-color: var(--color-gold-base); transform: scale(1.05) rotate(2deg); box-shadow: 0 0 15px var(--color-gold-faint); }
-  .pcard:hover .pseal::before { opacity: 1; }
-  .pcard.selected .pseal { background: var(--color-gold-base); color: var(--color-bg); border-color: var(--color-gold-base); box-shadow: 0 0 25px rgba(212,175,100,0.6); transform: scale(1.05); }
+  .tagline{font-family:var(--f-mono);font-size:13px;color:var(--muted);letter-spacing:0.12em;margin-top:var(--md);text-transform:uppercase}
 
-  .pinfo { display: flex; flex-direction: column; gap: 0.3rem; }
-  .pname { font-family: var(--font-cinzel); font-size: var(--fluid-h2); letter-spacing: 0.05em; color: var(--color-fg); font-weight: 400; transition: color 0.3s, text-shadow 0.3s; }
-  .pcard:hover .pname, .pcard.selected .pname { color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.3); }
-  .pdesc { font-family: var(--font-mono); font-size: 13px; color: rgba(244, 240, 230, 0.7); line-height: 1.5; }
-
-  .pmeta { text-align: right; font-family: var(--font-mono); font-size: 12px; color: var(--color-gold-dim); display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-xs); }
-  .pstatus { display: flex; align-items: center; gap: 6px; letter-spacing: 0.1em; text-transform: uppercase; }
-  .pstatus.act { color: var(--color-gold-base); }
-  .pdot { width: 4px; height: 4px; background: var(--color-gold-base); border-radius: 50%; box-shadow: 0 0 8px var(--color-gold-base); animation: pulse 2s infinite; }
-  
-  @keyframes pulse {
-    0% { opacity: 0.6; transform: scale(1); box-shadow: 0 0 8px var(--color-gold-base); }
-    50% { opacity: 1; transform: scale(1.5); box-shadow: 0 0 15px var(--color-gold-base); }
-    100% { opacity: 0.6; transform: scale(1); box-shadow: 0 0 8px var(--color-gold-base); }
+  /* ── Chronicle (shared) ──────────────────────────────── */
+  .chronicle{
+    position:relative;display:flex;align-items:center;justify-content:space-between;gap:var(--md);
+    text-decoration:none;color:inherit;padding:var(--md);border-radius:var(--radius);
+    background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--line);margin-bottom:var(--xl);overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.06);
+    transition:transform .5s var(--ease),box-shadow .5s var(--ease),background .5s var(--ease);
+    animation:rise .9s var(--ease) .08s both;
   }
-  
-  .pkbd kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; border: 1px solid var(--border-base); padding: 2px 6px; font-size: 11px; color: var(--color-gold-base); background: rgba(0,0,0,0.5); border-radius: 3px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.05); }
+  .chronicle::before{content:'';position:absolute;inset:0;background:radial-gradient(640px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,0.06),transparent 40%);opacity:0;transition:opacity .5s;pointer-events:none}
+  .chronicle:hover,.chronicle:focus-visible{transform:translateY(-4px);background:var(--glass-2);box-shadow:0 18px 40px rgba(0,0,0,0.5),0 0 28px var(--violet)}
+  .chronicle:hover::before,.chronicle:focus-visible::before{opacity:1}
+  .ch-left{display:flex;align-items:center;gap:var(--md);position:relative;z-index:2}
+  .ch-mark{width:50px;height:50px;flex:none;display:grid;place-items:center;border:1px solid var(--line);border-radius:12px;color:var(--gold);background:rgba(0,0,0,0.3)}
+  .ch-label{font-family:var(--f-mono);font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:var(--gold)}
+  .ch-title{font-family:var(--f-display);font-size:var(--h2);margin:2px 0}
+  .ch-desc{font-family:var(--f-body);font-size:14px;color:var(--muted)}
+  .arr{font-family:var(--f-mono);font-size:18px;color:var(--gold);opacity:0.75;transition:transform .4s var(--ease),opacity .4s,color .4s;position:relative;z-index:2}
+  .chronicle:hover .arr,.chronicle:focus-visible .arr{transform:translateX(10px) scale(1.15);opacity:1;color:#fff}
 
-  /* Tomes Section */
-  #tomes-section { display: none; margin-bottom: var(--space-xl); }
-  #tomes-section.show { display: block; }
-  
-  .project-banner { 
-    display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); 
-    border: 1px solid var(--border-glass); background: var(--surface-glass); 
-    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-    border-radius: 8px; margin-bottom: var(--space-md); font-family: var(--font-mono); font-size: 13px; color: var(--color-gold-dim); 
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255,255,255,0.05);
-  }
-  .pb-name { color: var(--color-gold-base); font-family: var(--font-cinzel); font-size: 16px; letter-spacing: 0.1em; }
-  .pb-change { 
-    margin-left: auto; border: 1px solid var(--border-base); background: transparent; color: var(--color-gold-base); 
-    padding: var(--space-xs) var(--space-sm); min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
-    font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; 
-    cursor: pointer; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); border-radius: 4px; 
-    position: relative; overflow: hidden;
-  }
-  .pb-change::before {
-    content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
-    background: var(--color-gold-base); border-radius: 50%; transform: translate(-50%, -50%);
-    transition: width 0.5s ease, height 0.5s ease; z-index: -1;
-  }
-  .pb-change:hover { color: var(--color-bg); box-shadow: 0 0 20px rgba(212,175,100,0.4); border-color: transparent; }
-  .pb-change:hover::before { width: 150px; height: 150px; }
+  /* ── Section heading ─────────────────────────────────── */
+  .sec-head{display:flex;align-items:baseline;gap:var(--sm);margin-bottom:var(--lg)}
+  .sec-title{font-family:var(--f-display);font-size:13px;letter-spacing:0.38em;color:var(--gold);text-transform:uppercase;white-space:nowrap}
+  .sec-rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line) 0%,transparent 100%)}
+  .sec-meta{font-family:var(--f-mono);font-size:11px;letter-spacing:0.16em;color:var(--faint);text-transform:uppercase}
 
-  /* Tomes Grid */
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: var(--space-md); border: none; background: transparent; }
-  .s2 { grid-column: 1 / -1; }
-
-  .card { 
-    position: relative; 
-    background: var(--surface-glass); 
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid transparent;
-    border-radius: 12px;
-    padding: var(--space-lg) var(--space-md); text-decoration: none; color: inherit; display: flex; flex-direction: column; 
-    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); 
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.08);
-    opacity: 0; transform: translateY(30px);
-    overflow: hidden;
-    animation: floatCard 6s ease-in-out infinite alternate;
+  /* ── Empty state ─────────────────────────────────────── */
+  .empty{
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--sm);
+    padding:var(--xl) var(--md);border:1px dashed var(--line);border-radius:var(--radius);
+    background:rgba(0,0,0,0.18);animation:rise .9s var(--ease) .12s both;
   }
-  
-  .card:nth-child(even) { animation-delay: -3s; }
-
-  @keyframes floatCard {
-    0% { transform: translateY(0px); }
-    100% { transform: translateY(-5px); }
+  .empty .glyph{font-family:var(--f-display);font-size:34px;color:var(--gold-dim)}
+  .empty h3{font-family:var(--f-display);font-weight:400;font-size:var(--h2);letter-spacing:0.04em}
+  .empty p{font-family:var(--f-mono);font-size:12px;letter-spacing:0.08em;color:var(--muted);max-width:46ch;line-height:1.7}
+  .empty-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+  .ghost-btn{
+    font-family:var(--f-mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);
+    border:1px solid var(--line);background:rgba(0,0,0,0.3);border-radius:10px;padding:11px 18px;cursor:pointer;
+    transition:all .35s var(--ease)
   }
+  .ghost-btn:hover{background:var(--gold);color:#0a0a12;border-color:var(--gold);box-shadow:0 0 20px rgba(216,181,110,0.4)}
 
-  .card::before {
-    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: radial-gradient(
-      800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
-      rgba(255, 255, 255, 0.06),
-      transparent 40%
-    );
-    opacity: 0; transition: opacity 0.5s; z-index: 1; pointer-events: none;
+  /* ── Active project banner ───────────────────────────── */
+  .banner{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px var(--md);border-radius:12px;
+    background:var(--glass);border:1px solid var(--line);margin-bottom:var(--lg);
+    font-family:var(--f-mono);font-size:12px;letter-spacing:0.1em;color:var(--muted);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
   }
-  
-  .card::after {
-    content: ''; position: absolute; inset: 0; border-radius: 12px;
-    padding: 1px; background: linear-gradient(135deg, rgba(212,175,100,0.4) 0%, transparent 60%, rgba(212,175,100,0.08) 100%);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    transition: opacity 0.5s ease; pointer-events: none;
+  .banner .b-name{font-family:var(--f-display);font-size:15px;letter-spacing:0.1em;color:var(--gold)}
+  .banner .b-reset{margin-left:auto;font-family:var(--f-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold-dim);background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;transition:all .3s var(--ease)}
+  .banner .b-reset:hover{color:#0a0a12;background:var(--gold);border-color:var(--gold)}
+
+  /* ── Tool grid ───────────────────────────────────────── */
+  #grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--md)}
+  .span-2{grid-column:1/-1}
+
+  .card{
+    position:relative;display:flex;flex-direction:column;text-decoration:none;color:inherit;
+    padding:var(--lg) var(--md);border-radius:var(--radius);overflow:hidden;
+    background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--line);
+    box-shadow:0 8px 24px rgba(0,0,0,0.3),inset 0 1px 1px rgba(255,255,255,0.06);
+    transition:transform .5s var(--ease),box-shadow .5s var(--ease),background .5s var(--ease),border-color .5s var(--ease);
+    opacity:0;transform:translateY(22px);
   }
+  .card.enter{animation:cardIn .65s var(--ease) forwards}
+  @keyframes cardIn{to{opacity:1;transform:translateY(0)}}
+  @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  @keyframes cardEntrance {
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .card.enter { animation: cardEntrance 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards, floatCard 6s ease-in-out 0.7s infinite alternate; }
-  .card.enter:nth-child(even) { animation: cardEntrance 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards, floatCard 6s ease-in-out 3.7s infinite alternate; }
-  
-  .card.enter:nth-child(1) { animation-delay: 0.05s, 0.75s; }
-  .card.enter:nth-child(2) { animation-delay: 0.1s, 0.8s; }
-  .card.enter:nth-child(3) { animation-delay: 0.15s, 0.85s; }
-  .card.enter:nth-child(4) { animation-delay: 0.2s, 0.9s; }
-  .card.enter:nth-child(5) { animation-delay: 0.25s, 0.95s; }
-  .card.enter:nth-child(6) { animation-delay: 0.3s, 1s; }
-  .card.enter:nth-child(7) { animation-delay: 0.35s, 1.05s; }
+  .card::before{content:'';position:absolute;inset:0;background:radial-gradient(640px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,0.06),transparent 40%);opacity:0;transition:opacity .5s;pointer-events:none;z-index:1}
+  .card:hover,.card:focus-visible{transform:translateY(-6px);background:var(--glass-2);border-color:var(--gold-dim);box-shadow:0 20px 44px rgba(0,0,0,0.55),0 0 28px var(--violet)}
+  .card:hover::before,.card:focus-visible::before{opacity:1}
 
-  .card:hover, .card:focus-visible { 
-    transform: translateY(-8px) scale(1.02) !important;
-    background: var(--surface-glass-hover); 
-    box-shadow: 0 20px 45px rgba(0,0,0,0.6), 0 0 30px rgba(75, 45, 140, 0.2), inset 0 1px 1px rgba(255,255,255,0.15);
-    animation-play-state: paused;
-  }
-  .card:hover::after, .card:focus-visible::after { background: linear-gradient(135deg, rgba(212,175,100,0.7) 0%, transparent 50%, rgba(212,175,100,0.2) 100%); }
-  .card:hover::before, .card:focus-visible::before { opacity: 1; }
-  .card[style*="display: none"] { display: none !important; }
+  .card-top{display:flex;align-items:center;gap:12px;margin-bottom:var(--md);position:relative;z-index:2}
+  .card-ico{width:46px;height:46px;flex:none;display:grid;place-items:center;border:1px solid var(--line);border-radius:11px;color:var(--gold);background:rgba(0,0,0,0.32);transition:all .45s var(--ease)}
+  .card:hover .card-ico,.card:focus-visible .card-ico{border-color:var(--gold);transform:scale(1.06) rotate(-2deg);box-shadow:0 0 16px var(--gold-faint)}
+  .clabel{font-family:var(--f-mono);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold)}
+  .ctitle{font-family:var(--f-display);font-size:var(--h2);font-weight:400;letter-spacing:0.02em;line-height:1.1;margin-top:3px;transition:color .3s,text-shadow .3s}
+  .card:hover .ctitle,.card:focus-visible .ctitle{color:#fff;text-shadow:0 0 14px rgba(255,255,255,0.25)}
+  .cdesc{font-family:var(--f-body);font-size:var(--body);color:var(--muted);line-height:1.6;flex:1;margin-bottom:var(--md);position:relative;z-index:2}
+  .cfoot{display:flex;align-items:center;justify-content:space-between;gap:var(--sm);margin-top:auto;padding-top:var(--sm);border-top:1px solid var(--line-soft);position:relative;z-index:2;transition:border-color .4s}
+  .card:hover .cfoot,.card:focus-visible .cfoot{border-color:var(--line)}
+  .tags{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font-family:var(--f-mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold-dim);background:rgba(0,0,0,0.4);border:1px solid var(--line-soft);border-radius:6px;padding:5px 9px;transition:all .3s}
+  .card:hover .tag,.card:focus-visible .tag{color:var(--gold);border-color:var(--line)}
+  .card:hover .arr,.card:focus-visible .arr{transform:translateX(10px) scale(1.15);opacity:1;color:#fff}
 
-  .clabel { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-gold-base); margin-bottom: var(--space-sm); position: relative; z-index: 2;}
-  .ctitle { font-family: var(--font-cinzel); font-size: var(--fluid-h2); letter-spacing: 0.02em; margin-bottom: var(--space-sm); color: var(--color-fg); font-weight: 400; transition: color 0.3s, text-shadow 0.3s; position: relative; z-index: 2;}
-  .card:hover .ctitle, .card:focus-visible .ctitle { color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.3); }
-  .cdesc { font-family: var(--font-syne); font-size: var(--fluid-body); color: rgba(244, 240, 230, 0.8); line-height: 1.6; flex: 1; margin-bottom: var(--space-md); position: relative; z-index: 2; }
+  /* ── Footer ──────────────────────────────────────────── */
+  footer{margin-top:var(--section);padding-top:var(--md);border-top:1px solid var(--line);text-align:center;animation:rise .9s var(--ease) .3s both}
+  .foot-links{display:flex;flex-wrap:wrap;gap:4px 0;justify-content:center;font-family:var(--f-mono);font-size:12px;letter-spacing:0.08em;text-transform:uppercase}
+  .foot-links a{color:var(--gold-dim);text-decoration:none;padding:8px 12px;border-radius:6px;transition:color .25s,text-shadow .25s}
+  .foot-links a:hover,.foot-links a:focus-visible{color:var(--gold);text-shadow:0 0 8px rgba(216,181,110,0.5)}
+  .foot-links .fsep{color:var(--faint);opacity:0.5;align-self:center}
+  .foot-meta{margin-top:var(--sm);display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;font-family:var(--f-mono);font-size:11px;letter-spacing:0.12em;color:var(--faint);text-transform:uppercase}
+  .offline-btn{font-family:var(--f-mono);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold-dim);background:transparent;border:1px solid var(--line);border-radius:8px;padding:9px 14px;cursor:pointer;transition:all .3s var(--ease)}
+  .offline-btn:hover{color:var(--gold);border-color:var(--gold-dim)}
+  .offline-btn[data-offline-state="ready"]{color:var(--gold);border-color:var(--gold-dim)}
+  .offline-btn [data-offline-progress]{margin-left:6px;color:var(--faint)}
 
-  .cfoot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; border-top: 1px solid var(--border-glass); padding-top: var(--space-sm); position: relative; z-index: 2; transition: border-color 0.4s; }
-  .card:hover .cfoot, .card:focus-visible .cfoot { border-color: rgba(212,175,100,0.3); }
-  .tags { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
-  .tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--color-gold-dim); text-transform: uppercase; background: rgba(0,0,0,0.4); padding: 6px 10px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; }
-  .card:hover .tag, .card:focus-visible .tag { color: var(--color-gold-base); border-color: var(--border-glass); background: rgba(212,175,100,0.05); }
-  
-  .arr { font-family: var(--font-mono); font-size: 16px; color: var(--color-gold-base); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s; opacity: 0.7; }
-  .card:hover .arr, .card:focus-visible .arr { transform: translateX(12px) scale(1.2); color: #fff; opacity: 1; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-
-  .deco { position: absolute; top: var(--space-lg); right: var(--space-md); font-family: var(--font-mono); font-size: 11px; color: var(--color-gold-faint); text-align: right; line-height: 1.5; pointer-events: none; transition: color 0.4s; z-index: 2;}
-  .card:hover .deco, .card:focus-visible .deco { color: var(--color-gold-dim); }
-
-  /* Shared Tracker */
-  .chronicle-pill { 
-    position: relative;
-    display: flex; align-items: center; justify-content: space-between; 
-    border: 1px solid transparent; background: var(--surface-glass);
-    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-    border-radius: 12px;
-    padding: var(--space-md) var(--space-md); text-decoration: none; color: inherit; margin-bottom: var(--space-section); 
-    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); 
-    box-shadow: 0 8px 25px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.08);
-    animation: slideUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
-    overflow: hidden;
-  }
-  
-  .chronicle-pill::before {
-    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: radial-gradient(
-      800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
-      rgba(255, 255, 255, 0.06),
-      transparent 40%
-    );
-    opacity: 0; transition: opacity 0.5s; z-index: 1; pointer-events: none;
-  }
-
-  .chronicle-pill::after {
-    content: ''; position: absolute; inset: 0; border-radius: 12px;
-    padding: 1px; background: linear-gradient(135deg, rgba(212,175,100,0.4) 0%, transparent 60%, rgba(212,175,100,0.08) 100%);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    transition: opacity 0.5s ease; pointer-events: none;
-  }
-  .chronicle-pill:hover, .chronicle-pill:focus-visible { 
-    transform: translateY(-4px) scale(1.01);
-    background: var(--surface-glass-hover); 
-    box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 30px rgba(75, 45, 140, 0.2), inset 0 1px 1px rgba(255,255,255,0.15);
-  }
-  .chronicle-pill:hover::after, .chronicle-pill:focus-visible::after { background: linear-gradient(135deg, rgba(212,175,100,0.7) 0%, transparent 50%, rgba(212,175,100,0.2) 100%); }
-  .chronicle-pill:hover::before, .chronicle-pill:focus-visible::before { opacity: 1; }
-  .chronicle-pill:hover .arr, .chronicle-pill:focus-visible .arr { transform: translateX(12px) scale(1.2); color: #fff; opacity: 1; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-  
-  .ch-info { display: flex; flex-direction: column; gap: 0.3rem; position: relative; z-index: 2;}
-  .ch-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-gold-base); }
-  .ch-title { font-family: var(--font-cinzel); font-size: var(--fluid-h2); color: var(--color-fg); transition: color 0.3s, text-shadow 0.3s; }
-  .chronicle-pill:hover .ch-title, .chronicle-pill:focus-visible .ch-title { color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.3); }
-  .ch-title-sub { font-family: var(--font-syne); font-size: 14px; color: rgba(244, 240, 230, 0.7); }
-
-  footer { margin-top: var(--space-xl); padding-top: var(--space-md); border-top: 1px solid var(--border-base); font-family: var(--font-mono); font-size: 12px; color: var(--color-gold-dim); text-align: center; text-transform: uppercase; letter-spacing: 0.1em; animation: slideUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s both; }
-  footer a { color: var(--color-gold-dim); text-decoration: none; transition: color 0.2s; margin: 0 var(--space-xs); display: inline-block; min-height: 44px; line-height: 44px; padding: 0 8px; border-radius: 4px; }
-  footer a:hover, footer a:focus-visible { color: var(--color-gold-base); text-shadow: 0 0 8px rgba(212,175,100,0.5); }
-
-  @media(max-width: 768px){
-    .pcard { grid-template-columns: 1fr; gap: var(--space-sm); padding: var(--space-md); }
-    .pcard:hover, .pcard.selected { padding-left: var(--space-md); transform: scale(1); }
-    .grid { gap: var(--space-sm); }
-    .s2 { grid-column: auto; }
-    .pmeta { text-align: left; align-items: flex-start; }
-    h1 { font-size: 2.5rem; }
-    .shell { padding: var(--space-lg) var(--space-sm); }
-    .card:hover, .card:focus-visible { transform: translateY(-4px) !important; }
+  @media(max-width:768px){
+    .topbar-inner{padding:12px var(--sm)}
+    .switcher{margin-left:0;width:100%;justify-content:center;flex-wrap:wrap}
+    .switch-label{width:100%;text-align:center}
+    .shell{padding:var(--lg) var(--sm) var(--xl)}
+    .chronicle{flex-direction:column;align-items:flex-start}
+    .ch-desc{font-size:13px}
+    .span-2{grid-column:auto}
   }
 </style>
 </head>
 <body>
 
+<a href="#main" class="skip-link">Skip to content</a>
 <canvas id="bg" aria-hidden="true"></canvas>
+
+<svg class="sigil-defs" aria-hidden="true" focusable="false">
+  <symbol id="i-vault" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h11l3 3v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="14" cy="12" r="3"/><path d="M14 9v-1M14 16v-1"/></symbol>
+  <symbol id="i-oracle" viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+  <symbol id="i-alchemist" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.4 15h9.2"/></symbol>
+  <symbol id="i-ledger" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-scribe" viewBox="0 0 24 24"><path d="M4 20l4-1L20 7a2 2 0 0 0-3-3L5 16z"/><path d="M14 6l4 4M4 20l1-4"/></symbol>
+  <symbol id="i-reviewer" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-splitter" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><path d="M8 7l11 4M8 17l11-4"/><circle cx="19" cy="11" r="1.6"/><circle cx="19" cy="13" r="1.6"/></symbol>
+  <symbol id="i-chronicle" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/><path d="M8 14h3M14 14h2"/></symbol>
+  <symbol id="i-mark" viewBox="0 0 24 24"><path d="M5 4a2 2 0 0 1 2-2h11v18H7a2 2 0 0 0-2 2z"/><path d="M9 7h6M9 11h6"/></symbol>
+</svg>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a href="index.html" class="brand" aria-label="The Grimoire — home">
+      <span class="brand-mark"><svg class="ico" aria-hidden="true"><use href="#i-mark"/></svg></span>
+      <span class="brand-name">The&nbsp;<b>Grimoire</b></span>
+    </a>
+
+    <div class="switcher" role="group" aria-label="Choose a project">
+      <span class="switch-label">Project</span>
+      <button type="button" class="seg" id="seg-wmf" aria-pressed="false" onclick="selectProject('wmf')">WMF <kbd>1</kbd></button>
+      <button type="button" class="seg" id="seg-siemens" aria-pressed="false" onclick="selectProject('siemens')">Siemens GP <kbd>2</kbd></button>
+    </div>
+  </div>
+</div>
 
 <div class="shell">
 
-  <header>
+  <header class="hero">
     <div class="eyebrow">Arcane Workspace · Anno MMXXVI</div>
     <h1>
-      <span class="t-mal">Malignant</span>
-      <span class="t-grim">Grimoire</span>
+      <span class="t-sub">The</span>
+      <span class="t-main">Grimoire</span>
     </h1>
     <div class="tagline">Codex of tools · Bound in fire · Forever current</div>
   </header>
 
   <main id="main" role="main">
 
-    <a href="holiday-tracker.html" class="chronicle-pill" id="c5">
-      <div class="ch-info">
-        <div class="ch-label">The Chronicle · Shared</div>
-        <div class="ch-title">Holiday Tracker</div>
-        <div class="ch-title-sub">Team absences &amp; leave · Synced in real time</div>
+    <a href="holiday-tracker.html" class="chronicle">
+      <div class="ch-left">
+        <span class="ch-mark"><svg class="ico" aria-hidden="true"><use href="#i-chronicle"/></svg></span>
+        <div>
+          <div class="ch-label">The Chronicle · Shared</div>
+          <div class="ch-title">Holiday Tracker</div>
+          <div class="ch-desc">Team absences &amp; leave · Synced in real time</div>
+        </div>
       </div>
-      <div class="arr">⟶</div>
+      <span class="arr">&rarr;</span>
     </a>
 
-    <div class="ledger-section">
-      <div class="section-title">Volume I — Projects</div>
-      <div class="arcane-ledger">
-        <a class="pcard" id="proj-wmf" role="button" tabindex="0" onclick="selectProject('wmf',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('wmf',this)}">
-          <div class="pseal">WMF</div>
-          <div class="pinfo">
-            <div class="pname">Württembergische Metallwarenfabrik</div>
-            <div class="pdesc">Forwarder codex · Surcharge mapping · Invoice transmutation rituals</div>
-          </div>
-          <div class="pmeta">
-            <div class="pstatus act"><div class="pdot"></div>Active</div>
-            <div class="pkbd" aria-hidden="true"><kbd>1</kbd></div>
-          </div>
-        </a>
-
-        <a class="pcard" id="proj-siemens" role="button" tabindex="0" onclick="selectProject('siemens',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('siemens',this)}">
-          <div class="pseal">SGP</div>
-          <div class="pinfo">
-            <div class="pname">Siemens General Procurement</div>
-            <div class="pdesc">Process knowledge base · Procurement rites &amp; guidelines</div>
-          </div>
-          <div class="pmeta">
-            <div class="pstatus act"><div class="pdot"></div>Active</div>
-            <div class="pkbd" aria-hidden="true"><kbd>2</kbd></div>
-          </div>
-        </a>
-      </div>
-    </div>
-
-    <div id="tomes-section">
-      <div class="project-banner">
-        <span>Project</span> ·
-        <span class="pb-name" id="banner-name"></span> ·
-        <span id="banner-sub"></span>
-        <button type="button" class="pb-change" id="btn-change-project">Reset</button>
+    <section aria-labelledby="tools-heading">
+      <div class="sec-head">
+        <h2 class="sec-title" id="tools-heading">The Tomes</h2>
+        <span class="sec-rule"></span>
+        <span class="sec-meta" id="tools-count"></span>
       </div>
 
       <div id="aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-      <div class="grid">
-        <a href="#" class="card" id="c0">
-          <div class="deco">Sub Inscribe()</div>
-          <div class="clabel">Tome I · The Vault</div>
-          <div class="ctitle">VB Code Vault</div>
-          <div class="cdesc">Store, search &amp; conjure VB/VBA spells. Syntax-illuminated, synced to the cloud.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">VB</span><span class="tag">VBA</span><span class="tag">Excel</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </a>
-
-        <a href="#" class="card" id="c1">
-          <div class="deco">ask("Riddle")</div>
-          <div class="clabel">Tome II · The Oracle</div>
-          <div class="ctitle">Notes &amp; Lore</div>
-          <div class="cdesc">Question, answers &amp; scrolls. Your personal oracle.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">Q&amp;A</span><span class="tag">Notes</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </a>
-
-        <a href="#" class="card s2" id="c2">
-          <div class="deco">transmute(scroll)</div>
-          <div class="clabel">Tome III · Featured Ritual</div>
-          <div class="ctitle">Anmerkung Processor</div>
-          <div class="cdesc">Upload an Excel invoice scroll, select your forwarder, and auto-fill the Anmerkung column via inscribed VB rituals. Pure browser alchemy.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">Dachser</span><span class="tag">K+N</span><span class="tag">DHL</span><span class="tag">Wackler</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </a>
-
-        <a href="#" class="card" id="c4">
-          <div class="deco">ledger.open()</div>
-          <div class="clabel">Tome IV · The Ledger</div>
-          <div class="ctitle">Task Ledger</div>
-          <div class="cdesc">Track open tasks across forwarders. Log totals, notes &amp; status.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">Tasks</span><span class="tag">Tracking</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </a>
-
-        <a href="#" class="card" id="c3">
-          <div class="deco">scribe.find()</div>
-          <div class="clabel">Tome III · The Scribe</div>
-          <div class="ctitle">Standard Wording</div>
-          <div class="cdesc">A searchable library of pre-written phrases. Click any entry to copy instantly.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">Phrases</span><span class="tag">Templates</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </a>
-
-        <a href="#" class="card" id="c6">
-          <div class="deco">review.week()</div>
-          <div class="clabel">Tome IV · The Reviewer</div>
-          <div class="ctitle">Task Reviewer</div>
-          <div class="cdesc">Per-person daily reviews. Auto-scored with grades and Friday digest.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">Scoring</span><span class="tag">People</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </a>
-
-        <a href="#" class="card" id="c7">
-          <div class="deco">split.byPerson()</div>
-          <div class="clabel">Tome V · The Splitter</div>
-          <div class="ctitle">File Splitter</div>
-          <div class="cdesc">Upload an Excel file, add names, and get equal row portions per person — shuffled &amp; ready to download.</div>
-          <div class="cfoot">
-            <div class="tags"><span class="tag">Excel</span><span class="tag">Split</span></div>
-            <div class="arr">⟶</div>
-          </div>
-        </a>
+      <!-- Empty state: shown until a project is chosen -->
+      <div class="empty" id="empty-state">
+        <div class="glyph">&#10022;</div>
+        <h3>Choose a project to reveal its tomes</h3>
+        <p>The Grimoire adapts to your project. Select one above &mdash; or press its number &mdash; to summon the relevant rituals.</p>
+        <div class="empty-actions">
+          <button type="button" class="ghost-btn" onclick="selectProject('wmf')">WMF</button>
+          <button type="button" class="ghost-btn" onclick="selectProject('siemens')">Siemens GP</button>
+        </div>
       </div>
-    </div>
+
+      <!-- Active project banner + grid: populated by JS -->
+      <div class="banner" id="banner" hidden>
+        <span>Project</span>
+        <span class="b-name" id="banner-name"></span>
+        <span id="banner-sub"></span>
+        <button type="button" class="b-reset" id="btn-reset">Reset</button>
+      </div>
+
+      <div id="grid"></div>
+    </section>
 
   </main>
 
   <footer>
-    codingkuh.my.id · 
-    <a href="code.html">Vault</a>
-    <a href="qa.html">Oracle</a>
-    <a href="anmerkung.html">Alchemist</a>
-    <a href="todo.html">Ledger</a>
-    <a href="standard-wording.html">Wording</a>
-    <a href="task-reviewer-siemens.html">Reviewer</a>
-    <a href="holiday-tracker.html">Chronicle</a>
+    <nav class="foot-links" id="footer-links" aria-label="All pages"></nav>
+    <div class="foot-meta">
+      <span>codingkuh.my.id</span>
+      <button type="button" class="offline-btn" id="offline-btn">
+        <span data-offline-label>Download for offline</span><span data-offline-progress></span>
+      </button>
+    </div>
   </footer>
 
 </div>
 
 <script>
-/**
- * The Grimoire Core Logic
- * Modernized ES6 implementation with async capabilities where appropriate.
- */
+/* ──────────────────────────────────────────────────────────
+   The Grimoire — landing / hub logic
+   ────────────────────────────────────────────────────────── */
 
+/* Decorative floating-rune canvas (honours reduced motion via core helpers) */
 class RuneEngine {
-  constructor(canvasId) {
-    this.canvas = document.getElementById(canvasId);
+  constructor(id){
+    this.canvas = document.getElementById(id);
     if (!this.canvas) return;
     this.ctx = this.canvas.getContext('2d');
-    this.reducedMotion = window.Grimoire?.reducedMotion ?? window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.width = window.innerWidth;
-    this.height = window.innerHeight;
+    this.reduced = window.Grimoire?.reducedMotion ?? window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.scale = window.Grimoire?.densityScale ? window.Grimoire.densityScale() : 1;
+    this.CHARS = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ☽☿♄⊕⊗✦✧';
     this.runes = [];
-    this.RUNE_CHARS = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ☽☿♄⊕⊗✦✧✨';
-    this.lastTime = 0;
-    this.isRunning = false;
-
-    this.init();
-    this.bindEvents();
-  }
-
-  resize = () => {
-    this.width = this.canvas.width = window.innerWidth;
-    this.height = this.canvas.height = window.innerHeight;
-  };
-
-  createRune = (initial = false) => ({
-    ch: this.RUNE_CHARS[Math.floor(Math.random() * this.RUNE_CHARS.length)],
-    x: Math.random() * this.width,
-    y: initial ? Math.random() * this.height : this.height + 40,
-    vy: -(Math.random() * 0.4 + 0.1),
-    a: Math.random() * 0.1 + 0.05,
-    maxLife: Math.random() * 0.5 + 0.5,
-    life: initial ? Math.random() * 0.5 : 0,
-    phase: Math.random() * Math.PI * 2,
-    size: Math.floor(Math.random() * 14) + 12
-  });
-
-  init = () => {
+    this.running = false;
+    this.last = 0;
     this.resize();
-    this.runes = Array.from({ length: 45 }, () => this.createRune(true));
-    
-    if (this.reducedMotion) {
-      this.drawFrame(0);
-    } else {
-      this.start();
-    }
-  };
-
-  bindEvents = () => {
-    window.addEventListener('resize', () => {
-      this.resize();
-      if (this.reducedMotion) this.drawFrame(0);
-    });
-
+    this.runes = Array.from({ length: Math.round(45 * (this.scale || 0.4)) }, () => this.make(true));
+    window.addEventListener('resize', () => { this.resize(); if (this.reduced) this.frame(0); });
     document.addEventListener('visibilitychange', () => {
-      if (this.reducedMotion) return;
-      if (document.hidden) {
-        this.stop();
-      } else {
-        this.lastTime = performance.now();
-        this.start();
-      }
+      if (this.reduced) return;
+      if (document.hidden) this.running = false;
+      else { this.last = performance.now(); this.start(); }
     });
-  };
-
-  drawFrame = (dt) => {
-    this.ctx.clearRect(0, 0, this.width, this.height);
-    
-    this.runes.forEach(r => {
-      r.y += r.vy * dt;
-      r.phase += 0.02 * dt;
-      
-      const currentAlpha = (Math.sin(r.phase) * 0.5 + 0.5) * r.a;
-      
-      if (r.y < -40) {
-        Object.assign(r, this.createRune(false));
-      }
-      
+    if (this.reduced) this.frame(0); else this.start();
+  }
+  resize(){ this.w = this.canvas.width = window.innerWidth; this.h = this.canvas.height = window.innerHeight; }
+  make(initial){
+    return {
+      ch: this.CHARS[Math.floor(Math.random()*this.CHARS.length)],
+      x: Math.random()*this.w,
+      y: initial ? Math.random()*this.h : this.h + 40,
+      vy: -(Math.random()*0.4 + 0.1),
+      a: Math.random()*0.1 + 0.05,
+      phase: Math.random()*Math.PI*2,
+      size: Math.floor(Math.random()*14) + 12
+    };
+  }
+  frame(dt){
+    this.ctx.clearRect(0,0,this.w,this.h);
+    for (const r of this.runes){
+      r.y += r.vy*dt; r.phase += 0.02*dt;
+      if (r.y < -40) Object.assign(r, this.make(false));
+      const alpha = (Math.sin(r.phase)*0.5 + 0.5) * r.a;
       this.ctx.font = `${r.size}px 'Cinzel', serif`;
-      this.ctx.fillStyle = `rgba(212, 175, 100, ${currentAlpha})`;
-      
-      this.ctx.shadowBlur = 8;
-      this.ctx.shadowColor = `rgba(212, 175, 100, ${currentAlpha * 0.5})`;
+      this.ctx.fillStyle = `rgba(216,181,110,${alpha})`;
+      this.ctx.shadowBlur = 8; this.ctx.shadowColor = `rgba(216,181,110,${alpha*0.5})`;
       this.ctx.fillText(r.ch, r.x, r.y);
       this.ctx.shadowBlur = 0;
-    });
-  };
-
-  loop = (ts) => {
-    if (!this.isRunning) return;
-    
-    const dt = Math.min((ts - this.lastTime) / 16.67, 2.5);
-    this.lastTime = ts;
-    
-    this.drawFrame(dt);
-    
-    if (!document.hidden) {
-      requestAnimationFrame(this.loop);
-    } else {
-      this.isRunning = false;
     }
+  }
+  loop = (ts) => {
+    if (!this.running) return;
+    const dt = Math.min((ts - this.last)/16.67, 2.5);
+    this.last = ts;
+    this.frame(dt);
+    if (!document.hidden) requestAnimationFrame(this.loop); else this.running = false;
   };
-
-  start = () => {
-    if (this.isRunning) return;
-    this.isRunning = true;
-    this.lastTime = performance.now();
-    requestAnimationFrame(this.loop);
-  };
-
-  stop = () => {
-    this.isRunning = false;
-  };
+  start(){ if (this.running) return; this.running = true; this.last = performance.now(); requestAnimationFrame(this.loop); }
 }
 
 class ProjectManager {
-  constructor() {
+  constructor(){
     this.projects = {
       wmf: {
         name: 'WMF', sub: 'Württembergische Metallwarenfabrik',
-        code: 'code.html', qa: 'qa.html', anmerkung: 'anmerkung.html',
-        todo: 'todo.html', wording: null, reviewer: null, splitter: null
+        tools: [
+          { label: 'Tome I · The Vault',         title: 'VB Code Vault',       desc: 'Store, search &amp; conjure VB/VBA spells. Syntax-illuminated, synced to the cloud.', href: 'code.html',      icon: 'vault',     tags: ['VB','VBA','Excel'] },
+          { label: 'Tome II · The Oracle',        title: 'Notes &amp; Lore',    desc: 'Questions, answers &amp; scrolls. Your personal oracle.',                            href: 'qa.html',        icon: 'oracle',    tags: ['Q&amp;A','Notes'] },
+          { label: 'Tome III · Featured Ritual',  title: 'Anmerkung Processor', desc: 'Upload an Excel invoice scroll, choose a forwarder, and auto-fill the Anmerkung column. Pure browser alchemy.', href: 'anmerkung.html', icon: 'alchemist', tags: ['Dachser','K+N','DHL','Wackler'], wide: true },
+          { label: 'Tome IV · The Ledger',        title: 'Task Ledger',         desc: 'Track open tasks across forwarders. Log totals, notes &amp; status.',                 href: 'todo.html',      icon: 'ledger',    tags: ['Tasks','Tracking'] }
+        ]
       },
       siemens: {
         name: 'Siemens GP', sub: 'General Procurement',
-        code: null, qa: 'qa-siemens.html', anmerkung: null,
-        todo: null, wording: 'standard-wording.html', reviewer: 'task-reviewer-siemens.html',
-        splitter: 'File_splitter.html'
+        tools: [
+          { label: 'Tome I · The Oracle',    title: 'GP Knowledge Base', desc: 'Process knowledge base · Procurement rites &amp; guidelines.',                                              href: 'qa-siemens.html',            icon: 'oracle',   tags: ['Q&amp;A','Process'] },
+          { label: 'Tome II · The Scribe',   title: 'Standard Wording',  desc: 'A searchable library of pre-written phrases. Click any entry to copy instantly.',                            href: 'standard-wording.html',      icon: 'scribe',   tags: ['Phrases','Templates'] },
+          { label: 'Tome III · The Reviewer',title: 'Task Reviewer',     desc: 'Per-person daily reviews. Auto-scored with grades and a Friday digest.',                                    href: 'task-reviewer-siemens.html', icon: 'reviewer', tags: ['Scoring','People'] },
+          { label: 'Tome IV · The Splitter', title: 'File Splitter',     desc: 'Upload an Excel file, add names, and get equal row portions per person &mdash; shuffled &amp; ready to download.', href: 'File_splitter.html',         icon: 'splitter', tags: ['Excel','Split'] }
+        ]
       }
     };
-    
-    this.elements = {
-      tomesSection: document.getElementById('tomes-section'),
+
+    this.el = {
+      segWmf: document.getElementById('seg-wmf'),
+      segSiemens: document.getElementById('seg-siemens'),
+      empty: document.getElementById('empty-state'),
+      banner: document.getElementById('banner'),
       bannerName: document.getElementById('banner-name'),
       bannerSub: document.getElementById('banner-sub'),
-      btnChange: document.getElementById('btn-change-project'),
-      cards: document.querySelectorAll('.pcard'),
-      interactiveCards: document.querySelectorAll('.card, .chronicle-pill')
+      btnReset: document.getElementById('btn-reset'),
+      grid: document.getElementById('grid'),
+      count: document.getElementById('tools-count'),
+      live: document.getElementById('aria-live')
     };
 
-    this.bindEvents();
-    this.setupSpotlight();
+    this.active = null;
+    window.selectProject = (key) => this.select(key);
+    this.bind();
+    this.spotlight();
     this.restore();
   }
 
-  bindEvents = () => {
-    this.elements.btnChange?.addEventListener('click', this.clearProject);
-
+  bind(){
+    this.el.btnReset?.addEventListener('click', () => this.clear());
     document.addEventListener('keydown', (e) => {
       const tag = (e.target?.tagName || '').toLowerCase();
-      if (['input', 'textarea', 'select'].includes(tag) || e.target?.isContentEditable) return;
+      if (['input','textarea','select'].includes(tag) || e.target?.isContentEditable) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === '1') { e.preventDefault(); this.select('wmf'); }
+      else if (e.key === '2') { e.preventDefault(); this.select('siemens'); }
+      else if (e.key === 'Escape' && this.active) { e.preventDefault(); this.clear(); }
+    });
+  }
 
-      switch(e.key) {
-        case '1':
-          e.preventDefault();
-          this.selectProject('wmf', document.getElementById('proj-wmf'));
-          break;
-        case '2':
-          e.preventDefault();
-          this.selectProject('siemens', document.getElementById('proj-siemens'));
-          break;
-        case 'Escape':
-          if (this.elements.tomesSection?.classList.contains('show')) {
-            e.preventDefault();
-            this.clearProject();
-          }
-          break;
+  /* Mouse-follow spotlight on interactive surfaces */
+  spotlight(){
+    document.addEventListener('mousemove', (e) => {
+      const cards = document.querySelectorAll('.card, .chronicle');
+      for (const c of cards){
+        if (!c.offsetParent) continue;
+        const r = c.getBoundingClientRect();
+        c.style.setProperty('--mx', `${e.clientX - r.left}px`);
+        c.style.setProperty('--my', `${e.clientY - r.top}px`);
       }
     });
+  }
 
-    window.selectProject = (key, el) => this.selectProject(key, el);
-  };
+  renderGrid(proj){
+    const html = proj.tools.map((t) => `
+      <a href="${t.href}" class="card${t.wide ? ' span-2' : ''}">
+        <div class="card-top">
+          <span class="card-ico"><svg class="ico" aria-hidden="true"><use href="#i-${t.icon}"/></svg></span>
+          <div>
+            <div class="clabel">${t.label}</div>
+            <div class="ctitle">${t.title}</div>
+          </div>
+        </div>
+        <p class="cdesc">${t.desc}</p>
+        <div class="cfoot">
+          <div class="tags">${t.tags.map((tag) => `<span class="tag">${tag}</span>`).join('')}</div>
+          <span class="arr">&rarr;</span>
+        </div>
+      </a>`).join('');
 
-  setupSpotlight = () => {
-    document.addEventListener('mousemove', e => {
-      for (const card of this.elements.interactiveCards) {
-        if (!card.offsetParent) continue;
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        card.style.setProperty('--mouse-x', `${x}px`);
-        card.style.setProperty('--mouse-y', `${y}px`);
-      }
+    this.el.grid.innerHTML = html;
+    // Trigger staggered entrance
+    const cards = this.el.grid.querySelectorAll('.card');
+    cards.forEach((c, i) => {
+      c.style.animationDelay = `${0.05 + i * 0.07}s`;
+      void c.offsetWidth;
+      c.classList.add('enter');
     });
-  };
+    this.el.count.textContent = `${proj.tools.length} tomes`;
+  }
 
-  updateWire = (id, href) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    
-    if (href) {
-      el.href = href;
-      el.removeAttribute('aria-disabled');
-      el.setAttribute('tabindex', '0');
-    } else {
-      el.href = '#';
-      el.setAttribute('aria-disabled', 'true');
-      el.setAttribute('tabindex', '-1');
-    }
-  };
-
-  selectProject = (key, el, { silent = false } = {}) => {
+  select(key, { silent = false } = {}){
     const proj = this.projects[key];
     if (!proj) return;
+    this.active = key;
 
-    this.elements.cards.forEach(c => {
-      const isSelected = c === el;
-      c.classList.toggle('selected', isSelected);
-      c.setAttribute('aria-pressed', String(isSelected));
-    });
+    this.el.segWmf?.setAttribute('aria-pressed', String(key === 'wmf'));
+    this.el.segSiemens?.setAttribute('aria-pressed', String(key === 'siemens'));
 
-    if (this.elements.bannerName) this.elements.bannerName.textContent = proj.name;
-    if (this.elements.bannerSub) this.elements.bannerSub.textContent = proj.sub;
+    this.el.empty.hidden = true;
+    this.el.banner.hidden = false;
+    this.el.bannerName.textContent = proj.name;
+    this.el.bannerSub.textContent = proj.sub;
 
-    const isSiemens = key === 'siemens';
+    this.renderGrid(proj);
 
-    const updates = [
-      { id: 'c0', href: proj.code, show: !isSiemens },
-      { id: 'c1', href: proj.qa, show: true },
-      { id: 'c2', href: proj.anmerkung, show: !isSiemens },
-      { id: 'c3', href: proj.wording, show: isSiemens },
-      { id: 'c4', href: proj.todo, show: !isSiemens },
-      { id: 'c6', href: proj.reviewer, show: isSiemens },
-      { id: 'c7', href: proj.splitter, show: isSiemens }
-    ];
+    try { localStorage.setItem('grimoire.project', key); } catch (e) { /* private mode */ }
+    if (this.el.live) this.el.live.textContent = `${proj.name} selected. ${proj.tools.length} tomes available.`;
 
-    updates.forEach(({ id, href, show }) => {
-      this.updateWire(id, href);
-      const cardEl = document.getElementById(id);
-      if (cardEl) {
-        cardEl.style.display = show ? 'flex' : 'none';
-        if (show) {
-          cardEl.classList.remove('enter');
-          void cardEl.offsetWidth;
-          cardEl.classList.add('enter');
-        }
-      }
-    });
-
-    this.elements.tomesSection?.classList.add('show');
-
-    try {
-      localStorage.setItem('grimoire.project', key);
-    } catch (e) {
-      console.warn('Storage unavailable', e);
-    }
-
-    if (!silent && this.elements.tomesSection) {
+    if (!silent){
       setTimeout(() => {
-        const y = this.elements.tomesSection.getBoundingClientRect().top + window.scrollY - 40;
+        const y = this.el.banner.getBoundingClientRect().top + window.scrollY - 90;
         window.scrollTo({ top: y, behavior: 'smooth' });
-      }, 100);
+      }, 80);
     }
-  };
+  }
 
-  clearProject = () => {
-    this.elements.cards.forEach(c => {
-      c.classList.remove('selected');
-      c.setAttribute('aria-pressed', 'false');
-    });
-    
-    this.elements.tomesSection?.classList.remove('show');
-    
-    try {
-      localStorage.removeItem('grimoire.project');
-    } catch (e) {
-      console.warn('Storage unavailable', e);
-    }
-  };
+  clear(){
+    this.active = null;
+    this.el.segWmf?.setAttribute('aria-pressed', 'false');
+    this.el.segSiemens?.setAttribute('aria-pressed', 'false');
+    this.el.banner.hidden = true;
+    this.el.grid.innerHTML = '';
+    this.el.count.textContent = '';
+    this.el.empty.hidden = false;
+    try { localStorage.removeItem('grimoire.project'); } catch (e) { /* noop */ }
+    if (this.el.live) this.el.live.textContent = 'Project cleared. Choose a project to reveal its tomes.';
+  }
 
-  restore = () => {
+  restore(){
     try {
       const saved = localStorage.getItem('grimoire.project');
-      if (saved && this.projects[saved]) {
-        const cardId = saved === 'wmf' ? 'proj-wmf' : 'proj-siemens';
-        const card = document.getElementById(cardId);
-        if (card) this.selectProject(saved, card, { silent: true });
-      }
-    } catch (e) {
-      console.warn('Storage unavailable', e);
-    }
-  };
+      if (saved && this.projects[saved]) this.select(saved, { silent: true });
+    } catch (e) { /* noop */ }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   new RuneEngine('bg');
   new ProjectManager();
+
+  // Footer links from the shared Nav registry (single source of truth)
+  const footer = document.getElementById('footer-links');
+  if (footer && window.Grimoire?.Nav) {
+    footer.innerHTML = window.Grimoire.Nav.footerLinks({ exclude: ['index'] });
+  }
+
+  // Offline support: register the SW and wire the download button
+  if (window.Grimoire?.Offline) {
+    window.Grimoire.Offline.register();
+    window.Grimoire.Offline.mount('#offline-btn');
+  }
 });
 </script>
 </body>
