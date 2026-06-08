@@ -79,6 +79,8 @@
   .progress-label { font-size: 12px; color: var(--text2); font-family: var(--mono); }
   .results { display: none; width: 100%; max-width: 620px; flex-direction: column; gap: 10px; margin-top: 8px; }
   .results.show { display: flex; }
+  .result-summary { display: flex; flex-wrap: wrap; gap: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 20px; font-size: 12px; color: var(--text2); font-family: var(--mono); letter-spacing: 0.02em; }
+  .result-summary strong { color: var(--accent); font-weight: 500; }
   .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; animation: slideIn 0.2s ease; }
   .result-info { flex: 1; }
   .result-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
@@ -162,6 +164,7 @@
   let workbook = null;
   let sheetData = {};
   let generatedFiles = [];
+  const NAMES_KEY = 'fileSplitter.names';
 
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
@@ -173,6 +176,32 @@
     if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   });
   fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+  // People list: Enter adds a new person, typing persists names.
+  const peopleListEl = document.getElementById('peopleList');
+  peopleListEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.classList.contains('person-input')) {
+      e.preventDefault();
+      const inputs = Array.from(document.querySelectorAll('.person-input'));
+      const idx = inputs.indexOf(e.target);
+      const next = inputs[idx + 1];
+      if (next) next.focus(); else addPerson();
+    }
+  });
+  peopleListEl.addEventListener('input', e => {
+    if (e.target.classList.contains('person-input')) saveNames();
+  });
+
+  // Restore previously entered names.
+  (function restoreNames() {
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem(NAMES_KEY) || '[]'); } catch (e) {}
+    if (Array.isArray(saved) && saved.some(v => v && v.trim())) {
+      peopleListEl.innerHTML = '';
+      saved.forEach(v => addPerson(v));
+      if (peopleListEl.children.length === 0) addPerson();
+    }
+  })();
 
   function isBlankRow(row) {
     return row.every(cell => cell === null || cell === undefined || cell === '');
@@ -226,16 +255,31 @@
     document.getElementById('fileInfo').classList.remove('show');
     document.getElementById('sheetList').classList.remove('show');
     document.getElementById('sheetList').innerHTML = '';
+    generatedFiles.forEach(f => URL.revokeObjectURL(f.url));
+    generatedFiles = [];
+    document.getElementById('results').classList.remove('show');
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('dlAllBtn').classList.add('hide');
   }
 
-  function addPerson() {
+  function saveNames() {
+    try {
+      const vals = Array.from(document.querySelectorAll('.person-input')).map(i => i.value);
+      localStorage.setItem(NAMES_KEY, JSON.stringify(vals));
+    } catch (e) { /* storage unavailable */ }
+  }
+
+  function addPerson(value = '') {
     const list = document.getElementById('peopleList');
     const num = list.children.length + 1;
     const row = document.createElement('div');
     row.className = 'person-row';
-    row.innerHTML = `<span class="person-num">${num}</span><input class="person-input" type="text" placeholder="Enter name…" /><button class="rm-btn" onclick="removePerson(this)">×</button>`;
+    row.innerHTML = `<span class="person-num">${num}</span><input class="person-input" type="text" placeholder="Enter name…" /><button class="rm-btn" onclick="removePerson(this)" title="Remove">×</button>`;
     list.appendChild(row);
-    row.querySelector('input').focus();
+    const input = row.querySelector('input');
+    input.value = value;
+    if (!value) input.focus();
+    return input;
   }
 
   function removePerson(btn) {
@@ -243,6 +287,7 @@
     if (list.children.length > 1) {
       btn.closest('.person-row').remove();
       reNumberPeople();
+      saveNames();
     }
   }
 
@@ -263,6 +308,21 @@
     return a;
   }
 
+  // Spread n rows across `parts` people as evenly as possible.
+  // e.g. balancedSizes(5, 4) -> [2, 1, 1, 1] instead of [2, 2, 1, 0].
+  // Remainder rows are handed to the first people so nobody is starved
+  // while others double up.
+  function balancedSizes(n, parts) {
+    const base = Math.floor(n / parts);
+    let rem = n % parts;
+    const sizes = [];
+    for (let p = 0; p < parts; p++) {
+      sizes.push(base + (rem > 0 ? 1 : 0));
+      if (rem > 0) rem--;
+    }
+    return sizes;
+  }
+
   async function splitFile() {
     hideError();
     const names = getNames();
@@ -271,6 +331,7 @@
 
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const doShuffle = document.getElementById('shuffleRows').checked;
+    generatedFiles.forEach(f => URL.revokeObjectURL(f.url));
     generatedFiles = [];
     document.getElementById('results').innerHTML = '';
     document.getElementById('results').classList.remove('show');
@@ -284,14 +345,25 @@
     const total = names.length * workbook.SheetNames.length;
     let done = 0;
 
-    // Pre-shuffle each sheet's rows once, so all people get from the same shuffled pool
+    // Pre-shuffle each sheet's rows once, so all people get from the same shuffled pool.
+    // Also precompute balanced slice boundaries per person so the remainder is
+    // spread fairly instead of dumping leftovers on (or starving) the last person.
     const shuffledSheets = {};
+    const sheetBounds = {};
     for (const shName of workbook.SheetNames) {
       const { allData } = sheetData[shName];
       const dataRows = skipBlanks ? allData.filter(r => !isBlankRow(r)) : allData;
-      shuffledSheets[shName] = doShuffle ? shuffleArray(dataRows) : dataRows;
+      const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
+      shuffledSheets[shName] = rows;
+
+      const sizes = balancedSizes(rows.length, names.length);
+      const bounds = [];
+      let off = 0;
+      for (const s of sizes) { bounds.push([off, off + s]); off += s; }
+      sheetBounds[shName] = bounds;
     }
 
+    const usedNames = {};
     for (let i = 0; i < names.length; i++) {
       const name = names[i];
       const wb = XLSX.utils.book_new();
@@ -301,9 +373,8 @@
         const { header } = sheetData[shName];
         const dataRows = shuffledSheets[shName];
 
-        const chunkSize = Math.ceil(dataRows.length / names.length);
-        const start = i * chunkSize;
-        const chunk = dataRows.slice(start, start + chunkSize);
+        const [start, end] = sheetBounds[shName][i];
+        const chunk = dataRows.slice(start, end);
 
         sheetSummary[shName] = chunk.length;
 
@@ -320,7 +391,11 @@
       const url = URL.createObjectURL(blob);
       const today = new Date();
       const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
-      const fileName = `${name.replace(/\s+/g, '_')}_data_${dateStr}.xlsx`;
+      // Build a safe, unique filename (handles duplicate / blank names).
+      let base = name.replace(/[^\w.\- ]+/g, '').replace(/\s+/g, '_') || `person_${i + 1}`;
+      usedNames[base] = (usedNames[base] || 0) + 1;
+      if (usedNames[base] > 1) base += `_${usedNames[base]}`;
+      const fileName = `${base}_data_${dateStr}.xlsx`;
       generatedFiles.push({ name, fileName, url, blob, sheetSummary });
     }
 
@@ -331,15 +406,33 @@
     btn.disabled = false;
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   function renderResults() {
     const container = document.getElementById('results');
     container.innerHTML = '';
 
+    const grandTotal = generatedFiles.reduce((sum, f) => sum + Object.values(f.sheetSummary).reduce((a, b) => a + b, 0), 0);
+    const counts = generatedFiles.map(f => Object.values(f.sheetSummary).reduce((a, b) => a + b, 0));
+    const minRows = Math.min(...counts);
+    const maxRows = Math.max(...counts);
+
+    const summary = document.createElement('div');
+    summary.className = 'result-summary';
+    summary.innerHTML = `
+      <span><strong>${generatedFiles.length}</strong> file${generatedFiles.length === 1 ? '' : 's'}</span>
+      <span><strong>${grandTotal}</strong> rows distributed</span>
+      <span>${minRows === maxRows ? `<strong>${minRows}</strong> each` : `<strong>${minRows}–${maxRows}</strong> per person`}</span>
+    `;
+    container.appendChild(summary);
+
     generatedFiles.forEach(f => {
       const totalRows = Object.values(f.sheetSummary).reduce((a, b) => a + b, 0);
       const sheetPills = Object.entries(f.sheetSummary).map(([s, r]) => {
-        if (r === 0) return `<span class="sheet-pill empty">${s}: 0</span>`;
-        return `<span class="sheet-pill">${s}: ${r}</span>`;
+        if (r === 0) return `<span class="sheet-pill empty">${escapeHtml(s)}: 0</span>`;
+        return `<span class="sheet-pill">${escapeHtml(s)}: ${r}</span>`;
       }).join('');
 
       const hasEmpty = Object.values(f.sheetSummary).some(r => r === 0);
@@ -348,13 +441,13 @@
       card.className = 'result-card';
       card.innerHTML = `
         <div class="result-info">
-          <div class="result-name">${f.name} ${hasEmpty ? '<span class="warn-badge">some sheets empty</span>' : ''}</div>
+          <div class="result-name">${escapeHtml(f.name)} ${hasEmpty ? '<span class="warn-badge">some sheets empty</span>' : ''}</div>
           <div class="result-meta">
             <div style="margin-bottom:2px">${totalRows} data rows total</div>
             <div>${sheetPills}</div>
           </div>
         </div>
-        <a class="dl-btn" href="${f.url}" download="${f.fileName}">↓ download</a>
+        <a class="dl-btn" href="${f.url}" download="${escapeHtml(f.fileName)}">↓ download</a>
       `;
       container.appendChild(card);
     });
