@@ -1,634 +1,296 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="The Malignant Grimoire — a codex of VB/VBA spells, forwarder rituals and arcane workspace tools.">
-<meta name="theme-color" content="#02020a">
+<meta name="theme-color" content="#030305">
 <title>The Grimoire</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/grimoire-core.css">
 <script src="assets/grimoire-core.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#02020a;
-  --b:91,156,246;--v:167,139,250;--e:52,211,153;--pk:244,114,182;--gold:212,175,100;
-  --amber:251,191,36;--teal:20,184,166;
-  --cinzel:'Cinzel',serif;--syne:'Syne',sans-serif;--mono:'DM Mono',monospace;
-}
-html,body{width:100%;min-height:100vh;background:var(--bg);overflow-x:hidden}
-body{font-family:var(--syne);color:#ede8ff;display:flex;flex-direction:column;align-items:center;padding:0 1.2rem 7rem}
+  /* Editorial Arcane Styles */
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root {
+    --bg: #030305;
+    --fg: #e2dfd8;
+    --gold: #d4af64;
+    --gold-dim: rgba(212,175,100,0.3);
+    --gold-faint: rgba(212,175,100,0.1);
+    --border: rgba(212,175,100,0.25);
+    --cinzel: 'Cinzel', serif;
+    --syne: 'Syne', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  html, body { width: 100%; min-height: 100vh; background: var(--bg); color: var(--fg); font-family: var(--syne); overflow-x: hidden; position: relative; }
+  
+  /* CSS Noise overlay for physical texture */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 50; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+    opacity: 0.04; mix-blend-mode: overlay;
+  }
 
-#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+  canvas#bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.4; }
 
-/* ─── RUNE RING ─── */
-.rune-ring{position:relative;z-index:3;margin-top:3.5rem;margin-bottom:1.5rem;width:120px;height:120px;animation:ring-enter 1.2s cubic-bezier(.16,.84,.24,1) both}
-@keyframes ring-enter{from{opacity:0;transform:scale(.4) rotate(-120deg)}to{opacity:1;transform:scale(1) rotate(0deg)}}
-.rune-ring svg{width:100%;height:100%}
-.ring-spin{animation:spin-slow 28s linear infinite;transform-origin:center}
-.ring-spin2{animation:spin-slow 18s linear infinite reverse;transform-origin:center}
-@keyframes spin-slow{to{transform:rotate(360deg)}}
-.ring-glow{animation:glow-pulse 3s ease-in-out infinite}
-@keyframes glow-pulse{0%,100%{opacity:.5}50%{opacity:1}}
+  .shell { position: relative; z-index: 3; width: 100%; max-width: 900px; margin: 0 auto; padding: 4rem 2rem 8rem; display: flex; flex-direction: column; }
 
-.shell{position:relative;z-index:3;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center}
+  /* Hero / Header */
+  header { margin-bottom: 4rem; border-bottom: 1px solid var(--border); padding-bottom: 2rem; }
+  .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold-dim); margin-bottom: 1rem; }
+  h1 { font-family: var(--cinzel); font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 400; line-height: 0.9; letter-spacing: -0.02em; text-transform: uppercase; }
+  .t-mal { display: block; font-size: 0.4em; letter-spacing: 0.2em; color: var(--gold-dim); margin-bottom: 0.2rem; }
+  .t-grim { display: block; color: var(--gold); }
+  .tagline { font-family: var(--mono); font-size: 11px; color: var(--gold-dim); letter-spacing: 0.15em; margin-top: 1.5rem; text-transform: uppercase; }
 
-/* ─── HERO ─── */
-.eyebrow{font-family:var(--cinzel);font-size:10px;letter-spacing:.45em;text-transform:uppercase;color:rgba(212,175,100,.45);margin-bottom:1rem;animation:rise 1s .15s ease both}
-h1{font-family:var(--cinzel);font-size:clamp(3.2rem,8vw,5.8rem);font-weight:900;line-height:.95;letter-spacing:-.01em;text-align:center;margin-bottom:.5rem;animation:rise 1s .2s ease both}
-.t-mal{display:block;color:rgba(255,255,255,.7);font-size:.52em;letter-spacing:.22em;font-weight:400;text-transform:uppercase}
-.t-grim{display:block;background:linear-gradient(120deg,#d4af64 0%,#f0dcaa 35%,#a78bfa 60%,#6ec7ff 80%,#d4af64 100%);background-size:300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gold-shift 8s linear infinite}
-@keyframes gold-shift{0%{background-position:0%}100%{background-position:300%}}
-.tagline{font-family:var(--mono);font-size:10.5px;color:rgba(212,175,100,.3);letter-spacing:.18em;text-align:center;margin-top:.9rem;margin-bottom:3.2rem;animation:rise 1s .28s ease both}
+  /* Ledger Rows */
+  .ledger-section { margin-bottom: 4rem; }
+  .section-title { font-family: var(--cinzel); font-size: 12px; letter-spacing: 0.4em; color: var(--gold); text-transform: uppercase; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-.orn{display:flex;align-items:center;gap:12px;width:100%;max-width:500px;margin-bottom:1.6rem;animation:rise 1s .32s ease both}
-.orn-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.25),transparent)}
-.orn-diamond{width:6px;height:6px;background:rgba(212,175,100,.5);transform:rotate(45deg);flex-shrink:0}
-.orn-text{font-family:var(--cinzel);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:rgba(212,175,100,.35);white-space:nowrap}
+  .arcane-ledger { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+  
+  .pcard { position: relative; display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 2rem; padding: 1.5rem 0; border-bottom: 1px solid var(--border); cursor: pointer; text-decoration: none; color: inherit; transition: background 0.3s, padding-left 0.3s; }
+  .pcard:hover, .pcard.selected { background: rgba(212,175,100,0.03); padding-left: 1rem; }
+  .pcard:focus-visible { outline: 1px solid var(--gold); outline-offset: 4px; }
+  
+  .pseal { width: 50px; height: 50px; font-family: var(--cinzel); font-size: 14px; color: var(--gold); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; border-radius: 0; }
+  .pcard.selected .pseal { background: var(--gold); color: var(--bg); border-color: var(--gold); }
 
-/* ─── PROJECT GRID ─── */
-.project-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;margin-bottom:2.8rem;animation:rise 1s .36s ease both}
+  .pinfo { display: flex; flex-direction: column; gap: 0.3rem; }
+  .pname { font-family: var(--cinzel); font-size: 1.4rem; letter-spacing: 0.05em; color: var(--fg); font-weight: 400; }
+  .pdesc { font-family: var(--mono); font-size: 11px; color: rgba(226, 223, 216, 0.6); line-height: 1.4; }
 
-.pcard{position:relative;border-radius:20px;padding:1.8rem 1.6rem 1.5rem;color:inherit;display:flex;flex-direction:column;overflow:hidden;cursor:pointer;
-  background:rgba(10,8,24,.7);
-  border:1px solid rgba(212,175,100,.1);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  transition:transform .35s cubic-bezier(.16,.84,.24,1.05),box-shadow .35s,border-color .35s,background .35s;
-  user-select:none}
+  .pmeta { text-align: right; font-family: var(--mono); font-size: 10px; color: var(--gold-dim); display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+  .pstatus { display: flex; align-items: center; gap: 6px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .pstatus.act { color: var(--gold); }
+  .pdot { width: 4px; height: 4px; background: var(--gold); border-radius: 50%; }
+  
+  .pkbd kbd { display: inline-block; border: 1px solid var(--border); padding: 2px 6px; font-size: 9px; color: var(--gold); background: var(--bg); }
 
-.pcard:focus-visible{outline:2px solid rgba(212,175,100,0.8);outline-offset:4px;}
+  /* Tomes Section */
+  #tomes-section { display: none; opacity: 0; transform: translateY(20px); transition: opacity 0.5s, transform 0.5s; margin-bottom: 4rem; }
+  #tomes-section.show { display: block; opacity: 1; transform: translateY(0); }
+  
+  .project-banner { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--border); background: var(--bg); margin-bottom: 2rem; font-family: var(--mono); font-size: 11px; color: var(--gold-dim); }
+  .pb-name { color: var(--gold); font-family: var(--cinzel); font-size: 14px; letter-spacing: 0.1em; }
+  .pb-change { margin-left: auto; border: 1px solid var(--border); background: transparent; color: var(--gold); padding: 0.4rem 1rem; font-family: var(--mono); font-size: 10px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+  .pb-change:hover { background: var(--gold); color: var(--bg); }
 
-.pcard::before,.pcard::after{content:'';position:absolute;width:14px;height:14px;pointer-events:none;transition:opacity .4s;opacity:.2}
-.pcard::before{top:12px;left:12px;border-top:1px solid rgba(212,175,100,.7);border-left:1px solid rgba(212,175,100,.7)}
-.pcard::after{bottom:12px;right:12px;border-bottom:1px solid rgba(212,175,100,.7);border-right:1px solid rgba(212,175,100,.7)}
+  /* Tomes Grid */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .s2 { grid-column: 1 / -1; }
 
-.pcard-top{position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.8),transparent);opacity:0;transition:opacity .4s}
-.pcard:hover .pcard-top,.pcard.selected .pcard-top{opacity:1}
+  .card { position: relative; background: var(--bg); padding: 2.5rem 2rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; transition: background 0.3s; }
+  .card:hover { background: rgba(212,175,100,0.03); }
+  .card[style*="display: none"] { display: none !important; }
 
-.pblob{position:absolute;border-radius:50%;filter:blur(70px);opacity:0;transition:opacity .6s;pointer-events:none;z-index:0;width:200px;height:180px;background:rgba(212,175,100,.1);top:-50px;left:-40px}
-.pcard:hover .pblob,.pcard.selected .pblob{opacity:1}
+  .clabel { font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 1rem; }
+  .ctitle { font-family: var(--cinzel); font-size: 1.6rem; letter-spacing: 0.02em; margin-bottom: 1rem; color: var(--fg); font-weight: 400; }
+  .cdesc { font-family: var(--syne); font-size: 13px; color: rgba(226, 223, 216, 0.7); line-height: 1.6; flex: 1; margin-bottom: 2rem; }
 
-.pspot{position:absolute;inset:0;border-radius:20px;opacity:0;transition:opacity .3s;pointer-events:none;background:radial-gradient(260px circle at var(--cx,50%) var(--cy,50%),rgba(255,255,255,.04),transparent 55%);z-index:1}
-.pcard:hover .pspot{opacity:1}
+  .cfoot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; border-top: 1px solid var(--border); padding-top: 1rem; }
+  .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; color: var(--gold-dim); text-transform: uppercase; }
+  
+  .arr { font-family: var(--mono); font-size: 14px; color: var(--gold); transition: transform 0.3s; }
+  .card:hover .arr { transform: translateX(8px); }
 
-.pcard:hover:not(.locked){transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-8px);border-color:rgba(212,175,100,.28);box-shadow:0 24px 70px rgba(212,175,100,.14),0 0 0 1px rgba(212,175,100,.08)}
-.pcard:hover::before,.pcard:hover::after{opacity:1}
+  .deco { position: absolute; top: 2.5rem; right: 2rem; font-family: var(--mono); font-size: 9px; color: var(--gold-faint); text-align: right; line-height: 1.5; pointer-events: none; }
 
-.pcard.selected{border-color:rgba(212,175,100,.7);background:rgba(20,16,5,.95);box-shadow:0 24px 70px rgba(212,175,100,.2),0 0 0 1px rgba(212,175,100,.12)}
-.pcard.selected::before,.pcard.selected::after{opacity:1}
-.pcard.selected .pcard-top{opacity:1;background:linear-gradient(90deg,transparent,#d4af64,transparent);height:2px;}
+  /* Shared Tracker */
+  .chronicle-pill { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); padding: 1.5rem; text-decoration: none; color: inherit; margin-bottom: 4rem; transition: background 0.3s; }
+  .chronicle-pill:hover { background: rgba(212,175,100,0.03); }
+  .ch-info { display: flex; flex-direction: column; gap: 0.3rem; }
+  .ch-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+  .ch-title { font-family: var(--cinzel); font-size: 1.4rem; color: var(--fg); }
+  .ch-title-sub { font-family: var(--syne); font-size: 12px; color: rgba(226, 223, 216, 0.6); }
 
+  footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 10px; color: var(--gold-dim); text-align: center; text-transform: uppercase; letter-spacing: 0.1em; }
+  footer a { color: var(--gold-dim); text-decoration: none; transition: color 0.2s; margin: 0 0.5rem; }
+  footer a:hover { color: var(--gold); }
 
-.pcin{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
-
-.pseal{width:50px;height:50px;margin-bottom:1.1rem;flex-shrink:0}
-
-.pname{font-family:var(--cinzel);font-size:1.1rem;font-weight:600;letter-spacing:.04em;color:rgba(255,255,255,.88);margin-bottom:.45rem}
-.pdesc{font-family:var(--mono);font-size:11.5px;color:rgba(212,175,100,.45);line-height:1.6;flex:1;letter-spacing:.02em}
-
-.pfoot{margin-top:1.2rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
-
-.pstatus{font-family:var(--cinzel);font-size:8px;letter-spacing:.28em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
-.pdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.pstatus.act .pdot{background:#34d399;box-shadow:0 0 7px #34d399;animation:dpulse 2.5s ease-in-out infinite}
-@keyframes dpulse{0%,100%{opacity:1}50%{opacity:.2}}
-.pstatus.act{color:rgba(52,211,153,.65)}
-.pstatus.lck .pdot{background:rgba(212,175,100,.15)}
-.pstatus.lck{color:rgba(212,175,100,.2)}
-
-.parr{width:30px;height:30px;border-radius:50%;border:1px solid rgba(212,175,100,.12);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(212,175,100,.2);flex-shrink:0;transition:all .3s;font-family:var(--mono)}
-.pcard:hover:not(.locked) .parr{transform:translateX(4px);border-color:rgba(212,175,100,.55);color:rgba(212,175,100,.9);box-shadow:0 0 14px rgba(212,175,100,.18)}
-.pcard.selected .parr{transform:translateX(4px);background:rgba(212,175,100,.15);color:#d4af64;border-color:rgba(212,175,100,.55);box-shadow:0 0 14px rgba(212,175,100,.18)}
-
-
-/* ─── REVEAL DIVIDER ─── */
-.sec-div{width:100%;display:flex;align-items:center;gap:14px;margin-bottom:1.6rem;
-  opacity:0;transform:translateY(14px);transition:opacity .5s,transform .5s;pointer-events:none}
-.sec-div.show{opacity:1;transform:translateY(0);pointer-events:auto}
-.sdl{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.18),transparent)}
-.sec-div-sym{font-family:var(--cinzel);font-size:13px;color:rgba(212,175,100,.2)}
-.sec-div-label{font-family:var(--cinzel);font-size:10px;letter-spacing:.32em;text-transform:uppercase;color:rgba(212,175,100,.25);white-space:nowrap}
-
-/* ─── TOMES SECTION ─── */
-#tomes-section{width:100%;opacity:0;transform:translateY(22px);transition:opacity .5s .08s,transform .5s .08s;pointer-events:none}
-#tomes-section.show{opacity:1;transform:translateY(0);pointer-events:auto;margin-bottom:2.8rem;}
-
-.project-banner{display:flex;align-items:center;gap:10px;background:rgba(212,175,100,.04);border:1px solid rgba(212,175,100,.1);border-radius:14px;padding:.75rem 1.2rem;margin-bottom:1.6rem;font-family:var(--mono);font-size:11px;color:rgba(212,175,100,.4);letter-spacing:.06em}
-.pb-name{color:rgba(212,175,100,.9);font-family:var(--cinzel);font-size:12px;font-weight:600;letter-spacing:.1em}
-.pb-sep{color:rgba(212,175,100,.2)}
-
-/* ─── TOOL CARDS ─── */
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}
-.s2{grid-column:1/-1}
-
-.card{position:relative;border-radius:24px;padding:2.2rem 2rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;overflow:hidden;cursor:pointer;
-  background:rgba(10,8,24,.7);
-  border:1px solid rgba(212,175,100,.1);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  transition:transform .45s cubic-bezier(.16,.84,.24,1.05),box-shadow .4s,border-color .4s}
-.card::before,.card::after{content:'';position:absolute;width:18px;height:18px;pointer-events:none;transition:opacity .4s;opacity:.3}
-.card::before{top:14px;left:14px;border-top:1px solid rgba(212,175,100,.6);border-left:1px solid rgba(212,175,100,.6)}
-.card::after{bottom:14px;right:14px;border-bottom:1px solid rgba(212,175,100,.6);border-right:1px solid rgba(212,175,100,.6)}
-.card:hover::before,.card:hover::after{opacity:1}
-
-.card-top{position:absolute;top:0;left:8%;right:8%;height:1px;opacity:0;transition:opacity .4s;border-radius:50%}
-.card:hover .card-top{opacity:1}
-.card-b .card-top{background:linear-gradient(90deg,transparent,rgba(var(--b),1),transparent)}
-.card-v .card-top{background:linear-gradient(90deg,transparent,rgba(var(--v),1),transparent)}
-.card-e .card-top{background:linear-gradient(90deg,transparent,rgba(var(--e),.9),transparent)}
-.card-a .card-top{background:linear-gradient(90deg,transparent,rgba(var(--amber),1),transparent)}
-.card-pk .card-top{background:linear-gradient(90deg,transparent,rgba(var(--pk),1),transparent)}
-.card-tl .card-top{background:linear-gradient(90deg,transparent,rgba(var(--teal),1),transparent)}
-
-.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:0;transition:opacity .6s;pointer-events:none;z-index:0}
-.card:hover .blob{opacity:1}
-.card-b .blob{width:220px;height:200px;background:rgba(var(--b),.15);top:-60px;left:-60px}
-.card-v .blob{width:220px;height:200px;background:rgba(var(--v),.15);top:-60px;right:-60px;left:auto}
-.card-e .blob{width:300px;height:200px;background:rgba(var(--e),.1);bottom:-60px;left:5%}
-.card-a .blob{width:220px;height:200px;background:rgba(var(--amber),.12);top:-60px;left:-60px}
-.card-pk .blob{width:220px;height:200px;background:rgba(var(--pk),.13);top:-60px;right:-60px;left:auto}
-.card-tl .blob{width:220px;height:200px;background:rgba(var(--teal),.13);top:-60px;left:-60px}
-
-.spot{position:absolute;inset:0;border-radius:24px;opacity:0;transition:opacity .3s;pointer-events:none;background:radial-gradient(300px circle at var(--cx,50%) var(--cy,50%),rgba(255,255,255,.04),transparent 55%);z-index:1}
-.card:hover .spot{opacity:1}
-
-.card:hover{transform:perspective(1000px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-10px)}
-.card-b:hover{border-color:rgba(var(--b),.3);box-shadow:0 28px 80px rgba(var(--b),.18),0 0 0 1px rgba(var(--b),.1),inset 0 1px 0 rgba(var(--b),.1)}
-.card-v:hover{border-color:rgba(var(--v),.3);box-shadow:0 28px 80px rgba(var(--v),.18),0 0 0 1px rgba(var(--v),.1),inset 0 1px 0 rgba(var(--v),.1)}
-.card-e:hover{border-color:rgba(var(--e),.25);box-shadow:0 28px 80px rgba(var(--e),.13),0 0 0 1px rgba(var(--e),.08),inset 0 1px 0 rgba(var(--e),.08)}
-.card-a:hover{border-color:rgba(var(--amber),.3);box-shadow:0 28px 80px rgba(var(--amber),.15),0 0 0 1px rgba(var(--amber),.1),inset 0 1px 0 rgba(var(--amber),.08)}
-.card-pk:hover{border-color:rgba(var(--pk),.3);box-shadow:0 28px 80px rgba(var(--pk),.18),0 0 0 1px rgba(var(--pk),.1),inset 0 1px 0 rgba(var(--pk),.1)}
-.card-tl:hover{border-color:rgba(var(--teal),.3);box-shadow:0 28px 80px rgba(var(--teal),.15),0 0 0 1px rgba(var(--teal),.1),inset 0 1px 0 rgba(var(--teal),.08)}
-
-.cin{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
-.s2 .cin{flex-direction:row;align-items:flex-start;gap:2rem}
-.s2 .cbody{flex:1}
-
-.icon{width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;margin-bottom:1.6rem;position:relative;transition:transform .45s cubic-bezier(.16,.84,.24,1.05)}
-.s2 .icon{margin-bottom:0}
-.card:hover .icon{transform:scale(1.15) rotate(-8deg)}
-.card-b .icon{background:rgba(var(--b),.1);box-shadow:0 0 0 1px rgba(var(--b),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--b),1)}
-.card-v .icon{background:rgba(var(--v),.1);box-shadow:0 0 0 1px rgba(var(--v),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--v),1)}
-.card-e .icon{background:rgba(var(--e),.08);box-shadow:0 0 0 1px rgba(var(--e),.18),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--e),1)}
-.card-a .icon{background:rgba(var(--amber),.1);box-shadow:0 0 0 1px rgba(var(--amber),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--amber),1)}
-.card-pk .icon{background:rgba(var(--pk),.1);box-shadow:0 0 0 1px rgba(var(--pk),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(var(--pk),1)}
-.card-tl .icon{background:rgba(var(--teal),.1);box-shadow:0 0 0 1px rgba(var(--teal),.2),inset 0 1px 0 rgba(255,255,255,.06);color:rgba(20,184,166,1)}
-.icon::after{content:'';position:absolute;inset:-6px;border-radius:22px;border:1px solid transparent;transition:all .45s}
-.card-b:hover .icon::after{border-color:rgba(var(--b),.22);inset:-10px;border-radius:26px}
-.card-v:hover .icon::after{border-color:rgba(var(--v),.22);inset:-10px;border-radius:26px}
-.card-e:hover .icon::after{border-color:rgba(var(--e),.18);inset:-10px;border-radius:26px}
-.card-a:hover .icon::after{border-color:rgba(var(--amber),.22);inset:-10px;border-radius:26px}
-.card-pk:hover .icon::after{border-color:rgba(var(--pk),.22);inset:-10px;border-radius:26px}
-.card-tl:hover .icon::after{border-color:rgba(var(--teal),.22);inset:-10px;border-radius:26px}
-
-.clabel{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.35em;text-transform:uppercase;margin-bottom:7px;opacity:.7}
-.card-b .clabel{color:rgba(var(--b),1)}
-.card-v .clabel{color:rgba(var(--v),1)}
-.card-e .clabel{color:rgba(var(--e),1)}
-.card-a .clabel{color:rgba(var(--amber),1)}
-.card-pk .clabel{color:rgba(var(--pk),1)}
-.card-tl .clabel{color:rgba(20,184,166,1)}
-
-.ctitle{font-family:var(--cinzel);font-size:1.35rem;font-weight:600;letter-spacing:.02em;line-height:1.15;margin-bottom:.8rem;color:rgba(255,255,255,.88)}
-.s2 .ctitle{font-size:1.2rem}
-.cdesc{font-family:var(--mono);font-size:11.5px;color:rgba(255,255,255,.45);line-height:1.6;flex:1}
-.cfoot{margin-top:1.6rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
-.tags{display:flex;gap:5px;flex-wrap:wrap}
-.tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;padding:3px 9px;border-radius:20px;border:1px solid}
-.card-b .tag{color:rgba(var(--b),.9);border-color:rgba(var(--b),.22);background:rgba(var(--b),.07)}
-.card-v .tag{color:rgba(var(--v),.9);border-color:rgba(var(--v),.22);background:rgba(var(--v),.07)}
-.card-e .tag{color:rgba(var(--e),.9);border-color:rgba(var(--e),.18);background:rgba(var(--e),.05)}
-.card-a .tag{color:rgba(var(--amber),.9);border-color:rgba(var(--amber),.22);background:rgba(var(--amber),.07)}
-.card-pk .tag{color:rgba(var(--pk),.9);border-color:rgba(var(--pk),.22);background:rgba(var(--pk),.07)}
-.card-tl .tag{color:rgba(20,184,166,.9);border-color:rgba(var(--teal),.22);background:rgba(var(--teal),.07)}
-.arr{width:34px;height:34px;border-radius:50%;border:1px solid rgba(212,175,100,.12);display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(212,175,100,.25);flex-shrink:0;transition:all .35s;font-family:var(--mono)}
-.card:hover .arr{transform:translateX(5px);border-color:rgba(212,175,100,.5);color:rgba(212,175,100,.9);box-shadow:0 0 18px rgba(212,175,100,.2)}
-
-.deco{position:absolute;bottom:16px;right:18px;font-family:var(--mono);font-size:7.5px;line-height:2.2;text-align:right;pointer-events:none;user-select:none;z-index:2;opacity:.04;transition:opacity .5s}
-.card:hover .deco{opacity:.16}
-.card-b .deco{color:rgba(var(--b),1)}
-.card-v .deco{color:rgba(var(--v),1)}
-.card-e .deco{color:rgba(var(--e),1)}
-.card-a .deco{color:rgba(var(--amber),1)}
-.card-pk .deco{color:rgba(var(--pk),1)}
-.card-tl .deco{color:rgba(20,184,166,1)}
-
-/* ─── FOOTER ─── */
-.sigil-div{display:flex;align-items:center;gap:16px;width:100%;margin:3rem 0 0;animation:rise 1s .5s ease both}
-.sdl2{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.15),transparent)}
-.sigil-sym{font-family:var(--cinzel);font-size:16px;color:rgba(212,175,100,.25);letter-spacing:.1em}
-
-footer{margin-top:2.8rem;font-family:var(--cinzel);font-size:9px;letter-spacing:.22em;color:rgba(212,175,100,.18);text-align:center;line-height:2.8;animation:rise 1s .6s ease both}
-footer a{color:rgba(212,175,100,.18);text-decoration:none;transition:color .2s}
-footer a:hover{color:rgba(212,175,100,.55)}
-.fsep{margin:0 10px;opacity:.4}
-@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
-
-/* ─── CHRONICLE PILL (Holiday Tracker — cross-project) ─── */
-.chronicle-pill{position:relative;display:flex;align-items:center;gap:1.1rem;width:100%;padding:1rem 1.2rem;margin-bottom:2rem;text-decoration:none;color:inherit;border-radius:18px;
-  background:rgba(10,8,24,.7);
-  border:1px solid rgba(212,175,100,.12);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  overflow:hidden;
-  transition:transform .35s cubic-bezier(.16,.84,.24,1.05),border-color .35s,box-shadow .35s,background .35s;
-  animation:rise 1s .3s ease both}
-.chronicle-pill::before,.chronicle-pill::after{content:'';position:absolute;width:12px;height:12px;pointer-events:none;transition:opacity .4s;opacity:.22}
-.chronicle-pill::before{top:10px;left:10px;border-top:1px solid rgba(212,175,100,.7);border-left:1px solid rgba(212,175,100,.7)}
-.chronicle-pill::after{bottom:10px;right:10px;border-bottom:1px solid rgba(212,175,100,.7);border-right:1px solid rgba(212,175,100,.7)}
-.chronicle-pill:hover::before,.chronicle-pill:hover::after,
-.chronicle-pill:focus-visible::before,.chronicle-pill:focus-visible::after{opacity:1}
-.chronicle-pill .ch-top{position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,100,.8),transparent);opacity:0;transition:opacity .4s}
-.chronicle-pill:hover .ch-top,.chronicle-pill:focus-visible .ch-top{opacity:1}
-.chronicle-pill:hover,.chronicle-pill:focus-visible{transform:translateY(-3px);border-color:rgba(212,175,100,.32);background:rgba(18,14,32,.85);box-shadow:0 18px 50px rgba(212,175,100,.12),0 0 0 1px rgba(212,175,100,.08)}
-.ch-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
-  background:rgba(212,175,100,.08);
-  box-shadow:0 0 0 1px rgba(212,175,100,.22),inset 0 1px 0 rgba(255,255,255,.05);
-  transition:transform .4s cubic-bezier(.16,.84,.24,1.05)}
-.chronicle-pill:hover .ch-icon,.chronicle-pill:focus-visible .ch-icon{transform:scale(1.08) rotate(-6deg)}
-.ch-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.ch-label{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.32em;text-transform:uppercase;color:rgba(212,175,100,.7)}
-.ch-title{font-family:var(--cinzel);font-size:1rem;font-weight:600;letter-spacing:.04em;color:rgba(255,255,255,.92);display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;line-height:1.2}
-.ch-title-sub{font-family:var(--mono);font-size:10.5px;font-weight:400;letter-spacing:.04em;color:rgba(255,255,255,.42);text-transform:none}
-.ch-badge{font-family:var(--cinzel);font-size:8.5px;letter-spacing:.28em;text-transform:uppercase;padding:5px 10px;border-radius:14px;
-  color:rgba(212,175,100,.85);border:1px solid rgba(212,175,100,.28);background:rgba(212,175,100,.06);flex-shrink:0}
-.ch-arr{width:30px;height:30px;border-radius:50%;border:1px solid rgba(212,175,100,.15);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(212,175,100,.28);flex-shrink:0;transition:all .3s;font-family:var(--mono)}
-.chronicle-pill:hover .ch-arr,.chronicle-pill:focus-visible .ch-arr{transform:translateX(4px);border-color:rgba(212,175,100,.55);color:rgba(212,175,100,.9);box-shadow:0 0 14px rgba(212,175,100,.18)}
-
-/* ─── KEYBOARD HINTS ON PROJECT CARDS ─── */
-.pkbd{position:absolute;top:14px;right:14px;z-index:3;display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(212,175,100,.35);opacity:.45;transition:opacity .35s,color .35s}
-.pcard:hover .pkbd,.pcard.selected .pkbd,.pcard:focus-visible .pkbd{opacity:1;color:rgba(212,175,100,.85)}
-.pkbd kbd{display:inline-block;min-width:18px;padding:2px 6px;border:1px solid rgba(212,175,100,.28);border-radius:5px;background:rgba(212,175,100,.06);font-family:var(--mono);font-size:9px;color:rgba(212,175,100,.75);line-height:1;box-shadow:inset 0 -1px 0 rgba(212,175,100,.12)}
-@media (pointer:coarse){.pkbd{display:none}}
-
-/* ─── TOME PREVIEW CHIPS ON PROJECT CARDS ─── */
-.ptomes{display:flex;flex-wrap:wrap;gap:5px;margin-top:1rem;padding-top:.9rem;border-top:1px dashed rgba(212,175,100,.09)}
-.ptome{font-family:var(--mono);font-size:9px;letter-spacing:.08em;padding:3px 9px;border-radius:14px;border:1px solid rgba(212,175,100,.14);color:rgba(212,175,100,.55);background:rgba(212,175,100,.035);display:inline-flex;align-items:center;gap:5px;transition:all .3s}
-.pcard:hover .ptome,.pcard.selected .ptome{border-color:rgba(212,175,100,.35);color:rgba(212,175,100,.85);background:rgba(212,175,100,.07)}
-.ptome-ic{font-size:10px;opacity:.9;filter:grayscale(.2)}
-
-/* Tome count in the status area */
-.ptcount{font-family:var(--mono);font-size:9.5px;color:rgba(212,175,100,.35);letter-spacing:.04em;margin-left:auto;padding-right:8px}
-.pcard:hover .ptcount,.pcard.selected .ptcount{color:rgba(212,175,100,.75)}
-
-/* ─── CHANGE-PROJECT PILL (in banner) ─── */
-.pb-change{margin-left:auto;display:inline-flex;align-items:center;gap:7px;padding:6px 12px 6px 10px;border-radius:20px;border:1px solid rgba(212,175,100,.22);background:rgba(212,175,100,.04);color:rgba(212,175,100,.72);font-family:var(--cinzel);font-size:9px;font-weight:600;letter-spacing:.25em;text-transform:uppercase;cursor:pointer;transition:border-color .25s,background .25s,color .25s,transform .25s}
-.pb-change:hover,.pb-change:focus-visible{border-color:rgba(212,175,100,.55);background:rgba(212,175,100,.1);color:#d4af64;transform:translateY(-1px)}
-.pb-change-ic{font-size:12px;line-height:1;display:inline-block;transition:transform .4s}
-.pb-change:hover .pb-change-ic{transform:rotate(-90deg)}
-
-/* ─── STAGGERED TOME REVEAL ─── */
-#tomes-section.show .grid .card{animation:tome-rise .55s cubic-bezier(.16,.84,.24,1) both}
-#tomes-section.show .grid .card:nth-child(1){animation-delay:.08s}
-#tomes-section.show .grid .card:nth-child(2){animation-delay:.15s}
-#tomes-section.show .grid .card:nth-child(3){animation-delay:.22s}
-#tomes-section.show .grid .card:nth-child(4){animation-delay:.29s}
-#tomes-section.show .grid .card:nth-child(5){animation-delay:.36s}
-#tomes-section.show .grid .card:nth-child(6){animation-delay:.43s}
-@keyframes tome-rise{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
-
-/* Cross-fade when swapping projects */
-#tomes-section.swap .grid{opacity:.25;transform:translateY(6px);transition:opacity .18s ease,transform .18s ease}
-#tomes-section.swap .project-banner{opacity:.5;transition:opacity .18s ease}
-
-@media(max-width:580px){
-  .project-grid{grid-template-columns:1fr}
-  .grid{grid-template-columns:1fr}.s2{grid-column:auto}
-  .s2 .cin{flex-direction:column;gap:1.2rem}
-  h1{font-size:3rem}.card{padding:1.6rem}
-  .rune-ring{width:90px;height:90px}
-  .project-banner{flex-wrap:wrap}
-  .pb-change{margin-left:0;margin-top:4px}
-  .chronicle-pill{flex-wrap:wrap;gap:.8rem;padding:.9rem 1rem}
-  .ch-body{flex-basis:100%;order:3}
-  .ch-title{font-size:.95rem;gap:6px}
-  .ch-title-sub{font-size:10px}
-  .ch-badge{order:2;margin-left:auto}
-}
+  @media(max-width: 768px){
+    .pcard { grid-template-columns: 1fr; gap: 1rem; }
+    .grid { grid-template-columns: 1fr; }
+    .s2 { grid-column: auto; }
+    .pmeta { text-align: left; align-items: flex-start; }
+    h1 { font-size: 2.5rem; }
+  }
 </style>
 </head>
 <body>
 
-<a class="skip-link" href="#tomes-section">Skip to tools</a>
-
 <canvas id="bg" aria-hidden="true"></canvas>
-
-<div class="rune-ring" aria-hidden="true">
-<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <g class="ring-spin">
-    <circle cx="60" cy="60" r="56" stroke="rgba(212,175,100,0.18)" stroke-width=".8" stroke-dasharray="4 6"/>
-    <polygon points="60,4 63,8 60,12 57,8" fill="rgba(212,175,100,0.6)"/>
-    <polygon points="116,60 112,63 108,60 112,57" fill="rgba(212,175,100,0.4)"/>
-    <polygon points="60,116 57,112 60,108 63,112" fill="rgba(212,175,100,0.3)"/>
-    <polygon points="4,60 8,57 12,60 8,63" fill="rgba(212,175,100,0.35)"/>
-  </g>
-  <g class="ring-spin2">
-    <circle cx="60" cy="60" r="44" stroke="rgba(167,139,250,0.22)" stroke-width=".8" stroke-dasharray="2 8"/>
-    <circle cx="60" cy="16" r="2.5" fill="rgba(167,139,250,0.7)"/>
-    <circle cx="104" cy="60" r="2" fill="rgba(167,139,250,0.5)"/>
-    <circle cx="60" cy="104" r="2" fill="rgba(167,139,250,0.4)"/>
-    <circle cx="16" cy="60" r="2" fill="rgba(167,139,250,0.45)"/>
-  </g>
-  <circle cx="60" cy="60" r="30" stroke="rgba(212,175,100,0.12)" stroke-width=".6"/>
-  <g class="ring-glow">
-    <circle cx="60" cy="60" r="14" fill="rgba(167,139,250,0.08)"/>
-    <circle cx="60" cy="60" r="14" stroke="rgba(212,175,100,0.35)" stroke-width=".7"/>
-    <path d="M60 46 L64 56 L60 74 L56 56 Z" fill="rgba(212,175,100,0.55)" stroke="none"/>
-    <path d="M46 60 L56 56 L74 60 L56 64 Z" fill="rgba(167,139,250,0.5)" stroke="none"/>
-  </g>
-</svg>
-</div>
 
 <div class="shell">
 
-  <div class="eyebrow">Arcane Workspace · Anno MMXXVI</div>
-  <h1>
-    <span class="t-mal">Malignant</span>
-    <span class="t-grim">Grimoire</span>
-  </h1>
-  <div class="tagline">Codex of tools · Bound in fire · Forever current</div>
+  <header>
+    <div class="eyebrow">Arcane Workspace · Anno MMXXVI</div>
+    <h1>
+      <span class="t-mal">Malignant</span>
+      <span class="t-grim">Grimoire</span>
+    </h1>
+    <div class="tagline">Codex of tools · Bound in fire · Forever current</div>
+  </header>
 
   <main id="main" role="main">
 
-  <a href="holiday-tracker.html" class="chronicle-pill" id="c5" aria-label="Holiday Tracker — shared chronicle of absences and leave">
-    <div class="ch-top"></div>
-    <div class="ch-icon">🗓️</div>
-    <div class="ch-body">
-      <div class="ch-label">The Chronicle · Shared</div>
-      <div class="ch-title">
-        Holiday Tracker
-        <span class="ch-title-sub">team absences &amp; leave · synced in real time</span>
+    <a href="holiday-tracker.html" class="chronicle-pill" id="c5">
+      <div class="ch-info">
+        <div class="ch-label">The Chronicle · Shared</div>
+        <div class="ch-title">Holiday Tracker</div>
+        <div class="ch-title-sub">Team absences &amp; leave · Synced in real time</div>
       </div>
-    </div>
-    <div class="ch-badge">All projects</div>
-    <div class="ch-arr">⟶</div>
-  </a>
+      <div class="arr">⟶</div>
+    </a>
 
-  <div class="orn">
-    <div class="orn-line"></div>
-    <div class="orn-diamond"></div>
-    <div class="orn-text">I — Choose your project</div>
-    <div class="orn-diamond"></div>
-    <div class="orn-line"></div>
-  </div>
+    <div class="ledger-section">
+      <div class="section-title">Volume I — Projects</div>
+      <div class="arcane-ledger">
+        <a class="pcard" id="proj-wmf" role="button" tabindex="0" onclick="selectProject('wmf',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('wmf',this)}">
+          <div class="pseal">WMF</div>
+          <div class="pinfo">
+            <div class="pname">Württembergische Metallwarenfabrik</div>
+            <div class="pdesc">Forwarder codex · Surcharge mapping · Invoice transmutation rituals</div>
+          </div>
+          <div class="pmeta">
+            <div class="pstatus act"><div class="pdot"></div>Active</div>
+            <div class="pkbd" aria-hidden="true"><kbd>1</kbd></div>
+          </div>
+        </a>
 
-  <div class="project-grid">
-    <div class="pcard" id="proj-wmf" role="button" tabindex="0" aria-pressed="false" aria-label="WMF project — 4 tomes, keyboard shortcut 1" onclick="selectProject('wmf',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('wmf',this)}">
-      <div class="pcard-top"></div>
-      <div class="pblob"></div>
-      <div class="pspot"></div>
-      <div class="pkbd" aria-hidden="true"><kbd>1</kbd></div>
-      <div class="pcin">
-        <svg class="pseal" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="25,2 46,13 46,37 25,48 4,37 4,13" stroke="rgba(212,175,100,0.5)" stroke-width="1" fill="rgba(212,175,100,0.05)"/>
-          <polygon points="25,8 40,17 40,33 25,42 10,33 10,17" stroke="rgba(212,175,100,0.15)" stroke-width=".6" fill="none"/>
-          <text x="25" y="29" text-anchor="middle" font-family="Cinzel,serif" font-size="11" font-weight="600" fill="rgba(212,175,100,0.9)">WMF</text>
-        </svg>
-        <div class="pname">WMF</div>
-        <div class="pdesc">Württembergische Metallwarenfabrik<br>Forwarder codex · Surcharge mapping<br>Invoice transmutation rituals</div>
-        <div class="ptomes" aria-hidden="true">
-          <span class="ptome"><span class="ptome-ic">💾</span>Vault</span>
-          <span class="ptome"><span class="ptome-ic">📝</span>Oracle</span>
-          <span class="ptome"><span class="ptome-ic">📊</span>Alchemist</span>
-          <span class="ptome"><span class="ptome-ic">🗂️</span>Ledger</span>
-        </div>
-        <div class="pfoot">
-          <div class="pstatus act"><div class="pdot"></div>Active</div>
-          <div class="ptcount">4 tomes</div>
-          <div class="parr">⟶</div>
-        </div>
+        <a class="pcard" id="proj-siemens" role="button" tabindex="0" onclick="selectProject('siemens',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('siemens',this)}">
+          <div class="pseal">SGP</div>
+          <div class="pinfo">
+            <div class="pname">Siemens General Procurement</div>
+            <div class="pdesc">Process knowledge base · Procurement rites &amp; guidelines</div>
+          </div>
+          <div class="pmeta">
+            <div class="pstatus act"><div class="pdot"></div>Active</div>
+            <div class="pkbd" aria-hidden="true"><kbd>2</kbd></div>
+          </div>
+        </a>
       </div>
     </div>
 
-    <div class="pcard" id="proj-siemens" role="button" tabindex="0" aria-pressed="false" aria-label="Siemens GP project — 3 tomes, keyboard shortcut 2" onclick="selectProject('siemens',this)" onkeydown="if(event.key === 'Enter'||event.key===' '){event.preventDefault();selectProject('siemens',this)}">
-      <div class="pcard-top"></div>
-      <div class="pblob" style="background:rgba(59,130,246,0.12)"></div>
-      <div class="pspot"></div>
-      <div class="pkbd" aria-hidden="true"><kbd>2</kbd></div>
-      <div class="pcin">
-        <svg class="pseal" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="25,2 46,13 46,37 25,48 4,37 4,13" stroke="rgba(59,130,246,0.5)" stroke-width="1" fill="rgba(59,130,246,0.05)"/>
-          <polygon points="25,8 40,17 40,33 25,42 10,33 10,17" stroke="rgba(59,130,246,0.15)" stroke-width=".6" fill="none"/>
-          <text x="25" y="29" text-anchor="middle" font-family="Cinzel,serif" font-size="9" font-weight="600" fill="rgba(59,130,246,0.9)">SGP</text>
-        </svg>
-        <div class="pname">Siemens GP</div>
-        <div class="pdesc">General Procurement<br>Process knowledge base<br>Procurement rites &amp; guidelines</div>
-        <div class="ptomes" aria-hidden="true">
-          <span class="ptome" style="color:rgba(147,197,253,.75);border-color:rgba(59,130,246,.22);background:rgba(59,130,246,.06)"><span class="ptome-ic">📝</span>Oracle</span>
-          <span class="ptome" style="color:rgba(147,197,253,.75);border-color:rgba(59,130,246,.22);background:rgba(59,130,246,.06)"><span class="ptome-ic">✍️</span>Scribe</span>
-          <span class="ptome" style="color:rgba(147,197,253,.75);border-color:rgba(59,130,246,.22);background:rgba(59,130,246,.06)"><span class="ptome-ic">📋</span>Reviewer</span>
-        </div>
-        <div class="pfoot">
-          <div class="pstatus act" style="color:rgba(59,130,246,.65)"><div class="pdot" style="background:#3b82f6;box-shadow:0 0 7px #3b82f6;animation:dpulse 2.5s ease-in-out infinite"></div>Active</div>
-          <div class="ptcount" style="color:rgba(59,130,246,.4)">3 tomes</div>
-          <div class="parr">⟶</div>
-        </div>
+    <div id="tomes-section">
+      <div class="project-banner">
+        <span>Project</span> ·
+        <span class="pb-name" id="banner-name"></span> ·
+        <span id="banner-sub"></span>
+        <button type="button" class="pb-change" id="btn-change-project">Reset</button>
       </div>
-    </div>
-  </div>
 
-  <div class="sec-div" id="sec-div">
-    <div class="sdl"></div>
-    <div class="sec-div-sym">✦</div>
-    <div class="sec-div-label" id="sec-div-label">II — Select your instrument</div>
-    <div class="sec-div-sym">✦</div>
-    <div class="sdl"></div>
-  </div>
+      <div id="aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-  <div id="tomes-section">
-    <div class="project-banner">
-      <span style="color:rgba(212,175,100,.3);font-size:10px;font-family:var(--mono)">Project</span>
-      <span class="pb-sep">·</span>
-      <span class="pb-name" id="banner-name"></span>
-      <span class="pb-sep">·</span>
-      <span id="banner-sub" style="font-family:var(--mono);font-size:11px"></span>
-      <button type="button" class="pb-change" id="btn-change-project" aria-label="Change project">
-        <span class="pb-change-ic" aria-hidden="true">⟲</span>
-        <span>Change</span>
-      </button>
-    </div>
-
-    <div id="aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-
-    <div class="grid">
-
-      <a href="#" class="card card-b" id="c0" role="button" aria-disabled="true" tabindex="-1">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">💾</div>
+      <div class="grid">
+        <a href="#" class="card" id="c0">
+          <div class="deco">Sub Inscribe()</div>
           <div class="clabel">Tome I · The Vault</div>
           <div class="ctitle">VB Code Vault</div>
-          <div class="cdesc">Store, search &amp; conjure VB/VBA spells. Syntax-illuminated, synced to the cloud via Firebase.</div>
+          <div class="cdesc">Store, search &amp; conjure VB/VBA spells. Syntax-illuminated, synced to the cloud.</div>
           <div class="cfoot">
             <div class="tags"><span class="tag">VB</span><span class="tag">VBA</span><span class="tag">Excel</span></div>
             <div class="arr">⟶</div>
           </div>
-        </div>
-        <div class="deco">Sub Inscribe()<br>&nbsp;spell.bind()<br>&nbsp;illuminate()<br>End Sub</div>
-      </a>
+        </a>
 
-      <a href="#" class="card card-v" id="c1" role="button" aria-disabled="true" tabindex="-1">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">📝</div>
+        <a href="#" class="card" id="c1">
+          <div class="deco">ask("Riddle")</div>
           <div class="clabel">Tome II · The Oracle</div>
-          <div class="ctitle">Notes</div>
-          <div class="cdesc">Question, answers &amp; scrolls. Your personal oracle — answers preserved for eternity.</div>
+          <div class="ctitle">Notes &amp; Lore</div>
+          <div class="cdesc">Question, answers &amp; scrolls. Your personal oracle.</div>
           <div class="cfoot">
-            <div class="tags"><span class="tag">Q&amp;A</span><span class="tag">Notes</span><span class="tag">Lore</span></div>
+            <div class="tags"><span class="tag">Q&amp;A</span><span class="tag">Notes</span></div>
             <div class="arr">⟶</div>
           </div>
-        </div>
-        <div class="deco">ask("Riddle")<br>&nbsp;.divine(ans)<br>&nbsp;.seal()<br>// eternal ✦</div>
-      </a>
+        </a>
 
-      <a href="#" class="card card-e s2" id="c2" role="button" aria-disabled="true" tabindex="-1">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">📊</div>
-          <div class="cbody">
-            <div class="clabel">Tome III · The Alchemist · Featured Ritual</div>
-            <div class="ctitle">Anmerkung Processor</div>
-            <div class="cdesc">Upload an Excel invoice scroll, select your forwarder (Dachser, K+N, DHL Express, Wackler), and the Grimoire auto-fills the Anmerkung column via your inscribed VB ritual — no installation, no server, pure browser alchemy.</div>
-            <div class="cfoot">
-              <div class="tags"><span class="tag">Dachser</span><span class="tag">K+N</span><span class="tag">DHL</span><span class="tag">Wackler</span><span class="tag">xlsx</span></div>
-              <div class="arr">⟶</div>
-            </div>
+        <a href="#" class="card s2" id="c2">
+          <div class="deco">transmute(scroll)</div>
+          <div class="clabel">Tome III · Featured Ritual</div>
+          <div class="ctitle">Anmerkung Processor</div>
+          <div class="cdesc">Upload an Excel invoice scroll, select your forwarder, and auto-fill the Anmerkung column via inscribed VB rituals. Pure browser alchemy.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">Dachser</span><span class="tag">K+N</span><span class="tag">DHL</span><span class="tag">Wackler</span></div>
+            <div class="arr">⟶</div>
           </div>
-        </div>
-        <div class="deco">transmute(scroll)<br>&nbsp;.forwarder()<br>&nbsp;.alchemize()<br>seal() ✦</div>
-      </a>
+        </a>
 
-      <a href="todo.html" class="card card-pk" id="c4">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">🗂️</div>
+        <a href="#" class="card" id="c4">
+          <div class="deco">ledger.open()</div>
           <div class="clabel">Tome IV · The Ledger</div>
-          <div class="ctitle">Forwarder Task Ledger</div>
-          <div class="cdesc">Track open tasks across Dachser, K+N, DHL Express, Wackler, Honold &amp; ERKA. Log forwarder, data totals, notes &amp; status — mark done when the ritual is complete.</div>
+          <div class="ctitle">Task Ledger</div>
+          <div class="cdesc">Track open tasks across forwarders. Log totals, notes &amp; status.</div>
           <div class="cfoot">
-            <div class="tags"><span class="tag">Tasks</span><span class="tag">Tracking</span><span class="tag">Forwarder</span></div>
+            <div class="tags"><span class="tag">Tasks</span><span class="tag">Tracking</span></div>
             <div class="arr">⟶</div>
           </div>
-        </div>
-        <div class="deco">ledger.open()<br>&nbsp;.track(fwd)<br>&nbsp;.seal(done)<br>// bound ✦</div>
-      </a>
+        </a>
 
-      <a href="#" class="card card-a" id="c3" role="button" aria-disabled="true" tabindex="-1">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">✍️</div>
+        <a href="#" class="card" id="c3">
+          <div class="deco">scribe.find()</div>
           <div class="clabel">Tome III · The Scribe</div>
           <div class="ctitle">Standard Wording</div>
-          <div class="cdesc">A searchable library of pre-written phrases &amp; standard text. Click any entry to copy instantly — add, edit, or organize by category.</div>
+          <div class="cdesc">A searchable library of pre-written phrases. Click any entry to copy instantly.</div>
           <div class="cfoot">
-            <div class="tags"><span class="tag">Phrases</span><span class="tag">Templates</span><span class="tag">Copy</span></div>
+            <div class="tags"><span class="tag">Phrases</span><span class="tag">Templates</span></div>
             <div class="arr">⟶</div>
           </div>
-        </div>
-        <div class="deco">scribe.find()<br>&nbsp;.copy(phrase)<br>&nbsp;.paste()<br>// instant ✦</div>
-      </a>
+        </a>
 
-      <a href="#" class="card card-tl" id="c6" role="button" aria-disabled="true" tabindex="-1">
-        <div class="card-top"></div><div class="blob"></div><div class="spot"></div>
-        <div class="cin">
-          <div class="icon">📋</div>
+        <a href="#" class="card" id="c6">
+          <div class="deco">review.week()</div>
           <div class="clabel">Tome IV · The Reviewer</div>
           <div class="ctitle">Task Reviewer</div>
-          <div class="cdesc">Per-person daily reviews — done, can't process, not done. Auto-scored with grades, trend vs yesterday, Friday digest to Slack / Teams.</div>
+          <div class="cdesc">Per-person daily reviews. Auto-scored with grades and Friday digest.</div>
           <div class="cfoot">
-            <div class="tags"><span class="tag">Weekly</span><span class="tag">Scoring</span><span class="tag">People</span></div>
+            <div class="tags"><span class="tag">Scoring</span><span class="tag">People</span></div>
             <div class="arr">⟶</div>
           </div>
-        </div>
-        <div class="deco">review.week()<br>&nbsp;.score(p)<br>&nbsp;.suggest()<br>// per person ✦</div>
-      </a>
-
+        </a>
+      </div>
     </div>
-  </div>
-
-  <div class="sigil-div">
-    <div class="sdl2"></div>
-    <div class="sigil-sym">✦ ᛟ ✦</div>
-    <div class="sdl2"></div>
-  </div>
 
   </main>
 
   <footer>
-    codingkuh.my.id<span class="fsep">·</span>Firebase + GitHub Pages<br>
-    <a href="code.html">The Vault</a><span class="fsep">✦</span><a href="qa.html">The Oracle</a><span class="fsep">✦</span><a href="anmerkung.html">The Alchemist</a><span class="fsep">✦</span><a href="todo.html">The Ledger</a><span class="fsep">✦</span><a href="standard-wording.html">Standard Wording</a><span class="fsep">✦</span><a href="task-reviewer-siemens.html">Task Reviewer</a><span class="fsep">✦</span><a href="holiday-tracker.html">The Chronicle</a>
+    codingkuh.my.id · 
+    <a href="code.html">Vault</a>
+    <a href="qa.html">Oracle</a>
+    <a href="anmerkung.html">Alchemist</a>
+    <a href="todo.html">Ledger</a>
+    <a href="standard-wording.html">Wording</a>
+    <a href="task-reviewer-siemens.html">Reviewer</a>
+    <a href="holiday-tracker.html">Chronicle</a>
   </footer>
 
 </div>
 
 <script>
+// Slowed down, purely atmospheric canvas
 (function(){
 const cv=document.getElementById('bg'),cx=cv.getContext('2d');
 const REDUCED = window.Grimoire && window.Grimoire.reducedMotion;
-const DENSITY = (window.Grimoire && window.Grimoire.densityScale) ? window.Grimoire.densityScale() : 1;
-let W,H,t=0,pts=[],runeChars=[];
-const PAL=[[91,156,246],[167,139,250],[52,211,153],[244,114,182],[212,175,100]];
-let mouse={x:-9999,y:-9999};
-function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight}
-function mkpt(){const c=PAL[Math.floor(Math.random()*PAL.length)];return{x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.15,r:Math.random()*2+.5,a:Math.random()*.4+.05,da:(Math.random()*.0008+.0003)*(Math.random()<.5?1:-1),c,ph:Math.random()*Math.PI*2}}
+let W,H,t=0,runeChars=[];
 const RUNES='ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ☽☿♄⊕⊗✦';
-function mkRune(){return{ch:RUNES[Math.floor(Math.random()*RUNES.length)],x:Math.random()*W,y:Math.random()*H,vy:-(Math.random()*.3+.1),a:Math.random()*.12+.02,size:Math.floor(Math.random()*8)+10,c:PAL[Math.floor(Math.random()*PAL.length)],life:1}}
-function init(){resize();pts=Array.from({length:Math.min(Math.floor(W*H/9000*DENSITY),Math.floor(140*DENSITY))},mkpt);for(let i=0;i<Math.floor(35*DENSITY);i++)runeChars.push(mkRune())}
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight}
+function mkRune(){return{ch:RUNES[Math.floor(Math.random()*RUNES.length)],x:Math.random()*W,y:Math.random()*H,vy:-(Math.random()*.1+.05),a:Math.random()*.15+.05,size:Math.floor(Math.random()*12)+14,life:1}}
+function init(){resize();for(let i=0;i<40;i++)runeChars.push(mkRune())}
 let last=0;
 function frame(ts){
-  const dt=Math.min((ts-last)/16.67,2.5);last=ts;t+=.003*dt;
+  const dt=Math.min((ts-last)/16.67,2.5);last=ts;t+=.001*dt;
   cx.clearRect(0,0,W,H);
-  [{x:W*.15,y:H*-.1,rx:W*.6,ry:H*.4,c:[91,156,246],a:.032},{x:W*.78,y:H*-.12,rx:W*.52,ry:H*.35,c:[167,139,250],a:.03},{x:W*.5,y:H*1.1,rx:W*.6,ry:H*.4,c:[52,211,153],a:.02},{x:W*.88,y:H*.52,rx:W*.32,ry:H*.42,c:[212,175,100],a:.016},{x:W*.05,y:H*.45,rx:W*.28,ry:H*.38,c:[244,114,182],a:.013}].forEach(a=>{
-    const p=a.a+.009*Math.sin(t*1.4+a.x*.004);
-    const g=cx.createRadialGradient(a.x,a.y,0,a.x,a.y,Math.hypot(a.rx,a.ry)*.62);
-    g.addColorStop(0,`rgba(${a.c},${p})`);g.addColorStop(.5,`rgba(${a.c},${p*.28})`);g.addColorStop(1,'transparent');
-    cx.save();cx.translate(a.x,a.y);cx.scale(a.rx/a.ry,1);cx.translate(-a.x,-a.y);cx.fillStyle=g;cx.beginPath();cx.arc(a.x,a.y,a.ry,0,Math.PI*2);cx.fill();cx.restore();
-  });
-  runeChars.forEach(r=>{r.y+=r.vy*dt;r.life-=.0004*dt;if(r.y<-40||r.life<=0)Object.assign(r,mkRune(),{y:H+20});cx.font=`${r.size}px 'Cinzel',serif`;cx.fillStyle=`rgba(${r.c},${r.a*r.life})`;cx.fillText(r.ch,r.x,r.y)});
-  for(let i=0;i<pts.length;i++){const p=pts[i];for(let j=i+1;j<pts.length;j++){const q=pts[j];const dx=p.x-q.x,dy=p.y-q.y;if(Math.abs(dx)<125&&Math.abs(dy)<125){const dSq=dx*dx+dy*dy;if(dSq<15625){const d=Math.sqrt(dSq);cx.strokeStyle=`rgba(${p.c},${(1-d/125)*.055})`;cx.lineWidth=.45;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(q.x,q.y);cx.stroke()}}}const mdx=p.x-mouse.x,mdy=p.y-mouse.y;if(Math.abs(mdx)<170&&Math.abs(mdy)<170){const mdSq=mdx*mdx+mdy*mdy;if(mdSq<28900){const md=Math.sqrt(mdSq);cx.strokeStyle=`rgba(${p.c},${(1-md/170)*.28})`;cx.lineWidth=.75;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(mouse.x,mouse.y);cx.stroke()}}}
-  pts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.da*dt;if(p.a<.04||p.a>.52)p.da*=-1;if(p.x<-20)p.x=W+20;if(p.x>W+20)p.x=-20;if(p.y<-20)p.y=H+20;if(p.y>H+20)p.y=-20;const rdx=p.x-mouse.x,rdy=p.y-mouse.y;if(Math.abs(rdx)<115&&Math.abs(rdy)<115){const rdSq=rdx*rdx+rdy*rdy;if(rdSq<13225&&rdSq>0){const rd=Math.sqrt(rdSq);const f=(1-rd/115)*.5;p.vx+=(rdx/rd)*f*.04;p.vy+=(rdy/rd)*f*.04}}const spSq=p.vx*p.vx+p.vy*p.vy;if(spSq>.2704){const sp=Math.sqrt(spSq);p.vx*=.52/sp;p.vy*=.52/sp}const bx=.6*Math.sin(t*1.1+p.ph),by=.6*Math.cos(t*.88+p.ph*1.3);if(p.r>1.7){cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r*3.8,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a*.09})`;cx.fill()}cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a})`;cx.fill()});
+  runeChars.forEach(r=>{r.y+=r.vy*dt;r.life-=.0002*dt;if(r.y<-40||r.life<=0)Object.assign(r,mkRune(),{y:H+20});cx.font=`${r.size}px 'Cinzel',serif`;cx.fillStyle=`rgba(212,175,100,${r.a*r.life})`;cx.fillText(r.ch,r.x,r.y)});
   if (!document.hidden && !REDUCED) requestAnimationFrame(frame);
 }
 window.addEventListener('resize',init);
-window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
-window.addEventListener('touchmove',e=>{const tt=e.touches[0];mouse.x=tt.clientX;mouse.y=tt.clientY},{passive:true});
-window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
-
-// Render a single static frame if reduced-motion. Otherwise run & pause on hidden tab.
 init();
-if (REDUCED) {
-  frame(0);
-} else {
-  requestAnimationFrame(frame);
-  document.addEventListener('visibilitychange', ()=>{
-    if (!document.hidden) { last = 0; requestAnimationFrame(frame); }
-  });
-}
-
-function bindTilt(id){
-  const el=document.getElementById(id);if(!el)return;
-  const spot=el.querySelector('.spot');
-  el.addEventListener('mousemove',e=>{
-    const r=el.getBoundingClientRect(),nx=(e.clientX-r.left)/r.width-.5,ny=(e.clientY-r.top)/r.height-.5;
-    el.style.setProperty('--rx',(-ny*13)+'deg');el.style.setProperty('--ry',(nx*13)+'deg');
-    if(spot){spot.style.setProperty('--cx',((e.clientX-r.left)/r.width*100).toFixed(1)+'%');spot.style.setProperty('--cy',((e.clientY-r.top)/r.height*100).toFixed(1)+'%')}
-  });
-  el.addEventListener('mouseleave',()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg')});
-}
-['c0','c1','c2','c3','c4','c5','c6'].forEach(bindTilt);
-
-document.querySelectorAll('.pcard').forEach(el=>{
-  const spot=el.querySelector('.pspot');
-  el.addEventListener('mousemove',e=>{
-    const r=el.getBoundingClientRect(),nx=(e.clientX-r.left)/r.width-.5,ny=(e.clientY-r.top)/r.height-.5;
-    el.style.setProperty('--rx',(-ny*9)+'deg');el.style.setProperty('--ry',(nx*9)+'deg');
-    if(spot){spot.style.setProperty('--cx',((e.clientX-r.left)/r.width*100).toFixed(1)+'%');spot.style.setProperty('--cy',((e.clientY-r.top)/r.height*100).toFixed(1)+'%')}
-  });
-  el.addEventListener('mouseleave',()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg')});
-});
+if(REDUCED){ frame(0); } else { requestAnimationFrame(frame); document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ last=0; requestAnimationFrame(frame); } }); }
 })();
 
 /* ─── PROJECT DATA ─── */
@@ -660,160 +322,86 @@ function selectProject(key,el,opts){
   if(!proj)return;
   opts = opts || {};
 
-  // If the same project is already active, bail early (no jank)
-  const alreadySelected = el && el.classList.contains('selected');
+  document.querySelectorAll('.pcard').forEach(c=>{
+    const isMe=c===el;
+    c.classList.toggle('selected',isMe);
+    c.setAttribute('aria-pressed',isMe?'true':'false');
+  });
+
+  document.getElementById('banner-name').textContent=proj.name;
+  document.getElementById('banner-sub').textContent=proj.sub;
+
+  const isSiemens = key==='siemens';
+
+  function wire(id, href){
+    const a=document.getElementById(id);
+    if(!a) return;
+    if(href){
+      a.href=href;
+      a.removeAttribute('aria-disabled');
+      a.setAttribute('tabindex','0');
+    }else{
+      a.href='#';
+      a.setAttribute('aria-disabled','true');
+      a.setAttribute('tabindex','-1');
+    }
+  }
+  wire('c0', proj.code);
+  wire('c1', proj.qa);
+  wire('c2', proj.anmerkung);
+  wire('c3', proj.wording);
+  wire('c4', proj.todo);
+  wire('c6', proj.reviewer);
+
+  document.getElementById('c0').style.display=isSiemens?'none':'flex';
+  document.getElementById('c2').style.display=isSiemens?'none':'flex';
+  document.getElementById('c4').style.display=isSiemens?'none':'flex';
+  document.getElementById('c3').style.display=isSiemens?'flex':'none';
+  document.getElementById('c6').style.display=isSiemens?'flex':'none';
 
   const tomes = document.getElementById('tomes-section');
-  const sec   = document.getElementById('sec-div');
-  const wasShown = tomes.classList.contains('show');
+  tomes.classList.add('show');
 
-  const applySelection = () => {
-    document.querySelectorAll('.pcard').forEach(c=>{
-      const isMe=c===el;
-      c.classList.toggle('selected',isMe);
-      c.setAttribute('aria-pressed',isMe?'true':'false');
-    });
+  try { localStorage.setItem('grimoire.project', key); } catch(e){}
 
-    document.getElementById('banner-name').textContent=proj.name;
-    document.getElementById('banner-sub').textContent=proj.sub;
-
-    const isSiemens = key==='siemens';
-
-    // Wire links + a11y state
-    function wire(id, href){
-      const a=document.getElementById(id);
-      if(!a) return;
-      if(href){
-        a.href=href;
-        a.removeAttribute('aria-disabled');
-        a.setAttribute('tabindex','0');
-      }else{
-        a.href='#';
-        a.setAttribute('aria-disabled','true');
-        a.setAttribute('tabindex','-1');
-      }
-    }
-    wire('c0', proj.code);
-    wire('c1', proj.qa);
-    wire('c2', proj.anmerkung);
-    wire('c3', proj.wording);
-    wire('c4', proj.todo);
-    wire('c6', proj.reviewer);
-
-    // c0: Code Vault — WMF only
-    document.getElementById('c0').style.display=isSiemens?'none':'';
-    // c2: Anmerkung — WMF only
-    document.getElementById('c2').style.display=isSiemens?'none':'';
-    // c4: Task Ledger — WMF only
-    document.getElementById('c4').style.display=isSiemens?'none':'';
-    // c3: Standard Wording — Siemens only
-    document.getElementById('c3').style.display=isSiemens?'':'none';
-    // c6: Task Reviewer — Siemens only
-    document.getElementById('c6').style.display=isSiemens?'':'none';
-
-    // Re-trigger stagger animation on swap (remove+add show)
-    tomes.classList.remove('show');
-    sec.classList.add('show');
-    // Force reflow so the animation restarts cleanly
-    void tomes.offsetWidth;
-    tomes.classList.add('show');
-    tomes.classList.remove('swap');
-
-    // Persist
-    try { localStorage.setItem('grimoire.project', key); } catch(e){}
-
-    // Announce
-    const live = document.getElementById('aria-live');
-    if(live){
-      const tomeCount = [proj.code,proj.qa,proj.anmerkung,proj.todo,proj.wording,proj.reviewer].filter(Boolean).length;
-      live.textContent = `${proj.name} selected. ${tomeCount} tome${tomeCount===1?'':'s'} available.`;
-    }
-  };
-
-  // Smooth cross-fade when switching between already-visible projects
-  if(wasShown && !alreadySelected){
-    tomes.classList.add('swap');
-    setTimeout(applySelection, 170);
-  } else {
-    applySelection();
-  }
-
-  // Scroll behaviour — skip when restoring from storage
   if(!opts.silent){
     setTimeout(()=>{
-      const target = document.getElementById('sec-div');
+      const target = document.getElementById('tomes-section');
       const y = target.getBoundingClientRect().top + window.scrollY - 40;
-      window.scrollTo({ top: y, behavior: (window.Grimoire && window.Grimoire.reducedMotion) ? 'auto' : 'smooth' });
-    }, wasShown && !alreadySelected ? 220 : 260);
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }, 100);
   }
 }
 
-/* ─── CHANGE PROJECT BUTTON ─── */
 function clearProject(){
   document.querySelectorAll('.pcard').forEach(c=>{
     c.classList.remove('selected');
     c.setAttribute('aria-pressed','false');
   });
-  document.getElementById('sec-div').classList.remove('show');
-  document.getElementById('tomes-section').classList.remove('show','swap');
+  document.getElementById('tomes-section').classList.remove('show');
   try { localStorage.removeItem('grimoire.project'); } catch(e){}
-  const live = document.getElementById('aria-live');
-  if(live) live.textContent = 'Selection cleared. Choose a project.';
-  // Return focus to the project grid for keyboard users
-  const firstCard = document.querySelector('.pcard');
-  if(firstCard){
-    const y = firstCard.getBoundingClientRect().top + window.scrollY - 80;
-    window.scrollTo({ top: Math.max(0,y), behavior: (window.Grimoire && window.Grimoire.reducedMotion) ? 'auto' : 'smooth' });
-    setTimeout(()=>firstCard.focus(), 300);
-  }
 }
 
 document.getElementById('btn-change-project').addEventListener('click', clearProject);
 
-/* ─── KEYBOARD SHORTCUTS ─── */
 document.addEventListener('keydown', e=>{
-  // Ignore when typing in inputs / with modifiers
   const tag = (e.target && e.target.tagName || '').toLowerCase();
   if(tag==='input'||tag==='textarea'||tag==='select'||e.target?.isContentEditable) return;
   if(e.ctrlKey||e.metaKey||e.altKey) return;
 
-  if(e.key==='1'){
-    e.preventDefault();
-    const card = document.getElementById('proj-wmf');
-    selectProject('wmf', card);
-  } else if(e.key==='2'){
-    e.preventDefault();
-    const card = document.getElementById('proj-siemens');
-    selectProject('siemens', card);
-  } else if(e.key==='Escape'){
-    if(document.getElementById('tomes-section').classList.contains('show')){
-      e.preventDefault();
-      clearProject();
-    }
-  }
+  if(e.key==='1'){ e.preventDefault(); selectProject('wmf', document.getElementById('proj-wmf')); }
+  else if(e.key==='2'){ e.preventDefault(); selectProject('siemens', document.getElementById('proj-siemens')); }
+  else if(e.key==='Escape'){ if(document.getElementById('tomes-section').classList.contains('show')){ e.preventDefault(); clearProject(); } }
 });
 
-/* ─── RESTORE LAST PROJECT ─── */
 (function restore(){
   let saved = null;
-  try { saved = localStorage.getItem('grimoire.project'); } catch(e){}
+  try { localStorage.getItem('grimoire.project'); } catch(e){}
   if(saved && PROJECTS[saved]){
     const card = document.getElementById(saved==='wmf'?'proj-wmf':'proj-siemens');
     if(card) selectProject(saved, card, {silent:true});
   }
 })();
-
-// Block activation of disabled tome cards (keyboard + click)
-document.querySelectorAll('.card[aria-disabled]').forEach(card=>{
-  card.addEventListener('click', e=>{
-    if(card.getAttribute('aria-disabled')==='true'){ e.preventDefault(); }
-  });
-  card.addEventListener('keydown', e=>{
-    if((e.key==='Enter'||e.key===' ') && card.getAttribute('aria-disabled')==='true'){
-      e.preventDefault();
-    }
-  });
-});
 </script>
 </body>
 </html>
