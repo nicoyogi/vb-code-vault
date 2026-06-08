@@ -38,3 +38,9 @@ claude-skills/
 diff.txt
 .gemini/
 .claude/
+apply_redesign.py
+redesign.py
+redesign.js
+__pycache__/
+*.pyc
+
