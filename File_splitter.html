@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>File Splitter</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0d0d; --surface: #161616; --surface2: #1e1e1e;
+    --border: #2a2a2a; --border2: #3a3a3a;
+    --accent: #c8f135; --accent-dim: rgba(200,241,53,0.12); --accent-mid: rgba(200,241,53,0.25);
+    --text: #f0f0f0; --text2: #888; --text3: #555;
+    --danger: #ff5c5c; --warn: #f5a623;
+    --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif;
+    --radius: 10px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 60px 20px 80px; }
+  header { width: 100%; max-width: 620px; margin-bottom: 48px; }
+  .logo { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; color: var(--accent); text-transform: uppercase; margin-bottom: 20px; }
+  h1 { font-size: clamp(28px, 5vw, 42px); font-weight: 500; line-height: 1.15; letter-spacing: -0.02em; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .sub { margin-top: 10px; font-size: 14px; color: var(--text2); font-weight: 300; }
+  .card { width: 100%; max-width: 620px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 16px; }
+  .card-title { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--text3); text-transform: uppercase; margin-bottom: 16px; }
+  .dropzone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 36px 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-dim); }
+  .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+  .dz-icon { font-size: 28px; margin-bottom: 10px; }
+  .dz-label { font-size: 14px; color: var(--text2); }
+  .dz-label strong { color: var(--text); font-weight: 500; }
+  .dz-hint { font-size: 11px; color: var(--text3); margin-top: 6px; font-family: var(--mono); }
+  .file-info { display: none; align-items: center; gap: 12px; background: var(--accent-dim); border: 1px solid rgba(200,241,53,0.3); border-radius: 8px; padding: 12px 16px; margin-top: 12px; }
+  .file-info.show { display: flex; }
+  .file-badge { font-family: var(--mono); font-size: 11px; color: var(--accent); background: var(--accent-mid); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  .file-name { font-size: 13px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-size { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+  .remove-file { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 2px 4px; line-height: 1; border-radius: 4px; }
+  .remove-file:hover { color: var(--danger); background: rgba(255,92,92,0.1); }
+  .sheet-list { display: none; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .sheet-list.show { display: flex; }
+  .sheet-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border-radius: 6px; padding: 8px 12px; font-size: 12px; }
+  .sheet-name { font-family: var(--mono); color: var(--accent); }
+  .sheet-count { color: var(--text2); }
+  .people-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .person-row { display: flex; align-items: center; gap: 8px; animation: slideIn 0.18s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .person-num { font-family: var(--mono); font-size: 11px; color: var(--text3); width: 20px; text-align: right; flex-shrink: 0; }
+  .person-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-family: var(--sans); font-size: 14px; color: var(--text); outline: none; transition: border-color 0.15s; }
+  .person-input:focus { border-color: var(--accent); }
+  .person-input::placeholder { color: var(--text3); }
+  .rm-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text3); cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; flex-shrink: 0; }
+  .rm-btn:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,92,92,0.07); }
+  .add-btn { background: none; border: 1px dashed var(--border2); border-radius: 8px; color: var(--text2); cursor: pointer; padding: 9px 16px; font-family: var(--sans); font-size: 13px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+  /* blank row toggle */
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .toggle-label { font-size: 13px; color: var(--text2); flex: 1; }
+  .toggle-label span { color: var(--text); }
+  .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--surface2); border: 1px solid var(--border2); border-radius: 99px; cursor: pointer; transition: background 0.2s; }
+  .toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: var(--text3); border-radius: 50%; transition: transform 0.2s, background 0.2s; }
+  .toggle input:checked + .toggle-slider { background: var(--accent-dim); border-color: var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--accent); }
+
+  .split-btn { width: 100%; max-width: 620px; padding: 16px; background: var(--accent); color: #0d0d0d; border: none; border-radius: var(--radius); font-family: var(--sans); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: opacity 0.15s, transform 0.1s; letter-spacing: -0.01em; }
+  .split-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+  .split-btn:active:not(:disabled) { transform: translateY(0); }
+  .split-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .progress-wrap { display: none; width: 100%; max-width: 620px; margin-top: 20px; }
+  .progress-wrap.show { display: block; }
+  .progress-bar-bg { background: var(--surface); border: 1px solid var(--border); border-radius: 99px; height: 6px; overflow: hidden; margin-bottom: 10px; }
+  .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 99px; width: 0%; transition: width 0.3s ease; }
+  .progress-label { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+  .results { display: none; width: 100%; max-width: 620px; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .results.show { display: flex; }
+  .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; animation: slideIn 0.2s ease; }
+  .result-info { flex: 1; }
+  .result-name { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .result-meta { font-family: var(--mono); font-size: 11px; color: var(--text2); line-height: 1.6; }
+  .sheet-pill { display: inline-block; margin-right: 6px; }
+  .sheet-pill.empty { color: var(--text3); text-decoration: line-through; }
+  .warn-badge { display: inline-block; font-size: 10px; background: rgba(245,166,35,0.15); border: 1px solid rgba(245,166,35,0.3); color: var(--warn); border-radius: 4px; padding: 1px 6px; margin-left: 4px; vertical-align: middle; }
+  .dl-btn { background: var(--accent-dim); border: 1px solid rgba(200,241,53,0.25); border-radius: 7px; color: var(--accent); cursor: pointer; padding: 8px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; transition: all 0.15s; white-space: nowrap; text-decoration: none; display: inline-block; flex-shrink: 0; }
+  .dl-btn:hover { background: var(--accent-mid); border-color: var(--accent); }
+  .dl-all { width: 100%; max-width: 620px; margin-top: 4px; background: none; border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; color: var(--text2); font-family: var(--sans); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s; }
+  .dl-all:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .dl-all.hide { display: none; }
+  .error-msg { display: none; width: 100%; max-width: 620px; background: rgba(255,92,92,0.08); border: 1px solid rgba(255,92,92,0.3); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--danger); margin-top: 12px; }
+  .error-msg.show { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">— Split Tool</div>
+  <h1>Split your file<br>by <em>input</em></h1>
+  <p class="sub">Upload an Excel file, add names, get equal portions per person. Blank rows are skipped automatically.</p>
+</header>
+
+<div class="card">
+  <div class="card-title">01 — Upload file</div>
+  <div class="dropzone" id="dropzone">
+    <input type="file" id="fileInput" accept=".xlsx,.xls" />
+    <div class="dz-icon">📂</div>
+    <div class="dz-label"><strong>Drop your Excel file here</strong> or click to browse</div>
+    <div class="dz-hint">.xlsx · .xls</div>
+  </div>
+  <div class="file-info" id="fileInfo">
+    <span class="file-badge">XLSX</span>
+    <span class="file-name" id="fileName">—</span>
+    <span class="file-size" id="fileSize">—</span>
+    <button class="remove-file" onclick="clearFile()">×</button>
+  </div>
+  <div class="sheet-list" id="sheetList"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">02 — Add people</div>
+  <div class="people-list" id="peopleList">
+    <div class="person-row">
+      <span class="person-num">1</span>
+      <input class="person-input" type="text" placeholder="Enter name…" />
+      <button class="rm-btn" onclick="removePerson(this)">×</button>
+    </div>
+  </div>
+  <button class="add-btn" onclick="addPerson()">+ Add person</button>
+
+  <div class="toggle-row">
+    <div class="toggle-label"><span>Skip blank rows</span> — empty rows in the source won't count toward anyone's share</div>
+    <label class="toggle">
+      <input type="checkbox" id="skipBlanks" checked />
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+  <div class="toggle-row">
+    <div class="toggle-label"><span>Shuffle rows</span> — randomly mix data so everyone gets a spread, not just top/middle/bottom</div>
+    <label class="toggle">
+      <input type="checkbox" id="shuffleRows" checked />
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+</div>
+
+<button class="split-btn" id="splitBtn" onclick="splitFile()">⚡ Split file</button>
+<div class="error-msg" id="errorMsg"></div>
+
+<div class="progress-wrap" id="progressWrap">
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">Processing…</div>
+</div>
+
+<div class="results" id="results"></div>
+<button class="dl-all hide" id="dlAllBtn" onclick="downloadAll()">⬇ Download all as ZIP</button>
+
+<script>
+  let workbook = null;
+  let sheetData = {};
+  let generatedFiles = [];
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('drag');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+  function isBlankRow(row) {
+    return row.every(cell => cell === null || cell === undefined || cell === '');
+  }
+
+  function handleFile(file) {
+    if (!file.name.match(/\.(xlsx|xls)$/i)) { showError('Please upload an Excel file (.xlsx or .xls)'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        workbook = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+        sheetData = {};
+        const sheetList = document.getElementById('sheetList');
+        sheetList.innerHTML = '';
+
+        workbook.SheetNames.forEach(name => {
+          const ws = workbook.Sheets[name];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          // Find header row (first non-blank row)
+          let headerIdx = 0;
+          for (let i = 0; i < rows.length; i++) {
+            if (!isBlankRow(rows[i])) { headerIdx = i; break; }
+          }
+          const header = rows[headerIdx] || [];
+          // All rows after header, filter blanks
+          const allData = rows.slice(headerIdx + 1);
+          sheetData[name] = { header, allData, headerIdx };
+
+          const nonBlank = allData.filter(r => !isBlankRow(r)).length;
+          const blanks = allData.length - nonBlank;
+
+          const row = document.createElement('div');
+          row.className = 'sheet-row';
+          row.innerHTML = `<span class="sheet-name">${name}</span><span class="sheet-count">${nonBlank} rows${blanks > 0 ? ` <span style="color:var(--warn)">(+${blanks} blank)</span>` : ''}</span>`;
+          sheetList.appendChild(row);
+        });
+
+        sheetList.classList.add('show');
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatSize(file.size);
+        document.getElementById('fileInfo').classList.add('show');
+        hideError();
+      } catch(err) { showError('Could not read file: ' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function clearFile() {
+    workbook = null; sheetData = {};
+    fileInput.value = '';
+    document.getElementById('fileInfo').classList.remove('show');
+    document.getElementById('sheetList').classList.remove('show');
+    document.getElementById('sheetList').innerHTML = '';
+  }
+
+  function addPerson() {
+    const list = document.getElementById('peopleList');
+    const num = list.children.length + 1;
+    const row = document.createElement('div');
+    row.className = 'person-row';
+    row.innerHTML = `<span class="person-num">${num}</span><input class="person-input" type="text" placeholder="Enter name…" /><button class="rm-btn" onclick="removePerson(this)">×</button>`;
+    list.appendChild(row);
+    row.querySelector('input').focus();
+  }
+
+  function removePerson(btn) {
+    const list = document.getElementById('peopleList');
+    if (list.children.length > 1) {
+      btn.closest('.person-row').remove();
+      reNumberPeople();
+    }
+  }
+
+  function reNumberPeople() {
+    document.querySelectorAll('.person-num').forEach((el, i) => el.textContent = i + 1);
+  }
+
+  function getNames() {
+    return Array.from(document.querySelectorAll('.person-input')).map(i => i.value.trim()).filter(Boolean);
+  }
+
+  function shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  async function splitFile() {
+    hideError();
+    const names = getNames();
+    if (!workbook) { showError('Please upload a file first.'); return; }
+    if (names.length === 0) { showError('Please enter at least one person name.'); return; }
+
+    const skipBlanks = document.getElementById('skipBlanks').checked;
+    const doShuffle = document.getElementById('shuffleRows').checked;
+    generatedFiles = [];
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('results').classList.remove('show');
+    document.getElementById('dlAllBtn').classList.add('hide');
+
+    const btn = document.getElementById('splitBtn');
+    btn.disabled = true;
+    setProgress(0, 'Starting…');
+    document.getElementById('progressWrap').classList.add('show');
+
+    const total = names.length * workbook.SheetNames.length;
+    let done = 0;
+
+    // Pre-shuffle each sheet's rows once, so all people get from the same shuffled pool
+    const shuffledSheets = {};
+    for (const shName of workbook.SheetNames) {
+      const { allData } = sheetData[shName];
+      const dataRows = skipBlanks ? allData.filter(r => !isBlankRow(r)) : allData;
+      shuffledSheets[shName] = doShuffle ? shuffleArray(dataRows) : dataRows;
+    }
+
+    for (let i = 0; i < names.length; i++) {
+      const name = names[i];
+      const wb = XLSX.utils.book_new();
+      const sheetSummary = {};
+
+      for (const shName of workbook.SheetNames) {
+        const { header } = sheetData[shName];
+        const dataRows = shuffledSheets[shName];
+
+        const chunkSize = Math.ceil(dataRows.length / names.length);
+        const start = i * chunkSize;
+        const chunk = dataRows.slice(start, start + chunkSize);
+
+        sheetSummary[shName] = chunk.length;
+
+        const ws = XLSX.utils.aoa_to_sheet([header, ...chunk]);
+        XLSX.utils.book_append_sheet(wb, ws, shName);
+
+        done++;
+        setProgress(Math.round((done / total) * 100), `Building ${name} — ${shName}…`);
+        await sleep(10);
+      }
+
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const today = new Date();
+      const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
+      const fileName = `${name.replace(/\s+/g, '_')}_data_${dateStr}.xlsx`;
+      generatedFiles.push({ name, fileName, url, blob, sheetSummary });
+    }
+
+    setProgress(100, 'Done!');
+    await sleep(400);
+    document.getElementById('progressWrap').classList.remove('show');
+    renderResults();
+    btn.disabled = false;
+  }
+
+  function renderResults() {
+    const container = document.getElementById('results');
+    container.innerHTML = '';
+
+    generatedFiles.forEach(f => {
+      const totalRows = Object.values(f.sheetSummary).reduce((a, b) => a + b, 0);
+      const sheetPills = Object.entries(f.sheetSummary).map(([s, r]) => {
+        if (r === 0) return `<span class="sheet-pill empty">${s}: 0</span>`;
+        return `<span class="sheet-pill">${s}: ${r}</span>`;
+      }).join('');
+
+      const hasEmpty = Object.values(f.sheetSummary).some(r => r === 0);
+
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `
+        <div class="result-info">
+          <div class="result-name">${f.name} ${hasEmpty ? '<span class="warn-badge">some sheets empty</span>' : ''}</div>
+          <div class="result-meta">
+            <div style="margin-bottom:2px">${totalRows} data rows total</div>
+            <div>${sheetPills}</div>
+          </div>
+        </div>
+        <a class="dl-btn" href="${f.url}" download="${f.fileName}">↓ download</a>
+      `;
+      container.appendChild(card);
+    });
+
+    container.classList.add('show');
+    if (generatedFiles.length > 1) document.getElementById('dlAllBtn').classList.remove('hide');
+  }
+
+  async function downloadAll() {
+    const zip = new JSZip();
+    generatedFiles.forEach(f => zip.file(f.fileName, f.blob));
+    const content = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(content);
+    const a = document.createElement('a'); a.href = url; a.download = 'split_files.zip'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function setProgress(pct, label) {
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = label;
+  }
+
+  function showError(msg) { const el = document.getElementById('errorMsg'); el.textContent = msg; el.classList.add('show'); }
+  function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
+  function formatSize(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+    return (b/(1024*1024)).toFixed(1) + ' MB';
+  }
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
