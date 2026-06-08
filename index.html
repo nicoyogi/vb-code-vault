@@ -270,6 +270,7 @@
   .card.enter:nth-child(4) { animation-delay: 0.2s, 0.9s; }
   .card.enter:nth-child(5) { animation-delay: 0.25s, 0.95s; }
   .card.enter:nth-child(6) { animation-delay: 0.3s, 1s; }
+  .card.enter:nth-child(7) { animation-delay: 0.35s, 1.05s; }
 
   .card:hover, .card:focus-visible { 
     transform: translateY(-8px) scale(1.02) !important;
@@ -492,6 +493,17 @@
             <div class="arr">⟶</div>
           </div>
         </a>
+
+        <a href="#" class="card" id="c7">
+          <div class="deco">split.byPerson()</div>
+          <div class="clabel">Tome V · The Splitter</div>
+          <div class="ctitle">File Splitter</div>
+          <div class="cdesc">Upload an Excel file, add names, and get equal row portions per person — shuffled &amp; ready to download.</div>
+          <div class="cfoot">
+            <div class="tags"><span class="tag">Excel</span><span class="tag">Split</span></div>
+            <div class="arr">⟶</div>
+          </div>
+        </a>
       </div>
     </div>
 
@@ -634,12 +646,13 @@ class ProjectManager {
       wmf: {
         name: 'WMF', sub: 'Württembergische Metallwarenfabrik',
         code: 'code.html', qa: 'qa.html', anmerkung: 'anmerkung.html',
-        todo: 'todo.html', wording: null, reviewer: null
+        todo: 'todo.html', wording: null, reviewer: null, splitter: null
       },
       siemens: {
         name: 'Siemens GP', sub: 'General Procurement',
         code: null, qa: 'qa-siemens.html', anmerkung: null,
-        todo: null, wording: 'standard-wording.html', reviewer: 'task-reviewer-siemens.html'
+        todo: null, wording: 'standard-wording.html', reviewer: 'task-reviewer-siemens.html',
+        splitter: 'File_splitter.html'
       }
     };
     
@@ -735,7 +748,8 @@ class ProjectManager {
       { id: 'c2', href: proj.anmerkung, show: !isSiemens },
       { id: 'c3', href: proj.wording, show: isSiemens },
       { id: 'c4', href: proj.todo, show: !isSiemens },
-      { id: 'c6', href: proj.reviewer, show: isSiemens }
+      { id: 'c6', href: proj.reviewer, show: isSiemens },
+      { id: 'c7', href: proj.splitter, show: isSiemens }
     ];
 
     updates.forEach(({ id, href, show }) => {
