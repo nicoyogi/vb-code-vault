@@ -19,14 +19,18 @@ if (typeof firebase === 'undefined' || !firebase.initializeApp) {
 firebase.initializeApp(window.firebaseConfig);
 const db          = firebase.firestore();
 
-/* Auto-detect long-polling. The default WebChannel/streaming transport
-   silently hangs behind some corporate proxies, firewalls and VPNs
-   (Firestore get()/onSnapshot never resolve and never reject), which is
-   the classic "stuck on Loading…" symptom. Long-polling falls back to
-   plain HTTP requests that those networks allow. Must run before any
-   other Firestore call that starts the network. */
+/* FORCE long-polling. The default WebChannel/streaming transport silently
+   hangs behind many corporate proxies, firewalls and VPNs — Firestore
+   get()/onSnapshot never resolve and never reject, which is the classic
+   "stuck on Loading…" symptom this app's users hit on the office network.
+   `experimentalAutoDetectLongPolling` is NOT enough here: the auto-detect
+   probe itself rides the streaming channel and can hang on exactly those
+   networks, so detection never completes. Forcing long-polling makes every
+   request a plain HTTP round-trip (which we verified those networks allow),
+   eliminating the hang outright. Must run before any other Firestore call
+   that starts the network. */
 try {
-  db.settings({ experimentalAutoDetectLongPolling: true });
+  db.settings({ experimentalForceLongPolling: true });
 } catch (e) { /* settings already applied — safe to ignore */ }
 const peopleCol   = db.collection('wmf_holiday_people');
 const holidaysCol = db.collection('wmf_holidays');
