@@ -1886,6 +1886,157 @@ function exportCSV() {
 }
 
 /* ════════════════════════════════════════════
+   ICS EXPORT  (personal — current user only)
+   Paste this block anywhere after the CSV EXPORT
+   section in holiday-tracker.js
+════════════════════════════════════════════ */
+
+/**
+ * Format a date string "YYYY-MM-DD" → "YYYYMMDD" for ICS DATE values.
+ * We use all-day DATE (not DATETIME) so Outlook/Teams treats the event as
+ * a full-day block and marks the user as Out of Office for the whole day.
+ */
+function icsDate(iso) {
+  return iso.replace(/-/g, '');
+}
+
+/**
+ * Escape special characters in ICS text fields (RFC 5545 §3.3.11).
+ * Backslash must come first to avoid double-escaping.
+ */
+function icsEscape(str) {
+  return (str || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g,  '\\;')
+    .replace(/,/g,  '\\,')
+    .replace(/\n/g, '\\n');
+}
+
+/**
+ * Fold long ICS lines at 75 octets (RFC 5545 §3.1).
+ * Continuation lines start with a single SPACE.
+ */
+function icsFold(line) {
+  if (line.length <= 75) return line;
+  const chunks = [];
+  chunks.push(line.slice(0, 75));
+  let i = 75;
+  while (i < line.length) {
+    chunks.push(' ' + line.slice(i, i + 74));
+    i += 74;
+  }
+  return chunks.join('\r\n');
+}
+
+/**
+ * Build a single VEVENT block for one holiday entry.
+ *
+ * Key properties for Teams / Outlook OOO recognition:
+ *   CLASS:PUBLIC          — visible to everyone
+ *   TRANSP:OPAQUE         — marks the time as busy
+ *   X-MICROSOFT-CDO-BUSYSTATUS:OOF — triggers "Out of Office" in Teams
+ *
+ * DTEND for all-day events is the day AFTER the last day (exclusive),
+ * per RFC 5545 §3.6.1.
+ */
+function buildVEVENT(h, person) {
+  const icon    = LEAVE_TYPE_ICONS[h.type] || '📌';
+  const typeLabel = (h.type || 'leave').charAt(0).toUpperCase() + (h.type || 'leave').slice(1);
+  const halfTag = h.halfDay ? ` (${h.halfDayPart || 'half day'})` : '';
+  const summary = icsEscape(`${icon} ${typeLabel}${halfTag} — ${person ? person.name : 'Out of Office'}`);
+  const noteDesc = h.note ? `\\n\\nNote: ${icsEscape(h.note)}` : '';
+  const description = icsEscape(`${typeLabel}${halfTag}`) + noteDesc;
+
+  // DTEND is exclusive: day after the last day
+  const endDate = new Date(parseDate(h.end));
+  endDate.setDate(endDate.getDate() + 1);
+  const dtEnd = icsDate(dateStr(endDate));
+
+  // Stable UID: based on holiday id + person id so re-exports don't
+  // create duplicate events in the calendar
+  const uid = `ht-${h.id}-${h.personId}@grimoire.idsm`;
+
+  const lines = [
+    'BEGIN:VEVENT',
+    icsFold(`UID:${uid}`),
+    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z')}`,
+    `DTSTART;VALUE=DATE:${icsDate(h.start)}`,
+    `DTEND;VALUE=DATE:${dtEnd}`,
+    icsFold(`SUMMARY:${summary}`),
+    icsFold(`DESCRIPTION:${description}`),
+    'CLASS:PUBLIC',
+    'TRANSP:OPAQUE',
+    'X-MICROSOFT-CDO-BUSYSTATUS:OOF',
+    'X-MICROSOFT-CDO-ALLDAYEVENT:TRUE',
+    `CATEGORIES:${icsEscape(typeLabel)}`,
+    'END:VEVENT',
+  ];
+  return lines.join('\r\n');
+}
+
+/**
+ * Export all holidays belonging to the currently logged-in user as a .ics
+ * file. The file can be double-clicked to import into Outlook, which then
+ * syncs "Out of Office" status to Microsoft Teams.
+ *
+ * Optionally pass `yearFilter` (number) to export only a specific year.
+ */
+function exportUserICS(yearFilter) {
+  if (!currentUser) { showToast('Sign in first.', true); return; }
+
+  const myId = myPersonId();
+  if (!myId) { showToast('Your account isn\'t linked to a team member.', true); return; }
+
+  const person = getPerson(myId);
+
+  let entries = holidays.filter(h => h.personId === myId);
+  if (yearFilter) {
+    entries = entries.filter(h => {
+      const y = parseInt(h.start.slice(0, 4), 10);
+      return y === yearFilter;
+    });
+  }
+
+  if (!entries.length) {
+    showToast(yearFilter ? `No holidays for ${yearFilter}.` : 'No holidays to export.', true);
+    return;
+  }
+
+  const vevents = entries
+    .sort((a, b) => a.start.localeCompare(b.start))
+    .map(h => buildVEVENT(h, person))
+    .join('\r\n');
+
+  const calName = icsEscape(
+    `${person ? person.name : 'My'} Holidays${yearFilter ? ' ' + yearFilter : ''}`
+  );
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Grimoire Holiday Tracker//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    icsFold(`X-WR-CALNAME:${calName}`),
+    'X-WR-CALDESC:Exported from AwayTrack · The Grimoire',
+    'X-MICROSOFT-CALSCALE:GREGORIAN',
+    vevents,
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const fileName = person
+    ? `holidays_${person.name.replace(/\s+/g, '_').toLowerCase()}${yearFilter ? '_' + yearFilter : ''}.ics`
+    : `holidays${yearFilter ? '_' + yearFilter : ''}.ics`;
+  a.href = url; a.download = fileName; a.click();
+  URL.revokeObjectURL(url);
+
+  showToast(`ICS exported — ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}. Open in Outlook to sync Teams OOO.`);
+}
+
+/* ════════════════════════════════════════════
    AUTO-LOGOUT ON INACTIVITY
 ════════════════════════════════════════════ */
 (function() {
