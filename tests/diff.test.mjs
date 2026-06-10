@@ -190,3 +190,79 @@ test('phraseCellParts: empty cell and empty changed list', () => {
     'nothing changed → all phrases neutral',
   );
 });
+
+/* ── buildTrainingSummary — AI Bundle failure-pattern aggregation ── */
+
+/* Minimal record shaped like buildTrainingSet output. */
+const rec = (over) => ({
+  row_uid: 'uid' + Math.random().toString(16).slice(2, 8),
+  source_file: '', sheet: 'S1', row: 4, forwarder: 'wackler',
+  processor: 'processWackler', label: 'missed',
+  engine_label: 'missed',
+  engine_missing_phrase_keys: ['differenzEnergiezuschlag'],
+  engine_extra_phrase_keys: [],
+  engine_missing_phrases: ['Differenz Energiezuschlag'],
+  engine_extra_phrases: [],
+  missing_phrase_keys: [], extra_phrase_keys: [],
+  missing_phrases: [], extra_phrases: [],
+  inputs: { stat: '10', tz_diff: '4.2' },
+  ...over,
+});
+
+test('buildTrainingSummary: groups rows into patterns, solved rows excluded', () => {
+  const s = e.buildTrainingSummary([
+    rec({ row_uid: 'u1', inputs: { stat: '10', tz_diff: '4.2' } }),
+    rec({ row_uid: 'u2', row: 9, inputs: { stat: '10', tz_diff: '7.9' } }),
+    rec({ row_uid: 'u3', label: 'correct', engine_label: 'correct',
+      engine_missing_phrase_keys: [], engine_missing_phrases: [] }),
+  ]);
+  assert.equal(s.total_records, 3);
+  assert.equal(s.engine_solved, 1, 'engine-correct row counts as solved');
+  assert.equal(s.engine_actionable, 2);
+  assert.equal(s.pattern_count, 1, 'solved row produces no pattern');
+  const p = s.patterns[0];
+  assert.equal(p.count, 2);
+  assert.equal(p.basis, 'engine_vs_truth');
+  assert.equal(p.suggested_action, 'add_or_loosen_branch');
+  assert.deepStrictEqual(A(p.missing_phrase_keys), ['differenzEnergiezuschlag']);
+  assert.deepStrictEqual(A(p.example_row_uids), ['u1', 'u2']);
+});
+
+test('buildTrainingSummary: shared vs varying inputs across a pattern', () => {
+  const s = e.buildTrainingSummary([
+    rec({ inputs: { stat: '10', tz_diff: '4.2', vkg: '120' } }),
+    rec({ inputs: { stat: '10', tz_diff: '7.9' } }),
+  ]);
+  const p = s.patterns[0];
+  assert.deepStrictEqual({ ...p.shared_inputs }, { stat: '10' },
+    'identical on every row → gate-signal candidate');
+  assert.deepStrictEqual(A(p.varying_inputs), ['tz_diff'],
+    'present on every row but differing → varying');
+  assert.ok(!('vkg' in p.shared_inputs) && !A(p.varying_inputs).includes('vkg'),
+    'keys missing from some rows are omitted');
+});
+
+test('buildTrainingSummary: a_vs_b fallback when the engine was not evaluated', () => {
+  const s = e.buildTrainingSummary([
+    rec({ engine_label: '', engine_missing_phrase_keys: [], engine_missing_phrases: [],
+      missing_phrase_keys: ['mautdifferenz'], missing_phrases: ['Mautdifferenz'] }),
+  ]);
+  assert.equal(s.engine_not_evaluated, 1);
+  assert.equal(s.engine_actionable, 0);
+  assert.equal(s.pattern_count, 1);
+  assert.equal(s.patterns[0].basis, 'a_vs_b');
+  assert.deepStrictEqual(A(s.patterns[0].missing_phrase_keys), ['mautdifferenz']);
+});
+
+test('buildTrainingSummary: patterns sorted by count desc; fix_both action', () => {
+  const wrongRec = () => rec({ forwarder: 'kn', processor: 'processKN', label: 'wrong',
+    engine_label: 'wrong',
+    engine_missing_phrase_keys: ['kontierung'], engine_missing_phrases: ['Kontierung?'],
+    engine_extra_phrase_keys: ['mautdifferenz'], engine_extra_phrases: ['Mautdifferenz'] });
+  const s = e.buildTrainingSummary([rec(), wrongRec(), wrongRec()]);
+  assert.equal(s.pattern_count, 2);
+  assert.equal(s.patterns[0].count, 2, 'largest pattern first');
+  assert.equal(s.patterns[0].forwarder, 'kn');
+  assert.equal(s.patterns[0].suggested_action, 'fix_both');
+  assert.deepStrictEqual({ ...s.by_engine_label }, { missed: 1, wrong: 2 });
+});

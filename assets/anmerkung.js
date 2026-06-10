@@ -2899,9 +2899,109 @@ function buildTrainingSet(){
       inputs:r.inputs||{},
     });
   }
+  /* Deterministic record order: forwarder → source pair → sheet → row.
+     The walk order above depends on workbook sheet order and (for Bulk)
+     pair order, so without this sort two exports of the same corpus
+     could disagree line-for-line — sorting makes successive bundles
+     diffable and downstream dedup/join stable. */
+  records.sort((a,b)=>
+    String(a.forwarder).localeCompare(String(b.forwarder))||
+    String(a.source_file||'').localeCompare(String(b.source_file||''))||
+    String(a.sheet).localeCompare(String(b.sheet))||
+    (a.row-b.row));
   /* Canonical, deterministic input-key ordering across all records. */
   const inputKeys=orderedInputKeys(records.map(r=>({fw:r.forwarder,inputs:r.inputs})));
   return{records,inputKeys};
+}
+
+/* Aggregate a training-record array (buildTrainingSet output) into the
+   compact, AI-first failure-pattern summary shipped as summary.json in
+   the AI Bundle. Pure — no DOM, no globals — so it's unit-testable and
+   the caller stamps engine_version / exported_at / filter scope.
+
+   Why: the documented rule-update workflow STARTS with "group records by
+   forwarder, then by engine_missing/extra_phrase_keys patterns" — this
+   does that grouping up front, so an AI consumer (often context-limited)
+   can prioritise by pattern count and only then pull the matching JSONL
+   records by row_uid.
+
+   Pattern semantics:
+     • Basis is engine-vs-truth (the authoritative fix target) whenever
+       the engine ran; rows where it didn't (unknown forwarder) fall back
+       to the A-vs-B keys and are marked basis:'a_vs_b'.
+     • Rows the engine already solves (engine_label==='correct') count
+       toward engine_solved but produce NO pattern — nothing to fix.
+     • shared_inputs are the input cells that hold the IDENTICAL value on
+       every row of the pattern — prime gate-signal candidates; keys
+       present on every row but with differing values land in
+       varying_inputs. Keys missing from some rows are omitted. */
+function buildTrainingSummary(records){
+  const byLabel={},byEngineLabel={},byForwarder={};
+  let solved=0,actionable=0,notEvaluated=0;
+  const patterns=new Map();
+  for(const r of (records||[])){
+    byLabel[r.label]=(byLabel[r.label]||0)+1;
+    const el=r.engine_label||'not_evaluated';
+    byEngineLabel[el]=(byEngineLabel[el]||0)+1;
+    const fwB=byForwarder[r.forwarder]||(byForwarder[r.forwarder]={
+      records:0,engine_correct:0,engine_wrong:0,engine_missed:0,engine_overfired:0,engine_not_evaluated:0});
+    fwB.records++;
+    const useEngine=!!r.engine_label;
+    if(!useEngine){fwB.engine_not_evaluated++;notEvaluated++;}
+    else if(r.engine_label==='correct'){fwB.engine_correct++;solved++;continue;}
+    else{fwB['engine_'+r.engine_label]++;actionable++;}
+    const missK =(useEngine?r.engine_missing_phrase_keys:r.missing_phrase_keys)||[];
+    const extraK=(useEngine?r.engine_extra_phrase_keys :r.extra_phrase_keys )||[];
+    if(!missK.length&&!extraK.length)continue;
+    const key=r.forwarder+'|'+missK.slice().sort().join(',')+'|'+extraK.slice().sort().join(',')+'|'+(useEngine?'e':'a');
+    let p=patterns.get(key);
+    if(!p){
+      p={forwarder:r.forwarder,processor:r.processor||'',
+        basis:useEngine?'engine_vs_truth':'a_vs_b',
+        missing_phrase_keys:missK.slice().sort(),
+        extra_phrase_keys:extraK.slice().sort(),
+        missing_phrases:((useEngine?r.engine_missing_phrases:r.missing_phrases)||[]).slice(),
+        extra_phrases:((useEngine?r.engine_extra_phrases:r.extra_phrases)||[]).slice(),
+        suggested_action:missK.length&&extraK.length?'fix_both'
+          :(missK.length?'add_or_loosen_branch':'guard_or_tighten_branch'),
+        count:0,labels:{},example_row_uids:[],_inputsList:[]};
+      patterns.set(key,p);
+    }
+    p.count++;
+    p.labels[r.label]=(p.labels[r.label]||0)+1;
+    if(p.example_row_uids.length<5&&r.row_uid)p.example_row_uids.push(r.row_uid);
+    p._inputsList.push(r.inputs||{});
+  }
+  const out=[...patterns.values()];
+  for(const p of out){
+    const lists=p._inputsList;delete p._inputsList;
+    const allKeys=new Set();
+    for(const o of lists)for(const k of Object.keys(o))allKeys.add(k);
+    const shared={},varying=[];
+    for(const k of [...allKeys].sort()){
+      const vals=lists.map(o=>o[k]);
+      if(vals.some(v=>v==null))continue; /* not on every row → omit */
+      if(vals.every(v=>v===vals[0]))shared[k]=vals[0];
+      else varying.push(k);
+    }
+    p.shared_inputs=shared;p.varying_inputs=varying;
+  }
+  out.sort((a,b)=>(b.count-a.count)||
+    String(a.forwarder).localeCompare(String(b.forwarder))||
+    String(a.missing_phrase_keys).localeCompare(String(b.missing_phrase_keys))||
+    String(a.extra_phrase_keys).localeCompare(String(b.extra_phrase_keys)));
+  return{
+    schema:'anmerkung.training-summary/v1',
+    total_records:(records||[]).length,
+    by_label:byLabel,
+    by_engine_label:byEngineLabel,
+    by_forwarder:byForwarder,
+    engine_solved:solved,
+    engine_actionable:actionable,
+    engine_not_evaluated:notEvaluated,
+    pattern_count:out.length,
+    patterns:out,
+  };
 }
 
 function downloadTrainingSet(format){
@@ -3181,6 +3281,54 @@ function downloadRuleSpec(){
     Object.keys(spec.forwarders).length+' forwarders, engine v'+spec.engine_version+'.','ok');
 }
 
+/* Build prompt.md — the READY-TO-PASTE prompt the bundle has always
+   promised. The user attaches the bundle files to any AI assistant and
+   pastes this verbatim; it encodes the authoritative-field rule
+   (engine_* over A-vs-B), the pattern-first workflow, the engine
+   constraints, and the expected output shape, with the live pattern
+   counts interpolated so the assistant knows the size of the job. */
+function buildAiBundlePrompt(spec,summary){
+  const topPatterns=(summary.patterns||[]).slice(0,3).map(p=>
+    '  - '+p.forwarder+' · '+p.count+'× · '+p.suggested_action+
+    (p.missing_phrase_keys.length?' · missing: '+p.missing_phrase_keys.join(', '):'')+
+    (p.extra_phrase_keys.length?' · extra: '+p.extra_phrase_keys.join(', '):'')).join('\n');
+  return [
+'# Prompt — paste into your AI assistant together with this bundle\'s files',
+'',
+'> Attach `training.jsonl`, `rule_spec.json`, and `summary.json` (and `assets/anmerkung.js` if the assistant cannot read the repository), then paste everything below the line.',
+'',
+'---',
+'',
+'You are maintaining `assets/anmerkung.js` (engine v'+spec.engine_version+'), a deterministic, browser-side rule engine that fills the German "Anmerkung" column of forwarder invoice audits. I am giving you labeled training data from the engine\'s Diff Mode:',
+'',
+'- `summary.json` — failure patterns, pre-grouped by forwarder and by the phrase keys the CURRENT engine gets wrong vs ground truth. '+summary.pattern_count+' pattern(s) over '+summary.engine_actionable+' actionable row(s); '+summary.engine_solved+' row(s) the engine already solves. Top patterns:',
+topPatterns||'  - (none)',
+'- `training.jsonl` — one JSON record per row; join to patterns via `row_uid`.',
+'- `rule_spec.json` — the PHRASES catalog, per-forwarder thresholds, processor/resolver symbols, and an English glossary for every `inputs.*` key.',
+'',
+'## Task',
+'',
+'Propose a minimal patch to `assets/anmerkung.js` that closes the failure patterns, largest `count` first.',
+'',
+'## Rules',
+'',
+'1. The `engine_*` fields are authoritative: `engine_missing_phrase_keys` = phrases ground truth wants that the engine fails to emit (ADD a branch or LOOSEN its gate); `engine_extra_phrase_keys` = phrases the engine emits that truth rejects (GUARD or TIGHTEN the branch). Ignore the plain `predicted`/`missing_*`/`extra_*` fields unless `engine_label` is blank — they compare a possibly-stale tool output, not the current engine.',
+'2. Diagnose gates from `summary.json` first: each pattern\'s `shared_inputs` are the cell values identical on EVERY failing row (prime gate signals); `varying_inputs` differ across rows and must not become gate conditions. Pull the matching `training.jsonl` records by `example_row_uids` for the full picture.',
+'3. Emit phrases only via the existing `PHRASES` catalog and `join()` helper (it dedupes case-insensitively). New wording goes into `PHRASES` first; keys prefixed `lit_`/`tpl_`/`?:` are explained in `rule_spec.json`.',
+'4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Do not weaken a gate so far that it would fire on rows the engine currently gets right ('+summary.engine_solved+' solved rows are the regression set).',
+'5. Keep edits inside the `process<Forwarder>` functions (resolvers are already wired) unless a pattern clearly needs a new resolver column.',
+'',
+'## Output format',
+'',
+'For each pattern you fix, in priority order:',
+'1. **Diagnosis** — which branch/gate is wrong and why, citing the `shared_inputs` evidence.',
+'2. **Patch** — the exact code change (unified diff or before/after snippet).',
+'3. **Coverage** — the `row_uid`s this change fixes, and any solved rows it could plausibly affect.',
+'',
+'A fix is complete when re-running Train & Compare flips the row\'s `engine_matches_b` to `true` and empties its `engine_missing_phrase_keys` / `engine_extra_phrase_keys`.',
+''].join('\n');
+}
+
 /* Build the README.md a downstream AI agent reads first. Hard-coded
    so the bundle is self-explanatory; the schema description echoes
    what's actually in rule_spec.json. */
@@ -3195,13 +3343,18 @@ function buildAiBundleReadme(spec,recordCount,filterScope){
   lines.push('');
   lines.push('## Files in this bundle');
   lines.push('');
+  lines.push('- `prompt.md` — ready-to-paste prompt. Attach the other files to your AI assistant and paste this; it encodes the whole workflow below.');
+  lines.push('- `summary.json` — failure patterns, pre-grouped: every (forwarder × engine_missing/extra_phrase_keys) combination with its row count, label distribution, example `row_uid`s, and the input cells shared by every failing row (gate-signal candidates). Records are sorted deterministically (forwarder → source pair → sheet → row) so bundles diff cleanly across runs.');
   lines.push('- `training.jsonl` — one JSON record per line, one record per failing/correct row from Diff Mode.');
   lines.push('- `rule_spec.json` — the schema. Lists every PHRASES key, every threshold, every input field per forwarder, and the exact source-code symbol an AI should edit to update rules.');
   lines.push('- `README.md` — this file.');
   lines.push('');
   lines.push('## How an AI assistant should use this bundle');
   lines.push('');
-  lines.push('### 1. Read `rule_spec.json` first');
+  lines.push('### 0. Start with `summary.json`');
+  lines.push('It already does workflow step 1 (grouping) for you: patterns are sorted by row count, each carries `suggested_action` (`add_or_loosen_branch` / `guard_or_tighten_branch` / `fix_both`), `shared_inputs` (cell values identical on every failing row — prime gate signals), `varying_inputs` (present everywhere but differing — must NOT become gate conditions), and `example_row_uids` to pull the full records from `training.jsonl`. Rows the engine already solves are counted in `engine_solved` and excluded from patterns — they are the regression set a fix must not break.');
+  lines.push('');
+  lines.push('### 1. Read `rule_spec.json`');
   lines.push('It tells you:');
   lines.push('- The exact source file (`assets/anmerkung.js`) and the four processor symbols to edit (`processDachser`, `processKN`, `processDHL`, `processWackler`).');
   lines.push('- The `PHRASES` catalog: every key you can emit and the German string it produces.');
@@ -3280,18 +3433,29 @@ async function downloadAiBundle(){
       diffFilter.q?'search='+diffFilter.q:''].filter(Boolean).join(', ')
     :'';
   const jsonl=records.map(r=>JSON.stringify(r)).join('\n')+'\n';
+  /* summary.json: pure aggregation + provenance stamps the tests don't
+     need to see (kept out of buildTrainingSummary so it stays pure). */
+  const summary=buildTrainingSummary(records);
+  summary.engine_version=spec.engine_version;
+  summary.exported_at=spec.exported_at;
+  summary.filter_scope=filterScope||'';
   const readme=buildAiBundleReadme(spec,records.length,filterScope);
+  const prompt=buildAiBundlePrompt(spec,summary);
   const zip=new JSZip();
+  zip.file('README.md',readme);
+  zip.file('prompt.md',prompt);
+  zip.file('summary.json',JSON.stringify(summary,null,2)+'\n');
   zip.file('training.jsonl',jsonl);
   zip.file('rule_spec.json',JSON.stringify(spec,null,2)+'\n');
-  zip.file('README.md',readme);
   const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='anmerkung_ai_bundle_'+stamp+'.zip';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  showLog('AI Bundle exported \u2014 '+records.length+' record(s) + rule_spec.json + README.md'+
-    (filterScope?' (filter: '+filterScope+')':'')+'. Drop into any AI assistant to update rules.','ok');
+  showLog('AI Bundle exported \u2014 '+records.length+' record(s) \u00b7 '+summary.pattern_count+
+    ' failure pattern(s) ('+summary.engine_actionable+' actionable, '+summary.engine_solved+' already solved)'+
+    ' \u00b7 training.jsonl + summary.json + rule_spec.json + prompt.md + README.md'+
+    (filterScope?' (filter: '+filterScope+')':'')+'.','ok');
 }
 
 /* ══════════════════════════════════════════════════════════
