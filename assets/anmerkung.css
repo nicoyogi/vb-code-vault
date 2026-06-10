@@ -909,3 +909,82 @@ body.theme-pro .footer a:hover { color: var(--accent); }
 
 /* FOCUS RINGS */
 body.theme-pro :focus-visible { outline-color: var(--accent); }
+
+/* ══════════════════════════════════════════════════════════
+   DESIGN POLISH PASS
+   Selection color, themed scrollbars, panel open transitions,
+   drag-state feedback, small-screen grid stacking, and
+   prefers-reduced-motion support.
+══════════════════════════════════════════════════════════ */
+
+/* Text selection matches the accent instead of OS default */
+::selection { background: rgba(52,211,153,0.25); color: var(--text); }
+body.theme-light ::selection { background: rgba(13,140,95,0.2); }
+body.theme-pro ::selection { background: rgba(37,99,235,0.18); }
+
+/* Native widgets (select dropdowns, search clear buttons) pick up the accent */
+body { accent-color: var(--accent); }
+
+/* Themed thin scrollbars — the default OS scrollbar breaks the dark
+   surfaces in .preview-scroll, .diff-table-wrap, .log and .cl-list */
+.preview-scroll, .diff-table-wrap, .log, .cl-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212,175,100,0.25) transparent;
+}
+.preview-scroll::-webkit-scrollbar, .diff-table-wrap::-webkit-scrollbar,
+.log::-webkit-scrollbar, .cl-list::-webkit-scrollbar { width: 8px; height: 8px; }
+.preview-scroll::-webkit-scrollbar-thumb, .diff-table-wrap::-webkit-scrollbar-thumb,
+.log::-webkit-scrollbar-thumb, .cl-list::-webkit-scrollbar-thumb {
+  background: rgba(212,175,100,0.18); border-radius: 8px;
+}
+.preview-scroll::-webkit-scrollbar-thumb:hover, .diff-table-wrap::-webkit-scrollbar-thumb:hover,
+.log::-webkit-scrollbar-thumb:hover, .cl-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(212,175,100,0.32);
+}
+.preview-scroll::-webkit-scrollbar-track, .diff-table-wrap::-webkit-scrollbar-track,
+.log::-webkit-scrollbar-track, .cl-list::-webkit-scrollbar-track { background: transparent; }
+body.theme-pro .preview-scroll, body.theme-pro .diff-table-wrap,
+body.theme-pro .log, body.theme-pro .cl-list { scrollbar-color: #cbd5e1 transparent; }
+body.theme-pro .preview-scroll::-webkit-scrollbar-thumb, body.theme-pro .diff-table-wrap::-webkit-scrollbar-thumb,
+body.theme-pro .log::-webkit-scrollbar-thumb, body.theme-pro .cl-list::-webkit-scrollbar-thumb { background: #cbd5e1; }
+
+/* Collapsible panels ease in instead of snapping open */
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.adv-panel.open, .bonus-panel.open { animation: panel-in var(--duration-normal) var(--ease-out); }
+#cl-overlay.open .cl-box { animation: panel-in 0.3s var(--ease-out); }
+
+/* Drop zones pulse while a file hovers over them, so the active
+   target is unmistakable when several zones are on screen */
+@keyframes drag-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.18); }
+  50%      { box-shadow: 0 0 0 8px rgba(52,211,153,0.05); }
+}
+.upload-area.drag, .diff-slot.drag { animation: drag-pulse 1.2s ease-in-out infinite; }
+@keyframes drag-pulse-violet {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(167,139,250,0.2); }
+  50%      { box-shadow: 0 0 0 8px rgba(167,139,250,0.05); }
+}
+.bulk-upload-area.drag, .diff-bulk-slot.drag { animation: drag-pulse-violet 1.2s ease-in-out infinite; }
+
+/* Small screens: stack side-by-side grids that get cramped */
+@media (max-width: 520px) {
+  .diff-slots, .diff-bulk-slots, .adv-grid { grid-template-columns: 1fr; }
+  .diff-summary { grid-template-columns: repeat(2, 1fr); }
+  .bdp-file { max-width: 30%; }
+}
+
+/* Respect reduced-motion: collapse all animation and transforms.
+   The animated gold gradient and spring hovers become static. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fw-btn:hover, .btn-run:hover:not(:disabled), .btn-dl:hover,
+  .btn-grimoire:hover, .df-send-tester:hover { transform: none; }
+}
