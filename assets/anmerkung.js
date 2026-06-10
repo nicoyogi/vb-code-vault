@@ -1685,6 +1685,7 @@ function clearDiff(){
   document.getElementById('diffEmpty').style.display='none';
   /* Reset filter state + counters */
   diffFilter.label='all';diffFilter.fw='all';diffFilter.sheet='all';diffFilter.q='';
+  diffRenderLimit=DIFF_PAGE;_diffFilterSig='';
   const setCt=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   ['tcAll','tcWrong','tcMissed','tcOverfired','tcDrift','tcCorrect'].forEach(id=>setCt(id,'0'));
   ['ctDiffCsv','ctTrainCsv','ctTrainJsonl'].forEach(id=>setCt(id,''));
@@ -1832,6 +1833,18 @@ function computePhraseDiff(beforeRaw,afterRaw){
     extra_phrases:extra,
     phrase_jaccard:Math.round(jaccard*10000)/10000,
   };
+}
+
+/* Decompose a raw Anmerkung cell into per-phrase render parts for the
+   diff table. `changedList` is the row's extra_phrases (for the A cell)
+   or missing_phrases (for the B cell); phrases whose normalised form
+   appears there are flagged `changed`, so the table can highlight ONLY
+   the phrases that actually differ instead of striking/recoloring the
+   whole cell — on multi-phrase rows the one disagreeing phrase is
+   visible at a glance without opening the detail drawer. */
+function phraseCellParts(raw,changedList){
+  const changed=new Set((changedList||[]).map(normPhrase));
+  return splitTriggers(raw||'').map(p=>({text:p,changed:changed.has(normPhrase(p))}));
 }
 
 /* Granular sub-label refines `wrong` along set-relation lines.
@@ -2359,6 +2372,7 @@ function filterDiffRows(){
 
 function renderDiff(){
   if(!diffState.results)return;
+  diffRenderLimit=DIFF_PAGE; /* fresh compare → snap the table back to one page */
   const{total,added,removed,changed,wrong,missed,overfired,correct,drift,forwarders,sheets}=diffState.results;
 
   /* Classic top-4 tiles */
@@ -2420,14 +2434,38 @@ function renderDiff(){
   showLog(`Diff \u2014 ${wrong} wrong, ${missed} missed, ${overfired} overfired, ${drift} engine-drift (${total} rows scanned across ${forwarders.length||1} forwarder(s)).`,'ok');
 }
 
+/* Incremental render cap. The table renders DIFF_PAGE rows at a time;
+   "Show more" in the footer raises the cap by another page instead of
+   forcing the user to filter. The cap snaps back to one page whenever
+   the filter state changes (tracked by signature) or a new compare runs,
+   so a stale deep scroll never carries into an unrelated view. */
+const DIFF_PAGE=500;
+let diffRenderLimit=DIFF_PAGE;
+let _diffFilterSig='';
+function expandDiffLimit(){diffRenderLimit+=DIFF_PAGE;refreshDiffView();}
+
 /* Rebuild the visible table + meta line + export-button counters from
    the current filter state. Called by runDiff, the chip buttons, the
    filter inputs, and the include-matches checkbox. */
 function refreshDiffView(){
   if(!diffState.results)return;
+  /* Pull the live control values FIRST. The inline onchange/oninput
+     handlers on the selects + search box fire BEFORE the DOMContentLoaded
+     mirror listeners (inline attributes register at parse time), so
+     reading diffFilter here without this sync would filter on the
+     previous value — and the old reverse-sync at the bottom of this
+     function then wrote that stale value back into the select, reverting
+     the user's dropdown choice outright. The DOM controls are the source
+     of truth; diffFilter mirrors them for the export paths. */
+  const qEl=document.getElementById('diffSearch');if(qEl)diffFilter.q=qEl.value;
+  const fwEl=document.getElementById('diffFwFilter');if(fwEl)diffFilter.fw=fwEl.value;
+  const shEl=document.getElementById('diffSheetFilter');if(shEl)diffFilter.sheet=shEl.value;
+  const sig=[diffFilter.label,diffFilter.fw,diffFilter.sheet,diffFilter.q,
+    !!document.getElementById('diffIncludeMatch')?.checked].join('\u0001');
+  if(sig!==_diffFilterSig){_diffFilterSig=sig;diffRenderLimit=DIFF_PAGE;}
   const filtered=filterDiffRows();
   const{rows,total,forwarders}=diffState.results;
-  const MAX=500;
+  const MAX=diffRenderLimit;
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   const metaPrefix=diffState.results.meta||(diffState.a&&diffState.b?`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}`:'');
@@ -2441,7 +2479,7 @@ function refreshDiffView(){
   const foot=document.getElementById('diffTableFoot');
   if(foot){
     if(!filtered.length){foot.textContent='// no rows match the current filter — loosen a chip or clear the search.';}
-    else if(filtered.length>MAX){foot.textContent=`// showing first ${MAX} of ${filtered.length} matching rows — use filters to narrow.`;}
+    else if(filtered.length>MAX){foot.innerHTML=`// showing first ${MAX} of ${filtered.length} matching rows — <button type="button" class="df-show-more" onclick="expandDiffLimit()">show ${Math.min(DIFF_PAGE,filtered.length-MAX)} more</button> or use filters to narrow.`;}
     else if(filtered.length<rows.length){foot.textContent=`// showing ${filtered.length} of ${rows.length} rows (filtered).`;}
     else{foot.textContent=`// showing all ${filtered.length} rows.`;}
   }
@@ -2457,10 +2495,14 @@ function refreshDiffView(){
   /* Active chip visual state */
   document.querySelectorAll('#trainChips .train-chip').forEach(b=>
     b.classList.toggle('active',b.dataset.label===diffFilter.label));
+  /* The classic summary tiles double as filter shortcuts (added→missed,
+     removed→overfired, changed→wrong) — mirror the same active state. */
+  document.querySelectorAll('.diff-summary .diff-stat[data-label]').forEach(b=>{
+    const on=b.dataset.label===diffFilter.label;
+    b.classList.toggle('active',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+  });
 
-  /* Keep select values in sync (handles programmatic changes). */
-  const fwSel=document.getElementById('diffFwFilter');if(fwSel&&fwSel.value!==diffFilter.fw)fwSel.value=diffFilter.fw;
-  const shSel=document.getElementById('diffSheetFilter');if(shSel&&shSel.value!==diffFilter.sheet)shSel.value=diffFilter.sheet;
 }
 
 function renderDiffRow(r,i,esc){
@@ -2474,7 +2516,18 @@ function renderDiffRow(r,i,esc){
   const labelCls=LABEL_CLASS[r.label]||'';
   const engine=renderEngineCell(r,esc);
   const actions=`<button type="button" class="df-expand-btn" aria-expanded="false" title="Show inputs + reason trace" onclick="toggleDiffDetail(${i})">›</button>`;
-  return `<tr class="${labelCls}" data-row-i="${i}"><td>${sheetCell}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-${r.label}">${r.label}</span></td><td class="df-before">${esc(r.before||'\u2014')}</td><td class="df-after">${esc(r.after||'\u2014')}</td>${engine}<td class="df-actions">${actions}</td></tr>`;
+  /* Per-phrase highlighting: only the phrases that actually differ get
+     the removed/added treatment; phrases both sides agree on render
+     neutral, so on multi-phrase rows the disagreeing phrase pops out
+     without opening the detail drawer. Empty cells render an em-dash. */
+  const phraseCell=(cls,raw,changedList,changedCls)=>{
+    const parts=phraseCellParts(raw,changedList);
+    if(!parts.length)return `<td class="${cls}">\u2014</td>`;
+    return `<td class="${cls}">${parts.map(p=>`<span class="dfp ${p.changed?changedCls:'dfp-common'}">${esc(p.text)}</span>`).join('<span class="dfp-sep"> // </span>')}</td>`;
+  };
+  const beforeCell=phraseCell('df-before',r.before,r.extra_phrases,'dfp-extra');
+  const afterCell =phraseCell('df-after' ,r.after ,r.missing_phrases,'dfp-missing');
+  return `<tr class="${labelCls}" data-row-i="${i}"><td>${sheetCell}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-${r.label}">${r.label}</span></td>${beforeCell}${afterCell}${engine}<td class="df-actions">${actions}</td></tr>`;
 }
 
 function renderEngineCell(r,esc){

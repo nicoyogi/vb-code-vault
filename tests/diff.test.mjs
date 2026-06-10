@@ -157,3 +157,36 @@ test('engine-vs-truth: a solved row reports correct + jaccard 1', () => {
   assert.equal(e.classifyDiff(engineNow, truth), 'correct');
   assert.equal(e.computePhraseDiff(engineNow, truth).phrase_jaccard, 1);
 });
+
+/* ── phraseCellParts — per-phrase table-cell highlighting ── */
+
+test('phraseCellParts: flags only the phrases listed as changed', () => {
+  const parts = A(e.phraseCellParts(
+    'Mautdifferenz // Portalavisierung, ok?',
+    ['Portalavisierung, ok?'],
+  )).map((p) => ({ text: p.text, changed: p.changed }));
+  assert.deepStrictEqual(parts, [
+    { text: 'Mautdifferenz', changed: false },
+    { text: 'Portalavisierung, ok?', changed: true },
+  ]);
+});
+
+test('phraseCellParts: changed-list matching is case/whitespace-insensitive', () => {
+  const parts = A(e.phraseCellParts(
+    'Differenz  Treibstoff',
+    ['differenz treibstoff'],
+  ));
+  assert.equal(parts.length, 1);
+  assert.equal(parts[0].changed, true, 'normPhrase semantics: case + whitespace folded');
+  assert.equal(parts[0].text, 'Differenz  Treibstoff', 'original casing/spacing preserved');
+});
+
+test('phraseCellParts: empty cell and empty changed list', () => {
+  assert.deepStrictEqual(A(e.phraseCellParts('', ['x'])), [], 'empty cell → no parts');
+  const parts = A(e.phraseCellParts('Mautdifferenz', []));
+  assert.deepStrictEqual(
+    parts.map((p) => ({ text: p.text, changed: p.changed })),
+    [{ text: 'Mautdifferenz', changed: false }],
+    'nothing changed → all phrases neutral',
+  );
+});

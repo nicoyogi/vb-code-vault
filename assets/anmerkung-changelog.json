@@ -1,6 +1,17 @@
 {
-  "version": "1.21.0",
+  "version": "1.22.0",
   "entries": [
+    {
+      "ver": "1.22.0",
+      "date": "2026-06-10",
+      "items": [
+        "Diff Mode — per-phrase highlighting in the table's Before (A) / After (B) columns. The Anmerkung cell is a ' // '-joined list of independent phrases, and previously the WHOLE Before cell was struck through red and the whole After cell rendered green even when only one phrase out of several differed. Now each phrase renders on its own: phrases both sides agree on stay neutral, a phrase only A has (over-fired) is struck through red, and a phrase only B has (missed) is green — so on multi-phrase rows the one disagreeing phrase is visible at a glance without opening the detail drawer. Powered by the row's existing missing_phrases/extra_phrases buckets (new phraseCellParts helper), so the table now agrees exactly with the phrase-diff block and the exports.",
+        "Diff Mode — the table's hard 500-row render cap is now a pager: the footer grew a \"show 500 more\" button that extends the table page by page instead of forcing a filter. The cap snaps back to one page whenever the filter state changes or a new Train & Compare runs, so a deep scroll never leaks into an unrelated view. Exports are unaffected — they always honored the full filter scope, not the render cap.",
+        "Diff Mode — the four classic summary tiles (total / added / removed / changed) are now clickable filter shortcuts, consistent with the training chips: added filters to missed, removed to overfired, changed to wrong, and total rows back to all. The active tile is highlighted and kept in sync with the chips (aria-pressed included).",
+        "Diff Mode — fixed the Forwarder / Sheet filter dropdowns, which never actually filtered: the inline onchange handler re-rendered the table BEFORE the listener that mirrors the dropdown value into the filter state ran, and the render then wrote the stale value back into the select, silently reverting the user's choice. The free-text search had the same root cause as a one-keystroke lag. refreshDiffView now reads the live control values first (the DOM is the source of truth), and the reverse-sync that caused the revert is gone.",
+        "Tests — added phraseCellParts coverage (changed-phrase flagging, normPhrase case/whitespace-insensitive matching, empty-cell behavior); exposed it from the test harness."
+      ]
+    },
     {
       "ver": "1.21.0",
       "date": "2026-06-05",
@@ -351,7 +362,7 @@
         "Forwarder tiles are now a proper radiogroup — arrow keys and Home/End work.",
         "Offline PWA — install The Alchemist to your machine from Chrome/Edge.",
         "Phrase catalog (PHRASES) extracted — single source of truth for all rule output strings.",
-        "Version badge + \"What\u2019s new\" button in the header."
+        "Version badge + \"What’s new\" button in the header."
       ]
     },
     {

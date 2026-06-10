@@ -414,9 +414,12 @@ body.theme-light :focus-visible { outline-color: rgba(13,140,95,0.7); }
 .diff-slot-name { font-family: var(--mono); font-size: 10.5px; color: var(--text2); word-break: break-all; }
 .diff-slot.loaded .diff-slot-name { color: var(--accent); }
 .diff-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-.diff-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .7rem .8rem; text-align: center; }
-.diff-stat-n { font-family: var(--cinzel); font-size: 18px; font-weight: 900; color: var(--text); }
-.diff-stat-l { font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 2px; letter-spacing: .04em; }
+/* Tiles are <button>s — they double as label-filter shortcuts. */
+.diff-stat { appearance: none; font: inherit; color: inherit; cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .7rem .8rem; text-align: center; transition: border-color .15s, background .15s; }
+.diff-stat:hover { border-color: var(--border2); }
+.diff-stat.active { border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.05); }
+.diff-stat-n { display: block; font-family: var(--cinzel); font-size: 18px; font-weight: 900; color: var(--text); }
+.diff-stat-l { display: block; font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 2px; letter-spacing: .04em; }
 .diff-stat.added .diff-stat-n { color: var(--accent); }
 .diff-stat.removed .diff-stat-n { color: var(--danger); }
 .diff-stat.changed .diff-stat-n { color: #fbbf24; }
@@ -430,8 +433,16 @@ body.theme-light .diff-table td { border-bottom-color: rgba(80,55,20,0.05); }
 .diff-table tr.df-added td { background: rgba(52,211,153,0.05); }
 .diff-table tr.df-removed td { background: rgba(248,113,113,0.05); }
 .diff-table tr.df-changed td { background: rgba(251,191,36,0.04); }
-.diff-table .df-before { color: var(--danger); text-decoration: line-through; opacity: 0.75; }
-.diff-table .df-after { color: var(--accent); }
+/* Per-phrase diff highlighting: the Anmerkung cell is a ' // '-joined
+   list of independent phrases, so only the phrases that actually differ
+   get the removed/added treatment — phrases both sides agree on stay
+   neutral, making the disagreeing phrase visible at a glance on
+   multi-phrase rows. (Sheet-warning rows have plain text cells.) */
+.diff-table .df-before, .diff-table .df-after { color: var(--text2); }
+.diff-table .dfp-extra { color: var(--danger); text-decoration: line-through; opacity: 0.8; }
+.diff-table .dfp-missing { color: var(--accent); }
+.diff-table .dfp-common { color: var(--text3); }
+.diff-table .dfp-sep { color: var(--text3); opacity: 0.55; }
 .diff-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-bottom: 8px; }
 .diff-empty { font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; padding: 20px 0; }
 
@@ -687,6 +698,8 @@ body.theme-light .df-phr-chip.phr-common  { color: #047857; background: rgba(52,
 
 /* Table footer note ("showing X of Y · filtered from Z") */
 .diff-table-foot { font-family: var(--mono); font-size: 9.5px; color: var(--text3); padding: 6px 2px 0; letter-spacing: .04em; }
+.df-show-more { appearance: none; background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.df-show-more:hover { opacity: 0.8; }
 
 @media (max-width: 600px) {
   .diff-filters { flex-direction: column; align-items: stretch; }
@@ -846,6 +859,8 @@ body.theme-pro .diff-slot:hover, body.theme-pro .diff-slot.drag { border-color: 
 body.theme-pro .diff-slot.loaded { border-color: var(--accent); background: #eff6ff; }
 body.theme-pro .diff-slot.loaded .diff-slot-name { color: var(--accent); }
 body.theme-pro .diff-stat { border-radius: 6px; background: #ffffff; }
+body.theme-pro .diff-stat:hover { border-color: var(--accent); }
+body.theme-pro .diff-stat.active { border-color: var(--accent); background: #eff6ff; }
 body.theme-pro .diff-stat-n { font-weight: 700; }
 body.theme-pro .diff-stat.added .diff-stat-n { color: #059669; }
 body.theme-pro .diff-stat.removed .diff-stat-n { color: var(--danger); }

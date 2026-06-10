@@ -181,7 +181,7 @@ export function loadEngine() {
     'idxToCol', 'colToIdx',
     'phraseToKey', 'phraseKeysFor',
     // diff-mode labeling / training-output primitives
-    'classifyDiff', 'computePhraseDiff', 'granularLabel', 'rowUid',
+    'classifyDiff', 'computePhraseDiff', 'granularLabel', 'rowUid', 'phraseCellParts',
   ];
   const engine = {};
   const missing = [];

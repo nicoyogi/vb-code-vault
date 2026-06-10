@@ -309,12 +309,12 @@
       <div id="diffResults" style="display:none">
         <div class="diff-meta" id="diffMeta"></div>
 
-        <!-- Classic diff summary -->
-        <div class="diff-summary">
-          <div class="diff-stat"><div class="diff-stat-n" id="dCount">0</div><div class="diff-stat-l">total rows</div></div>
-          <div class="diff-stat added"><div class="diff-stat-n" id="dAdded">0</div><div class="diff-stat-l">added</div></div>
-          <div class="diff-stat removed"><div class="diff-stat-n" id="dRemoved">0</div><div class="diff-stat-l">removed</div></div>
-          <div class="diff-stat changed"><div class="diff-stat-n" id="dChanged">0</div><div class="diff-stat-l">changed</div></div>
+        <!-- Classic diff summary — tiles double as filter shortcuts -->
+        <div class="diff-summary" role="group" aria-label="Diff summary — click a tile to filter the table">
+          <button type="button" class="diff-stat" data-label="all" aria-pressed="false" onclick="setDiffLabelFilter('all')" title="Show every differing row"><span class="diff-stat-n" id="dCount">0</span><span class="diff-stat-l">total rows</span></button>
+          <button type="button" class="diff-stat added" data-label="missed" aria-pressed="false" onclick="setDiffLabelFilter('missed')" title="Filter: rows where B added an Anmerkung that A lacks (missed)"><span class="diff-stat-n" id="dAdded">0</span><span class="diff-stat-l">added</span></button>
+          <button type="button" class="diff-stat removed" data-label="overfired" aria-pressed="false" onclick="setDiffLabelFilter('overfired')" title="Filter: rows where A has an Anmerkung that B removed (overfired)"><span class="diff-stat-n" id="dRemoved">0</span><span class="diff-stat-l">removed</span></button>
+          <button type="button" class="diff-stat changed" data-label="wrong" aria-pressed="false" onclick="setDiffLabelFilter('wrong')" title="Filter: rows where both sides disagree (wrong)"><span class="diff-stat-n" id="dChanged">0</span><span class="diff-stat-l">changed</span></button>
         </div>
 
         <!-- Training-set summary (label chips — click to filter) -->
