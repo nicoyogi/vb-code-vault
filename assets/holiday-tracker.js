@@ -1939,14 +1939,7 @@ function icsFold(line) {
  * DTEND for all-day events is the day AFTER the last day (exclusive),
  * per RFC 5545 §3.6.1.
  */
-function buildVEVENT(h, person) {
-  const icon    = LEAVE_TYPE_ICONS[h.type] || '📌';
-  const typeLabel = (h.type || 'leave').charAt(0).toUpperCase() + (h.type || 'leave').slice(1);
-  const halfTag = h.halfDay ? ` (${h.halfDayPart || 'half day'})` : '';
-  const summary = icsEscape(`${icon} ${typeLabel}${halfTag} — ${person ? person.name : 'Out of Office'}`);
-  const noteDesc = h.note ? `\\n\\nNote: ${icsEscape(h.note)}` : '';
-  const description = icsEscape(`${typeLabel}${halfTag}`) + noteDesc;
-
+function buildVEVENT(h) {
   // DTEND is exclusive: day after the last day
   const endDate = new Date(parseDate(h.end));
   endDate.setDate(endDate.getDate() + 1);
@@ -1962,13 +1955,10 @@ function buildVEVENT(h, person) {
     `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z')}`,
     `DTSTART;VALUE=DATE:${icsDate(h.start)}`,
     `DTEND;VALUE=DATE:${dtEnd}`,
-    icsFold(`SUMMARY:${summary}`),
-    icsFold(`DESCRIPTION:${description}`),
     'CLASS:PUBLIC',
     'TRANSP:OPAQUE',
     'X-MICROSOFT-CDO-BUSYSTATUS:OOF',
     'X-MICROSOFT-CDO-ALLDAYEVENT:TRUE',
-    `CATEGORIES:${icsEscape(typeLabel)}`,
     'END:VEVENT',
   ];
   return lines.join('\r\n');
@@ -2004,7 +1994,7 @@ function exportUserICS(yearFilter) {
 
   const vevents = entries
     .sort((a, b) => a.start.localeCompare(b.start))
-    .map(h => buildVEVENT(h, person))
+    .map(h => buildVEVENT(h))
     .join('\r\n');
 
   const calName = icsEscape(
