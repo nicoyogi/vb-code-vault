@@ -1023,11 +1023,15 @@ function renderPeopleList() {
     const toggleAdmin = prof
       ? `<button class="btn btn-sm btn-ghost" onclick="toggleAdminStatus('${prof.uid}','${p.name}',${!!prof.isAdmin})" style="padding:4px 8px;font-size:0.65rem;">${prof.isAdmin?'↓':'↑'}admin</button>`
       : '';
+    const resetPw = prof
+      ? `<button class="delete-btn" onclick="openResetPasswordModal('${prof.uid}','${p.name.replace(/'/g, "\\'")}')" title="Reset password" style="color:var(--accent2);">🔑</button>`
+      : '';
     return `<div class="list-item-row" style="flex-wrap:wrap;gap:6px;">
       <div class="avatar" style="width:30px;height:30px;background:${color.bg};color:${color.text};font-size:0.65rem;">${initials(p.name)}</div>
       <div class="list-item-info"><div class="list-item-name">${p.name}</div><div class="list-item-date">${p.dept}</div></div>
       ${badge}${toggleAdmin}
       <button class="delete-btn" onclick="openEditPerson('${p.id}')" title="Edit name &amp; department" style="color:var(--accent3);">✎</button>
+      ${resetPw}
       <button class="delete-btn" onclick="removePerson('${p.id}')" title="Remove">✕</button>
     </div>`;
   }).join('');
@@ -1199,6 +1203,78 @@ async function toggleAdminStatus(uid, personName, currentlyAdmin) {
     renderPeopleList();
   } catch(e) { showToast('Failed: '+e.message, true); }
   finally { showSaving(false); }
+}
+
+/* ════════════════════════════════════════════
+   ADMIN PASSWORD RESET
+   Lets an admin set a new password for any team
+   member WITHOUT knowing the old one.
+════════════════════════════════════════════ */
+let _resetPwUid = null;
+
+function openResetPasswordModal(uid, personName) {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  const prof = userProfiles.find(u => u.uid === uid);
+  if (!prof) { showToast('No account to reset.', true); return; }
+  _resetPwUid = uid;
+  document.getElementById('resetPwSub').textContent = `New password for ${personName}`;
+  document.getElementById('resetPw1').value = '';
+  document.getElementById('resetPw2').value = '';
+  const reveal = document.getElementById('resetPwReveal');
+  if (reveal) reveal.checked = false;
+  document.getElementById('resetPw1').type = 'password';
+  document.getElementById('resetPw2').type = 'password';
+  const err = document.getElementById('resetPwError');
+  err.textContent = ''; err.classList.remove('show');
+  document.getElementById('resetPwModal').classList.add('open');
+  setTimeout(() => document.getElementById('resetPw1').focus(), 100);
+}
+
+function closeResetPasswordModal() {
+  document.getElementById('resetPwModal').classList.remove('open');
+  _resetPwUid = null;
+}
+
+function toggleResetPwReveal() {
+  const show = document.getElementById('resetPwReveal').checked;
+  document.getElementById('resetPw1').type = show ? 'text' : 'password';
+  document.getElementById('resetPw2').type = show ? 'text' : 'password';
+}
+
+async function doAdminResetPassword() {
+  if (!isAdmin()) { showToast('Admin only.', true); return; }
+  if (!_resetPwUid) return;
+  const prof = userProfiles.find(u => u.uid === _resetPwUid);
+  if (!prof) { showToast('Account not found.', true); closeResetPasswordModal(); return; }
+
+  const pw1 = document.getElementById('resetPw1').value;
+  const pw2 = document.getElementById('resetPw2').value;
+  const err = document.getElementById('resetPwError');
+  err.textContent = ''; err.classList.remove('show');
+
+  if (!pw1)           { err.textContent = 'Enter a new password.';   err.classList.add('show'); return; }
+  if (pw1.length < 6) { err.textContent = 'Min 6 characters.';       err.classList.add('show'); return; }
+  if (pw1 !== pw2)    { err.textContent = 'Passwords do not match.';  err.classList.add('show'); return; }
+
+  const btn = document.getElementById('resetPwBtn');
+  if (btn) btn.disabled = true;
+  showSaving(true);
+  try {
+    const hash = await hashPassword(pw1);
+    await userProfCol.doc(_resetPwUid).update({ passwordHash: hash });
+    await writeLog('person_add',
+      `🔑 Password reset for <strong>${prof.displayName}</strong>`,
+      { personId: prof.personId, uid: _resetPwUid });
+    showToast(`Password reset for ${prof.displayName}.`);
+    closeResetPasswordModal();
+    renderPeopleList();
+  } catch(e) {
+    err.textContent = 'Failed: ' + e.message;
+    err.classList.add('show');
+  } finally {
+    if (btn) btn.disabled = false;
+    showSaving(false);
+  }
 }
 
 /* ════════════════════════════════════════════
