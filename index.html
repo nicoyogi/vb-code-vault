@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="The Grimoire — a codex of VB/VBA spells, forwarder rituals and arcane workspace tools.">
-<meta name="theme-color" content="#06060c">
+<meta name="theme-color" content="#050509">
 <title>The Grimoire</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,60 +17,67 @@
 
   :root{
     /* Palette */
-    --bg:#06060c;
+    --bg:#050509;
     --bg-soft:#0b0b16;
     --ink:#f3efe3;
-    --muted:rgba(243,239,227,0.60);
-    --faint:rgba(243,239,227,0.40);
+    --muted:rgba(243,239,227,0.62);
+    --faint:rgba(243,239,227,0.38);
 
     --gold:#d8b56e;
     --gold-2:#f0dca6;
     --gold-dim:rgba(216,181,110,0.55);
+    --gold-soft:rgba(216,181,110,0.28);
     --gold-faint:rgba(216,181,110,0.10);
     --violet:rgba(110,80,200,0.30);
 
     /* Surfaces */
-    --glass:rgba(20,20,30,0.45);
-    --glass-2:rgba(34,30,52,0.62);
+    --glass:rgba(18,18,28,0.48);
+    --glass-2:rgba(34,30,52,0.64);
     --line:rgba(216,181,110,0.18);
     --line-soft:rgba(243,239,227,0.08);
 
     /* Scale */
-    --xs:8px; --sm:14px; --md:22px; --lg:34px; --xl:52px; --section:84px;
+    --xs:8px; --sm:14px; --md:22px; --lg:34px; --xl:52px; --section:88px;
 
     --f-display:'Cinzel',serif;
     --f-body:'Syne',sans-serif;
     --f-mono:'DM Mono',monospace;
 
-    --h1:clamp(2.6rem,1.2rem+5vw,5rem);
-    --h2:clamp(1.35rem,1rem+1.4vw,2rem);
-    --body:clamp(1rem,0.96rem+0.2vw,1.1rem);
+    --h1:clamp(2.8rem, 1.2rem + 5.6vw, 5.4rem);
+    --h2:clamp(1.3rem, 1rem + 1.3vw, 1.9rem);
+    --body:clamp(1rem, 0.96rem + 0.2vw, 1.08rem);
 
     --ease:cubic-bezier(0.2,0.8,0.2,1);
-    --radius:14px;
+    --radius:16px;
   }
 
   html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--f-body);overflow-x:hidden;position:relative;scroll-behavior:smooth}
 
   :focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
+  ::selection{background:rgba(216,181,110,0.28);color:#fff}
 
-  /* Ambient field */
+  kbd{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--gold-dim)}
+  [hidden]{display:none!important}
+
+  /* ── Ambient field ───────────────────────────────────── */
   body::before{
-    content:'';position:fixed;inset:-50%;z-index:0;pointer-events:none;opacity:0.7;
+    content:'';position:fixed;inset:-50%;z-index:0;pointer-events:none;opacity:0.75;
     background:
-      radial-gradient(circle at 22% 18%, var(--violet) 0%, transparent 38%),
-      radial-gradient(circle at 82% 8%, var(--gold-faint) 0%, transparent 34%),
-      radial-gradient(circle at 60% 100%, rgba(60,40,120,0.20) 0%, transparent 50%);
-    animation:drift 24s ease-in-out infinite alternate;
+      radial-gradient(circle at 22% 16%, var(--violet) 0%, transparent 38%),
+      radial-gradient(circle at 84% 6%, var(--gold-faint) 0%, transparent 32%),
+      radial-gradient(circle at 60% 105%, rgba(60,40,120,0.22) 0%, transparent 50%);
+    animation:drift 26s ease-in-out infinite alternate;
   }
   @keyframes drift{0%{transform:scale(1) translate(0,0)}100%{transform:scale(1.12) translate(-2%,2%)}}
 
+  /* Film grain + vignette */
   body::after{
-    content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:0.045;mix-blend-mode:overlay;
+    content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:0.05;mix-blend-mode:overlay;
     background-image:url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)"/%3E%3C/svg%3E');
   }
+  .vignette{position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(120% 90% at 50% 30%,transparent 55%,rgba(0,0,0,0.5) 100%)}
 
-  canvas#bg{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.45}
+  canvas#bg{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.5}
 
   .sigil-defs{position:absolute;width:0;height:0;overflow:hidden}
   .ico{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
@@ -78,35 +85,54 @@
   /* ── Top bar ─────────────────────────────────────────── */
   .topbar{
     position:sticky;top:0;z-index:40;
-    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-    background:linear-gradient(180deg, rgba(6,6,12,0.86) 0%, rgba(6,6,12,0.45) 100%);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    background:linear-gradient(180deg, rgba(5,5,9,0.88) 0%, rgba(5,5,9,0.42) 100%);
     border-bottom:1px solid var(--line-soft);
   }
-  .topbar-inner{max-width:1040px;margin:0 auto;padding:14px var(--md);display:flex;align-items:center;gap:var(--md);flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
-  .brand-mark{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:9px;color:var(--gold);background:rgba(0,0,0,0.35)}
+  .topbar::after{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent 0%,var(--gold-soft) 50%,transparent 100%);opacity:0.6}
+  .topbar-inner{max-width:1080px;margin:0 auto;padding:13px var(--md);display:flex;align-items:center;gap:var(--md);flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit}
+  .brand-mark{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;color:var(--gold);background:rgba(0,0,0,0.35);box-shadow:inset 0 1px 1px rgba(255,255,255,0.06)}
   .brand-name{font-family:var(--f-display);font-size:15px;letter-spacing:0.22em;text-transform:uppercase}
   .brand-name b{font-weight:600;color:var(--gold)}
 
-  .switcher{margin-left:auto;display:flex;align-items:center;gap:6px;padding:5px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,0.35)}
+  .almanac{margin-left:auto;display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--faint)}
+  .almanac .moon{font-size:14px;filter:grayscale(0.3) sepia(0.4) hue-rotate(-15deg) saturate(2);opacity:0.85}
+
+  .switcher{display:flex;align-items:center;gap:6px;padding:5px;border:1px solid var(--line);border-radius:13px;background:rgba(0,0,0,0.35)}
   .switch-label{font-family:var(--f-mono);font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--faint);padding:0 6px}
   .seg{
     appearance:none;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;
     font-family:var(--f-mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;
     padding:9px 14px;border-radius:9px;display:inline-flex;align-items:center;gap:8px;transition:all .35s var(--ease)
   }
-  .seg kbd{font-family:var(--f-mono);font-size:10px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--gold-dim)}
   .seg:hover{color:var(--ink);border-color:var(--line)}
   .seg[aria-pressed="true"]{background:var(--gold);color:#0a0a12;border-color:var(--gold);box-shadow:0 0 18px rgba(216,181,110,0.4)}
   .seg[aria-pressed="true"] kbd{color:#0a0a12;border-color:rgba(0,0,0,0.3)}
 
   /* ── Shell ───────────────────────────────────────────── */
-  .shell{position:relative;z-index:3;width:100%;max-width:1040px;margin:0 auto;padding:var(--xl) var(--md) var(--section)}
+  .shell{position:relative;z-index:3;width:100%;max-width:1080px;margin:0 auto;padding:var(--xl) var(--md) var(--section)}
 
-  header.hero{padding:var(--lg) 0 var(--xl);border-bottom:1px solid var(--line);margin-bottom:var(--xl);animation:rise .9s var(--ease) both}
-  .eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:var(--sm)}
-  h1{font-family:var(--f-display);font-size:var(--h1);font-weight:400;line-height:0.92;letter-spacing:-0.01em;text-transform:uppercase}
-  .t-sub{display:block;font-size:0.36em;letter-spacing:0.24em;color:var(--gold-dim);margin-bottom:0.25rem}
+  /* ── Hero ────────────────────────────────────────────── */
+  header.hero{position:relative;padding:var(--xl) 0;margin-bottom:var(--lg);animation:rise .9s var(--ease) both}
+
+  .hero-sigil{
+    position:absolute;top:50%;right:-60px;width:min(440px,52vw);aspect-ratio:1;
+    transform:translateY(-50%);pointer-events:none;color:var(--gold);opacity:0.34;
+    -webkit-mask-image:radial-gradient(circle,#000 30%,transparent 72%);
+    mask-image:radial-gradient(circle,#000 30%,transparent 72%);
+  }
+  .hero-sigil .r-slow{transform-origin:center;animation:spin 140s linear infinite}
+  .hero-sigil .r-rev{transform-origin:center;animation:spin 100s linear infinite reverse}
+  .hero-sigil .r-text{transform-origin:center;animation:spin 200s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hero-sigil .ring-text{font-family:var(--f-display);font-size:13.5px;letter-spacing:0.42em;fill:currentColor;opacity:0.8}
+
+  .eyebrow{display:flex;align-items:center;gap:12px;font-family:var(--f-mono);font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:var(--sm)}
+  .eyebrow::before{content:'\2726';font-size:9px;opacity:0.8}
+
+  h1{font-family:var(--f-display);font-size:var(--h1);font-weight:400;line-height:0.92;letter-spacing:-0.01em;text-transform:uppercase;position:relative;z-index:2}
+  .t-sub{display:block;font-size:0.34em;letter-spacing:0.26em;color:var(--gold-dim);margin-bottom:0.3rem}
   @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
   .t-main{
     display:block;
@@ -114,7 +140,17 @@
     background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
     text-shadow:0 4px 30px rgba(216,181,110,0.25);animation:shimmer 9s linear infinite;
   }
-  .tagline{font-family:var(--f-mono);font-size:13px;color:var(--muted);letter-spacing:0.12em;margin-top:var(--md);text-transform:uppercase}
+  .tagline{font-family:var(--f-mono);font-size:13px;color:var(--muted);letter-spacing:0.12em;margin-top:var(--md);text-transform:uppercase;position:relative;z-index:2}
+
+  .hero-stats{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:var(--lg);position:relative;z-index:2}
+  .stat{display:flex;align-items:baseline;gap:9px;font-family:var(--f-mono);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--faint)}
+  .stat b{font-family:var(--f-display);font-weight:600;font-size:19px;color:var(--gold);letter-spacing:0.08em}
+  .stat-sep{color:var(--gold-dim);font-size:9px;opacity:0.7}
+
+  .hero-rule{display:flex;align-items:center;gap:14px;margin-top:var(--xl)}
+  .hero-rule::before,.hero-rule::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line));}
+  .hero-rule::after{background:linear-gradient(90deg,var(--line),transparent)}
+  .hero-rule span{color:var(--gold-dim);font-size:12px}
 
   /* ── Chronicle (shared) ──────────────────────────────── */
   .chronicle{
@@ -130,49 +166,64 @@
   .chronicle:hover,.chronicle:focus-visible{transform:translateY(-4px);background:var(--glass-2);box-shadow:0 18px 40px rgba(0,0,0,0.5),0 0 28px var(--violet)}
   .chronicle:hover::before,.chronicle:focus-visible::before{opacity:1}
   .ch-left{display:flex;align-items:center;gap:var(--md);position:relative;z-index:2}
-  .ch-mark{width:50px;height:50px;flex:none;display:grid;place-items:center;border:1px solid var(--line);border-radius:12px;color:var(--gold);background:rgba(0,0,0,0.3)}
-  .ch-label{font-family:var(--f-mono);font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:var(--gold)}
-  .ch-title{font-family:var(--f-display);font-size:var(--h2);margin:2px 0}
+  .ch-mark{width:52px;height:52px;flex:none;display:grid;place-items:center;border:1px solid var(--line);border-radius:13px;color:var(--gold);background:rgba(0,0,0,0.3)}
+  .ch-label{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:var(--gold)}
+  .pulse{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);animation:pulse 2.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.7)}}
+  .ch-title{font-family:var(--f-display);font-size:var(--h2);margin:3px 0 2px}
   .ch-desc{font-family:var(--f-body);font-size:14px;color:var(--muted)}
   .arr{font-family:var(--f-mono);font-size:18px;color:var(--gold);opacity:0.75;transition:transform .4s var(--ease),opacity .4s,color .4s;position:relative;z-index:2}
   .chronicle:hover .arr,.chronicle:focus-visible .arr{transform:translateX(10px) scale(1.15);opacity:1;color:#fff}
 
   /* ── Section heading ─────────────────────────────────── */
-  .sec-head{display:flex;align-items:baseline;gap:var(--sm);margin-bottom:var(--lg)}
+  .sec-head{display:flex;align-items:baseline;gap:var(--sm);margin-bottom:var(--md)}
   .sec-title{font-family:var(--f-display);font-size:13px;letter-spacing:0.38em;color:var(--gold);text-transform:uppercase;white-space:nowrap}
   .sec-rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line) 0%,transparent 100%)}
   .sec-meta{font-family:var(--f-mono);font-size:11px;letter-spacing:0.16em;color:var(--faint);text-transform:uppercase}
 
-  /* ── Empty state ─────────────────────────────────────── */
-  .empty{
-    display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--sm);
-    padding:var(--xl) var(--md);border:1px dashed var(--line);border-radius:var(--radius);
-    background:rgba(0,0,0,0.18);animation:rise .9s var(--ease) .12s both;
+  /* ── Choice seals (empty state) ──────────────────────── */
+  .choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--md);animation:rise .9s var(--ease) .12s both}
+  .choice-intro{grid-column:1/-1;text-align:center;font-family:var(--f-mono);font-size:12px;letter-spacing:0.14em;color:var(--muted);line-height:1.8;text-transform:uppercase;padding:var(--sm) 0}
+  .seal{
+    position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;
+    padding:var(--xl) var(--md) var(--lg);border-radius:var(--radius);cursor:pointer;color:inherit;
+    background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--line);overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,0.35),inset 0 1px 1px rgba(255,255,255,0.06);
+    transition:transform .5s var(--ease),box-shadow .5s var(--ease),background .5s var(--ease),border-color .5s var(--ease);
   }
-  .empty .glyph{font-family:var(--f-display);font-size:34px;color:var(--gold-dim)}
-  .empty h3{font-family:var(--f-display);font-weight:400;font-size:var(--h2);letter-spacing:0.04em}
-  .empty p{font-family:var(--f-mono);font-size:12px;letter-spacing:0.08em;color:var(--muted);max-width:46ch;line-height:1.7}
-  .empty-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px}
-  .ghost-btn{
-    font-family:var(--f-mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);
-    border:1px solid var(--line);background:rgba(0,0,0,0.3);border-radius:10px;padding:11px 18px;cursor:pointer;
-    transition:all .35s var(--ease)
-  }
-  .ghost-btn:hover{background:var(--gold);color:#0a0a12;border-color:var(--gold);box-shadow:0 0 20px rgba(216,181,110,0.4)}
+  .seal::before{content:'';position:absolute;inset:0;background:radial-gradient(560px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,0.06),transparent 42%);opacity:0;transition:opacity .5s;pointer-events:none}
+  .seal:hover,.seal:focus-visible{transform:translateY(-6px);background:var(--glass-2);border-color:var(--gold-dim);box-shadow:0 20px 44px rgba(0,0,0,0.55),0 0 30px var(--violet)}
+  .seal:hover::before,.seal:focus-visible::before{opacity:1}
 
-  /* ── Active project banner ───────────────────────────── */
-  .banner{
-    display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px var(--md);border-radius:12px;
+  .emblem{position:relative;width:86px;height:86px;display:grid;place-items:center;color:var(--gold);margin-bottom:4px}
+  .emblem .ico{width:30px;height:30px;position:relative;z-index:2}
+  .emblem::before{content:'';position:absolute;inset:14px;border:1px solid var(--line);border-radius:50%;background:rgba(0,0,0,0.32);transition:all .5s var(--ease)}
+  .emblem::after{content:'';position:absolute;inset:0;border:1px dashed var(--gold-soft);border-radius:50%;opacity:0.55;transition:opacity .5s}
+  .seal:hover .emblem::before,.seal:focus-visible .emblem::before{border-color:var(--gold);box-shadow:0 0 22px var(--gold-faint)}
+  .seal:hover .emblem::after,.seal:focus-visible .emblem::after{opacity:1;animation:spin 14s linear infinite}
+
+  .seal-name{font-family:var(--f-display);font-size:clamp(1.5rem, 1.2rem + 1.4vw, 2.1rem);font-weight:400;letter-spacing:0.06em;text-transform:uppercase;transition:color .3s,text-shadow .3s}
+  .seal:hover .seal-name,.seal:focus-visible .seal-name{color:#fff;text-shadow:0 0 16px rgba(255,255,255,0.25)}
+  .seal-sub{font-family:var(--f-body);font-size:13px;color:var(--muted);max-width:34ch;line-height:1.6}
+  .seal-meta{display:flex;align-items:center;gap:10px;margin-top:8px;font-family:var(--f-mono);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold-dim)}
+
+  /* ── Active project bar ──────────────────────────────── */
+  .proj-bar{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px var(--md);border-radius:13px;
     background:var(--glass);border:1px solid var(--line);margin-bottom:var(--lg);
     font-family:var(--f-mono);font-size:12px;letter-spacing:0.1em;color:var(--muted);
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    animation:rise .5s var(--ease) both;
   }
-  .banner .b-name{font-family:var(--f-display);font-size:15px;letter-spacing:0.1em;color:var(--gold)}
-  .banner .b-reset{margin-left:auto;font-family:var(--f-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold-dim);background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;transition:all .3s var(--ease)}
-  .banner .b-reset:hover{color:#0a0a12;background:var(--gold);border-color:var(--gold)}
+  .proj-bar .p-glyph{color:var(--gold-dim);font-size:11px}
+  .proj-bar .p-name{font-family:var(--f-display);font-size:15px;letter-spacing:0.1em;color:var(--gold)}
+  .proj-bar .p-reset{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold-dim);background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;transition:all .3s var(--ease)}
+  .proj-bar .p-reset:hover{color:#0a0a12;background:var(--gold);border-color:var(--gold)}
+  .proj-bar .p-reset:hover kbd{color:#0a0a12;border-color:rgba(0,0,0,0.3)}
 
   /* ── Tool grid ───────────────────────────────────────── */
-  #grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--md)}
+  #grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--md);perspective:1400px}
   .span-2{grid-column:1/-1}
 
   .card{
@@ -181,16 +232,32 @@
     background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
     border:1px solid var(--line);
     box-shadow:0 8px 24px rgba(0,0,0,0.3),inset 0 1px 1px rgba(255,255,255,0.06);
+    transform:translateY(var(--lift,0)) rotateX(var(--rx,0)) rotateY(var(--ry,0));
     transition:transform .5s var(--ease),box-shadow .5s var(--ease),background .5s var(--ease),border-color .5s var(--ease);
-    opacity:0;transform:translateY(22px);
+    opacity:0;will-change:transform;
   }
   .card.enter{animation:cardIn .65s var(--ease) forwards}
-  @keyframes cardIn{to{opacity:1;transform:translateY(0)}}
+  @keyframes cardIn{from{opacity:0;translate:0 22px}to{opacity:1;translate:0 0}}
   @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 
   .card::before{content:'';position:absolute;inset:0;background:radial-gradient(640px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,0.06),transparent 40%);opacity:0;transition:opacity .5s;pointer-events:none;z-index:1}
-  .card:hover,.card:focus-visible{transform:translateY(-6px);background:var(--glass-2);border-color:var(--gold-dim);box-shadow:0 20px 44px rgba(0,0,0,0.55),0 0 28px var(--violet)}
+  .card:hover,.card:focus-visible{--lift:-6px;background:var(--glass-2);border-color:var(--gold-dim);box-shadow:0 20px 44px rgba(0,0,0,0.55),0 0 28px var(--violet)}
   .card:hover::before,.card:focus-visible::before{opacity:1}
+
+  /* Corner brackets — tighten on hover */
+  .corners{position:absolute;inset:11px;pointer-events:none;opacity:0.45;transition:inset .45s var(--ease),opacity .45s}
+  .corners::before,.corners::after{content:'';position:absolute;width:15px;height:15px;border:1px solid var(--gold-dim)}
+  .corners::before{top:0;left:0;border-right:0;border-bottom:0}
+  .corners::after{bottom:0;right:0;border-left:0;border-top:0}
+  .card:hover .corners,.card:focus-visible .corners{inset:7px;opacity:1}
+
+  /* Roman numeral watermark */
+  .cnum{
+    position:absolute;top:-14px;right:6px;z-index:0;pointer-events:none;
+    font-family:var(--f-display);font-weight:900;font-size:96px;line-height:1;color:var(--gold);
+    opacity:0.06;transition:opacity .5s,transform .5s var(--ease);
+  }
+  .card:hover .cnum,.card:focus-visible .cnum{opacity:0.13;transform:translate(-4px,4px)}
 
   .card-top{display:flex;align-items:center;gap:12px;margin-bottom:var(--md);position:relative;z-index:2}
   .card-ico{width:46px;height:46px;flex:none;display:grid;place-items:center;border:1px solid var(--line);border-radius:11px;color:var(--gold);background:rgba(0,0,0,0.32);transition:all .45s var(--ease)}
@@ -207,7 +274,11 @@
   .card:hover .arr,.card:focus-visible .arr{transform:translateX(10px) scale(1.15);opacity:1;color:#fff}
 
   /* ── Footer ──────────────────────────────────────────── */
-  footer{margin-top:var(--section);padding-top:var(--md);border-top:1px solid var(--line);text-align:center;animation:rise .9s var(--ease) .3s both}
+  footer{margin-top:var(--section);text-align:center;animation:rise .9s var(--ease) .3s both}
+  .foot-ornament{display:flex;align-items:center;gap:14px;margin-bottom:var(--md)}
+  .foot-ornament::before,.foot-ornament::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line))}
+  .foot-ornament::after{background:linear-gradient(90deg,var(--line),transparent)}
+  .foot-ornament span{color:var(--gold-dim);font-size:12px}
   .foot-links{display:flex;flex-wrap:wrap;gap:4px 0;justify-content:center;font-family:var(--f-mono);font-size:12px;letter-spacing:0.08em;text-transform:uppercase}
   .foot-links a{color:var(--gold-dim);text-decoration:none;padding:8px 12px;border-radius:6px;transition:color .25s,text-shadow .25s}
   .foot-links a:hover,.foot-links a:focus-visible{color:var(--gold);text-shadow:0 0 8px rgba(216,181,110,0.5)}
@@ -218,14 +289,20 @@
   .offline-btn[data-offline-state="ready"]{color:var(--gold);border-color:var(--gold-dim)}
   .offline-btn [data-offline-progress]{margin-left:6px;color:var(--faint)}
 
+  /* ── Responsive ──────────────────────────────────────── */
+  @media(max-width:860px){
+    .almanac{display:none}
+    .hero-sigil{opacity:0.18;right:-120px}
+  }
   @media(max-width:768px){
     .topbar-inner{padding:12px var(--sm)}
-    .switcher{margin-left:0;width:100%;justify-content:center;flex-wrap:wrap}
-    .switch-label{width:100%;text-align:center}
+    .switcher{margin-left:auto;flex-wrap:wrap}
+    .switch-label{display:none}
     .shell{padding:var(--lg) var(--sm) var(--xl)}
     .chronicle{flex-direction:column;align-items:flex-start}
     .ch-desc{font-size:13px}
     .span-2{grid-column:auto}
+    .hero-stats{gap:12px}
   }
 </style>
 </head>
@@ -233,6 +310,7 @@
 
 <a href="#main" class="skip-link">Skip to content</a>
 <canvas id="bg" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
 
 <svg class="sigil-defs" aria-hidden="true" focusable="false">
   <symbol id="i-vault" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h11l3 3v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="14" cy="12" r="3"/><path d="M14 9v-1M14 16v-1"/></symbol>
@@ -244,6 +322,8 @@
   <symbol id="i-splitter" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><path d="M8 7l11 4M8 17l11-4"/><circle cx="19" cy="11" r="1.6"/><circle cx="19" cy="13" r="1.6"/></symbol>
   <symbol id="i-chronicle" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/><path d="M8 14h3M14 14h2"/></symbol>
   <symbol id="i-mark" viewBox="0 0 24 24"><path d="M5 4a2 2 0 0 1 2-2h11v18H7a2 2 0 0 0-2 2z"/><path d="M9 7h6M9 11h6"/></symbol>
+  <symbol id="i-anvil" viewBox="0 0 24 24"><path d="M3 7h9c0 3 2 5 6 5v2c-3 0-4.5 1.2-5 3h2v3H7v-3h2c-.5-1.8-2-3-4-3v-2c2 0 3.4-1.6 3.4-3H3z"/></symbol>
+  <symbol id="i-tower" viewBox="0 0 24 24"><path d="M8 21V8l4-5 4 5v13"/><path d="M5 21h14M8 12h8M10 21v-4h4v4"/></symbol>
 </svg>
 
 <div class="topbar">
@@ -253,10 +333,15 @@
       <span class="brand-name">The&nbsp;<b>Grimoire</b></span>
     </a>
 
+    <div class="almanac" aria-hidden="true">
+      <span id="almanac-date"></span>
+      <span class="moon" id="almanac-moon"></span>
+    </div>
+
     <div class="switcher" role="group" aria-label="Choose a project">
       <span class="switch-label">Project</span>
-      <button type="button" class="seg" id="seg-wmf" aria-pressed="false" onclick="selectProject('wmf')">WMF <kbd>1</kbd></button>
-      <button type="button" class="seg" id="seg-siemens" aria-pressed="false" onclick="selectProject('siemens')">Siemens GP <kbd>2</kbd></button>
+      <button type="button" class="seg" data-project="wmf" aria-pressed="false">WMF <kbd>1</kbd></button>
+      <button type="button" class="seg" data-project="siemens" aria-pressed="false">Siemens GP <kbd>2</kbd></button>
     </div>
   </div>
 </div>
@@ -264,12 +349,41 @@
 <div class="shell">
 
   <header class="hero">
-    <div class="eyebrow">Arcane Workspace · Anno MMXXVI</div>
+    <svg class="hero-sigil" viewBox="0 0 440 440" aria-hidden="true" focusable="false">
+      <g class="r-slow">
+        <circle cx="220" cy="220" r="206" fill="none" stroke="currentColor" stroke-width="0.8" stroke-dasharray="2 9"/>
+        <circle cx="220" cy="220" r="184" fill="none" stroke="currentColor" stroke-width="0.6"/>
+        <path d="M220 8 l6 12 -6 12 -6 -12z M220 408 l6 12 -6 12 -6 -12z M8 214 l12 6 12 -6 -12 -6z M408 214 l12 6 12 -6 -12 -6z" fill="currentColor" opacity="0.9"/>
+      </g>
+      <g class="r-text">
+        <defs><path id="sigil-path" d="M220,220 m-160,0 a160,160 0 1,1 320,0 a160,160 0 1,1 -320,0"/></defs>
+        <text class="ring-text"><textPath href="#sigil-path">CODEX OF TOOLS &#183; BOUND IN FIRE &#183; FOREVER CURRENT &#183; ANNO MMXXVI &#183;</textPath></text>
+      </g>
+      <g class="r-rev">
+        <circle cx="220" cy="220" r="126" fill="none" stroke="currentColor" stroke-width="0.7" stroke-dasharray="40 14 6 14"/>
+        <circle cx="220" cy="220" r="100" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="1 7"/>
+      </g>
+      <circle cx="220" cy="220" r="62" fill="none" stroke="currentColor" stroke-width="0.7"/>
+      <path d="M220 176 l13 31 31 13 -31 13 -13 31 -13 -31 -31 -13 31 -13z" fill="none" stroke="currentColor" stroke-width="0.9"/>
+      <circle cx="220" cy="220" r="4" fill="currentColor"/>
+    </svg>
+
+    <div class="eyebrow">Arcane Workspace &middot; Anno MMXXVI</div>
     <h1>
       <span class="t-sub">The</span>
       <span class="t-main">Grimoire</span>
     </h1>
-    <div class="tagline">Codex of tools · Bound in fire · Forever current</div>
+    <div class="tagline">Codex of tools &middot; Bound in fire &middot; Forever current</div>
+
+    <div class="hero-stats" aria-label="Contents">
+      <span class="stat"><b>II</b> Projects</span>
+      <span class="stat-sep">&#10022;</span>
+      <span class="stat"><b>VIII</b> Tomes</span>
+      <span class="stat-sep">&#10022;</span>
+      <span class="stat"><b>I</b> Chronicle</span>
+    </div>
+
+    <div class="hero-rule" aria-hidden="true"><span>&#10022;</span></div>
   </header>
 
   <main id="main" role="main">
@@ -278,9 +392,9 @@
       <div class="ch-left">
         <span class="ch-mark"><svg class="ico" aria-hidden="true"><use href="#i-chronicle"/></svg></span>
         <div>
-          <div class="ch-label">The Chronicle · Shared</div>
+          <div class="ch-label"><span class="pulse" aria-hidden="true"></span>The Chronicle &middot; Shared</div>
           <div class="ch-title">Holiday Tracker</div>
-          <div class="ch-desc">Team absences &amp; leave · Synced in real time</div>
+          <div class="ch-desc">Team absences &amp; leave &middot; Synced in real time</div>
         </div>
       </div>
       <span class="arr">&rarr;</span>
@@ -296,22 +410,29 @@
       <div id="aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
       <!-- Empty state: shown until a project is chosen -->
-      <div class="empty" id="empty-state">
-        <div class="glyph">&#10022;</div>
-        <h3>Choose a project to reveal its tomes</h3>
-        <p>The Grimoire adapts to your project. Select one above &mdash; or press its number &mdash; to summon the relevant rituals.</p>
-        <div class="empty-actions">
-          <button type="button" class="ghost-btn" onclick="selectProject('wmf')">WMF</button>
-          <button type="button" class="ghost-btn" onclick="selectProject('siemens')">Siemens GP</button>
-        </div>
+      <div class="choice" id="choice">
+        <p class="choice-intro">The Grimoire adapts to your project.<br>Choose a seal &mdash; or press its number &mdash; to summon the relevant rituals.</p>
+        <button type="button" class="seal" data-project="wmf">
+          <span class="emblem"><svg class="ico" aria-hidden="true"><use href="#i-anvil"/></svg></span>
+          <span class="seal-name">WMF</span>
+          <span class="seal-sub">W&uuml;rttembergische Metallwarenfabrik &mdash; vault, oracle, alchemy &amp; ledger.</span>
+          <span class="seal-meta">IV tomes &middot; press <kbd>1</kbd></span>
+        </button>
+        <button type="button" class="seal" data-project="siemens">
+          <span class="emblem"><svg class="ico" aria-hidden="true"><use href="#i-tower"/></svg></span>
+          <span class="seal-name">Siemens GP</span>
+          <span class="seal-sub">General Procurement &mdash; knowledge, wording, review &amp; the splitter.</span>
+          <span class="seal-meta">IV tomes &middot; press <kbd>2</kbd></span>
+        </button>
       </div>
 
-      <!-- Active project banner + grid: populated by JS -->
-      <div class="banner" id="banner" hidden>
+      <!-- Active project bar + grid: populated by JS -->
+      <div class="proj-bar" id="proj-bar" hidden>
+        <span class="p-glyph" aria-hidden="true">&#10022;</span>
         <span>Project</span>
-        <span class="b-name" id="banner-name"></span>
-        <span id="banner-sub"></span>
-        <button type="button" class="b-reset" id="btn-reset">Reset</button>
+        <span class="p-name" id="proj-name"></span>
+        <span id="proj-sub"></span>
+        <button type="button" class="p-reset" id="btn-reset">Reset <kbd>Esc</kbd></button>
       </div>
 
       <div id="grid"></div>
@@ -320,6 +441,7 @@
   </main>
 
   <footer>
+    <div class="foot-ornament" aria-hidden="true"><span>&#10087;</span></div>
     <nav class="foot-links" id="footer-links" aria-label="All pages"></nav>
     <div class="foot-meta">
       <span>codingkuh.my.id</span>
@@ -336,30 +458,42 @@
    The Grimoire — landing / hub logic
    ────────────────────────────────────────────────────────── */
 
-/* Decorative floating-rune canvas (honours reduced motion via core helpers) */
-class RuneEngine {
+const REDUCED = window.Grimoire?.reducedMotion
+  ?? window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Decorative canvas: faint twinkling stars + rising runes.
+   Honours reduced motion (single static frame) and tab visibility. */
+class AetherEngine {
   constructor(id){
     this.canvas = document.getElementById(id);
     if (!this.canvas) return;
     this.ctx = this.canvas.getContext('2d');
-    this.reduced = window.Grimoire?.reducedMotion ?? window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.scale = window.Grimoire?.densityScale ? window.Grimoire.densityScale() : 1;
+    this.scale = window.Grimoire?.densityScale ? (window.Grimoire.densityScale() || 0.4) : 1;
     this.CHARS = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ☽☿♄⊕⊗✦✧';
-    this.runes = [];
     this.running = false;
     this.last = 0;
     this.resize();
-    this.runes = Array.from({ length: Math.round(45 * (this.scale || 0.4)) }, () => this.make(true));
-    window.addEventListener('resize', () => { this.resize(); if (this.reduced) this.frame(0); });
+    this.stars = Array.from({ length: Math.round(90 * this.scale) }, () => this.makeStar());
+    this.runes = Array.from({ length: Math.round(34 * this.scale) }, () => this.makeRune(true));
+    window.addEventListener('resize', () => { this.resize(); if (REDUCED) this.frame(0); });
     document.addEventListener('visibilitychange', () => {
-      if (this.reduced) return;
+      if (REDUCED) return;
       if (document.hidden) this.running = false;
       else { this.last = performance.now(); this.start(); }
     });
-    if (this.reduced) this.frame(0); else this.start();
+    if (REDUCED) this.frame(0); else this.start();
   }
   resize(){ this.w = this.canvas.width = window.innerWidth; this.h = this.canvas.height = window.innerHeight; }
-  make(initial){
+  makeStar(){
+    return {
+      x: Math.random()*this.w, y: Math.random()*this.h,
+      r: Math.random()*1.1 + 0.3,
+      a: Math.random()*0.35 + 0.1,
+      phase: Math.random()*Math.PI*2,
+      speed: Math.random()*0.012 + 0.004
+    };
+  }
+  makeRune(initial){
     return {
       ch: this.CHARS[Math.floor(Math.random()*this.CHARS.length)],
       x: Math.random()*this.w,
@@ -371,16 +505,25 @@ class RuneEngine {
     };
   }
   frame(dt){
-    this.ctx.clearRect(0,0,this.w,this.h);
+    const ctx = this.ctx;
+    ctx.clearRect(0,0,this.w,this.h);
+    for (const s of this.stars){
+      s.phase += s.speed*dt*16;
+      const alpha = (Math.sin(s.phase)*0.5 + 0.5) * s.a;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(243,239,227,${alpha})`;
+      ctx.fill();
+    }
     for (const r of this.runes){
       r.y += r.vy*dt; r.phase += 0.02*dt;
-      if (r.y < -40) Object.assign(r, this.make(false));
+      if (r.y < -40) Object.assign(r, this.makeRune(false));
       const alpha = (Math.sin(r.phase)*0.5 + 0.5) * r.a;
-      this.ctx.font = `${r.size}px 'Cinzel', serif`;
-      this.ctx.fillStyle = `rgba(216,181,110,${alpha})`;
-      this.ctx.shadowBlur = 8; this.ctx.shadowColor = `rgba(216,181,110,${alpha*0.5})`;
-      this.ctx.fillText(r.ch, r.x, r.y);
-      this.ctx.shadowBlur = 0;
+      ctx.font = `${r.size}px 'Cinzel', serif`;
+      ctx.fillStyle = `rgba(216,181,110,${alpha})`;
+      ctx.shadowBlur = 8; ctx.shadowColor = `rgba(216,181,110,${alpha*0.5})`;
+      ctx.fillText(r.ch, r.x, r.y);
+      ctx.shadowBlur = 0;
     }
   }
   loop = (ts) => {
@@ -393,36 +536,56 @@ class RuneEngine {
   start(){ if (this.running) return; this.running = true; this.last = performance.now(); requestAnimationFrame(this.loop); }
 }
 
+/* Topbar almanac: date + moon phase */
+function mountAlmanac(){
+  const dateEl = document.getElementById('almanac-date');
+  const moonEl = document.getElementById('almanac-moon');
+  if (!dateEl) return;
+  const MOONS = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+  const SYNODIC = 29.53058867;
+  const KNOWN_NEW = Date.UTC(2000, 0, 6, 18, 14); // new moon, 2000-01-06
+  const tick = () => {
+    const now = new Date();
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    dateEl.textContent = `${String(now.getDate()).padStart(2,'0')} ${months[now.getMonth()]} · ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    if (moonEl){
+      const phase = (((now.getTime() - KNOWN_NEW) / 86400000) % SYNODIC) / SYNODIC;
+      moonEl.textContent = MOONS[Math.round(phase * 8) % 8];
+    }
+  };
+  tick();
+  setInterval(tick, 30000);
+}
+
 class ProjectManager {
   constructor(){
     this.projects = {
       wmf: {
         name: 'WMF', sub: 'Württembergische Metallwarenfabrik',
         tools: [
-          { label: 'Tome I · The Vault',         title: 'VB Code Vault',       desc: 'Store, search &amp; conjure VB/VBA spells. Syntax-illuminated, synced to the cloud.', href: 'code.html',      icon: 'vault',     tags: ['VB','VBA','Excel'] },
-          { label: 'Tome II · The Oracle',        title: 'Notes &amp; Lore',    desc: 'Questions, answers &amp; scrolls. Your personal oracle.',                            href: 'qa.html',        icon: 'oracle',    tags: ['Q&amp;A','Notes'] },
-          { label: 'Tome III · Featured Ritual',  title: 'Anmerkung Processor', desc: 'Upload an Excel invoice scroll, choose a forwarder, and auto-fill the Anmerkung column. Pure browser alchemy.', href: 'anmerkung.html', icon: 'alchemist', tags: ['Dachser','K+N','DHL','Wackler'], wide: true },
-          { label: 'Tome IV · The Ledger',        title: 'Task Ledger',         desc: 'Track open tasks across forwarders. Log totals, notes &amp; status.',                 href: 'todo.html',      icon: 'ledger',    tags: ['Tasks','Tracking'] }
+          { num: 'I',   epithet: 'The Vault',       title: 'VB Code Vault',       desc: 'Store, search &amp; conjure VB/VBA spells. Syntax-illuminated, synced to the cloud.', href: 'code.html',      icon: 'vault',     tags: ['VB','VBA','Excel'] },
+          { num: 'II',  epithet: 'The Oracle',      title: 'Notes &amp; Lore',    desc: 'Questions, answers &amp; scrolls. Your personal oracle.',                            href: 'qa.html',        icon: 'oracle',    tags: ['Q&amp;A','Notes'] },
+          { num: 'III', epithet: 'Featured Ritual', title: 'Anmerkung Processor', desc: 'Upload an Excel invoice scroll, choose a forwarder, and auto-fill the Anmerkung column. Pure browser alchemy.', href: 'anmerkung.html', icon: 'alchemist', tags: ['Dachser','K+N','DHL','Wackler'], wide: true },
+          { num: 'IV',  epithet: 'The Ledger',      title: 'Task Ledger',         desc: 'Track open tasks across forwarders. Log totals, notes &amp; status.',                 href: 'todo.html',      icon: 'ledger',    tags: ['Tasks','Tracking'] }
         ]
       },
       siemens: {
         name: 'Siemens GP', sub: 'General Procurement',
         tools: [
-          { label: 'Tome I · The Oracle',    title: 'GP Knowledge Base', desc: 'Process knowledge base · Procurement rites &amp; guidelines.',                                              href: 'qa-siemens.html',            icon: 'oracle',   tags: ['Q&amp;A','Process'] },
-          { label: 'Tome II · The Scribe',   title: 'Standard Wording',  desc: 'A searchable library of pre-written phrases. Click any entry to copy instantly.',                            href: 'standard-wording.html',      icon: 'scribe',   tags: ['Phrases','Templates'] },
-          { label: 'Tome III · The Reviewer',title: 'Task Reviewer',     desc: 'Per-person daily reviews. Auto-scored with grades and a Friday digest.',                                    href: 'task-reviewer-siemens.html', icon: 'reviewer', tags: ['Scoring','People'] },
-          { label: 'Tome IV · The Splitter', title: 'File Splitter',     desc: 'Upload an Excel file, add names, and get equal row portions per person &mdash; shuffled &amp; ready to download.', href: 'File_splitter.html',         icon: 'splitter', tags: ['Excel','Split'] }
+          { num: 'I',   epithet: 'The Oracle',   title: 'GP Knowledge Base', desc: 'Process knowledge base · Procurement rites &amp; guidelines.',                                              href: 'qa-siemens.html',            icon: 'oracle',   tags: ['Q&amp;A','Process'] },
+          { num: 'II',  epithet: 'The Scribe',   title: 'Standard Wording',  desc: 'A searchable library of pre-written phrases. Click any entry to copy instantly.',                            href: 'standard-wording.html',      icon: 'scribe',   tags: ['Phrases','Templates'] },
+          { num: 'III', epithet: 'The Reviewer', title: 'Task Reviewer',     desc: 'Per-person daily reviews. Auto-scored with grades and a Friday digest.',                                    href: 'task-reviewer-siemens.html', icon: 'reviewer', tags: ['Scoring','People'] },
+          { num: 'IV',  epithet: 'The Splitter', title: 'File Splitter',     desc: 'Upload an Excel file, add names, and get equal row portions per person &mdash; shuffled &amp; ready to download.', href: 'File_splitter.html',         icon: 'splitter', tags: ['Excel','Split'] }
         ]
       }
     };
 
     this.el = {
-      segWmf: document.getElementById('seg-wmf'),
-      segSiemens: document.getElementById('seg-siemens'),
-      empty: document.getElementById('empty-state'),
-      banner: document.getElementById('banner'),
-      bannerName: document.getElementById('banner-name'),
-      bannerSub: document.getElementById('banner-sub'),
+      segs: Array.from(document.querySelectorAll('.seg[data-project]')),
+      choice: document.getElementById('choice'),
+      bar: document.getElementById('proj-bar'),
+      barName: document.getElementById('proj-name'),
+      barSub: document.getElementById('proj-sub'),
       btnReset: document.getElementById('btn-reset'),
       grid: document.getElementById('grid'),
       count: document.getElementById('tools-count'),
@@ -430,13 +593,16 @@ class ProjectManager {
     };
 
     this.active = null;
-    window.selectProject = (key) => this.select(key);
+    this.finePointer = window.matchMedia('(pointer: fine)').matches;
     this.bind();
-    this.spotlight();
+    this.enchant(document.querySelectorAll('.chronicle, .seal'));
     this.restore();
   }
 
   bind(){
+    document.querySelectorAll('[data-project]').forEach((btn) => {
+      btn.addEventListener('click', () => this.select(btn.dataset.project));
+    });
     this.el.btnReset?.addEventListener('click', () => this.clear());
     document.addEventListener('keydown', (e) => {
       const tag = (e.target?.tagName || '').toLowerCase();
@@ -448,26 +614,37 @@ class ProjectManager {
     });
   }
 
-  /* Mouse-follow spotlight on interactive surfaces */
-  spotlight(){
-    document.addEventListener('mousemove', (e) => {
-      const cards = document.querySelectorAll('.card, .chronicle');
-      for (const c of cards){
-        if (!c.offsetParent) continue;
-        const r = c.getBoundingClientRect();
-        c.style.setProperty('--mx', `${e.clientX - r.left}px`);
-        c.style.setProperty('--my', `${e.clientY - r.top}px`);
-      }
+  /* Mouse-follow spotlight (+ gentle 3D tilt on tomes) */
+  enchant(nodes){
+    if (!this.finePointer) return;
+    nodes.forEach((el) => {
+      const tilts = el.classList.contains('card') && !REDUCED;
+      el.addEventListener('pointermove', (e) => {
+        const r = el.getBoundingClientRect();
+        const x = e.clientX - r.left, y = e.clientY - r.top;
+        el.style.setProperty('--mx', `${x}px`);
+        el.style.setProperty('--my', `${y}px`);
+        if (tilts){
+          el.style.setProperty('--ry', `${((x / r.width) - 0.5) * 5}deg`);
+          el.style.setProperty('--rx', `${(0.5 - (y / r.height)) * 5}deg`);
+        }
+      });
+      el.addEventListener('pointerleave', () => {
+        el.style.setProperty('--rx', '0deg');
+        el.style.setProperty('--ry', '0deg');
+      });
     });
   }
 
   renderGrid(proj){
     const html = proj.tools.map((t) => `
       <a href="${t.href}" class="card${t.wide ? ' span-2' : ''}">
+        <span class="cnum" aria-hidden="true">${t.num}</span>
+        <span class="corners" aria-hidden="true"></span>
         <div class="card-top">
           <span class="card-ico"><svg class="ico" aria-hidden="true"><use href="#i-${t.icon}"/></svg></span>
           <div>
-            <div class="clabel">${t.label}</div>
+            <div class="clabel">Tome ${t.num} &middot; ${t.epithet}</div>
             <div class="ctitle">${t.title}</div>
           </div>
         </div>
@@ -479,13 +656,13 @@ class ProjectManager {
       </a>`).join('');
 
     this.el.grid.innerHTML = html;
-    // Trigger staggered entrance
     const cards = this.el.grid.querySelectorAll('.card');
     cards.forEach((c, i) => {
       c.style.animationDelay = `${0.05 + i * 0.07}s`;
-      void c.offsetWidth;
+      void c.offsetWidth; // restart entrance animation
       c.classList.add('enter');
     });
+    this.enchant(cards);
     this.el.count.textContent = `${proj.tools.length} tomes`;
   }
 
@@ -494,13 +671,12 @@ class ProjectManager {
     if (!proj) return;
     this.active = key;
 
-    this.el.segWmf?.setAttribute('aria-pressed', String(key === 'wmf'));
-    this.el.segSiemens?.setAttribute('aria-pressed', String(key === 'siemens'));
+    this.el.segs.forEach((s) => s.setAttribute('aria-pressed', String(s.dataset.project === key)));
 
-    this.el.empty.hidden = true;
-    this.el.banner.hidden = false;
-    this.el.bannerName.textContent = proj.name;
-    this.el.bannerSub.textContent = proj.sub;
+    this.el.choice.hidden = true;
+    this.el.bar.hidden = false;
+    this.el.barName.textContent = proj.name;
+    this.el.barSub.textContent = proj.sub;
 
     this.renderGrid(proj);
 
@@ -509,7 +685,7 @@ class ProjectManager {
 
     if (!silent){
       setTimeout(() => {
-        const y = this.el.banner.getBoundingClientRect().top + window.scrollY - 90;
+        const y = this.el.bar.getBoundingClientRect().top + window.scrollY - 90;
         window.scrollTo({ top: y, behavior: 'smooth' });
       }, 80);
     }
@@ -517,12 +693,11 @@ class ProjectManager {
 
   clear(){
     this.active = null;
-    this.el.segWmf?.setAttribute('aria-pressed', 'false');
-    this.el.segSiemens?.setAttribute('aria-pressed', 'false');
-    this.el.banner.hidden = true;
+    this.el.segs.forEach((s) => s.setAttribute('aria-pressed', 'false'));
+    this.el.bar.hidden = true;
     this.el.grid.innerHTML = '';
     this.el.count.textContent = '';
-    this.el.empty.hidden = false;
+    this.el.choice.hidden = false;
     try { localStorage.removeItem('grimoire.project'); } catch (e) { /* noop */ }
     if (this.el.live) this.el.live.textContent = 'Project cleared. Choose a project to reveal its tomes.';
   }
@@ -536,8 +711,9 @@ class ProjectManager {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  new RuneEngine('bg');
+  new AetherEngine('bg');
   new ProjectManager();
+  mountAlmanac();
 
   // Footer links from the shared Nav registry (single source of truth)
   const footer = document.getElementById('footer-links');
