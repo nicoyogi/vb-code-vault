@@ -1,6 +1,28 @@
 {
-  "version": "1.21.0",
+  "version": "1.23.0",
   "entries": [
+    {
+      "ver": "1.23.0",
+      "date": "2026-06-10",
+      "items": [
+        "AI Bundle — new summary.json: the training corpus is pre-aggregated into failure patterns, one per (forwarder × engine_missing/extra_phrase_keys) combination, sorted by row count. Each pattern carries a suggested_action (add_or_loosen_branch / guard_or_tighten_branch / fix_both), the label distribution, up to 5 example_row_uids to pull full records from training.jsonl, shared_inputs (cell values identical on EVERY failing row — prime gate-signal candidates) and varying_inputs (present everywhere but differing — must not become gate conditions). Rows the current engine already solves are counted in engine_solved and excluded from patterns, making them an explicit regression set. This does the documented rule-update workflow's step 1 (grouping) up front, so a context-limited AI assistant can prioritise without walking every JSONL record.",
+        "AI Bundle — new prompt.md: the ready-to-paste prompt the bundle intro always promised but the README only paraphrased. It encodes the authoritative-field rule (engine_* over A-vs-B), the pattern-first workflow, the engine constraints (PHRASES catalog + join(), hasErr thresholds, don't regress solved rows), and the expected output shape (diagnosis → patch → covered row_uids), with the live pattern counts and top-3 patterns interpolated.",
+        "Training exports — records are now sorted deterministically (forwarder → source pair → sheet → row) in buildTrainingSet, so training.jsonl / Training Set CSV from successive runs of the same corpus are diffable line-for-line regardless of workbook sheet order or bulk pair order.",
+        "AI Bundle — README.md gained a 'Start with summary.json' step and the new file inventory; the export log line now reports pattern counts (actionable vs already-solved); the button tooltip lists the new contents.",
+        "Tests — buildTrainingSummary coverage: pattern grouping with solved-row exclusion, shared vs varying input derivation, a_vs_b fallback when the engine was not evaluated, count-descending order and fix_both action. Full suite: 92 passing."
+      ]
+    },
+    {
+      "ver": "1.22.0",
+      "date": "2026-06-10",
+      "items": [
+        "Diff Mode — per-phrase highlighting in the table's Before (A) / After (B) columns. The Anmerkung cell is a ' // '-joined list of independent phrases, and previously the WHOLE Before cell was struck through red and the whole After cell rendered green even when only one phrase out of several differed. Now each phrase renders on its own: phrases both sides agree on stay neutral, a phrase only A has (over-fired) is struck through red, and a phrase only B has (missed) is green — so on multi-phrase rows the one disagreeing phrase is visible at a glance without opening the detail drawer. Powered by the row's existing missing_phrases/extra_phrases buckets (new phraseCellParts helper), so the table now agrees exactly with the phrase-diff block and the exports.",
+        "Diff Mode — the table's hard 500-row render cap is now a pager: the footer grew a \"show 500 more\" button that extends the table page by page instead of forcing a filter. The cap snaps back to one page whenever the filter state changes or a new Train & Compare runs, so a deep scroll never leaks into an unrelated view. Exports are unaffected — they always honored the full filter scope, not the render cap.",
+        "Diff Mode — the four classic summary tiles (total / added / removed / changed) are now clickable filter shortcuts, consistent with the training chips: added filters to missed, removed to overfired, changed to wrong, and total rows back to all. The active tile is highlighted and kept in sync with the chips (aria-pressed included).",
+        "Diff Mode — fixed the Forwarder / Sheet filter dropdowns, which never actually filtered: the inline onchange handler re-rendered the table BEFORE the listener that mirrors the dropdown value into the filter state ran, and the render then wrote the stale value back into the select, silently reverting the user's choice. The free-text search had the same root cause as a one-keystroke lag. refreshDiffView now reads the live control values first (the DOM is the source of truth), and the reverse-sync that caused the revert is gone.",
+        "Tests — added phraseCellParts coverage (changed-phrase flagging, normPhrase case/whitespace-insensitive matching, empty-cell behavior); exposed it from the test harness."
+      ]
+    },
     {
       "ver": "1.21.0",
       "date": "2026-06-05",
@@ -351,7 +373,7 @@
         "Forwarder tiles are now a proper radiogroup — arrow keys and Home/End work.",
         "Offline PWA — install The Alchemist to your machine from Chrome/Edge.",
         "Phrase catalog (PHRASES) extracted — single source of truth for all rule output strings.",
-        "Version badge + \"What\u2019s new\" button in the header."
+        "Version badge + \"What’s new\" button in the header."
       ]
     },
     {
