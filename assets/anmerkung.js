@@ -264,9 +264,26 @@ const P=PHRASES;
    consumer can spot truly unmapped emissions and add a key.
 ══════════════════════════════════════════════════════════ */
 const PHRASES_REVERSE=(function(){
-  const m=new Map();
-  for(const[k,v]of Object.entries(PHRASES))m.set(String(v).toLowerCase().trim(),k);
-  return m;
+  const exact=new Map(),folded=new Map();
+  for(const[k,v]of Object.entries(PHRASES)){
+    /* A catalog value can be COMPOUND — two phrases pre-joined with the
+       ' // ' separator (elevatedRestricted). A diff consumer never sees that
+       joined form: every cell goes through splitTriggers first, so index each
+       half under the same key, or both halves come back as ?:-unmapped.
+       Lookup is two-layered: exact raw string first (lets the case-variant
+       Kontierung?/kontierung? entries resolve to their own keys), then the
+       normPhrase fold (case/whitespace/NFC/dash-noise tolerant — the SAME
+       fold classifyDiff compares with, so two phrases the diff scores equal
+       can never resolve to different keys). First declaration wins on folded
+       ties, matching catalog order. */
+    for(const part of splitTriggers(String(v))){
+      const raw=part.trim();
+      if(raw&&!exact.has(raw))exact.set(raw,k);
+      const f=normPhrase(part);
+      if(f&&!folded.has(f))folded.set(f,k);
+    }
+  }
+  return{exact,folded};
 })();
 
 /* Direct literals emitted by processors but NOT in PHRASES (yet).
@@ -299,9 +316,19 @@ const PHRASE_TEMPLATES=[
    `?:<phrase>` sentinel via phraseKeysFor. */
 function phraseToKey(phrase){
   if(phrase==null)return null;
-  const norm=String(phrase).toLowerCase().trim();
+  const raw=String(phrase).trim();
+  if(!raw)return null;
+  if(PHRASES_REVERSE.exact.has(raw))return PHRASES_REVERSE.exact.get(raw);
+  /* The folded lookup shares normPhrase with classifyDiff / computePhraseDiff,
+     so any two phrases the diff treats as EQUAL resolve to the SAME key — a
+     whitespace-/NFD-/dash-noisy truth cell must not split one failure pattern
+     into two in buildTrainingSummary, nor export a ?: sentinel for a phrase
+     that is in the catalog. (Previously this only lowercased+trimmed, so
+     "Differenz  treibstoff" compared equal in the diff but came out
+     ?:-unmapped here.) */
+  const norm=normPhrase(raw);
   if(!norm)return null;
-  if(PHRASES_REVERSE.has(norm))return PHRASES_REVERSE.get(norm);
+  if(PHRASES_REVERSE.folded.has(norm))return PHRASES_REVERSE.folded.get(norm);
   if(Object.prototype.hasOwnProperty.call(PHRASE_LITERALS,norm))return PHRASE_LITERALS[norm];
   for(const t of PHRASE_TEMPLATES)if(t.regex.test(norm))return t.key;
   return null;
@@ -1257,8 +1284,27 @@ function splitTriggers(s){if(!s)return[];return s.split(/\s*\/\/\s*/).map(x=>x.t
    cells. Folding both out means the phrase diff and the row labels reflect a
    REAL rule disagreement instead of cosmetic formatting noise — historically
    the single biggest source of false `wrong` rows in the exported training
-   data fed to an AI. */
-function normPhrase(p){return String(p==null?'':p).toLowerCase().replace(/\s+/g,' ').trim();}
+   data fed to an AI.
+   Beyond case + whitespace, three invisible-noise folds (all seen in
+   hand-edited Excel truth cells, all previously mislabeling a row `wrong`
+   although the visible text is identical):
+     • Unicode NFC — macOS-edited cells often carry umlauts decomposed (NFD:
+       "u" + combining diaeresis), which never byte-equals the engine's
+       precomposed "ü".
+     • zero-width chars — ZWSP/ZWNJ/ZWJ (U+200B–D), soft hyphen (U+00AD) and
+       a stray BOM (U+FEFF) survive copy-paste invisibly.
+     • dash variants — autocorrected en/em dashes (U+2010–U+2015, U+2212)
+       fold to the ASCII hyphen the catalog uses.
+   (NBSP needs no special case: JS \s already matches U+00A0.) */
+function normPhrase(p){
+  return String(p==null?'':p)
+    .normalize('NFC')
+    .replace(/[\u00ad\u200b-\u200d\ufeff]/g,'')
+    .replace(/[\u2010-\u2015\u2212]/g,'-')
+    .toLowerCase()
+    .replace(/\s+/g,' ')
+    .trim();
+}
 /* Order-insensitive set equality of two phrase lists under normPhrase.
    The Anmerkung column is a list of independent rule outputs, so the order
    they were emitted in does not change correctness. */
@@ -1859,15 +1905,25 @@ function phraseCellParts(raw,changedList){
    - phrase_superset: every B-phrase appears in A, A has more (engine OVER-fired)
    - phrase_overlap: both sides have unique phrases AND share at least one
    - phrase_disjoint: no shared phrases
-   - missed_full   : A empty, B non-empty (lifted from top-level label)
-   - overfired_full: A non-empty, B empty (lifted from top-level label) */
+   - missed_full   : A has no phrases, B has phrases (lifted from top-level label)
+   - overfired_full: A has phrases, B has none (lifted from top-level label) */
 function granularLabel(beforeRaw,afterRaw,pd){
   const a=(beforeRaw||'').trim(), b=(afterRaw||'').trim();
   if(a===b)return a===''?'empty_match':'exact_match';
-  if(a===''&&b!=='')return 'missed_full';
-  if(a!==''&&b==='')return 'overfired_full';
-  if(a.toLowerCase()===b.toLowerCase())return 'case_only';
-  if(a.replace(/\s+/g,'')===b.replace(/\s+/g,''))return 'whitespace';
+  /* Emptiness is PHRASE-level (splitTriggers), matching classifyDiff: a cell
+     holding only separator/whitespace garbage (' // ') has no phrases, so it
+     must land in the same empty bucket classifyDiff put it in. The raw-trim
+     check this used to do sub-labeled such a row overfired_full while the
+     top-level label said `correct` — a contradictory training signal. */
+  const nA=pd.predicted_phrases.length, nB=pd.expected_phrases.length;
+  if(nA===0&&nB===0)return 'empty_match';
+  if(nA===0)return 'missed_full';
+  if(nB===0)return 'overfired_full';
+  /* Cosmetic checks fold through NFC so a decomposed-umlaut truth cell of the
+     same visible text stays in the match family instead of falling through. */
+  const ca=a.normalize('NFC'), cb=b.normalize('NFC');
+  if(ca.toLowerCase()===cb.toLowerCase())return 'case_only';
+  if(ca.replace(/\s+/g,'')===cb.replace(/\s+/g,''))return 'whitespace';
   const m=pd.missing_phrases.length, x=pd.extra_phrases.length, c=pd.common_phrases.length;
   /* No missing AND no extra phrases ⇒ identical phrase sets that the flat
      string checks above didn't catch — i.e. emitted in a different order

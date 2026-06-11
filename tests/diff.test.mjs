@@ -266,3 +266,91 @@ test('buildTrainingSummary: patterns sorted by count desc; fix_both action', () 
   assert.equal(s.patterns[0].suggested_action, 'fix_both');
   assert.deepStrictEqual({ ...s.by_engine_label }, { missed: 1, wrong: 2 });
 });
+
+/* ── normalization hardening — invisible encoding/formatting noise in
+   hand-edited truth cells must NEVER create a false training label ── */
+
+test('classifyDiff: Unicode NFC vs NFD forms of the same text are correct', () => {
+  const nfc = 'Differenz Telefonische Zustellankündigung - Laderaumzuschlag'.normalize('NFC');
+  const nfd = nfc.normalize('NFD');
+  assert.notEqual(nfc, nfd, 'precondition: the raw strings differ byte-wise');
+  assert.equal(e.classifyDiff(nfc, nfd), 'correct');
+});
+
+test('classifyDiff: zero-width / soft-hyphen / NBSP noise is not a rule disagreement', () => {
+  assert.equal(e.classifyDiff('Mautdifferenz', 'Maut\u200bdifferenz'), 'correct', 'zero-width space');
+  assert.equal(e.classifyDiff('Mautdifferenz', 'Maut\u00addifferenz'), 'correct', 'soft hyphen');
+  assert.equal(e.classifyDiff('Differenz treibstoff', 'Differenz\u00a0treibstoff'), 'correct', 'NBSP');
+});
+
+test('classifyDiff: en/em-dash variants fold to the ASCII hyphen', () => {
+  assert.equal(e.classifyDiff('Termin-zuschlag', 'Termin–zuschlag'), 'correct', 'en dash');
+  assert.equal(e.classifyDiff('Termin-zuschlag', 'Termin—zuschlag'), 'correct', 'em dash');
+});
+
+test('classifyDiff: separator-only cells count as empty', () => {
+  assert.equal(e.classifyDiff(' // ', ''), 'correct', 'garbage vs empty is an empty-set match');
+  assert.equal(e.classifyDiff('//', 'x'), 'missed', 'garbage vs filled is a full miss');
+});
+
+test('granularLabel: separator-only cells agree with classifyDiff', () => {
+  const g = (a, b) => e.granularLabel(a, b, e.computePhraseDiff(a, b));
+  assert.equal(g(' // ', ''), 'empty_match', 'top label is correct — granular must not say overfired_full');
+  assert.equal(g('', ' // '), 'empty_match');
+  assert.equal(g(' // ', 'x'), 'missed_full');
+  assert.equal(g('x', ' // '), 'overfired_full');
+});
+
+test('granularLabel: NFC/NFD pair of the same visible text lands in the match family', () => {
+  const nfc = 'Gebühr für vergeblichen Abholversuch'.normalize('NFC');
+  const nfd = nfc.normalize('NFD');
+  const lbl = e.granularLabel(nfc, nfd, e.computePhraseDiff(nfc, nfd));
+  assert.ok(['case_only', 'whitespace', 'reordered'].includes(lbl),
+    'must be a cosmetic match label, was: ' + lbl);
+});
+
+/* ── phraseToKey / phraseKeysFor — key resolution must share normPhrase
+   semantics with the diff, or noisy catalog phrases export as ?: sentinels
+   and split one failure pattern into two in buildTrainingSummary ── */
+
+test('phraseToKey: whitespace / case / unicode noise still resolves to the catalog key', () => {
+  assert.equal(e.phraseToKey('Differenz  treibstoff'), 'treibstoff', 'double space');
+  assert.equal(e.phraseToKey('  MAUTDIFFERENZ '), 'mautDiff', 'case + padding');
+  const nfd = 'Differenz Telefonische Zustellankündigung - Laderaumzuschlag'.normalize('NFD');
+  assert.equal(e.phraseToKey(nfd), 'snkTelAnk', 'NFD umlauts');
+  assert.equal(e.phraseToKey('Termin–zuschlag'), 'terminZuschlag', 'en dash');
+});
+
+test('phraseToKey: compound catalog phrases resolve per ' + "' // '" + ' half', () => {
+  assert.equal(e.phraseToKey('Eelevated risk ok?'), 'elevatedRestricted');
+  assert.equal(e.phraseToKey('Restricted destination ok?'), 'elevatedRestricted');
+});
+
+test('phraseToKey: exact-case match wins over the case-folded Kontierung collision', () => {
+  assert.equal(e.phraseToKey('Kontierung?'), 'kontierungQ', 'K+N casing');
+  assert.equal(e.phraseToKey('kontierung?'), 'kontierungLower', 'DHL casing');
+});
+
+test('phraseToKey: legacy literals and templates still resolve through the fold', () => {
+  assert.equal(e.phraseToKey('DifferenzTreibstof'), 'lit_differenzTreibstofWackler', 'glued legacy literal');
+  assert.equal(e.phraseToKey('Differenz aufgrund abweichender Zwischenempfänger 12345 Berlin'), 'zwPrefix', 'template');
+});
+
+test('phraseKeysFor: no ?: sentinel for noisy catalog phrases', () => {
+  assert.deepStrictEqual(A(e.phraseKeysFor(['Differenz  Treibstoff'])), ['treibstoff']);
+  assert.deepStrictEqual(A(e.phraseKeysFor(['totally unknown phrase'])), ['?:totally unknown phrase'],
+    'genuinely unmapped phrases still surface as sentinels');
+});
+
+test('PHRASES catalog: normPhrase folding never merges two distinct branches (known exception: Kontierung case pair)', () => {
+  const seen = new Map(); const collisions = [];
+  for (const [k, v] of Object.entries(e.PHRASES)) {
+    for (const part of String(v).split(/\s*\/\/\s*/).map((s) => s.trim()).filter(Boolean)) {
+      const f = e.normPhrase(part);
+      if (seen.has(f) && seen.get(f) !== k) collisions.push(f);
+      else seen.set(f, k);
+    }
+  }
+  assert.deepStrictEqual(collisions, ['kontierung?'],
+    'a new catalog entry must not case/whitespace/dash-fold onto an existing branch — that would make two rule outputs indistinguishable to the diff');
+});
