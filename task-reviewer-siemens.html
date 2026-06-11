@@ -1,5 +1,5 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-grim="task-reviewer" data-grim-cards=".person-card,.stat-card">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +7,7 @@
   <title>Siemens GP · Task Reviewer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;500;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/grimoire-core.css">
   <script src="assets/grimoire-core.js"></script>
   <style>
@@ -328,6 +328,8 @@
       .week-nav .week-label { min-width: 160px; }
     }
   </style>
+<link rel="stylesheet" href="assets/grimoire-theme.css">
+  <script src="assets/grimoire-theme.js" defer></script>
 </head>
 <body>
 
@@ -625,7 +627,7 @@ let digestSending = false;
 /* ── Theme (light default, dark via .dark) — mirrors qa-siemens.html ── */
 function initTheme() {
   Grimoire.Theme.init({
-    defaultMode:'light', mode:'dark', className:'dark',
+    defaultMode:'dark', mode:'dark', className:'dark',
     iconEl:'#theme-icon', labelEl:'#theme-label',
     icons:{light:'☀️', dark:'🌙'},
     labels:{light:'Light', dark:'Dark'}
