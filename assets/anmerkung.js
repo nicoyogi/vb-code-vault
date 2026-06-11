@@ -642,40 +642,43 @@ function processDachser(ws,r,cols){
     else if(sachkonto.toUpperCase()==='X')res=join(res,'VORHOLUNG');
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
     else if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
-    /* Negative FR with no special flags (no ZW, no Vorholung, no Sonderfahrt, single
-       shipment). The audit splits these along magnitude: a small-magnitude negative
-       FR (just above the rounding threshold) is a Frachtzu/abschlag — a freight
-       surcharge/credit adjustment (training row 357: FR=-0.09 → expected
-       "Differenz Frachtzu/ abschlag" alongside other triggers). A large-magnitude
-       FR is a real freight discrepancy that falls through to the weight-deviation
-       wording (training row 241: FR=-26.24, no VKG → expected
-       "Differenz aufgrund von abweichendem Gewicht", NOT Frachtzu/abschlag). The
-       1.0-EUR cutoff sits comfortably between the two observed cases (0.09 vs 26.24). */
-    else if(frVal<0&&Math.abs(frVal)<1.0)res=join(res,'Differenz Frachtzu/ abschlag');
     else {
-      /* Weight-tier guard, consistent with the K+N and Wackler engines. When
-         `Volumen kg` and `Volumen kg DL` are both populated AND fall into
-         DIFFERENT Dachser tariff buckets (DACHSER_BP), the FR delta is a real
-         weight miscalc → plural "Differenz aufgrund abweichender Gewichte".
-         When they stay in the same bucket (or one of the volumes is missing /
-         non-positive — e.g. dummy-zero rows where the auditor doesn't attribute
-         the gap to weight at all), the row falls through to the legacy singular
-         "Differenz aufgrund von abweichendem Gewicht". Tier table is
-         `DACHSER_BP` above — sourced from the data/Dachser-weight.xlsx rate
-         card.
+      /* No special flag (ZW / Vorholung / Sonderfahrt / bundling). Classify the
+         FR delta against the audit (`Volumen kg`) vs DL (`Volumen kg DL`) weights.
+         Tier table is `DACHSER_BP` above — sourced from the data/Dachser-weight.xlsx
+         rate card; mirrors the K+N / Wackler weight-tier guards.
 
-         Trade-off note: training row 346 (VKG=54, VKG_DL=40) crosses the 50/100
-         bracket boundary so this rule labels it plural; the auditor labeled it
-         singular. Choosing tier-crossing here mirrors the K+N / Wackler
-         behavior and keeps the three forwarder engines consistent — the row 346
-         label is treated as a one-off auditor variation. */
+           both weights known & EQUAL  → emit NOTHING. There is no weight
+               discrepancy, so the residual FR gap is rounding noise (sub-EUR) or
+               a manual adjustment the auditor annotates by hand — attaching a
+               weight/Frachtzu phrase over-fires. (bundle 2026-06-11 rows 276/277/
+               278: FR=-0.09, VKG==VKG_DL → truth carries no Frachtzu/abschlag;
+               row 269: FR=134.91, VKG==VKG_DL → truth carries no abweich.Gewicht.)
+           both weights known & DIFFER → genuine weight miscalc. Crossing a
+               DACHSER_BP bucket → plural "abweichender Gewichte"; staying in the
+               same bucket → singular "abweichendem Gewicht".
+           weight basis missing (one or both volumes 0/blank) → the gap can't be
+               attributed to weight:
+                 · negative FR → freight surcharge/discount "Differenz Frachtzu/
+                   abschlag". Covers both the sub-EUR legacy case (FR=-0.09, no
+                   weights) and large credits where only the DL weight was recorded
+                   (bundle row 163: FR=-31.65, VKG=0, VKG_DL=2313).
+                 · positive FR → legacy singular weight wording (no usable tier
+                   basis — preserves the FR=+26.24 / no-VKG behaviour). */
       const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
       const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
-      const tiersKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
-      const crossTier=tiersKnown&&(dachserGetTier(v1)!==dachserGetTier(v2));
-      res=join(res, crossTier
-        ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
-        : 'Differenz aufgrund von abweichendem Gewicht'); /* singular — same tier or weights unknown */
+      const bothKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
+      if(bothKnown&&v1===v2){
+        /* weights identical — no discrepancy, emit nothing */
+      }else if(bothKnown){
+        res=join(res, (dachserGetTier(v1)!==dachserGetTier(v2))
+          ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
+          : 'Differenz aufgrund von abweichendem Gewicht'); /* singular — same tier, real diff */
+      }else if(frVal<0&&(Math.abs(frVal)<1.0||v2>0)){
+        res=join(res,'Differenz Frachtzu/ abschlag');
+      }else{
+        res=join(res,'Differenz aufgrund von abweichendem Gewicht'); /* legacy fallback — weights unknown */
+      }
     }
   }
   if(cols.snk_dl>=0&&cellNum(ws,r,cols.snk_dl)===14&&cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))
