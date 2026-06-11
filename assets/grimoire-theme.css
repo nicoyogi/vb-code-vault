@@ -1,0 +1,287 @@
+/* ──────────────────────────────────────────────────────────
+   Grimoire Theme — the index.html design language as a skin.
+   Load LAST on every page (after the page's own styles).
+   Pages opt in by setting  <html data-grim="<page-id>">.
+   Companion script: assets/grimoire-theme.js
+   ────────────────────────────────────────────────────────── */
+
+:root {
+  /* Canon palette (mirrors index.html) */
+  --gr-bg: #050509;
+  --gr-bg-soft: #0b0b16;
+  --gr-ink: #f3efe3;
+  --gr-muted: rgba(243, 239, 227, 0.62);
+  --gr-faint: rgba(243, 239, 227, 0.38);
+
+  --gr-gold: #d8b56e;
+  --gr-gold-2: #f0dca6;
+  --gr-gold-dim: rgba(216, 181, 110, 0.55);
+  --gr-gold-soft: rgba(216, 181, 110, 0.28);
+  --gr-gold-faint: rgba(216, 181, 110, 0.10);
+  --gr-violet: rgba(110, 80, 200, 0.30);
+  --gr-violet-solid: #8b6ce0;
+
+  --gr-glass: rgba(18, 18, 28, 0.48);
+  --gr-glass-2: rgba(34, 30, 52, 0.64);
+  --gr-line: rgba(216, 181, 110, 0.18);
+  --gr-line-soft: rgba(243, 239, 227, 0.08);
+
+  --gr-display: 'Cinzel', serif;
+  --gr-body: 'Syne', sans-serif;
+  --gr-mono: 'DM Mono', monospace;
+
+  --gr-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ── Shared keyframes ────────────────────────────────────── */
+@keyframes grDrift { 0% { transform: scale(1) translate(0, 0); } 100% { transform: scale(1.12) translate(-2%, 2%); } }
+@keyframes grSpin { to { transform: rotate(360deg); } }
+@keyframes grShimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+@keyframes grPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.7); } }
+@keyframes grRise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes grPageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Whole-page entrance — CSS only, so there is never a flash. */
+html[data-grim] body { animation: grPageIn 0.65s var(--gr-ease) both; }
+
+/* The oversized aurora must never widen the scroll area. */
+html[data-grim], html[data-grim] body { overflow-x: hidden; }
+
+/* ── Injected ambient layers (created by grimoire-theme.js) ── */
+.gr-aurora {
+  position: fixed; inset: -50%; z-index: -2; pointer-events: none; opacity: 0.75;
+  background:
+    radial-gradient(circle at 22% 16%, var(--gr-violet) 0%, transparent 38%),
+    radial-gradient(circle at 84% 6%, var(--gr-gold-faint) 0%, transparent 32%),
+    radial-gradient(circle at 60% 105%, rgba(60, 40, 120, 0.22) 0%, transparent 50%);
+  animation: grDrift 26s ease-in-out infinite alternate;
+}
+canvas.gr-aether { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5; }
+.gr-grain {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;
+  background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)"/%3E%3C/svg%3E');
+}
+.gr-vignette {
+  position: fixed; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 30%, transparent 55%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+/* Scroll progress — thin gold filament along the top edge */
+.gr-progress {
+  position: fixed; top: 0; left: 0; height: 2px; width: 0; z-index: 9000; pointer-events: none;
+  background: linear-gradient(90deg, var(--gr-gold-dim), var(--gr-gold) 60%, var(--gr-gold-2));
+  box-shadow: 0 0 10px rgba(216, 181, 110, 0.55);
+  transition: width 0.12s linear;
+}
+
+/* Departure veil — fades in just before navigating away */
+.gr-veil {
+  position: fixed; inset: 0; z-index: 99999; pointer-events: none;
+  background: var(--gr-bg); opacity: 0;
+  transition: opacity 0.24s ease;
+}
+.gr-veil.on { opacity: 1; }
+
+/* ── Scroll reveal (applied by JS — content stays visible without it) ── */
+html[data-grim] .gr-r {
+  opacity: 0;
+  transform: translateY(22px) scale(0.985);
+  filter: blur(7px);
+  transition:
+    opacity 0.7s var(--gr-ease),
+    transform 0.7s var(--gr-ease),
+    filter 0.7s var(--gr-ease);
+  transition-delay: var(--gr-stagger, 0s);
+}
+html[data-grim] .gr-r.gr-in { opacity: 1; transform: none; filter: none; }
+
+/* ── Mouse-follow spotlight layer (injected into hovered cards) ── */
+html[data-grim] .gr-spot-host { position: relative; }
+.gr-glow {
+  position: absolute; inset: 0; z-index: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(620px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.07), transparent 42%);
+  opacity: 0; transition: opacity 0.45s ease;
+}
+.gr-lit > .gr-glow { opacity: 1; }
+.gr-lit { will-change: transform; }
+
+/* Click sparks (gold dust burst) */
+.gr-spark {
+  position: fixed; z-index: 99990; pointer-events: none;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gr-gold-2);
+  box-shadow: 0 0 8px var(--gr-gold);
+}
+
+/* ── Site-wide chrome polish ─────────────────────────────── */
+html[data-grim] ::selection { background: rgba(216, 181, 110, 0.28); color: #fff; }
+html[data-grim] ::-webkit-scrollbar { width: 11px; height: 11px; }
+html[data-grim] ::-webkit-scrollbar-track { background: transparent; }
+html[data-grim] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(216, 181, 110, 0.34), rgba(110, 80, 200, 0.3));
+  border-radius: 8px; border: 3px solid rgba(5, 5, 9, 0.9);
+}
+html[data-grim] ::-webkit-scrollbar-thumb:hover { background: var(--gr-gold-dim); }
+
+/* Gold shimmer for the established page-title patterns */
+html[data-grim] .page-title .grad,
+html[data-grim] .pt-main {
+  background: linear-gradient(135deg, #f3e7c8 0%, var(--gr-gold) 22%, #ffffff 50%, var(--gr-gold) 78%, #8b6b27 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 4px 30px rgba(216, 181, 110, 0.25);
+  animation: grShimmer 9s linear infinite;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Per-page token remaps — bring bespoke palettes into canon.
+   Scoped by html[data-grim="…"], loaded after page styles.
+   ────────────────────────────────────────────────────────── */
+
+/* ── Siemens twins: qa-siemens + task-reviewer ─────────────
+   These pages treat the absence of .dark as "light", so canon
+   dark binds to .dark and parchment to :not(.dark). Their
+   Theme.init defaultMode is flipped to dark in the pages. */
+html.dark[data-grim="qa-siemens"],
+html.dark[data-grim="task-reviewer"] {
+  --bg: var(--gr-bg);
+  --bg2: var(--gr-bg-soft);
+  --surface: rgba(18, 18, 28, 0.72);
+  --surface2: rgba(34, 30, 52, 0.78);
+  --border: var(--gr-line);
+  --border2: rgba(216, 181, 110, 0.34);
+  --text: var(--gr-ink);
+  --text2: var(--gr-muted);
+  --text3: var(--gr-faint);
+  --accent: var(--gr-violet-solid);
+  --accent2: #a78bfa;
+  --accent-light: rgba(139, 108, 224, 0.12);
+  --accent-mid: rgba(139, 108, 224, 0.22);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  --shadow-lg: 0 20px 44px rgba(0, 0, 0, 0.55), 0 0 28px rgba(110, 80, 200, 0.3);
+  --grotesk: 'Cinzel', serif;
+  --ibm-sans: 'Syne', sans-serif;
+  --ibm-mono: 'DM Mono', monospace;
+}
+
+/* ── Standard Wording (GitHub-dark page → canon dark) ────── */
+html[data-grim="wording"] {
+  --bg: var(--gr-bg);
+  --bg2: #0d0d18;
+  --bg3: #11111e;
+  --surface: rgba(22, 22, 34, 0.85);
+  --border: var(--gr-line);
+  --border2: rgba(216, 181, 110, 0.34);
+  --text: var(--gr-ink);
+  --text2: var(--gr-muted);
+  --text3: var(--gr-faint);
+  --accent: var(--gr-violet-solid);
+  --accent2: #a78bfa;
+  --accent-glow: rgba(139, 108, 224, 0.2);
+  --yellow: var(--gr-gold);
+  --yellow-bg: var(--gr-gold-faint);
+  --display: 'Cinzel', serif;
+  --sans: 'Syne', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+
+/* ── File Splitter (lime terminal → gold codex) ──────────── */
+html[data-grim="splitter"] {
+  --bg: var(--gr-bg);
+  --surface: rgba(18, 18, 28, 0.72);
+  --surface2: rgba(34, 30, 52, 0.78);
+  --border: var(--gr-line);
+  --border2: rgba(216, 181, 110, 0.34);
+  --accent: var(--gr-gold);
+  --accent-dim: rgba(216, 181, 110, 0.12);
+  --accent-mid: rgba(216, 181, 110, 0.28);
+  --text: var(--gr-ink);
+  --text2: var(--gr-muted);
+  --text3: var(--gr-faint);
+  --sans: 'Syne', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+
+/* ── Anmerkung presentation deck (blue → gold) ───────────── */
+html[data-grim="presentation"] {
+  --bg: var(--gr-bg);
+  --surface-1: #0e0e1a;
+  --surface-2: #13131f;
+  --surface-3: #1a1a2c;
+  --border: rgba(216, 181, 110, 0.14);
+  --border-strong: rgba(216, 181, 110, 0.32);
+  --text: var(--gr-ink);
+  --text-2: rgba(243, 239, 227, 0.78);
+  --text-3: var(--gr-muted);
+  --text-4: var(--gr-faint);
+  --accent: var(--gr-gold);
+  --accent-2: #c9a35d;
+  --accent-soft: var(--gr-gold-faint);
+  --accent-line: var(--gr-gold-soft);
+  --sans: 'Syne', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+
+/* ── Holiday Tracker / The Chronicle (cyan → gold ramp) ──── */
+html[data-grim="chronicle"] {
+  --bg: var(--gr-bg);
+  --surface: rgba(18, 18, 28, 0.7);
+  --surface2: rgba(30, 28, 46, 0.78);
+  --surface3: rgba(40, 36, 62, 0.82);
+  --border: var(--gr-line);
+  --primary-50: #fdf8ec;
+  --primary-100: #f7ecce;
+  --primary-200: #f0dca6;
+  --primary-300: #e5c98a;
+  --primary-400: #d8b56e;
+  --primary-500: #c9a35d;
+  --primary-600: #b08d4a;
+  --primary-700: #8b6b27;
+  --primary-800: #6e541f;
+  --primary-900: #574218;
+  --font-serif: 'Cinzel', serif;
+}
+
+/* ── Parchment mode (light) for pages that keep a toggle ─── */
+html[data-grim="qa-siemens"]:not(.dark),
+html[data-grim="task-reviewer"]:not(.dark),
+html.light[data-grim="wording"] {
+  --bg: #f1e9d6;
+  --bg2: #f8f2e2;
+  --bg3: #ece2cc;
+  --surface: rgba(252, 248, 238, 0.92);
+  --surface2: #fdf9ef;
+  --border: rgba(139, 107, 39, 0.22);
+  --border2: rgba(139, 107, 39, 0.42);
+  --text: #241c0e;
+  --text2: rgba(36, 28, 14, 0.66);
+  --text3: rgba(36, 28, 14, 0.42);
+  --accent: #6d4fc4;
+  --accent2: #8b6ce0;
+  --accent-light: rgba(109, 79, 196, 0.1);
+  --accent-mid: rgba(109, 79, 196, 0.2);
+  --accent-glow: rgba(109, 79, 196, 0.18);
+  --shadow: 0 1px 3px rgba(80, 60, 20, 0.12), 0 4px 16px rgba(80, 60, 20, 0.06);
+  --shadow-lg: 0 4px 24px rgba(80, 60, 20, 0.16), 0 1px 4px rgba(80, 60, 20, 0.08);
+}
+html.light[data-grim] .gr-aurora,
+html[data-grim="qa-siemens"]:not(.dark) .gr-aurora,
+html[data-grim="task-reviewer"]:not(.dark) .gr-aurora { opacity: 0.3; }
+html.light[data-grim] .gr-vignette,
+html[data-grim="qa-siemens"]:not(.dark) .gr-vignette,
+html[data-grim="task-reviewer"]:not(.dark) .gr-vignette { background: radial-gradient(120% 90% at 50% 30%, transparent 60%, rgba(80, 60, 20, 0.18) 100%); }
+html.light[data-grim] canvas.gr-aether,
+html[data-grim="qa-siemens"]:not(.dark) canvas.gr-aether,
+html[data-grim="task-reviewer"]:not(.dark) canvas.gr-aether { opacity: 0.16; }
+html.light[data-grim] .gr-veil,
+html[data-grim="qa-siemens"]:not(.dark) .gr-veil,
+html[data-grim="task-reviewer"]:not(.dark) .gr-veil { background: #f1e9d6; }
+
+/* Reduced motion: kill the ambient drift outright (core CSS
+   already freezes transitions/animations site-wide). */
+@media (prefers-reduced-motion: reduce) {
+  .gr-aurora { animation: none; }
+  .gr-progress { transition: none; }
+  html[data-grim] body { animation: none; }
+}
