@@ -1,6 +1,17 @@
 {
-  "version": "1.23.0",
+  "version": "1.24.0",
   "entries": [
+    {
+      "ver": "1.24.0",
+      "date": "2026-06-11",
+      "items": [
+        "Diff Mode — phrase-normalisation hardening for clean training labels: normPhrase now folds Unicode to NFC (macOS-edited truth cells often carry decomposed umlauts that byte-compare unequal to the engine's precomposed ones), strips invisible zero-width characters (ZWSP/ZWNJ/ZWJ, soft hyphen, stray BOM) and folds en/em-dash variants to the ASCII hyphen. Each of these previously mislabeled a visibly-identical row as `wrong` — in the tiles, the table, AND every exported training row, the exact false signal an AI rule-fixer must never be fed. classifyDiff, computePhraseDiff, phraseCellParts and samePhraseSet (drift + engine-vs-truth) all share the helper, so the whole labeling pipeline tightened at once.",
+        "Diff Mode — phrase→key resolution now shares normPhrase semantics with the diff itself. phraseToKey previously only lowercased+trimmed, so a double-space/NFD/dash-noisy catalog phrase compared EQUAL in the diff yet exported as an unmapped `?:` sentinel key — and split one failure pattern into two in summary.json. Lookup is now two-layered: exact raw match first (the case-variant `Kontierung?` / `kontierung?` entries resolve to their own keys again instead of last-declared-wins), then the shared normPhrase fold, then literals/templates as before.",
+        "Diff Mode — compound catalog phrases resolve per half: PHRASES.elevatedRestricted is two phrases pre-joined with ' // ', but cells are split by splitTriggers before any key lookup, so neither half ever matched the joined reverse-index entry and DHL rows exported `?:Eelevated risk ok?` / `?:Restricted destination ok?`. The reverse index now indexes each ' // ' half under the same key.",
+        "Diff Mode — granularLabel emptiness is now PHRASE-level, matching classifyDiff: a cell holding only separator garbage (' // ') has no phrases, but the old raw-trim check sub-labeled such a row overfired_full while the top-level label said `correct` (and phrase_disjoint where classifyDiff said `missed`) — a self-contradictory training signal. Both sides garbage → empty_match; garbage vs filled → missed_full / overfired_full. The case/whitespace cosmetic checks fold through NFC too.",
+        "Tests — 12 new cases pin the hardening: NFC/NFD equality, zero-width/soft-hyphen/NBSP/dash noise, separator-only cells (classifyDiff + granularLabel agreement), noisy-phrase key resolution, compound-phrase halves, exact-case Kontierung resolution, legacy glued-literal + template regressions, and a catalog-wide guard that no two PHRASES entries may normPhrase-fold onto each other (known exception: the Kontierung case pair). Harness now exposes the PHRASES catalog. Full suite: 104 passing."
+      ]
+    },
     {
       "ver": "1.23.0",
       "date": "2026-06-10",

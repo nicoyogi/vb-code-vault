@@ -197,6 +197,16 @@ export function loadEngine() {
   engine.encode_cell = encode_cell;
   engine.WACKLER_RATECARD = sandbox.WACKLER_RATECARD || null;
   engine.WACKLER_NATIONAL_RATECARD = sandbox.WACKLER_NATIONAL_RATECARD || null;
+  /* The phrase catalog itself, so tests can guard catalog-wide invariants
+     (e.g. no two entries may normPhrase-fold onto each other). PHRASES is a
+     top-level `const`, which — unlike function declarations — does NOT land
+     on the vm context's global object, so it has to be read back by
+     evaluating inside the context. */
+  try {
+    engine.PHRASES = vm.runInContext('typeof PHRASES === "undefined" ? null : PHRASES', ctx);
+  } catch (err) {
+    engine.PHRASES = null;
+  }
   _engine = engine;
   return engine;
 }
