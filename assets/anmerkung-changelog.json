@@ -1,6 +1,19 @@
 {
-  "version": "1.24.0",
+  "version": "1.25.0",
   "entries": [
+    {
+      "ver": "1.25.0",
+      "date": "2026-06-12",
+      "items": [
+        "Wackler — the \"Wackler rechnet Frachtrate für <tier>kg ab\" note is plain tier wording again: the national-card \"(DEn: … €)\" EUR suffix is gone. AI-bundle 2026-06-12 shows the auditor strips ANY rate-card decoration from this phrase (every ground-truth \"Wackler rechnet\" row — 9ab8df23 / 52fa91df / e3d56631 / 941d66f0 / 169d8baa — carries the bare wording, so the suffix alone labeled otherwise tier-correct rows wrong), exactly as the international-card suffix was rejected earlier. The national rate card stays loaded for the billed-tier re-tiering probe; it just never decorates the phrase.",
+        "Wackler — billed-tier re-tiering (wacklerBilledTier) is now credit-only and adjacent-only. A POSITIVE FR delta never re-tiers: bundle rows 941d66f0/169d8baa (DE4, 174 kg → 200 tier, FR=+12.99) showed the old any-sign all-tier search matching the implied billed rate 42,04−12,99=29,05 to rate(50,DE4)=29,50 within tolerance and reporting a ghost \"für 50kg\" note three tiers below the chargeable weight. Only an FR credit (Wackler billed MORE) that exactly matches the published gap to the NEXT tier up re-tiers the note — the only step the confirmed cases show (e40698ee TR 7000→7500, domestic DE2 150→200).",
+        "Wackler — same-tier equal-weight multi-reference rows now split by COMBINED WEIGHT: at or below 1000 kg (WACKLER_BUENDEL_MAX_KG) the consignments could realistically have ridden one booking and the row classifies as \"hätte gebündelt werden müssen\" (bundle row cf56daaa: 231 kg, 2 refs, DE5); heavier rows keep the \"Wackler rechnet Frachtrate für <tier>kg ab\" tier-billing reading with MT/TZ itemised (bundle row 9ab8df23: 2556 kg, 4 refs, DE6 — consistent with the 2026-06-05 heavy rows 08a0d985 / d97ce4ec / f04300d4).",
+        "Wackler — cross-tier multi-reference rows gain a bundling branch: when the two weights still roughly agree (within 20% of the larger, WACKLER_XTIER_NEAR_BAND) AND the FR delta is positive (system tariff above the bill — the system rated the references separately while Wackler billed them as one), the row classifies as \"hätte gebündelt werden müssen\" instead of \"Differenz aufgrund abweichender Gewichte\" (bundle row 447856d4: 5465,44 vs 6158 kg, 12.7% apart, FR=+65.6). Far-apart weights (2026-06-05 row 3ac4d429: 39% apart) and every FR-credit row (f8ce2bae / 3aaa6bed / 9de2427a) keep the genuine weight-discrepancy wording.",
+        "Wackler — two bundle rows are documented as irreducible rather than encoded: 72cd0079 and 250a1f2a expect hand-written \"Fremdnummer … bereits berechnet in <other Beleg>, ok?\" notes that reference ANOTHER workbook's document number (10351346 / 10352648) — cross-document knowledge the engine's row inputs cannot derive. The engine keeps its generic classifications there.",
+        "AI Bundle — the exported rule-spec no longer claims the Wackler engine preserves protected existing phrases (WACKLER_PROTECTED): that mechanism was removed in v1.15.0, but the forwarder notes and the existing_anmerkung glossary entry still described it — a false constraint fed to every AI rule-fixer since.",
+        "Tests — the two domestic billed-tier expectations dropped their EUR suffix, and 8 new cases pin the 2026-06-12 rules: positive-FR no-re-tier (ghost 50kg), credit with no clean adjacent gap, suffix-free domestic note, light vs heavy equal-weight multi-ref split, cross-tier near-weight bundling, and the far-apart / FR-credit guards. Full suite: 112 passing."
+      ]
+    },
     {
       "ver": "1.24.0",
       "date": "2026-06-11",

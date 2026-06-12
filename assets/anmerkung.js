@@ -865,32 +865,23 @@ function wacklerResolveNatZone(ws,r,cols){
   if(lane&&lane.scope==='national')return WACKLER_NAT_RC.resolveZone('DE',lane.postal);
   return null;
 }
-/* Compose the same-tier "Wackler rechnet Frachtrate für <tier>kg ab" note. On a DOMESTIC German
-   shipment the note is now enriched with the actual national rate Wackler billed against, e.g.
-   "Wackler rechnet Frachtrate für 150kg ab (DE2: 29,50 €)", sourced from the standalone national
-   rate card (data/Wackler National Rate.xlsx). The auditor still gets the weight bracket; the
-   EUR makes it instantly checkable against the rate card. Enrichment only appears when the zone
-   resolves AND the national card has a published rate for that tier — international rows and
-   rows without a usable destination keep the plain tier wording (the earlier international-card
-   EUR enrichment that the auditor rejected stays gone). */
-function wacklerRechnetNote(tierKg,ws,r,cols){
-  let note='Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
-  if(WACKLER_NAT_RC){
-    const zone=wacklerResolveNatZone(ws,r,cols);
-    if(zone){
-      const eur=WACKLER_NAT_RC.rate(tierKg,zone);
-      if(eur>0)note+=' ('+zone+': '+WACKLER_NAT_RC.fmtEUR(eur)+')';
-    }
-  }
-  return note;
+/* Compose the "Wackler rechnet Frachtrate für <tier>kg ab" note — plain tier wording ONLY.
+   The auditor strips ANY rate-card EUR decoration from this phrase: the international-card
+   suffix was rejected first, and AI-bundle 2026-06-12 shows the national "(DEn: … €)" suffix
+   is rejected too (every ground-truth "Wackler rechnet" row — 9ab8df23 / 52fa91df / e3d56631 /
+   941d66f0 / 169d8baa — carries the bare tier wording, and the suffix alone labeled otherwise
+   tier-correct rows `wrong`). The national rate card stays loaded for the billed-tier
+   re-tiering probe below — it just never decorates the phrase anymore. */
+function wacklerRechnetNote(tierKg){
+  return 'Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
 }
 /* ── International rate-card zone + actually-billed tier ──────────────────────────────────────
    The "Wackler rechnet Frachtrate für <tier>kg ab" note must name the tier Wackler ACTUALLY
-   billed against — which is not always the tier the chargeable weight falls in. When the FR
-   Differenz is exactly the rate-card gap between two neighbouring tiers, Wackler billed the
-   *other* tier's rate (a half-tonne up or down), and the auditor reports that tier. Translating
-   the FR delta back into a tier needs the destination's published rate, so we resolve the
-   international rate-card zone and read WACKLER_RATECARD. */
+   billed against — which is not always the tier the chargeable weight falls in. When an FR
+   credit is exactly the rate-card gap to the NEXT tier up, Wackler billed that neighbouring
+   tier's rate, and the auditor reports that tier. Translating the FR delta back into a tier
+   needs the destination's published rate, so we resolve the international rate-card zone and
+   read WACKLER_RATECARD. */
 /* EUR tolerance when matching an implied billed-rate back to a rate-card tier (covers cent
    rounding in the published cells). Tight on purpose: only a clean tier-step FR gap re-tiers the
    note; an arbitrary rounding residual leaves the weight tier untouched. */
@@ -935,35 +926,35 @@ function wacklerRateProbe(ws,r,cols){
   if(intlZone&&WACKLER_RC)return{rateAt:kg=>WACKLER_RC.rate(kg,intlZone),tiers:WACKLER_BP};
   return null;
 }
-/* The rate-card tier whose published rate sits within WACKLER_RATE_TOL of targetRate, or null
-   when none is close enough. `probe` (from wacklerRateProbe) carries the card-specific rate
-   lookup AND tier list, so this resolves against the national and international cards alike. */
-function wacklerTierByRate(probe,targetRate){
-  if(!probe||!(targetRate>0))return null;
-  let best=null,bestDiff=Infinity;
-  for(const b of probe.tiers){
-    const rt=probe.rateAt(b);
-    if(rt>0){const d=Math.abs(rt-targetRate);if(d<bestDiff){bestDiff=d;best=b;}}
-  }
-  return(best!=null&&bestDiff<=WACKLER_RATE_TOL)?best:null;
-}
 /* The tier Wackler actually billed against on a "Wackler rechnet" row. The chargeable weight
-   puts the shipment in `weightTierKg` (rate-card ceiling); the signed FR Differenz reveals when
-   a neighbouring tier's rate was billed instead. FR Differenz is tariff − billed (a negative FR
-   is an over-bill / credit), so the billed freight is systemRate(weightTier) − frVal, and the
-   tier whose published rate matches that is the one to report. Falls back to weightTierKg when
-   the rate card or destination zone is unavailable, or when the implied billed rate lands on no
-   tier (a genuine rounding residual, not a clean tier step). Resolves AI-bundle 2026-06-05 row
-   e40698ee: TR, VKG 6840 / VKG_DL 6862 weigh into the 7000 tier, but FR=−59.34 is exactly
-   rate(7500,TR)−rate(7000,TR), so Wackler billed the 7500 tier. */
+   puts the shipment in `weightTierKg` (rate-card ceiling); an FR CREDIT (FR Differenz is
+   tariff − billed, so frVal < 0 means Wackler billed MORE than the weight tier's rate) that is
+   exactly the published gap to the NEXT tier up means Wackler billed that neighbouring tier,
+   and the auditor reports that tier. Two guards, both demanded by training data:
+     • credit-only — a POSITIVE FR never re-tiers. AI-bundle 2026-06-12 rows 941d66f0/169d8baa
+       (DE4, 174 kg → 200 tier, FR=+12.99): the old any-sign all-tier search matched the implied
+       billed rate 42.04−12.99=29.05 to rate(50,DE4)=29.50 within tolerance and reported a ghost
+       "für 50kg" note three tiers below the weight; ground truth keeps the weight tier (200 kg)
+       on every positive-FR row.
+     • adjacent-only — the match may only land on the next tier up, the only step the confirmed
+       cases show (e40698ee: TR 6840/6862 kg → 7000 tier, FR=−59.34 = rate(7500)−rate(7000)
+       exactly; domestic DE2 148/149 kg → 150 tier, FR=−2.96 = rate(200)−rate(150) exactly).
+       A far tier whose rate happens to sit within tolerance is a coincidence, not a billing
+       signature.
+   Falls back to weightTierKg when the rate card or destination zone is unavailable, or when
+   the FR gap matches no clean adjacent tier step (a genuine rounding residual — e.g. bundle
+   row 52fa91df: DE9 1500 tier, FR=−80.79 implies 281.18, no published neighbour rate fits). */
 function wacklerBilledTier(weightTierKg,frVal,ws,r,cols){
-  if(!(Math.abs(frVal)>T_WACKLER))return weightTierKg;
+  if(!(frVal<0&&Math.abs(frVal)>T_WACKLER))return weightTierKg;
   const probe=wacklerRateProbe(ws,r,cols);
   if(!probe)return weightTierKg;
   const systemRate=probe.rateAt(weightTierKg);
   if(!(systemRate>0))return weightTierKg;
-  const billed=wacklerTierByRate(probe,systemRate-frVal);
-  return billed!=null?billed:weightTierKg;
+  const idx=probe.tiers.indexOf(weightTierKg);
+  if(idx<0||idx+1>=probe.tiers.length)return weightTierKg;
+  const upTier=probe.tiers[idx+1],upRate=probe.rateAt(upTier);
+  if(upRate>0&&Math.abs(upRate-(systemRate-frVal))<=WACKLER_RATE_TOL)return upTier;
+  return weightTierKg;
 }
 /* Wackler SNK surcharge code book — sign-insensitive (reversibles like NL-FIX show as ±value).
    Tolerance handles real-world rounding (NL-FIX seen as 38.00 / 38.08). */
@@ -1017,6 +1008,23 @@ const WACKLER_TZ_ADDITIVE=2.0;
    so it never poaches real SNK Differenz residuals. Resolves AI-bundle training rows 1 & 42. */
 const WACKLER_HEBEBUEHNE_ABS=150;
 const WACKLER_HEBEBUEHNE_TOL=2.0;
+/* Bundling weight ceiling (kg): a same-tier multi-reference row with (near-)identical weights
+   reads as "hätte gebündelt werden müssen" only while the combined weight is light enough that
+   the consignments could realistically have ridden one booking. Heavy rows are already at
+   full-load tier rates — the auditor records the rate-card note there, not a bundling finding.
+   Bracketed by AI-bundle 2026-06-12: cf56daaa (231 kg, 2 refs, DE5 → bundling) vs 9ab8df23
+   (2556 kg, 4 refs, DE6 → "Wackler rechnet für 2600kg"), consistent with the 2026-06-05 heavy
+   rows 08a0d985 (8565 kg) / d97ce4ec (9760 kg) / f04300d4 (~6850 kg) that all read as
+   "Wackler rechnet". */
+const WACKLER_BUENDEL_MAX_KG=1000;
+/* Cross-tier near-weight band: on a multi-reference row whose two weights land in DIFFERENT
+   rate tiers, a bundling finding needs the weights to roughly agree (within 20% of the larger)
+   AND a positive FR delta (system tariff above the bill — the system rated the references
+   separately while Wackler billed them as one). AI-bundle 2026-06-12 row 447856d4 (5465,44 vs
+   6158 kg, 12.7% apart, FR=+65.6 → bundling) vs 2026-06-05 row 3ac4d429 (8019 vs 11141 kg, 39%
+   apart, FR=+1110.86 → abweichende Gewichte) and the FR-credit rows f8ce2bae / 3aaa6bed /
+   9de2427a (all → abweichende Gewichte). */
+const WACKLER_XTIER_NEAR_BAND=0.2;
 /* The engine is fully deterministic: every Anmerkung is recomputed from the
    row's inputs, regardless of any value already sitting in the target cell.
    There is no "preserve existing / protected phrase" short-circuit — the rules
@@ -1109,23 +1117,33 @@ function processWackler(ws,r,cols){
     if(snkCodeLabel)res=join(res,snkCodeLabel);
   }
   /* 5. Gewichte / Bundling cascade. Decision tree (both weights real + FR delta):
-     ─ same rate tier + multi-ref bundle         → "hätte gebündelt werden müssen"
-                                                   (consignments that should have ridden one
-                                                    booking; bundling wins over the rate-card
-                                                    wording — AI-bundle rows 6/27/28/58:
-                                                    multi-ref, VKG==VKG_DL, large FR delta)
-     ─ same rate tier, single ref                → "Wackler rechnet Frachtrate für <tier>kg ab"
+     ─ same tier + multi-ref + UNEQUAL weights   → "hätte gebündelt werden müssen"
+                                                   (separate consignments that should have ridden
+                                                    one booking)
+     ─ same tier + multi-ref + equal weights:
+         · combined ≤ WACKLER_BUENDEL_MAX_KG     → "hätte gebündelt werden müssen"
+                                                   (light refs billed as one tier rate — bundle
+                                                    2026-06-12 row cf56daaa: 231 kg, 2 refs)
+         · heavier                               → "Wackler rechnet Frachtrate für <tier>kg ab"
+                                                   (full-load tier billing — rows 9ab8df23 /
+                                                    08a0d985 / d97ce4ec; MT and TZ stay additive)
+     ─ same tier + multi-ref + volumetric weight → "Wackler rechnet" at the FLOOR tier
+                                                   (one consignment measured twice)
+     ─ same tier, single ref                     → "Wackler rechnet Frachtrate für <tier>kg ab"
                                                    (terminal: Wackler billed the tier rate, so the
                                                     FR/TZ deltas are systemic rounding for that
                                                     tier — see wacklerRechnetFired suppression below)
-     ─ different rate tier                       → "Differenz aufgrund abweichender Gewichte"
-                                                   (a genuine weight discrepancy)
+     ─ different rate tier:
+         · multi-ref + positive FR + weights
+           within WACKLER_XTIER_NEAR_BAND        → "hätte gebündelt werden müssen"
+                                                   (bundle 2026-06-12 row 447856d4: 5465,44 vs
+                                                    6158 kg, FR=+65.6)
+         · otherwise                             → "Differenz aufgrund abweichender Gewichte"
+                                                   (a genuine weight discrepancy — far-apart gaps
+                                                    and every FR-credit row: 2026-06-05 rows
+                                                    f8ce2bae / 3aaa6bed / 9de2427a / 3ac4d429)
      ─ no real weights + multi-ref + FR          → "hätte gebündelt werden müssen"   (legacy bundling)
-     Note: a prior "cross-tier + far-apart → hätte gebündelt werden müssen" branch was removed —
-     the auditor classifies far-apart multi-ref weight gaps as abweichende Gewichte, not bundling
-     (training rows 7 & 61), and only flags bundling when the weights sit in one tier (or there is
-     no weight signal at all). MT and TZ stay additive on every branch except same-tier "Wackler
-     rechnet" (see rules 9 & 11). */
+     MT and TZ stay additive on every branch except same-tier "Wackler rechnet" (see rules 9 & 11). */
   let gewichteTriggered=false,wacklerRechnetFired=false,hebebuehneFired=false;
   if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0&&frHasVal){
     const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl);
@@ -1164,22 +1182,33 @@ function processWackler(ws,r,cols){
           res=join(res,P.buendelMuessen);
         } else if(isBundle&&!volumetric&&sameWeight){
           /* Same-tier multi-reference row whose two weights are (near-)IDENTICAL whole-kg values:
-             the references were billed against one shared tier rate, so the auditor classifies it
-             as "Wackler rechnet Frachtrate für <tier>kg ab" rather than a "should have been bundled"
-             finding. Crucially we do NOT set wacklerRechnetFired here — unlike the single-shipment
-             rounding case below — because the auditor still itemises the Maut and (positive-FR)
-             Energiezuschlag deltas on these rows (AI-bundle 2026-06-05 rows 08a0d985: 9000kg / 3 refs
-             / AVIS=1 / MT+TZ kept, d97ce4ec: 10000kg / 2 refs / AVIS=6.5 / MT+TZ kept, and f04300d4:
-             ~6850kg / 2 refs / MT kept, fuel absorbed by the FR credit). Tier = ceiling bracket the
-             shared weight falls in. */
-          res=join(res,wacklerRechnetNote(reportTier,ws,r,cols));
+             the COMBINED WEIGHT decides. Light rows (≤ WACKLER_BUENDEL_MAX_KG) are consignments
+             that should have ridden one booking → "hätte gebündelt werden müssen" (AI-bundle
+             2026-06-12 row cf56daaa: 231 kg / 2 refs / DE5). Heavier rows were billed against one
+             shared tier rate → "Wackler rechnet Frachtrate für <tier>kg ab" (2026-06-12 row
+             9ab8df23: 2556 kg / 4 refs / DE6, and 2026-06-05 rows 08a0d985: 9000kg / 3 refs /
+             AVIS=1, d97ce4ec: 10000kg / 2 refs / AVIS=6.5, f04300d4: ~6850kg / 2 refs). On
+             NEITHER path is wacklerRechnetFired set — unlike the single-shipment rounding case
+             below — because the auditor still itemises the Maut and (positive-FR) Energiezuschlag
+             deltas on these rows. Tier = ceiling bracket the shared weight falls in. */
+          if(Math.max(vkg,vkgDl)<=WACKLER_BUENDEL_MAX_KG){
+            res=join(res,P.buendelMuessen);
+          } else {
+            res=join(res,wacklerRechnetNote(reportTier));
+          }
         } else if(isBundle&&volumetric){
-          res=join(res,wacklerRechnetNote(wacklerFloorTier(Math.max(vkg,vkgDl)),ws,r,cols));
+          res=join(res,wacklerRechnetNote(wacklerFloorTier(Math.max(vkg,vkgDl))));
           wacklerRechnetFired=true;
         } else {
-          res=join(res,wacklerRechnetNote(reportTier,ws,r,cols));
+          res=join(res,wacklerRechnetNote(reportTier));
           wacklerRechnetFired=true;
         }
+      } else if(isBundle&&frVal>0&&Math.abs(vkg-vkgDl)<=WACKLER_XTIER_NEAR_BAND*Math.max(vkg,vkgDl)){
+        /* Cross-tier multi-reference row whose weights still roughly agree, with a POSITIVE FR
+           delta (system tariff above the bill): the system rated the references separately while
+           Wackler billed them as one — the booking should have been bundled. Far-apart weights or
+           an FR credit stay a genuine weight discrepancy below. */
+        res=join(res,P.buendelMuessen);
       } else {
         res=join(res,'Differenz aufgrund abweichender Gewichte');
       }
@@ -3217,7 +3246,7 @@ const INPUT_GLOSSARY={
   serv_art          :'Serv.-Art — service category code (Dachser). K1AV / K1AS gate several SNK branches.',
   kostenstelle      :'KOSTENSTELLE — cost-center. Empty or "X" triggers Kontierung?.',
   sachkonto         :'SACHKONTO — GL account. Empty or "X" triggers Kontierung? (or VORHOLUNG on Dachser when "X").',
-  existing_anmerkung:'Existing Anmerkung — Wackler reads this; matching any WACKLER_PROTECTED phrase causes the row to be preserved (no overwrite).',
+  existing_anmerkung:'Existing Anmerkung — exported for context only. The engine is fully deterministic and recomputes every row from its inputs; it never reads this cell back (the old protected-phrase preservation was removed in v1.15.0).',
 };
 
 /* Per-forwarder gate + signature. Mirrors the gate doc-comments in
@@ -3245,7 +3274,7 @@ const FORWARDER_SPEC={
     processor:'processWackler',
     resolver :'resolveWackler',
     gate     :'Stat_Freigabe == 10 (partial: Kontierung still emitted on stat≠10 if KOST/SACH blank)',
-    notes    :'Existing Anmerkung is read first; if it matches WACKLER_PROTECTED it short-circuits to null (preserved). AVIS/SNK code-book is sign-insensitive with rounding tolerance.',
+    notes    :'Fully deterministic — the existing Anmerkung cell is never read back (no protected-phrase preservation since v1.15.0). AVIS/SNK code-book is sign-insensitive with rounding tolerance.',
   },
 };
 
