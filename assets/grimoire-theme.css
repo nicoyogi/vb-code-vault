@@ -39,7 +39,9 @@
 @keyframes grShimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
 @keyframes grPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.7); } }
 @keyframes grRise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes grPageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+/* Opacity only — never animate transform on body: any transform (even translateY(0))
+   makes body the containing block for position:fixed, pushing modals/overlays down the page. */
+@keyframes grPageIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* Whole-page entrance — CSS only, so there is never a flash. */
 html[data-grim] body { animation: grPageIn 0.65s var(--gr-ease) both; }
