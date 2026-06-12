@@ -381,9 +381,10 @@ test('processWackler: same-tier near-equal weights without a resolvable zone kee
 
 test('processWackler: DOMESTIC billed-tier uses the national rate card (DE2 150 -> 200 via FR)', () => {
   // Domestic German row, zone DE2: VKG 148 / VKG_DL 149 weigh into the 150 kg tier (national rate
-  // 29,50 €), but FR=-2.96 is exactly rate(200,DE2)-rate(150,DE2)=32,46-29,50 -> Wackler billed
-  // the 200 kg tier. The re-tiering now reads the NATIONAL card (the international card leaves DE
-  // cells blank), and the note is enriched with the domestic EUR rate it billed against.
+  // 29,50 €), but the FR CREDIT -2.96 is exactly rate(200,DE2)-rate(150,DE2)=32,46-29,50 ->
+  // Wackler billed the 200 kg tier. The re-tiering reads the NATIONAL card (the international
+  // card leaves DE cells blank); the note stays plain — the auditor rejected the EUR suffix
+  // (AI-bundle 2026-06-12).
   const ws = makeRow(R, {
     51: 10, 52: '32.46', 55: '-2.96',
     58: '2543200001', 59: '148', 60: '149',
@@ -391,7 +392,7 @@ test('processWackler: DOMESTIC billed-tier uses the national rate card (DE2 150 
   });
   assert.equal(
     e.processWackler(ws, R, W_COLS),
-    'Wackler rechnet Frachtrate für 200kg ab (DE2: 32,46 €)'
+    'Wackler rechnet Frachtrate für 200kg ab'
   );
 });
 
@@ -414,7 +415,8 @@ test('processWackler: Empf.-Land classifies the international lane (TR export, n
 test('processWackler: Abg.-Land=DE & Empf.-Land=DE classify domestic; zone comes from Empf.-PLZ', () => {
   // No explicit DEn token: the row is classified domestic purely from Abg.-Land=DE / Empf.-Land=DE,
   // and the German rate zone (DE2) is resolved from the Stuttgart PLZ 70173 — safe precisely
-  // because the country is known to be DE. FR=-2.96 re-tiers 150 -> 200 on the national card.
+  // because the country is known to be DE. The FR credit -2.96 re-tiers 150 -> 200 on the
+  // national card; the note stays plain (no EUR suffix).
   const ws = makeRow(R, {
     51: 10, 52: '32.46', 55: '-2.96',
     58: '2543200001', 59: '148', 60: '149',
@@ -423,7 +425,7 @@ test('processWackler: Abg.-Land=DE & Empf.-Land=DE classify domestic; zone comes
   });
   assert.equal(
     e.processWackler(ws, R, W_COLS),
-    'Wackler rechnet Frachtrate für 200kg ab (DE2: 32,46 €)'
+    'Wackler rechnet Frachtrate für 200kg ab'
   );
 });
 
@@ -508,5 +510,137 @@ test('processWackler: foreign numeric PLZ does not get a spurious German-zone EU
   assert.ok(
     out.includes('Wackler rechnet Frachtrate für 10000kg ab') && !/\(DE\d/.test(out),
     `expected a plain Wackler-rechnet note with no DE-zone EUR suffix, got: ${out}`
+  );
+});
+
+/* ──────────────────────────────────────────────────────────
+   WACKLER — AI-bundle 2026-06-12 rule updates
+   Ground truth from data/anmerkung_ai_bundle_2026-06-12-04-04-18.zip
+   (source files 10352647/10352648 Soll-Ist-Vergleich). Each test
+   uses the real failing row's inputs.
+─────────────────────────────────────────────────────────── */
+
+test('processWackler: positive FR never re-tiers the "Wackler rechnet" note', () => {
+  // Bundle rows 941d66f0 / 169d8baa: VKG=VKG_DL=174 (200 kg tier), DE4, FR=+12.99. The old
+  // any-sign all-tier search matched the implied billed rate 42,04-12,99=29,05 to
+  // rate(50,DE4)=29,50 within tolerance and emitted a ghost "für 50kg" note; ground truth
+  // keeps the weight tier. The EUR suffix is gone too. TZ=1.68 stays under the fuel threshold.
+  const ws = makeRow(R, {
+    51: 10, 52: '51.09', 54: '0.05', 55: '12.99', 56: '1.05', 57: '1.68',
+    58: '2543334633', 59: '174', 60: '174',
+    61: '63589', 62: 'Linsengericht', 63: '211FO011', 64: '612100',
+    66: 'DE', 67: 'DE',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 200kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: FR credit with no clean adjacent tier gap keeps the weight tier', () => {
+  // Bundle row 52fa91df: VKG=VKG_DL=1489 (1500 kg tier), DE9, FR=-80.79. The implied billed
+  // rate 200,39+80,79=281,18 matches no published neighbour rate, so the note keeps 1500 —
+  // and only the ADJACENT tier may ever be matched, far tiers are coincidence. The FR credit
+  // absorbs the fuel note; Maut stays additive.
+  const ws = makeRow(R, {
+    51: 10, 52: '254.47', 54: '-0.32', 55: '-80.79', 56: '-10.58', 57: '-10.5',
+    58: '2543320243', 59: '1489', 60: '1489',
+    61: '21244', 62: 'Buchholz in der Nordheide', 63: '211FO011', 64: '612100',
+    66: 'DE', 67: 'DE',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 1500kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: domestic "Wackler rechnet" note carries no national EUR suffix', () => {
+  // Bundle row e3d56631: VKG=VKG_DL=480 (500 kg tier), DE2 resolves — the old engine decorated
+  // the note with "(DE2: 58,10 €)" and the auditor struck it on every ground-truth row.
+  const ws = makeRow(R, {
+    51: 10, 52: '79.55', 54: '0.04', 55: '9.12', 56: '0.76', 57: '1.19',
+    58: '2543330716', 59: '480', 60: '480',
+    61: '72555', 62: 'Metzingen', 63: '211FO998', 64: '612100',
+    66: 'DE', 67: 'DE',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 500kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: LIGHT equal-weight multi-ref bundle -> hätte gebündelt werden müssen', () => {
+  // Bundle row cf56daaa: 2 refs, VKG=VKG_DL=231 (250 kg tier), DE5, FR=+15.39, AVIS=8.7.
+  // Light consignments (combined <= 1000 kg) should have ridden one booking — bundling wins
+  // over the rate-card wording. MT/TZ stay additive, AVIS resolves to "Avis, ok?".
+  const ws = makeRow(R, {
+    51: 10, 52: '78.9', 53: '8.7', 54: '0.07', 55: '15.39', 56: '1.25', 57: '2.01',
+    58: '2543320386,2543320633', 59: '231', 60: '231',
+    61: '95100', 62: 'Selb', 63: '211FO998', 64: '612100',
+    66: 'DE', 67: 'DE',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Avis, ok? // hätte gebündelt werden müssen // Mautdifferenz // Differenz Energiezuschlag'
+  );
+});
+
+test('processWackler: HEAVY equal-weight multi-ref bundle stays "Wackler rechnet" (domestic)', () => {
+  // Bundle row 9ab8df23: 4 refs, VKG=VKG_DL=2556 (2600 kg tier), DE6, FR=+187.06. Above the
+  // bundling weight ceiling the row reads as tier billing, with MT and fuel itemised and no
+  // EUR suffix. AVIS=17.4 matches no code and stays silent.
+  const ws = makeRow(R, {
+    51: 10, 52: '373.01', 53: '17.4', 54: '0.75', 55: '187.06', 56: '25.42', 57: '24.32',
+    58: '2543241414,2543254161,2543241418,2543241424', 59: '2556', 60: '2556',
+    61: '99820', 62: 'Hörselberg-Hainich', 63: '211FO011', 64: '612100',
+    66: 'DE', 67: 'DE',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 2600kg ab // Mautdifferenz // Differenz Energiezuschlag'
+  );
+});
+
+test('processWackler: cross-tier multi-ref with near weights + positive FR -> bundling', () => {
+  // Bundle row 447856d4: 2 refs, VKG=5465,44 (5500 tier) vs VKG_DL=6158 (6500 tier) — 12.7%
+  // apart, FR=+65.6: the system rated the references separately while Wackler billed them as
+  // one, so the booking should have been bundled. AVIS=8.7 -> "Avis, ok?"; MT/TZ additive.
+  const ws = makeRow(R, {
+    51: 10, 52: '554.22', 53: '8.7', 54: '0.27', 55: '65.6', 56: '4.16', 57: '8.53',
+    58: '2543276386,2543320440', 59: '5465,44', 60: '6158',
+    61: '76829', 62: 'Landau in der Pfalz', 63: '211FO011', 64: '612100',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Avis, ok? // hätte gebündelt werden müssen // Mautdifferenz // Differenz Energiezuschlag'
+  );
+});
+
+test('processWackler: cross-tier multi-ref with FAR-apart weights stays abweichende Gewichte', () => {
+  // Guard from AI-bundle 2026-06-05 row 3ac4d429: 2 refs, VKG=8019 vs VKG_DL=11141 (39% apart),
+  // FR=+1110.86 — a genuine weight discrepancy, NOT a bundling finding, despite the positive FR.
+  const ws = makeRow(R, {
+    51: 10, 52: '1361.54', 53: '1', 54: '4.02', 55: '1110.86', 56: '69.38', 57: '130.37',
+    58: '2543310716,2543310266', 59: '8019', 60: '11141',
+    61: '11-015', 62: 'Olsztynek', 63: '211FO011', 64: '612100',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Differenz aufgrund abweichender Gewichte // Differenz avis, ok? // Mautdifferenz // Differenz Energiezuschlag'
+  );
+});
+
+test('processWackler: cross-tier multi-ref with near weights but an FR CREDIT stays abweichende Gewichte', () => {
+  // Guard from AI-bundle 2026-06-05 row 3aaa6bed: 3 refs, VKG=2850 (3000 tier) vs VKG_DL=2705
+  // (2800 tier) — only 5% apart, but FR=-117.08 is a credit: Wackler billed MORE, which is a
+  // weight discrepancy, never a should-have-bundled finding. The credit absorbs the fuel note.
+  const ws = makeRow(R, {
+    51: 10, 52: '1416.65', 54: '-0.46', 55: '-117.08', 56: '-6.61', 57: '-15.22',
+    58: '503463856,503463857,503467086', 59: '2850', 60: '2705',
+    61: 'UB8 2YF', 62: 'Uxbridge Middlesex', 63: '201FO001', 64: '612110',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Differenz aufgrund abweichender Gewichte // Mautdifferenz'
   );
 });
