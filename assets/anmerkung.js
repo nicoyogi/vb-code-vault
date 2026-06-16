@@ -927,33 +927,41 @@ function wacklerRateProbe(ws,r,cols){
   return null;
 }
 /* The tier Wackler actually billed against on a "Wackler rechnet" row. The chargeable weight
-   puts the shipment in `weightTierKg` (rate-card ceiling); an FR CREDIT (FR Differenz is
-   tariff − billed, so frVal < 0 means Wackler billed MORE than the weight tier's rate) that is
-   exactly the published gap to the NEXT tier up means Wackler billed that neighbouring tier,
-   and the auditor reports that tier. Two guards, both demanded by training data:
-     • credit-only — a POSITIVE FR never re-tiers. AI-bundle 2026-06-12 rows 941d66f0/169d8baa
-       (DE4, 174 kg → 200 tier, FR=+12.99): the old any-sign all-tier search matched the implied
-       billed rate 42.04−12.99=29.05 to rate(50,DE4)=29.50 within tolerance and reported a ghost
-       "für 50kg" note three tiers below the weight; ground truth keeps the weight tier (200 kg)
-       on every positive-FR row.
-     • adjacent-only — the match may only land on the next tier up, the only step the confirmed
-       cases show (e40698ee: TR 6840/6862 kg → 7000 tier, FR=−59.34 = rate(7500)−rate(7000)
-       exactly; domestic DE2 148/149 kg → 150 tier, FR=−2.96 = rate(200)−rate(150) exactly).
-       A far tier whose rate happens to sit within tolerance is a coincidence, not a billing
-       signature.
+   puts the shipment in `weightTierKg` (rate-card ceiling); a signed FR delta (FR Differenz is
+   tariff − billed) can reveal Wackler billed a NEIGHBOURING tier's rate, which the auditor then
+   reports. The implied billed rate is systemRate − frVal:
+     • FR CREDIT (frVal < 0 → Wackler billed MORE): re-tier to the next tier UP when its rate
+       equals the implied billed rate (e40698ee: TR 6840/6862 kg → 7000 weight tier, FR=−59.34 =
+       rate(7500)−rate(7000) → 7500; domestic DE2 148/149 kg, FR=−2.96 = rate(200)−rate(150) → 200).
+     • FR UNDERCHARGE (frVal > 0 → Wackler billed LESS): re-tier to the floor tier one step DOWN
+       when its rate equals the implied billed rate (AI-bundle 2026-06-16 row f6cb2770: NL
+       VKG=VKG_DL=2125 → 2200 weight tier, FR=+17.83 = rate(2200,NL)−rate(2000,NL) → 2000).
+   ADJACENT-ONLY in both directions — only the immediate neighbour may match. A far tier whose
+   rate happens to sit within tolerance is coincidence, not a billing signature: this is what
+   keeps the 2026-06-12 positive-FR guard intact (941d66f0: DE4 174 kg → 200 tier, FR=+12.99 —
+   the implied 42.04−12.99=29.05 matches no adjacent neighbour, so the note stays 200; the old
+   any-sign ALL-tier search wrongly jumped to rate(50,DE4)=29.50 three tiers below).
    Falls back to weightTierKg when the rate card or destination zone is unavailable, or when
    the FR gap matches no clean adjacent tier step (a genuine rounding residual — e.g. bundle
    row 52fa91df: DE9 1500 tier, FR=−80.79 implies 281.18, no published neighbour rate fits). */
 function wacklerBilledTier(weightTierKg,frVal,ws,r,cols){
-  if(!(frVal<0&&Math.abs(frVal)>T_WACKLER))return weightTierKg;
+  if(!(Math.abs(frVal)>T_WACKLER))return weightTierKg;
   const probe=wacklerRateProbe(ws,r,cols);
   if(!probe)return weightTierKg;
   const systemRate=probe.rateAt(weightTierKg);
   if(!(systemRate>0))return weightTierKg;
   const idx=probe.tiers.indexOf(weightTierKg);
-  if(idx<0||idx+1>=probe.tiers.length)return weightTierKg;
-  const upTier=probe.tiers[idx+1],upRate=probe.rateAt(upTier);
-  if(upRate>0&&Math.abs(upRate-(systemRate-frVal))<=WACKLER_RATE_TOL)return upTier;
+  if(idx<0)return weightTierKg;
+  const billedRate=systemRate-frVal;
+  if(frVal<0&&idx+1<probe.tiers.length){
+    /* FR credit → Wackler billed the adjacent tier UP. */
+    const upTier=probe.tiers[idx+1],upRate=probe.rateAt(upTier);
+    if(upRate>0&&Math.abs(upRate-billedRate)<=WACKLER_RATE_TOL)return upTier;
+  }else if(frVal>0&&idx-1>=0){
+    /* FR undercharge → Wackler billed the adjacent (floor) tier DOWN. */
+    const downTier=probe.tiers[idx-1],downRate=probe.rateAt(downTier);
+    if(downRate>0&&Math.abs(downRate-billedRate)<=WACKLER_RATE_TOL)return downTier;
+  }
   return weightTierKg;
 }
 /* Wackler SNK surcharge code book — sign-insensitive (reversibles like NL-FIX show as ±value).
@@ -999,6 +1007,17 @@ const WACKLER_SNK_NOISE=5.0;
    training case (TARIF=54.95, SNK=80, ratio 1.45×) without overfiring on standard SNK Differenz
    residuals which run far below the booked tariff value. */
 const WACKLER_PAUSCHAL_RATIO=1.0;
+/* Terminzustellung surcharge billed at the ≈80 € rate. Same timed-delivery finding as the SNK
+   25 / 170 codes, just a different published amount — but it is WEIGHT-GATED, because an 80 € SNK
+   tells two different stories depending on whether the row carries a real chargeable weight:
+     • weighed shipment (VKG & VKG_DL > 0) → a timed-delivery surcharge riding on real freight →
+       "Terminzustellung" (AI-bundle 2026-06-16 rows a54fc7ee: 75 kg, tarif 54.91, IT and
+       278691a9: 152 kg, tarif 81.7, IT — both expect the plain Terminzustellung code).
+     • no weight, |SNK| ≥ tariff → a flat-rate lump charge → "Pauschalfracht, ok?" (the existing
+       54.95 / 80 no-weight row). So 80 is deliberately NOT in WACKLER_SNK_CODES (which is
+       weight-blind) — keeping it out leaves the no-weight Pauschalfracht reading intact. */
+const WACKLER_SNK_TERMIN80_ABS=80;
+const WACKLER_SNK_TERMIN80_TOL=0.5;
 /* TZ additive threshold: TZ ≥ 2.0 fires DifferenzTreibstof alongside other classifications.
    Below 2.0 the TZ delta is fuel-on-toll math noise (typical FR/MT-percentage spill). */
 const WACKLER_TZ_ADDITIVE=2.0;
@@ -1076,6 +1095,12 @@ function processWackler(ws,r,cols){
   const frHasVal=Math.abs(frVal)>T_WACKLER;
   const mtHasVal=Math.abs(mtVal)>T_WACKLER;
   const snkHasVal=Math.abs(snkVal)>T_WACKLER;
+  /* Real chargeable weight on the row — the gate that tells an 80 € SNK Terminzustellung surcharge
+     (weighed shipment) apart from a flat-rate Pauschalfracht (no weight). */
+  const vkgNum=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
+  const vkgDlNum=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
+  const hasWeights=vkgNum>0&&vkgDlNum>0;
+  const terminAt80=hasWeights&&Math.abs(Math.abs(snkVal)-WACKLER_SNK_TERMIN80_ABS)<=WACKLER_SNK_TERMIN80_TOL;
   /* 1b. Lagergeld — warehouse storage fee. Signature: the booked tariff is BLANK (no freight
      tariff backing) and the ONLY cost signal on the row is an SNK charge (no FR/MT/TZ delta and
      no AVIS surcharge code) that does NOT match a recognised SNK code. A bare, code-less SNK gap
@@ -1103,6 +1128,7 @@ function processWackler(ws,r,cols){
      &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE
      &&tarifNum>0&&Math.abs(snkVal)>=WACKLER_PAUSCHAL_RATIO*tarifNum
      &&!wacklerSnkCode(snkVal)
+     &&!terminAt80
      &&!isWacklerAvisCode(avisVal)){
     return'Pauschalfracht, ok?';
   }
@@ -1114,6 +1140,9 @@ function processWackler(ws,r,cols){
   let snkCodeLabel=null;
   if(cols.snk_diff>=0){
     snkCodeLabel=wacklerSnkCode(snkVal);
+    /* SNK≈80 on a weighed shipment is the Terminzustellung surcharge (weight-gated above so a
+       no-weight 80 € SNK stays a flat-rate Pauschalfracht). */
+    if(!snkCodeLabel&&terminAt80)snkCodeLabel='Terminzustellung';
     if(snkCodeLabel)res=join(res,snkCodeLabel);
   }
   /* 5. Gewichte / Bundling cascade. Decision tree (both weights real + FR delta):
@@ -1190,7 +1219,9 @@ function processWackler(ws,r,cols){
              AVIS=1, d97ce4ec: 10000kg / 2 refs / AVIS=6.5, f04300d4: ~6850kg / 2 refs). On
              NEITHER path is wacklerRechnetFired set — unlike the single-shipment rounding case
              below — because the auditor still itemises the Maut and (positive-FR) Energiezuschlag
-             deltas on these rows. Tier = ceiling bracket the shared weight falls in. */
+             deltas on these rows. Tier = reportTier: the weight's ceiling bracket, or an adjacent
+             tier when a clean tier-step FR delta shows Wackler billed a neighbour (2026-06-16 row
+             f6cb2770: NL 2125 kg, FR=+17.83 = rate(2200)−rate(2000) → the 2000 floor tier). */
           if(Math.max(vkg,vkgDl)<=WACKLER_BUENDEL_MAX_KG){
             res=join(res,P.buendelMuessen);
           } else {
