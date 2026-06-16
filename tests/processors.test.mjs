@@ -182,6 +182,7 @@ const W_COLS = {
   target: 50, stat: 51, tarif: 52, avis_diff: 53, snk_diff: 54, fr: 55, maut: 56,
   tz: 57, referenz: 58, vkg: 59, vkg_dl: 60, empf_plz: 61, empf_ort: 62,
   kostenstelle: 63, sachkonto: 64, zone: 65, empf_land: 66, abg_land: 67, abg_plz: 68,
+  fr_tar: 69, fr_dl: 70,
 };
 
 test('processWackler: existing annotation is ignored — output recomputed from inputs', () => {
@@ -520,11 +521,13 @@ test('processWackler: foreign numeric PLZ does not get a spurious German-zone EU
    uses the real failing row's inputs.
 ─────────────────────────────────────────────────────────── */
 
-test('processWackler: positive FR never re-tiers the "Wackler rechnet" note', () => {
-  // Bundle rows 941d66f0 / 169d8baa: VKG=VKG_DL=174 (200 kg tier), DE4, FR=+12.99. The old
-  // any-sign all-tier search matched the implied billed rate 42,04-12,99=29,05 to
-  // rate(50,DE4)=29,50 within tolerance and emitted a ghost "für 50kg" note; ground truth
-  // keeps the weight tier. The EUR suffix is gone too. TZ=1.68 stays under the fuel threshold.
+test('processWackler: a far INEXACT tier match never re-tiers the "Wackler rechnet" note', () => {
+  // Bundle rows 941d66f0 / 169d8baa: VKG=VKG_DL=174 (200 kg tier), DE4, FR=+12.99. The implied
+  // billed rate 42,04-12,99=29,05 sits 0,45 off rate(50,DE4)=29,50 — a far tier AND an inexact
+  // match, so the multi-step re-tiering rejects it (only a NEAR-EXACT far gap re-tiers, see the
+  // 3-step ec0469d0 case below). Ground truth keeps the weight tier; the old any-sign all-tier
+  // search wrongly emitted a ghost "für 50kg", which the tight far-tier tolerance now blocks.
+  // The EUR suffix is gone too. TZ=1.68 stays under the fuel threshold.
   const ws = makeRow(R, {
     51: 10, 52: '51.09', 54: '0.05', 55: '12.99', 56: '1.05', 57: '1.68',
     58: '2543334633', 59: '174', 60: '174',
@@ -539,9 +542,8 @@ test('processWackler: positive FR never re-tiers the "Wackler rechnet" note', ()
 
 test('processWackler: FR credit with no clean adjacent tier gap keeps the weight tier', () => {
   // Bundle row 52fa91df: VKG=VKG_DL=1489 (1500 kg tier), DE9, FR=-80.79. The implied billed
-  // rate 200,39+80,79=281,18 matches no published neighbour rate, so the note keeps 1500 —
-  // and only the ADJACENT tier may ever be matched, far tiers are coincidence. The FR credit
-  // absorbs the fuel note; Maut stays additive.
+  // rate 200,39+80,79=281,18 matches no published rate in the FR-credit (UP) direction within
+  // tolerance, so the note keeps 1500. The FR credit absorbs the fuel note; Maut stays additive.
   const ws = makeRow(R, {
     51: 10, 52: '254.47', 54: '-0.32', 55: '-80.79', 56: '-10.58', 57: '-10.5',
     58: '2543320243', 59: '1489', 60: '1489',
@@ -696,5 +698,92 @@ test('processWackler: positive FR down-tiers the "Wackler rechnet" note to the f
   assert.equal(
     e.processWackler(ws, R, W_COLS),
     'Wackler rechnet Frachtrate für 2000kg ab // Mautdifferenz // Differenz Energiezuschlag'
+  );
+});
+
+test('processWackler: positive FR down-tiers MULTIPLE steps on a near-exact gap (GB, no Land column)', () => {
+  // Bundle row ec0469d0: single ref, VKG 2496 / VKG_DL 2494 weigh into the 2600 kg tier, but
+  // FR=+310.3 is EXACTLY rate(2600,GB2)-rate(2000,GB2)=1001,40-691,10 -> Wackler billed the 2000
+  // tier, THREE steps down. Two things make this row work: (1) the destination is a UK postcode
+  // "RG30 1BD" with NO Empf.-Land / Tarifzone column, so the GB zone is resolved straight from the
+  // letter-led postcode (it can't be a numeric German PLZ); (2) the re-tiering walks past the
+  // adjacent 2400/2200 brackets to the near-exact 2000 match. Single ref -> wacklerRechnetFired,
+  // so the TZ=40.34 fuel gap is absorbed (no Energiezuschlag note); MT=36.32 stays additive.
+  const ws = makeRow(R, {
+    51: 10, 52: '833.73', 54: '0.93', 55: '310.3', 56: '36.32', 57: '40.34',
+    58: '503472974', 59: '2496', 60: '2494',
+    61: 'RG30 1BD', 62: 'Reading', 63: '201FO001', 64: '612110',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 2000kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: a numeric foreign-looking PLZ with no Land column never resolves a GB zone', () => {
+  // Guard for the GB-postcode fallback: it must fire ONLY for letter-led UK postcodes. A bare
+  // numeric PLZ (here an Italian "29012", no Land/zone column) stays unresolved, so the billed-tier
+  // re-tiering can't run and the note keeps the raw weight tier — exactly as before the fallback.
+  // (The real engine re-tiers this row via its Empf.-Land column, which this isolation test omits.)
+  const ws = makeRow(R, {
+    51: 10, 52: '747.28', 55: '-8.48', 56: '-0.76', 57: '-1.11',
+    58: '2543480405', 59: '2280', 60: '2284',
+    61: '29012', 62: 'Caorso', 63: '211FO002', 64: '612110',
+  });
+  const out = e.processWackler(ws, R, W_COLS);
+  assert.ok(
+    out.includes('Wackler rechnet Frachtrate für 2400kg ab'),
+    `expected the plain weight-tier note (2400, no GB re-tier), got: ${out}`
+  );
+});
+
+test('processWackler: FR Kosten lt. Tarif names the tier DIRECTLY off the rate card', () => {
+  // Real values from workbook 10354157 row 20 (ec0469d0), GB2, VKG 2496 -> 2600 weight tier. The
+  // sheet carries the FR freight columns: FR Kosten lt. Tarif = 691,10 = rate(2000,GB2) (the tariff
+  // freight) and FR Kosten DL = 1001,40 = rate(2600,GB2) (what Wackler billed), FR Differenz =
+  // +310,30 = DL − Tarif (an overcharge). The note reports the TARIFF tier, read straight off the
+  // rate card from Kosten lt. Tarif -> 2000 (NOT 2600, the billed tier). MT=36.32 stays additive.
+  const ws = makeRow(R, {
+    51: 10, 52: '833.73', 54: '0.93', 55: '310.3', 56: '36.32', 57: '40.34',
+    58: '503472974', 59: '2496', 60: '2494',
+    61: 'RG30 1BD', 62: 'Reading', 63: '201FO001', 64: '612110',
+    69: '691.10', 70: '1001.40', // FR Kosten lt. Tarif / FR Kosten DL
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 2000kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: FR Kosten DL − FR Differenz resolves the tariff tier when no Tarif column', () => {
+  // Only FR Kosten DL is present (no Kosten lt. Tarif column). The tariff freight is derived as
+  // Kosten DL − FR Differenz = 1001,40 − 310,30 = 691,10 = rate(2000,GB2) -> the same 2000 tier,
+  // proving the fallback derivation off the billed cost.
+  const ws = makeRow(R, {
+    51: 10, 52: '833.73', 54: '0.93', 55: '310.3', 56: '36.32', 57: '40.34',
+    58: '503472974', 59: '2496', 60: '2494',
+    61: 'RG30 1BD', 62: 'Reading', 63: '201FO001', 64: '612110',
+    70: '1001.40', // FR Kosten DL only
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 2000kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: an off-card FR Kosten lt. Tarif falls back to the FR-delta inference', () => {
+  // Guard: FR Kosten lt. Tarif = 700,00 matches no published GB2 tier rate within tolerance, so the
+  // direct lookup yields nothing and the engine falls back to the rate(weightTier) − FR-delta walk —
+  // which still re-tiers 2600 -> 2000 via FR=+310.3. An off-card tariff value must never break a row
+  // the FR delta alone already solves.
+  const ws = makeRow(R, {
+    51: 10, 52: '833.73', 54: '0.93', 55: '310.3', 56: '36.32', 57: '40.34',
+    58: '503472974', 59: '2496', 60: '2494',
+    61: 'RG30 1BD', 62: 'Reading', 63: '201FO001', 64: '612110',
+    69: '700.00', // off-card FR Kosten lt. Tarif
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 2000kg ab // Mautdifferenz'
   );
 });
