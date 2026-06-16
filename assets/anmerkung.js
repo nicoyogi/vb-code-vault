@@ -882,10 +882,18 @@ function wacklerRechnetNote(tierKg){
    tier's rate, and the auditor reports that tier. Translating the FR delta back into a tier
    needs the destination's published rate, so we resolve the international rate-card zone and
    read WACKLER_RATECARD. */
-/* EUR tolerance when matching an implied billed-rate back to a rate-card tier (covers cent
-   rounding in the published cells). Tight on purpose: only a clean tier-step FR gap re-tiers the
-   note; an arbitrary rounding residual leaves the weight tier untouched. */
+/* EUR tolerance when matching an implied billed-rate back to the IMMEDIATE neighbour tier (±1
+   step): loose enough to cover cent rounding in the published cells, since the common re-tiering is
+   a single neighbouring step. */
 const WACKLER_RATE_TOL=0.5;
+/* Tighter tolerance for a NON-ADJACENT (multi-step) re-tiering. A far tier re-tiers only when the
+   implied billed rate hits its published rate near-exactly — a genuine billing signature, since FR
+   is the EXACT published gap between the weight tier and the billed tier (AI-bundle 2026-06-16 row
+   ec0469d0: GB2, VKG 2496 → 2600 weight tier, FR=+310.3 = rate(2600,GB2)−rate(2000,GB2) EXACTLY →
+   2000, three steps down). A loose far match stays coincidence and is rejected — this keeps the
+   2026-06-12 ghost guard intact (941d66f0: DE4 200 tier, FR=+12.99, implied 29.05 vs
+   rate(50,DE4)=29.50 is 0.45 off: far AND inexact → the note stays 200). */
+const WACKLER_RETIER_EXACT_TOL=0.1;
 /* Resolve a row to an INTERNATIONAL rate-card zone (AT1/CH2/FR3/TR/…). Primary path is the
    Abg.-Land/Empf.-Land classification: an international lane resolves via its non-German country
    code + that side's PLZ (Empf.-PLZ on an export, Abg.-PLZ on an import), which is exactly
@@ -909,6 +917,21 @@ function wacklerResolveIntlZone(ws,r,cols){
       if(z)return z;
     }
   }
+  /* GB fallback when neither a Land column nor a Tarifzone token is present. A UK postcode is
+     alphanumeric and ALWAYS leads with letters (RG30, EH12, UB8…), so it can never be mistaken for
+     a German PLZ (five digits) — the foreign-numeric-masquerade risk the country guard exists for
+     simply does not apply to a letter-led code. So when the Empf.-PLZ leads with a letter and the
+     rate card's GB area division recognises it, resolve the GB zone straight from the postcode.
+     Numeric codes (German PLZ, NL "8242 PN") and other-country alphanumerics that aren't GB areas
+     (Irish "D24") fall through to null, exactly as before. AI-bundle 2026-06-16 row ec0469d0:
+     Empf.-PLZ "RG30 1BD", no Land column → GB2, which is what lets the billed-tier re-tiering run. */
+  if(typeof WACKLER_RC.resolveZoneByPostal==='function'&&cols.empf_plz!=null&&cols.empf_plz>=0){
+    const plz=String(cellStr(ws,r,cols.empf_plz)||'').trim();
+    if(/^[A-Za-z]/.test(plz)){
+      const z=WACKLER_RC.resolveZoneByPostal('GB',plz);
+      if(z)return z;
+    }
+  }
   return null;
 }
 /* Bind a row to the rate card + zone its freight is published under, returned as a
@@ -926,41 +949,87 @@ function wacklerRateProbe(ws,r,cols){
   if(intlZone&&WACKLER_RC)return{rateAt:kg=>WACKLER_RC.rate(kg,intlZone),tiers:WACKLER_BP};
   return null;
 }
-/* The tier Wackler actually billed against on a "Wackler rechnet" row. The chargeable weight
-   puts the shipment in `weightTierKg` (rate-card ceiling); a signed FR delta (FR Differenz is
-   tariff − billed) can reveal Wackler billed a NEIGHBOURING tier's rate, which the auditor then
-   reports. The implied billed rate is systemRate − frVal:
-     • FR CREDIT (frVal < 0 → Wackler billed MORE): re-tier to the next tier UP when its rate
-       equals the implied billed rate (e40698ee: TR 6840/6862 kg → 7000 weight tier, FR=−59.34 =
-       rate(7500)−rate(7000) → 7500; domestic DE2 148/149 kg, FR=−2.96 = rate(200)−rate(150) → 200).
-     • FR UNDERCHARGE (frVal > 0 → Wackler billed LESS): re-tier to the floor tier one step DOWN
-       when its rate equals the implied billed rate (AI-bundle 2026-06-16 row f6cb2770: NL
-       VKG=VKG_DL=2125 → 2200 weight tier, FR=+17.83 = rate(2200,NL)−rate(2000,NL) → 2000).
-   ADJACENT-ONLY in both directions — only the immediate neighbour may match. A far tier whose
-   rate happens to sit within tolerance is coincidence, not a billing signature: this is what
-   keeps the 2026-06-12 positive-FR guard intact (941d66f0: DE4 174 kg → 200 tier, FR=+12.99 —
-   the implied 42.04−12.99=29.05 matches no adjacent neighbour, so the note stays 200; the old
-   any-sign ALL-tier search wrongly jumped to rate(50,DE4)=29.50 three tiers below).
-   Falls back to weightTierKg when the rate card or destination zone is unavailable, or when
-   the FR gap matches no clean adjacent tier step (a genuine rounding residual — e.g. bundle
-   row 52fa91df: DE9 1500 tier, FR=−80.79 implies 281.18, no published neighbour rate fits). */
-function wacklerBilledTier(weightTierKg,frVal,ws,r,cols){
+/* ── The tier named in the "Wackler rechnet Frachtrate für <kg> ab" note ──────────────────────
+   That <kg> is the rate-card tier the freight is rated at PER THE TARIFF — the tier whose published
+   rate equals FR Kosten lt. Tarif (the tariff freight). It is NOT necessarily the tier Wackler
+   billed: on an over/undercharge the bill (FR Kosten DL) sits at a different tier, and the gap
+   (FR Differenz = Kosten DL − Kosten lt. Tarif) is the audit finding itself. Two signals name the
+   tier, in order of directness (see wacklerRechnetTier):
+
+   1. DIRECT (preferred) — the tariff freight (FR Kosten lt. Tarif, or FR Kosten DL − FR Differenz)
+      looked up STRAIGHT against the rate card via wacklerRateToTier: the tier whose published rate
+      equals it. No VKG assumption — it reads which kg the tariff used. Validated on the real
+      workbooks: ec0469d0 GB2 Tarif 691.10 = rate(2000) → 2000; f6cb2770 NL Tarif 389.73 =
+      rate(2000) → 2000; 0bf186a7 IT1 Tarif 605.59 = rate(2600) → 2600.
+   2. FALLBACK (FR Kosten columns absent) — Wackler bills the rate at the VKG weight tier, so infer
+      the tariff rate as rate(weightTier) − frVal and walk the tiers toward it (overcharge frVal>0 →
+      tariff below → down: ec0469d0 GB2 2600→2000 three steps; undercharge frVal<0 → tariff above →
+      up: e40698ee TR 7000→7500). The immediate neighbour matches within the loose cent-rounding
+      tolerance (WACKLER_RATE_TOL); a FARTHER tier must match near-exactly (WACKLER_RETIER_EXACT_TOL),
+      so a coincidental far hit is rejected — keeping the 2026-06-12 guard intact (941d66f0: DE4 200
+      tier, +12.99, implied 29.05 is 0.45 off rate(50,DE4)=29.50 → stays 200) and 52fa91df (DE9
+      1500, −80.79 implies 281.18, no fit → stays 1500).
+   Both degrade to weightTierKg when the rate card / destination zone is unavailable. */
+/* The tariff freight (EUR) — FR Kosten lt. Tarif, the cost the rate card prescribes — used to name
+   the "Wackler rechnet" tier directly. Prefers the explicit Kosten lt. Tarif cell; otherwise
+   derives it from FR Kosten DL − FR Differenz (Differenz = Kosten DL − Kosten lt. Tarif, so
+   Kosten lt. Tarif = Kosten DL − Differenz). Returns 0 when neither freight column is on the sheet,
+   so callers fall back to the rate(weightTier) − FR-delta inference. */
+function wacklerTariffFreight(ws,r,cols,frVal){
+  if(cols&&cols.fr_tar!=null&&cols.fr_tar>=0){
+    const tar=cellNum(ws,r,cols.fr_tar);
+    if(tar>0)return tar;
+  }
+  if(cols&&cols.fr_dl!=null&&cols.fr_dl>=0){
+    const dl=cellNum(ws,r,cols.fr_dl);
+    if(dl>0)return dl-frVal;
+  }
+  return 0;
+}
+/* Reverse rate-card lookup: the tier breakpoint whose published rate equals a known freight cost
+   (here the tariff freight). Returns the nearest-matching tier kg within WACKLER_RATE_TOL; ties and
+   flat rate regions resolve to the SMALLEST such tier (the most conservative reading). 0 when no
+   published rate fits, so the weight tier stands. */
+function wacklerRateToTier(probe,freight){
+  if(!probe||!(freight>0))return 0;
+  let best=0,bestErr=Infinity;
+  for(const t of probe.tiers){
+    const rt=probe.rateAt(t);
+    if(!(rt>0))continue;
+    const err=Math.abs(rt-freight);
+    if(err<bestErr){bestErr=err;best=t;}
+  }
+  return bestErr<=WACKLER_RATE_TOL?best:0;
+}
+function wacklerRechnetTier(weightTierKg,frVal,ws,r,cols){
   if(!(Math.abs(frVal)>T_WACKLER))return weightTierKg;
   const probe=wacklerRateProbe(ws,r,cols);
   if(!probe)return weightTierKg;
-  const systemRate=probe.rateAt(weightTierKg);
-  if(!(systemRate>0))return weightTierKg;
+  /* Preferred: the tariff freight (FR Kosten lt. Tarif, or FR Kosten DL − FR Differenz) looked up
+     STRAIGHT against the rate card. Names the tier from the published rate itself rather than from
+     VKG + the FR delta, so it is right even when a volumetric VKG rounds into a different weight tier
+     than the tariff rated — "compare to the rate card which kg was used". Only overrides when a
+     published tier rate matches the tariff freight within tolerance. */
+  const tariffFreight=wacklerTariffFreight(ws,r,cols,frVal);
+  if(tariffFreight>0){
+    const t=wacklerRateToTier(probe,tariffFreight);
+    if(t>0)return t;
+  }
+  /* Fallback (FR Kosten columns absent): Wackler bills the rate at the weight tier, so the tariff
+     rate is rate(weightTier) − frVal. Walk the tiers toward it — overcharge (frVal>0) → down,
+     undercharge (frVal<0) → up — matching the immediate neighbour within the loose cent-rounding
+     tolerance, a farther tier only on a near-exact match. */
+  const weightRate=probe.rateAt(weightTierKg);
+  if(!(weightRate>0))return weightTierKg;
   const idx=probe.tiers.indexOf(weightTierKg);
   if(idx<0)return weightTierKg;
-  const billedRate=systemRate-frVal;
-  if(frVal<0&&idx+1<probe.tiers.length){
-    /* FR credit → Wackler billed the adjacent tier UP. */
-    const upTier=probe.tiers[idx+1],upRate=probe.rateAt(upTier);
-    if(upRate>0&&Math.abs(upRate-billedRate)<=WACKLER_RATE_TOL)return upTier;
-  }else if(frVal>0&&idx-1>=0){
-    /* FR undercharge → Wackler billed the adjacent (floor) tier DOWN. */
-    const downTier=probe.tiers[idx-1],downRate=probe.rateAt(downTier);
-    if(downRate>0&&Math.abs(downRate-billedRate)<=WACKLER_RATE_TOL)return downTier;
+  const tariffRate=weightRate-frVal;
+  const step=frVal<0?1:-1;
+  for(let j=idx+step,dist=1;j>=0&&j<probe.tiers.length;j+=step,dist++){
+    const tier=probe.tiers[j],tierRate=probe.rateAt(tier);
+    if(!(tierRate>0))continue;
+    const tol=dist===1?WACKLER_RATE_TOL:WACKLER_RETIER_EXACT_TOL;
+    if(Math.abs(tierRate-tariffRate)<=tol)return tier;
   }
   return weightTierKg;
 }
@@ -997,7 +1066,7 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
 /* Resolve the audit wording for a Wackler AVIS code. The 8.7 credit (negative) is the
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
-function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),abg_land:fcAny('Abg.-Land','Absenderland','Versandland'),empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),abg_plz:fcAny('Abg.-PLZ','Absender-PLZ','Versand-PLZ'),zone:fcAny('Tarifzone','Tarifgebiet','Zone')};}
+function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),fr_tar:fc('FR','Kosten lt. Tarif'),fr_dl:fc('FR','Kosten DL'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),abg_land:fcAny('Abg.-Land','Absenderland','Versandland'),empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),abg_plz:fcAny('Abg.-PLZ','Absender-PLZ','Versand-PLZ'),zone:fcAny('Tarifzone','Tarifgebiet','Zone')};}
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
 const WACKLER_SNK_NOISE=5.0;
@@ -1181,11 +1250,11 @@ function processWackler(ws,r,cols){
        (vkg/vkgDl === 0) fall through to the Frachtdifferenz fallback in rule 8. */
     if(vkg>0&&vkgDl>0){
       const tA=wacklerGetTier(vkg),tB=wacklerGetTier(vkgDl);
-      /* The weight tier is the rate-card ceiling of the chargeable weight; a signed FR delta can
-         reveal Wackler billed a neighbouring tier's rate, so report THAT tier in the "Wackler
-         rechnet" note. Degrades to tA when the rate card / destination zone can't translate the
-         FR gap into a clean tier step (AI-bundle row e40698ee: 7000 weight tier → billed 7500). */
-      const reportTier=wacklerBilledTier(tA,frVal,ws,r,cols);
+      /* The weight tier is the rate-card ceiling of the chargeable weight, but the "Wackler rechnet"
+         note reports the tier the freight is rated at PER THE TARIFF (FR Kosten lt. Tarif), which an
+         over/undercharge puts at a different bracket. Degrades to tA when the rate card / destination
+         zone can't resolve it (AI-bundle row e40698ee: 7000 weight tier → tariff tier 7500). */
+      const reportTier=wacklerRechnetTier(tA,frVal,ws,r,cols);
       if(tA===tB){
         /* A multi-reference row whose two weights share a rate tier is normally separate
            consignments that should have ridden one booking → "hätte gebündelt werden müssen".
@@ -1219,9 +1288,9 @@ function processWackler(ws,r,cols){
              AVIS=1, d97ce4ec: 10000kg / 2 refs / AVIS=6.5, f04300d4: ~6850kg / 2 refs). On
              NEITHER path is wacklerRechnetFired set — unlike the single-shipment rounding case
              below — because the auditor still itemises the Maut and (positive-FR) Energiezuschlag
-             deltas on these rows. Tier = reportTier: the weight's ceiling bracket, or an adjacent
-             tier when a clean tier-step FR delta shows Wackler billed a neighbour (2026-06-16 row
-             f6cb2770: NL 2125 kg, FR=+17.83 = rate(2200)−rate(2000) → the 2000 floor tier). */
+             deltas on these rows. Tier = reportTier: the weight's ceiling bracket, or the tier the
+             tariff freight (FR Kosten lt. Tarif) maps to when it differs (2026-06-16 row f6cb2770:
+             NL 2125 kg, Tarif 389.73 = rate(2000) vs the 2200 weight tier → the 2000 tier). */
           if(Math.max(vkg,vkgDl)<=WACKLER_BUENDEL_MAX_KG){
             res=join(res,P.buendelMuessen);
           } else {
@@ -1594,6 +1663,7 @@ const TESTER_FIELDS={
   wackler:[
     ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],['target','Existing Anmerkung','str'],
     ['avis_diff','AVIS Differenz','num'],['snk_diff','SNK Differenz','num'],['fr','FR Differenz','num'],
+    ['fr_tar','FR Kosten lt.Tarif','num'],['fr_dl','FR Kosten DL','num'],
     ['maut','MT Differenz','num'],['tz','TZ Differenz','num'],
     ['referenz','ReferenzNr','str'],
     ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
@@ -1708,7 +1778,7 @@ function buildSyntheticWs(fw,userVals){
     dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','c502_dl','c503_dl','lg_diff','av_diff'],
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
-    wackler:['target','stat','tarif','avis_diff','snk_diff','fr','maut','tz','referenz','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
+    wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
   }[fw]||[];
   for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
   return{ws,cols};
@@ -2041,7 +2111,7 @@ const CANONICAL_INPUT_ORDER={
        'snk_diff','ac_diff','mt_diff','nx_diff','os_diff','tz_diff',
        'kostenstelle','sachkonto'],
   wackler:['stat','tarif','existing_anmerkung',
-           'avis_diff','snk_diff','fr_diff','mt_diff','tz_diff',
+           'avis_diff','snk_diff','fr_diff','fr_tarif','fr_dl','mt_diff','tz_diff',
            'referenz','vkg','vkg_dl','empf_plz','empf_ort',
            'kostenstelle','sachkonto'],
 };
@@ -2451,6 +2521,7 @@ function collectInputsForRow(fw,ws,r,cols){
   } else if(fw==='wackler'){
     get('stat',cols.stat);get('tarif',cols.tarif);get('existing_anmerkung',cols.target);
     get('avis_diff',cols.avis_diff);get('snk_diff',cols.snk_diff);get('fr_diff',cols.fr);
+    get('fr_tarif',cols.fr_tar);get('fr_dl',cols.fr_dl);
     get('mt_diff',cols.maut);get('tz_diff',cols.tz);
     get('referenz',cols.referenz);
     get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
@@ -2774,7 +2845,7 @@ function sendDiffToTester(i){
       kostenstelle:'kost',sachkonto:'sach',
     },
     wackler:{
-      existing_anmerkung:'target',fr_diff:'fr',mt_diff:'maut',tz_diff:'tz',
+      existing_anmerkung:'target',fr_diff:'fr',fr_tarif:'fr_tar',mt_diff:'maut',tz_diff:'tz',
     },
   };
   const remap=REMAP_BY_FW[r.fw]||{};
@@ -3242,6 +3313,8 @@ const INPUT_GLOSSARY={
   stat              :'Stat_Freigabe — approval state. 10 = approved (engine runs). Anything else gates most rules off.',
   tarif             :'Total Kosten lt. Tarif — booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
   fr_diff           :'FR Differenz — freight-charge delta vs tariff (numeric, signed).',
+  fr_tarif          :'FR Kosten lt. Tarif — the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier.',
+  fr_dl             :'FR Kosten DL — the freight Wackler actually billed (numeric) = rate(billedTier, zone) = fr_tarif + fr_diff. Differs from fr_tarif on an over/undercharge (fr_diff = Kosten DL − Kosten lt. Tarif); used to derive fr_tarif when the Kosten lt. Tarif column is absent.',
   exp_diff          :'EXP Differenz — express/priority surcharge delta (numeric, signed).',
   exp_dl            :'EXP Kosten DL — DL-side express cost (Dachser-only signal).',
   mt_diff           :'MT/Maut Differenz — toll delta (numeric, signed).',

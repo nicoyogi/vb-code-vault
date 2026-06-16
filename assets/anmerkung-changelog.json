@@ -1,6 +1,26 @@
 {
-  "version": "1.26.0",
+  "version": "1.28.0",
   "entries": [
+    {
+      "ver": "1.28.0",
+      "date": "2026-06-16",
+      "items": [
+        "Wackler — the \"Wackler rechnet für <kg> ab\" tier is now read DIRECTLY off the rate card from the freight cost, not inferred from VKG. The resolver reads two new FR sub-columns — FR Kosten lt. Tarif (the tariff freight the rate card prescribes, = rate(tariffTier, zone)) and FR Kosten DL (the freight Wackler actually billed) — and wacklerRechnetTier reverse-looks-up the TARIFF freight (Kosten lt. Tarif, or Kosten DL − FR Differenz) against the rate card to name the tier whose published rate matches it. Validated against the real Soll-Ist workbooks: the note reports the TARIFF tier, not the billed one (ec0469d0: Kosten lt. Tarif 691,10 = rate(2000,GB2) → 2000, while Wackler billed Kosten DL 1001,40 = rate(2600) — the 310,30 gap IS the overcharge finding). This is correct even when a volumetric VKG rounds into a different weight tier than the tariff rated, which the old VKG + FR-delta inference could not see.",
+        "Wackler — sign convention confirmed from the live data: FR Differenz = Kosten DL − Kosten lt. Tarif (billed − tariff), so a POSITIVE FR Differenz is an overcharge. The v1.27.0 FR-delta fallback already computed rate(weightTier) − FR Differenz = the tariff freight, so its output was right all along; v1.28.0 only corrects the internal naming (was mislabelled \"billed\") and adds the direct read.",
+        "Wackler — the change is additive and ordered: the direct rate-card lookup runs FIRST and only overrides when a published tier rate matches the tariff freight within tolerance; otherwise the v1.27.0 FR-delta walk (immediate neighbour loose, farther tiers near-exact) runs unchanged. On sheets without the FR Kosten columns (every bundle to date) behaviour is identical to v1.27.0 — the 176-row historical replay still changes only ec0469d0, zero regressions.",
+        "AI Bundle — fr_tarif (FR Kosten lt. Tarif) and fr_dl (FR Kosten DL) are now exported in the Wackler training inputs, canonical order and input glossary, and added to the rule tester. Future bundles carry the freight costs so the tariff-tier reading is verifiable in Diff Mode (prior bundles omitted them, so the engine read them from the live workbook but they never reached the export).",
+        "Tests — 3 new cases pin the freight-column reads against real values: FR Kosten lt. Tarif names the tier directly off the card, FR Kosten DL − FR Differenz resolves it when no Tarif column is present, and an off-card FR Kosten lt. Tarif falls back to the FR-delta inference without breaking the row. Validated end-to-end against both real Soll-Ist workbooks: 82/82 data rows match the auditor's truth. Full suite: 121 passing."
+      ]
+    },
+    {
+      "ver": "1.27.0",
+      "date": "2026-06-16",
+      "items": [
+        "Wackler — the \"Wackler rechnet\" billed-tier re-tiering is no longer adjacent-only: it now walks ALL tiers in the FR-implied direction (credit → up, undercharge → down). The immediate neighbour still matches within the loose cent-rounding tolerance (0.5 €), but a FARTHER tier re-tiers only on a NEAR-EXACT gap (0.1 €) — because FR is the exact published rate gap between the weight tier and the billed tier, a clean multi-step signature rather than a coincidence. AI-bundle 2026-06-16 row ec0469d0: GB2, VKG 2496 → 2600 weight tier, FR=+310.3 = rate(2600,GB2)−rate(2000,GB2) EXACTLY → the note now names 2000, three steps down. The tight far-tier band keeps the 2026-06-12 ghost guard intact (941d66f0: DE4 200 tier, FR=+12.99, implied 29.05 vs rate(50,DE4)=29.50 is 0.45 off — far AND inexact, so it stays 200) and 52fa91df (DE9 1500, no rate fits) unchanged.",
+        "Wackler — GB zone now resolves from the Empf.-PLZ alone when there is no Empf.-Land / Tarifzone column. A UK postcode is alphanumeric and always leads with letters (RG30, EH12, UB8…), so it can never be mistaken for a five-digit German PLZ — the foreign-numeric-masquerade risk the country guard exists for does not apply. Numeric codes and non-GB alphanumerics (Irish \"D24\") still fall through to null, exactly as before. This is what lets row ec0469d0 (Empf.-PLZ \"RG30 1BD\", no Land column) resolve GB2 so the billed-tier re-tiering can run.",
+        "Tests — 2 new cases pin the 2026-06-16 rules: the 3-step near-exact down-tiering with a Land-less GB postcode (ec0469d0 → 2000), and a guard that a bare numeric foreign PLZ with no Land column never resolves a GB zone (keeps the raw weight tier). The 941d66f0 ghost guard and 52fa91df comments were rewritten to describe the near-exact far-tier rule that now blocks them. Full suite: 118 passing."
+      ]
+    },
     {
       "ver": "1.26.0",
       "date": "2026-06-16",
