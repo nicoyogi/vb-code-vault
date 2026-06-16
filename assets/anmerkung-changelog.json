@@ -1,6 +1,15 @@
 {
-  "version": "1.25.0",
+  "version": "1.26.0",
   "entries": [
+    {
+      "ver": "1.26.0",
+      "date": "2026-06-16",
+      "items": [
+        "Wackler — an ≈80 € SNK on a WEIGHED shipment now resolves to the \"Terminzustellung\" timed-delivery code (the same finding as the SNK 25 / 170 codes at a different published rate). It is weight-gated: an 80 € SNK with no chargeable weight stays a flat-rate \"Pauschalfracht, ok?\" (|SNK| ≥ tariff), so 80 is deliberately kept OUT of the weight-blind WACKLER_SNK_CODES book. AI-bundle 2026-06-16 rows a54fc7ee (75 kg, tarif 54.91, IT — was mis-read as Pauschalfracht because |SNK| ≥ tariff) and 278691a9 (152 kg, tarif 81.7, IT — was falling through to the generic \"SNK Differenz\").",
+        "Wackler — billed-tier re-tiering (wacklerBilledTier) is now bidirectional but still ADJACENT-ONLY. Besides the existing FR-credit step UP (Wackler billed MORE → next tier up), a POSITIVE FR delta that exactly matches the published gap DOWN to the floor tier now re-tiers the \"Wackler rechnet\" note one step down (Wackler billed LESS, against the floor bracket). AI-bundle 2026-06-16 row f6cb2770: NL, VKG=VKG_DL=2125 → 2200 weight tier, FR=+17.83 = rate(2200,NL)−rate(2000,NL) → the note now names 2000, not 2200. Adjacent-only keeps the 2026-06-12 positive-FR guard intact (941d66f0: DE4 174→200, FR=+12.99 matches no neighbour step → stays 200; no return to the old ghost-tier jumps).",
+        "Tests — 4 new cases pin the 2026-06-16 rules: SNK=80 weighed → Terminzustellung (vs the would-be Pauschalfracht and vs the SNK-Differenz fallback), the no-weight SNK=80 → Pauschalfracht weight-gate guard, and the positive-FR floor-tier down-tiering (2200 → 2000, NL). Full suite: 116 passing."
+      ]
+    },
     {
       "ver": "1.25.0",
       "date": "2026-06-12",

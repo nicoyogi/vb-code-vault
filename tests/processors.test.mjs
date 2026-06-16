@@ -644,3 +644,57 @@ test('processWackler: cross-tier multi-ref with near weights but an FR CREDIT st
     'Differenz aufgrund abweichender Gewichte // Mautdifferenz'
   );
 });
+
+
+/* ──────────────────────────────────────────────────────────
+   WACKLER — AI-bundle 2026-06-16 rule updates
+   Three failure rows: an 80 € SNK Terminzustellung surcharge on
+   weighed shipments, and a positive-FR down-tiering of the
+   "Wackler rechnet" note.
+─────────────────────────────────────────────────────────── */
+
+test('processWackler: SNK=80 on a weighed shipment -> Terminzustellung (not Pauschalfracht)', () => {
+  // Bundle row a54fc7ee: VKG=VKG_DL=75, SNK=80, tarif 54.91 (|SNK| >= tariff), IT, no FR/MT/TZ.
+  // |SNK| >= tariff would have read as "Pauschalfracht, ok?", but a real chargeable weight makes
+  // the 80 € SNK a Terminzustellung surcharge — the weight gate splits the two readings.
+  const ws = makeRow(R, {
+    51: 10, 52: '54.91', 54: '80', 59: '75', 60: '75',
+    61: '52045', 62: 'FOIANO DELLA CHIANA', 63: '211FO002', 64: '612110', 66: 'IT', 67: 'DE',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Terminzustellung');
+});
+
+test('processWackler: SNK=80 on a weighed shipment -> Terminzustellung (not SNK Differenz)', () => {
+  // Bundle row 278691a9: VKG=VKG_DL=152, SNK=80, tarif 81.7 (|SNK| < tariff so never Pauschalfracht),
+  // IT, no FR/MT/TZ. The bare 80 € SNK previously fell through to the generic "SNK Differenz"
+  // fallback; it now resolves to the Terminzustellung code via the weight gate.
+  const ws = makeRow(R, {
+    51: 10, 52: '81.7', 54: '80', 59: '152', 60: '152',
+    61: '50031', 62: 'BARBERINO DI MUGELLO', 63: '211FO002', 64: '612110', 66: 'IT', 67: 'DE',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Terminzustellung');
+});
+
+test('processWackler: no-weight SNK=80 with |SNK| >= tariff stays Pauschalfracht (weight gate)', () => {
+  // Guard for the split above: with NO chargeable weight the 80 € SNK is a flat-rate lump charge,
+  // so |SNK| >= tariff still reads as "Pauschalfracht, ok?" — the Terminzustellung code must not
+  // poach it. (Same as the original 54.95/80 Pauschalfracht row, made explicit against the gate.)
+  const ws = makeRow(R, { 51: 10, 52: '54.91', 54: '80', 63: '1', 64: '2' });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Pauschalfracht, ok?');
+});
+
+test('processWackler: positive FR down-tiers the "Wackler rechnet" note to the floor tier', () => {
+  // Bundle row f6cb2770: 2 refs, VKG=VKG_DL=2125 weigh into the 2200 kg tier (NL), but FR=+17.83 is
+  // EXACTLY rate(2200,NL)-rate(2000,NL)=407,56-389,73 -> Wackler billed the 2000 tier (one step
+  // DOWN). The note must name 2000, not the raw 2200 weight tier. MT and (positive-FR) fuel stay
+  // additive. The destination zone (NL) is what lets the rate card re-tier it.
+  const ws = makeRow(R, {
+    51: 10, 52: '472.57', 54: '0.05', 55: '17.83', 56: '1.42', 57: '2.32',
+    58: '2543438622,2543438654', 59: '2125', 60: '2125',
+    61: '8242 PN', 62: 'Lelystad', 63: '211FO002', 64: '612110', 66: 'NL', 67: 'DE',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 2000kg ab // Mautdifferenz // Differenz Energiezuschlag'
+  );
+});
