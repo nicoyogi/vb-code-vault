@@ -175,6 +175,16 @@
     .an-table td.name { color: var(--text); font-family: var(--grotesk); font-weight: 600; font-size: 13px; }
     .an-rank { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-light); color: var(--accent); font-size: 10px; font-weight: 700; }
     .an-rank.r1 { background: var(--success-light); color: var(--success); }
+    .an-pill { padding: 2px 9px; border-radius: 4px; font-size: 10.5px; font-weight: 600; }
+    .pill-A { background: var(--success-light); color: var(--success); }
+    .pill-B { background: var(--accent-light); color: var(--accent); }
+    .pill-C { background: var(--warn-light); color: var(--warn); }
+    .pill-D { background: var(--danger-light); color: var(--danger); }
+    .an-delta { font-family: var(--ibm-mono); font-size: 11px; }
+    .an-delta.up { color: var(--success); } .an-delta.down { color: var(--danger); } .an-delta.flat { color: var(--text3); }
+    .age-pill { font-family: var(--ibm-mono); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: var(--accent-light); color: var(--accent); }
+    .age-pill.mid { background: var(--warn-light); color: var(--warn); }
+    .age-pill.old { background: var(--danger-light); color: var(--danger); }
     .mini-bar { height: 7px; border-radius: 4px; background: var(--bg2); overflow: hidden; min-width: 60px; display:inline-block; vertical-align: middle; }
     .mini-bar > span { display:block; height:100%; background: var(--accent); }
     .an-heat { display: grid; gap: 3px; font-family: var(--ibm-mono); min-width: max-content; }
@@ -357,11 +367,14 @@
       <button class="seg-btn active" id="tab-records"   onclick="setView('records')">Records</button>
       <button class="seg-btn" id="tab-quantity"  onclick="setView('quantity')">Quantity</button>
       <button class="seg-btn" id="tab-personnel" onclick="setView('personnel')">Personnel</button>
+      <button class="seg-btn" id="tab-people"    onclick="setView('people')">People</button>
       <button class="seg-btn" id="tab-analytics" onclick="setView('analytics')">Analytics</button>
     </div>
     <div class="spacer"></div>
-    <button class="btn-sm" onclick="openImport()" title="Import from ALOKASI PROJECT.xlsx">⤒ Import Excel</button>
-    <button class="btn-sm" onclick="exportCSV()" title="Export current view as CSV">⤓ Export</button>
+    <button class="btn-sm" onclick="openImport()" title="Import from ALOKASI PROJECT.xlsx">⤒ Import</button>
+    <button class="btn-sm" onclick="exportCSV()" title="Export filtered records as CSV">⤓ CSV</button>
+    <button class="btn-sm" onclick="exportXLSX()" title="Export to Excel in the ALOKASI workbook layout">⤓ Excel</button>
+    <button class="btn-sm" onclick="printBriefing()" title="Printable PDF briefing">🖨 Briefing</button>
   </div>
 
   <div class="toolbar" id="filter-bar">
@@ -377,11 +390,12 @@
   <div id="view-records"></div>
   <div id="view-quantity" style="display:none"></div>
   <div id="view-personnel" style="display:none"></div>
+  <div id="view-people" style="display:none"></div>
   <div id="view-analytics" style="display:none"></div>
 
   <div class="page-footer">
     codingkuh.my.id<span class="fsep">·</span>Siemens GP · Project Allocation<br>
-    <a href="index.html">Grimoire Home</a><span class="fsep">·</span><a href="task-reviewer-siemens.html">Task Reviewer</a><span class="fsep">·</span><a href="qa-siemens.html">SGP Knowledge Base</a>
+    <a href="index.html">Grimoire Home</a><span class="fsep">·</span><a href="qa-siemens.html">SGP Knowledge Base</a><span class="fsep">·</span><a href="standard-wording.html">Standard Wording</a>
   </div>
 </main>
 
@@ -422,6 +436,7 @@
     <div class="imp-list" id="imp-list"></div>
     <div class="modal-actions">
       <div class="left-note" id="imp-note" style="margin-right:auto;font-family:var(--ibm-mono);font-size:11px;color:var(--text3);"></div>
+      <label style="margin-right:auto;display:flex;align-items:center;gap:6px;font-family:var(--ibm-mono);font-size:11px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="imp-dedupe" checked style="width:15px;height:15px;cursor:pointer;"> Skip duplicates</label>
       <button class="btn-sm" onclick="closeImport()">Cancel</button>
       <button class="btn-primary" id="imp-confirm" onclick="confirmImport()" disabled>Import</button>
     </div>
@@ -442,6 +457,7 @@ const col = db.collection('sgp_alokasi_records');
 const profilesCol = db.collection('sgp_alokasi_profiles');
 
 let records = [];
+let loaded = false;                     /* first snapshot received */
 let editId = null;
 let saving = false;
 let viewMode = 'records';
@@ -471,16 +487,27 @@ function cleanName(tok){ return String(tok).replace(/\(.*?\)/g,'').trim(); }   /
 function recComp(r){ const t=num(r.total); return t>0 ? Math.round(num(r.done)/t*100) : 0; }
 function normStatus(s){ const t=String(s||'').toLowerCase(); if(t.startsWith('seles')) return 'Selesai'; if(t.startsWith('pro')) return 'Proses'; return s ? 'Proses' : ''; }
 function effStatus(r){ return r.status || (num(r.done)>=num(r.total)&&num(r.total)>0 ? 'Selesai':'Proses'); }
+function validCounts(total, done){
+  if (total<0 || done<0) return 'Counts cannot be negative.';
+  if (done>total) return 'Done cannot exceed total.';
+  return null;
+}
 
-/* ── Firestore listener ── */
+/* ── Firestore listeners ── */
 function startListener(){
   setStatus('','Connecting...');
-  col.onSnapshot(snap=>{
+  showLoading();
+  col.orderBy('date','desc').onSnapshot(snap=>{
     records = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    loaded = true;
     setStatus('online','Connected');
     refreshDatalists();
     render();
   }, err=>{ console.error(err); setStatus('error','Error'); showToast('Error: '+err.code+' — '+err.message, true); });
+}
+function showLoading(){
+  const v = document.getElementById('view-'+viewMode);
+  if (v) v.innerHTML = `<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading records…</div></div></div>`;
 }
 
 /* ── Dropdowns / datalists ── */
@@ -528,17 +555,19 @@ function applyFilters(list){
 /* ── View switching ── */
 function setView(mode){
   viewMode = mode;
-  ['records','quantity','personnel','analytics'].forEach(m=>{
+  ['records','quantity','personnel','people','analytics'].forEach(m=>{
     document.getElementById('tab-'+m).classList.toggle('active', m===mode);
     document.getElementById('view-'+m).style.display = m===mode ? '' : 'none';
   });
   render();
 }
 function render(){
+  if (!loaded){ showLoading(); return; }
   const list = applyFilters(records);
   if (viewMode==='records')   renderRecords(list);
   if (viewMode==='quantity')  renderQuantity(list);
   if (viewMode==='personnel') renderPersonnel(list);
+  if (viewMode==='people')    renderPeople(list);
   if (viewMode==='analytics') renderAnalytics(list);
 }
 
@@ -723,7 +752,178 @@ function renderAnalytics(list){
   heat += `</div></div>`;
   const heatCard = `<div class="an-card"><div class="an-card-head">Activity heatmap <span class="sub">total data per project per day · color = completion</span></div>${heat}</div>`;
 
-  host.innerHTML = metrics + trend + `<div class="an-grid2">${projCard}${staffCard}</div>` + `<div class="an-grid2">${statusCard}${heatCard}</div>`;
+  /* aging backlog — open (Proses) records by age */
+  const today = isoToday();
+  const ageOf = d => { if(!d) return 0; const a=new Date(d+'T00:00:00'), b=new Date(today+'T00:00:00'); return Math.max(0, Math.round((b-a)/86400000)); };
+  const openRecs = list.filter(r=>effStatus(r)==='Proses').map(r=>({r, age:ageOf(r.date), rem:Math.max(0,num(r.total)-num(r.done))})).sort((a,b)=> b.age-a.age || b.rem-a.rem);
+  const agingRows = openRecs.slice(0,12).map(o=>`<tr>
+      <td class="l name">${esc(o.r.project||'—')}</td><td class="l">${esc(o.r.ekspeditur||'—')}</td>
+      <td class="l">${esc(staffArr(o.r).map(cleanName).join(', ')||'—')}</td><td>${o.rem.toLocaleString()}</td>
+      <td><span class="age-pill ${o.age>7?'old':o.age>2?'mid':''}">${o.age}d</span></td></tr>`).join('');
+  const agingCard = `<div class="an-card"><div class="an-card-head">Aging backlog <span class="sub">${openRecs.length} open record${openRecs.length===1?'':'s'} · oldest first</span></div>
+    ${openRecs.length ? `<div class="an-scroll"><table class="an-table"><thead><tr><th class="l">Project</th><th class="l">Ekspeditur</th><th class="l">Staff</th><th>Remaining</th><th>Age</th></tr></thead><tbody>${agingRows}</tbody></table></div>` : `<div style="color:var(--text3);font-family:var(--ibm-mono);font-size:11.5px">No open (Proses) records — everything is Selesai. 👌</div>`}</div>`;
+
+  host.innerHTML = metrics + trend + `<div class="an-grid2">${projCard}${staffCard}</div>` + `<div class="an-grid2">${statusCard}${heatCard}</div>` + agingCard;
+}
+
+/* ════ People view — per-person scorecards derived from the allocation records ════ */
+function gradeFromComp(pct,total){ if(!total) return 'N/A'; if(pct>=85)return 'A'; if(pct>=70)return 'B'; if(pct>=50)return 'C'; return 'D'; }
+function peopleRollup(list){
+  const m = {};
+  list.forEach(r=>{
+    const names = [...new Set(staffArr(r).map(cleanName).filter(Boolean))];
+    const open = effStatus(r)==='Proses' ? Math.max(0, num(r.total)-num(r.done)) : 0;
+    names.forEach(n=>{
+      const o = m[n] = m[n] || { name:n, recs:0, total:0, done:0, backlog:0, projects:new Set(), days:new Set(), byDay:{} };
+      o.recs++; o.total+=num(r.total); o.done+=num(r.done); o.backlog+=open;
+      if (r.project) o.projects.add(r.project);
+      if (r.date){ o.days.add(r.date); const bd=o.byDay[r.date]=o.byDay[r.date]||{total:0,done:0}; bd.total+=num(r.total); bd.done+=num(r.done); }
+    });
+  });
+  return Object.values(m).map(o=>{
+    const pct = o.total ? Math.round(o.done/o.total*100) : 0;
+    const ds = Object.keys(o.byDay).sort();
+    let trend = null;
+    if (ds.length>=2){ const a=o.byDay[ds[ds.length-2]], b=o.byDay[ds[ds.length-1]]; const pa=a.total?Math.round(a.done/a.total*100):0, pb=b.total?Math.round(b.done/b.total*100):0; trend=pb-pa; }
+    return { ...o, pct, grade:gradeFromComp(pct,o.total), avgDay: o.days.size?Math.round(o.done/o.days.size):0, trend };
+  });
+}
+function renderPeople(list){
+  const host = document.getElementById('view-people');
+  const people = peopleRollup(list);
+  if (!people.length){ host.innerHTML = emptyPanel('No people to score yet.'); return; }
+  const totalDone = people.reduce((a,p)=>a+p.done,0);
+  const teamTotal = list.reduce((a,r)=>a+num(r.total),0), teamDone = list.reduce((a,r)=>a+num(r.done),0);
+  const teamPct = teamTotal?Math.round(teamDone/teamTotal*100):0;
+  const avgDonePerPerson = people.length ? totalDone/people.length : 0;
+  const busiest = people.slice().sort((a,b)=>b.done-a.done)[0];
+  const mostBacklog = people.slice().sort((a,b)=>b.backlog-a.backlog)[0];
+
+  const metrics = `<div class="metrics">
+    <div class="metric"><div class="metric-lbl">People</div><div class="metric-val">${people.length}</div><div class="metric-sub">scored from records</div></div>
+    <div class="metric m-done"><div class="metric-lbl">Team completion</div><div class="metric-val">${teamPct}%</div><div class="metric-sub">${teamDone.toLocaleString()} / ${teamTotal.toLocaleString()}</div></div>
+    <div class="metric m-data"><div class="metric-lbl">Busiest</div><div class="metric-val" style="font-size:1.2rem">${esc(busiest?busiest.name:'—')}</div><div class="metric-sub">${busiest?busiest.done.toLocaleString()+' done':''}</div></div>
+    <div class="metric m-prog"><div class="metric-lbl">Most backlog</div><div class="metric-val" style="font-size:1.2rem">${esc(mostBacklog&&mostBacklog.backlog?mostBacklog.name:'—')}</div><div class="metric-sub">${mostBacklog&&mostBacklog.backlog?mostBacklog.backlog.toLocaleString()+' open':'clear'}</div></div>
+  </div>`;
+
+  /* scorecard table */
+  const rows = people.slice().sort((a,b)=> b.pct-a.pct || b.done-a.done || a.name.localeCompare(b.name)).map((p,i)=>{
+    const t = p.trend;
+    const trendCell = t==null ? `<span class="an-delta flat">—</span>` : t>0 ? `<span class="an-delta up">▲ ${t}pp</span>` : t<0 ? `<span class="an-delta down">▼ ${Math.abs(t)}pp</span>` : `<span class="an-delta flat">→ 0pp</span>`;
+    return `<tr>
+      <td class="l"><span class="an-rank ${i===0?'r1':''}">${i+1}</span></td>
+      <td class="l name">${esc(p.name)}</td>
+      <td>${p.recs}</td><td>${p.projects.size}</td><td>${p.days.size}</td>
+      <td>${p.total.toLocaleString()}</td><td>${p.done.toLocaleString()}</td>
+      <td>${p.pct}% <span class="an-pill pill-${p.grade==='N/A'?'B':p.grade}">${p.grade}</span></td>
+      <td>${p.backlog?`<span style="color:var(--warn)">${p.backlog.toLocaleString()}</span>`:'0'}</td>
+      <td>${p.avgDay.toLocaleString()}</td>
+      <td class="l">${trendCell}</td>
+    </tr>`;
+  }).join('');
+  const scoreCard = `<div class="an-card"><div class="an-card-head">People scorecards <span class="sub">completion · grade · backlog · avg/day · last-day trend</span></div>
+    <div class="an-scroll"><table class="an-table"><thead><tr>
+      <th class="l">#</th><th class="l">Person</th><th>Recs</th><th>Projects</th><th>Days</th><th>Total</th><th>Done</th><th>Completion</th><th>Backlog</th><th>Avg/day</th><th class="l">Trend</th>
+    </tr></thead><tbody>${rows}</tbody></table></div></div>`;
+
+  /* workload balance — done per person vs team average */
+  const maxDone = Math.max(1, ...people.map(p=>p.done));
+  const balRows = people.slice().sort((a,b)=>b.done-a.done).map(p=>{
+    const overload = p.done >= avgDonePerPerson*1.5, under = p.done <= avgDonePerPerson*0.5;
+    const flag = overload ? `<span class="an-delta down" title="well above average">overloaded</span>` : under ? `<span class="an-delta flat" title="well below average">light</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-family:var(--ibm-mono);font-size:11.5px">
+      <span style="min-width:110px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name)}</span>
+      <span class="mini-bar" style="flex:1;height:10px"><span style="width:${Math.round(p.done/maxDone*100)}%;background:${compColor(p.pct)}"></span></span>
+      <span style="min-width:54px;text-align:right;color:var(--text2)">${p.done.toLocaleString()}</span>
+      <span style="min-width:74px;text-align:right">${flag}</span>
+    </div>`;
+  }).join('');
+  const balCard = `<div class="an-card"><div class="an-card-head">Workload balance <span class="sub">data done per person · avg ${Math.round(avgDonePerPerson).toLocaleString()}</span></div>${balRows}</div>`;
+
+  host.innerHTML = metrics + scoreCard + balCard;
+}
+
+/* ════ Excel export — rebuilds the ALOKASI workbook layout ════ */
+function sanitizeSheet(n){ return n.replace(/[\\\/?*\[\]:]/g,' ').slice(0,31).trim(); }
+async function exportXLSX(){
+  const list = applyFilters(records);
+  if (!list.length){ showToast('Nothing to export.', true); return; }
+  let XLSX; try { XLSX = await loadXLSX(); } catch(e){ showToast(e.message, true); return; }
+  const wb = XLSX.utils.book_new();
+  const { dates, projects } = pivotAxes(list);
+  const dts = dates.slice().reverse(); /* ascending */
+  /* QUANTITY DATA (sum total) */
+  const qcell={}; list.forEach(r=>{ const k=r.date+'|'+r.project; qcell[k]=(qcell[k]||0)+num(r.total); });
+  const qaoa=[['DATE',...projects]]; dts.forEach(d=>qaoa.push([d,...projects.map(p=>qcell[d+'|'+p]||'')]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(qaoa), 'QUANTITY DATA');
+  /* Alokasi Personal (staff) */
+  const pcell={}; list.forEach(r=>{ const k=r.date+'|'+r.project; (pcell[k]=pcell[k]||new Set()); staffArr(r).forEach(t=>pcell[k].add(t)); });
+  const paoa=[['DATE',...projects]]; dts.forEach(d=>paoa.push([d,...projects.map(p=>{ const s=pcell[d+'|'+p]; return s?[...s].join(', '):''; })]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(paoa), 'Alokasi Personal');
+  /* per-project RINCIAN detail sheets */
+  const byProj={}; list.forEach(r=>{ (byProj[r.project||'—']=byProj[r.project||'—']||[]).push(r); });
+  const used=new Set();
+  Object.keys(byProj).sort().forEach(p=>{
+    const rows=[['DATE','EKSPEDITUR','Nama Staff','Jumlah Seluruh Data','Jumlah yang dikerjakan','Status']];
+    byProj[p].slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(r=>rows.push([r.date||'', r.ekspeditur||'', staffArr(r).join(', '), num(r.total), num(r.done), effStatus(r)]));
+    let name = sanitizeSheet('RINCIAN '+p) || 'RINCIAN'; let base=name, k=2; while(used.has(name)){ name = sanitizeSheet(base.slice(0,28)+' '+k); k++; } used.add(name);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), name);
+  });
+  XLSX.writeFile(wb, `ALOKASI PROJECT ${isoToday()}.xlsx`);
+  showToast('Exported Excel workbook.');
+}
+
+/* ════ Printable PDF briefing (opens a clean print window) ════ */
+function printBriefing(){
+  const list = applyFilters(records);
+  if (!list.length){ showToast('Nothing to print.', true); return; }
+  const datesAll = list.map(r=>r.date).filter(Boolean).sort();
+  const f = getFilters();
+  const from = f.from || datesAll[0] || '', to = f.to || datesAll[datesAll.length-1] || '';
+  const totalData=list.reduce((a,r)=>a+num(r.total),0), doneData=list.reduce((a,r)=>a+num(r.done),0);
+  const pct = totalData?Math.round(doneData/totalData*100):0;
+  const open = list.filter(r=>effStatus(r)==='Proses');
+  const backlog = open.reduce((a,r)=>a+Math.max(0,num(r.total)-num(r.done)),0);
+  /* project rollup */
+  const proj={}; list.forEach(r=>{ const p=r.project||'—'; const o=proj[p]=proj[p]||{total:0,done:0}; o.total+=num(r.total); o.done+=num(r.done); });
+  const projRows = Object.entries(proj).map(([p,o])=>({p,...o,pct:o.total?Math.round(o.done/o.total*100):0})).sort((a,b)=>b.total-a.total)
+    .map(o=>`<tr><td>${esc(o.p)}</td><td class="r">${o.total.toLocaleString()}</td><td class="r">${o.done.toLocaleString()}</td><td class="r">${o.pct}%</td></tr>`).join('');
+  /* people rollup */
+  const people = peopleRollup(list).sort((a,b)=>b.pct-a.pct||b.done-a.done)
+    .map(p=>`<tr><td>${esc(p.name)}</td><td class="r">${p.recs}</td><td class="r">${p.total.toLocaleString()}</td><td class="r">${p.done.toLocaleString()}</td><td class="r">${p.pct}%</td><td class="r">${p.backlog.toLocaleString()}</td></tr>`).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Project Allocation Briefing</title>
+    <style>
+      body{font-family:'Segoe UI',Arial,sans-serif;color:#0a1628;margin:32px;font-size:13px}
+      h1{font-size:20px;margin:0 0 2px} .meta{color:#667;font-size:12px;margin-bottom:18px}
+      .kpis{display:flex;gap:24px;margin:0 0 22px;flex-wrap:wrap}
+      .kpi{border:1px solid #d6dde8;border-radius:8px;padding:10px 16px;min-width:120px}
+      .kpi .l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#889}
+      .kpi .v{font-size:22px;font-weight:700}
+      h2{font-size:14px;margin:22px 0 8px;border-bottom:2px solid #0055b4;padding-bottom:4px}
+      table{width:100%;border-collapse:collapse;font-size:12px} th,td{padding:6px 8px;border-bottom:1px solid #e3e8f0;text-align:left}
+      th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667} td.r,th.r{text-align:right}
+      .foot{margin-top:28px;color:#99a;font-size:10px}
+      @media print{body{margin:12mm}}
+    </style></head><body>
+    <h1>Siemens GP · Project Allocation Briefing</h1>
+    <div class="meta">${from?esc(fmtDate(from)):'—'} → ${to?esc(fmtDate(to)):'—'} · ${list.length} records · generated ${esc(fmtDate(isoToday()))}</div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">Total data</div><div class="v">${totalData.toLocaleString()}</div></div>
+      <div class="kpi"><div class="l">Done</div><div class="v">${doneData.toLocaleString()}</div></div>
+      <div class="kpi"><div class="l">Completion</div><div class="v">${pct}%</div></div>
+      <div class="kpi"><div class="l">Open records</div><div class="v">${open.length}</div></div>
+      <div class="kpi"><div class="l">Backlog</div><div class="v">${backlog.toLocaleString()}</div></div>
+    </div>
+    <h2>By project</h2>
+    <table><thead><tr><th>Project</th><th class="r">Total</th><th class="r">Done</th><th class="r">Completion</th></tr></thead><tbody>${projRows}</tbody></table>
+    <h2>By person</h2>
+    <table><thead><tr><th>Person</th><th class="r">Recs</th><th class="r">Total</th><th class="r">Done</th><th class="r">Completion</th><th class="r">Backlog</th></tr></thead><tbody>${people}</tbody></table>
+    <div class="foot">codingkuh.my.id · Siemens GP · Project Allocation — print to PDF (Ctrl/Cmd+P → Save as PDF)</div>
+    </body></html>`;
+  const w = window.open('', '_blank');
+  if (!w){ showToast('Allow pop-ups to print the briefing.', true); return; }
+  w.document.write(html); w.document.close(); w.focus();
+  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 350);
 }
 
 /* ── Form ── */
@@ -751,12 +951,14 @@ async function saveRecord(){
   const project=document.getElementById('f-project').value.trim();
   if (!date){ showToast('Pick a date.', true); return; }
   if (!project){ showToast('Enter a project.', true); return; }
+  const total = num(document.getElementById('f-total').value);
+  const done  = num(document.getElementById('f-done').value);
+  const vErr = validCounts(total, done); if (vErr){ showToast(vErr, true); return; }
   const payload = {
     date, project,
     ekspeditur: document.getElementById('f-eksp').value.trim(),
     staff: splitStaff(document.getElementById('f-staff').value),
-    total: num(document.getElementById('f-total').value),
-    done: num(document.getElementById('f-done').value),
+    total, done,
     status: document.getElementById('f-status').value,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedByName: currentUser.name, updatedByUid: currentUser.uid
@@ -786,15 +988,20 @@ function openEdit(id){
 function closeEdit(){ document.getElementById('edit-modal').classList.remove('open'); editId=null; }
 async function saveEdit(){
   if (!editId) return;
+  const date = document.getElementById('e-date').value;
+  const project = document.getElementById('e-project').value.trim();
+  if (!date){ showToast('Pick a date.', true); return; }
+  if (!project){ showToast('Enter a project.', true); return; }
+  const total = num(document.getElementById('e-total').value);
+  const done  = num(document.getElementById('e-done').value);
+  const vErr = validCounts(total, done); if (vErr){ showToast(vErr, true); return; }
   const btn=document.getElementById('e-save-btn'); btn.disabled=true; btn.textContent='Saving...';
   try{
     await col.doc(editId).update({
-      date: document.getElementById('e-date').value,
-      project: document.getElementById('e-project').value.trim(),
+      date, project,
       ekspeditur: document.getElementById('e-eksp').value.trim(),
       staff: splitStaff(document.getElementById('e-staff').value),
-      total: num(document.getElementById('e-total').value),
-      done: num(document.getElementById('e-done').value),
+      total, done,
       status: document.getElementById('e-status').value,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedByName: currentUser?currentUser.name:null, updatedByUid: currentUser?currentUser.uid:null
@@ -803,8 +1010,25 @@ async function saveEdit(){
   }catch(e){ showToast('Save failed: '+e.message, true); }
   finally{ btn.disabled=false; btn.textContent='Save'; }
 }
-async function deleteFromEdit(){ if(!editId) return; if(!confirm('Delete this record?')) return; try{ await col.doc(editId).delete(); showToast('Deleted.'); closeEdit(); }catch(e){ showToast('Delete failed: '+e.message, true); } }
-async function quickDelete(id){ if(!confirm('Delete this record?')) return; try{ await col.doc(id).delete(); showToast('Deleted.'); }catch(e){ showToast('Delete failed: '+e.message, true); } }
+/* Delete with a 6s Undo window (Firestore deletes are permanent, so we re-add on undo). */
+async function softDelete(id){
+  const r = records.find(x=>x.id===id); if(!r) return;
+  const { id:_omit, ...data } = r;
+  try{ await col.doc(id).delete(); showUndo('Record deleted.', data); }
+  catch(e){ showToast('Delete failed: '+e.message, true); }
+}
+function deleteFromEdit(){ if(!editId) return; const id=editId; closeEdit(); softDelete(id); }
+function quickDelete(id){ softDelete(id); }
+function showUndo(msg, data){
+  const t=document.getElementById('toast');
+  t.innerHTML = esc(msg)+' <button id="undo-btn" style="margin-left:10px;background:transparent;border:1px solid rgba(255,255,255,0.45);color:inherit;border-radius:4px;padding:2px 9px;font-family:var(--ibm-mono);font-size:11px;cursor:pointer">Undo</button>';
+  t.className='show'; clearTimeout(t._timer);
+  document.getElementById('undo-btn').onclick = async ()=>{
+    clearTimeout(t._timer); t.className=''; t.innerHTML='';
+    try{ await col.add(data); showToast('Restored.'); }catch(e){ showToast('Undo failed: '+e.message, true); }
+  };
+  t._timer = setTimeout(()=>{ t.className=''; t.innerHTML=''; }, 6000);
+}
 
 /* ── Export (current view / filtered records) ── */
 function exportCSV(){
@@ -875,11 +1099,21 @@ async function onImportFile(file){
     document.getElementById('imp-confirm').textContent = `Import ${recs.length}`;
   }catch(e){ console.error(e); document.getElementById('imp-note').textContent='Failed: '+e.message; showToast('Import failed: '+e.message, true); }
 }
+function recSig(r){ return [r.date, r.project, String(r.ekspeditur||'').toLowerCase(), staffArr(r).map(x=>x.toLowerCase()).sort().join('|'), num(r.total), num(r.done)].join('#'); }
 async function confirmImport(){
   if (!importRows.length) return;
   if (!currentUser){ showToast('Sign in first.', true); return; }
   const btn=document.getElementById('imp-confirm'); btn.disabled=true;
-  const rows=importRows.slice(); let written=0;
+  let rows=importRows.slice();
+  if (document.getElementById('imp-dedupe').checked){
+    const have=new Set(records.map(recSig));
+    const before=rows.length;
+    rows=rows.filter(r=>!have.has(recSig(r)));
+    const skipped=before-rows.length;
+    if (!rows.length){ showToast(`All ${before} rows already exist — nothing to import.`, true); btn.disabled=false; return; }
+    if (skipped) showToast(`Skipping ${skipped} duplicate${skipped===1?'':'s'}.`);
+  }
+  let written=0;
   try{
     for (let i=0;i<rows.length;i+=400){
       const batch=db.batch();
@@ -953,6 +1187,8 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeEdit(); clo
 /* ── Init ── */
 initTheme();
 resetForm();
+/* Deep-link: task-reviewer redirect lands on the People view. */
+if (location.hash === '#people') setView('people');
 checkAuth();
 if (window.Grimoire && window.Grimoire.Offline) window.Grimoire.Offline.register();
 </script>
