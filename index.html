@@ -342,6 +342,7 @@
       <span class="switch-label">Project</span>
       <button type="button" class="seg" data-project="wmf" aria-pressed="false">WMF <kbd>1</kbd></button>
       <button type="button" class="seg" data-project="siemens" aria-pressed="false">Siemens GP <kbd>2</kbd></button>
+      <button type="button" class="seg" data-project="ops" aria-pressed="false">Operations <kbd>3</kbd></button>
     </div>
   </div>
 </div>
@@ -423,6 +424,12 @@
           <span class="seal-name">Siemens GP</span>
           <span class="seal-sub">General Procurement &mdash; knowledge, wording, review &amp; the splitter.</span>
           <span class="seal-meta">IV tomes &middot; press <kbd>2</kbd></span>
+        </button>
+        <button type="button" class="seal" data-project="ops">
+          <span class="emblem"><svg class="ico" aria-hidden="true"><use href="#i-ledger"/></svg></span>
+          <span class="seal-name">Operations</span>
+          <span class="seal-sub">Cross-project allocation &amp; production &mdash; daily records, pivots &amp; analyzer.</span>
+          <span class="seal-meta">I tome &middot; press <kbd>3</kbd></span>
         </button>
       </div>
 
@@ -577,6 +584,12 @@ class ProjectManager {
           { num: 'III', epithet: 'The Reviewer', title: 'Task Reviewer',     desc: 'Per-person daily reviews. Auto-scored with grades and a Friday digest.',                                    href: 'task-reviewer-siemens.html', icon: 'reviewer', tags: ['Scoring','People'] },
           { num: 'IV',  epithet: 'The Splitter', title: 'File Splitter',     desc: 'Upload an Excel file, add names, and get equal row portions per person &mdash; shuffled &amp; ready to download.', href: 'File_splitter.html',         icon: 'splitter', tags: ['Excel','Split'] }
         ]
+      },
+      ops: {
+        name: 'Operations', sub: 'Cross-project allocation & production',
+        tools: [
+          { num: 'I',   epithet: 'The Allocator', title: 'Project Allocation', desc: 'Daily project records &mdash; staff, quantity &amp; status across all clients. Auto pivots, analyzer &amp; Excel import.', href: 'alokasi-project.html', icon: 'ledger', tags: ['Projects','Analytics'] }
+        ]
       }
     };
 
@@ -610,6 +623,7 @@ class ProjectManager {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === '1') { e.preventDefault(); this.select('wmf'); }
       else if (e.key === '2') { e.preventDefault(); this.select('siemens'); }
+      else if (e.key === '3') { e.preventDefault(); this.select('ops'); }
       else if (e.key === 'Escape' && this.active) { e.preventDefault(); this.clear(); }
     });
   }
@@ -663,7 +677,7 @@ class ProjectManager {
       c.classList.add('enter');
     });
     this.enchant(cards);
-    this.el.count.textContent = `${proj.tools.length} tomes`;
+    this.el.count.textContent = `${proj.tools.length} tome${proj.tools.length === 1 ? '' : 's'}`;
   }
 
   select(key, { silent = false } = {}){

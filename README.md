@@ -45,6 +45,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 | Look up a VB/VBA snippet | [The Vault](https://codingkuh.my.id/code.html) · [source](code.html) |
 | Check team absences / leave | [Holiday Tracker](https://codingkuh.my.id/holiday-tracker.html) · [source](holiday-tracker.html) |
 | Review a Siemens task | [Task Reviewer](https://codingkuh.my.id/task-reviewer-siemens.html) · [source](task-reviewer-siemens.html) |
+| Track daily project allocation & quantity | [Project Allocation](https://codingkuh.my.id/alokasi-project.html) · [source](alokasi-project.html) |
 | Install the Alchemist offline | [Offline / PWA](#offline--pwa) |
 | Fork and self-host | [Running locally](#running-locally) · [Firebase configuration](#firebase-configuration) |
 
@@ -60,6 +61,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 | [`qa-siemens.html`](qa-siemens.html) | **Siemens GP Knowledge Base** | Project-specific QA reference (IBM Plex styling, light/dark). | [↗](https://codingkuh.my.id/qa-siemens.html) |
 | [`standard-wording.html`](standard-wording.html) | **Siemens GP Standard Wording** | Reusable phrasing and copy templates. | [↗](https://codingkuh.my.id/standard-wording.html) |
 | [`task-reviewer-siemens.html`](task-reviewer-siemens.html) | **Siemens GP Task Reviewer** | Review helper for incoming tasks. | [↗](https://codingkuh.my.id/task-reviewer-siemens.html) |
+| [`alokasi-project.html`](alokasi-project.html) | **Siemens GP Project Allocation** | Daily per-project records (staff, quantity, status). Auto Quantity/Personnel pivots, analyzer, and import from `ALOKASI PROJECT.xlsx`. Per-user sign-in, syncs via Firebase. | [↗](https://codingkuh.my.id/alokasi-project.html) |
 | [`anmerkung.html`](anmerkung.html) | **The Alchemist** | In-browser processor for forwarder invoice annotations (Dachser / K+N / DHL Express / Wackler). See [below](#the-alchemist--anmerkung-processor). | [↗](https://codingkuh.my.id/anmerkung.html) |
 | [`todo.html`](todo.html) | **The Ledger** | Task tracker with filters, groups, and a light/dark toggle. | [↗](https://codingkuh.my.id/todo.html) |
 | [`holiday-tracker.html`](holiday-tracker.html) | **Holiday Tracker** | Team vacation, sick, WFH, and half-day tracking with calendar + Gantt views, vacation balances, public holidays, department filters, and an activity log. Syncs via Firebase Firestore. | [↗](https://codingkuh.my.id/holiday-tracker.html) |
@@ -170,6 +172,7 @@ vb-code-vault/
 ├── qa-siemens.html                  # Siemens-specific QA
 ├── standard-wording.html            # standard phrases / templates
 ├── task-reviewer-siemens.html       # Siemens task reviewer
+├── alokasi-project.html             # Siemens project allocation + analyzer
 ├── anmerkung.html                   # forwarder invoice processor (The Alchemist)
 ├── anmerkung-presentation.html      # presentation deck for the Alchemist
 ├── todo.html                        # task ledger
