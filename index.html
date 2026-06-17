@@ -422,8 +422,8 @@
         <button type="button" class="seal" data-project="siemens">
           <span class="emblem"><svg class="ico" aria-hidden="true"><use href="#i-tower"/></svg></span>
           <span class="seal-name">Siemens GP</span>
-          <span class="seal-sub">General Procurement &mdash; knowledge, wording, review &amp; the splitter.</span>
-          <span class="seal-meta">IV tomes &middot; press <kbd>2</kbd></span>
+          <span class="seal-sub">General Procurement &mdash; knowledge, wording &amp; the splitter.</span>
+          <span class="seal-meta">III tomes &middot; press <kbd>2</kbd></span>
         </button>
         <button type="button" class="seal" data-project="ops">
           <span class="emblem"><svg class="ico" aria-hidden="true"><use href="#i-ledger"/></svg></span>
@@ -581,14 +581,13 @@ class ProjectManager {
         tools: [
           { num: 'I',   epithet: 'The Oracle',   title: 'GP Knowledge Base', desc: 'Process knowledge base · Procurement rites &amp; guidelines.',                                              href: 'qa-siemens.html',            icon: 'oracle',   tags: ['Q&amp;A','Process'] },
           { num: 'II',  epithet: 'The Scribe',   title: 'Standard Wording',  desc: 'A searchable library of pre-written phrases. Click any entry to copy instantly.',                            href: 'standard-wording.html',      icon: 'scribe',   tags: ['Phrases','Templates'] },
-          { num: 'III', epithet: 'The Reviewer', title: 'Task Reviewer',     desc: 'Per-person daily reviews. Auto-scored with grades and a Friday digest.',                                    href: 'task-reviewer-siemens.html', icon: 'reviewer', tags: ['Scoring','People'] },
-          { num: 'IV',  epithet: 'The Splitter', title: 'File Splitter',     desc: 'Upload an Excel file, add names, and get equal row portions per person &mdash; shuffled &amp; ready to download.', href: 'File_splitter.html',         icon: 'splitter', tags: ['Excel','Split'] }
+          { num: 'III', epithet: 'The Splitter', title: 'File Splitter',     desc: 'Upload an Excel file, add names, and get equal row portions per person &mdash; shuffled &amp; ready to download.', href: 'File_splitter.html',         icon: 'splitter', tags: ['Excel','Split'] }
         ]
       },
       ops: {
         name: 'Operations', sub: 'Cross-project allocation & production',
         tools: [
-          { num: 'I',   epithet: 'The Allocator', title: 'Project Allocation', desc: 'Daily project records &mdash; staff, quantity &amp; status across all clients. Auto pivots, analyzer &amp; Excel import.', href: 'alokasi-project.html', icon: 'ledger', tags: ['Projects','Analytics'] }
+          { num: 'I',   epithet: 'The Allocator', title: 'Project Allocation', desc: 'Daily project records &mdash; staff, quantity &amp; status across all clients. Auto pivots, per-person scorecards, backlog aging, analyzer, Excel/PDF export &amp; import.', href: 'alokasi-project.html', icon: 'ledger', tags: ['Projects','People','Analytics'] }
         ]
       }
     };
