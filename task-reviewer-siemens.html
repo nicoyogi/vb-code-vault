@@ -178,9 +178,16 @@
       padding: 10px 12px; font-family: var(--ibm-mono); font-size: 12px; line-height: 1.6;
       background: var(--surface2); color: var(--text); outline: none;
     }
-    .tri-col.done textarea:focus { border-color: var(--success); box-shadow: 0 0 0 3px rgba(26,122,74,0.12); }
-    .tri-col.block textarea:focus { border-color: var(--warn); box-shadow: 0 0 0 3px rgba(183,121,31,0.12); }
-    .tri-col.not textarea:focus { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(192,57,43,0.12); }
+    .tri-col .num-in {
+      border: 1px solid var(--border2); border-radius: var(--radius); padding: 16px 12px;
+      font-family: var(--grotesk); font-size: 30px; font-weight: 700; text-align: center;
+      background: var(--surface2); color: var(--text); outline: none; width: 100%;
+      -moz-appearance: textfield;
+    }
+    .tri-col .num-in::-webkit-outer-spin-button, .tri-col .num-in::-webkit-inner-spin-button { opacity: 1; height: 34px; }
+    .tri-col.done textarea:focus, .tri-col.done .num-in:focus { border-color: var(--success); box-shadow: 0 0 0 3px rgba(26,122,74,0.12); }
+    .tri-col.block textarea:focus, .tri-col.block .num-in:focus { border-color: var(--warn); box-shadow: 0 0 0 3px rgba(183,121,31,0.12); }
+    .tri-col.not textarea:focus, .tri-col.not .num-in:focus { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(192,57,43,0.12); }
     .tri-hint { font-family: var(--ibm-mono); font-size: 10px; color: var(--text3); }
     .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); align-items: center; flex-wrap: wrap; }
     .form-actions .left-note { margin-right: auto; font-family: var(--ibm-mono); font-size: 10.5px; color: var(--text3); }
@@ -327,6 +334,66 @@
       main { padding: 1.5rem 1rem 5rem; }
       .week-nav .week-label { min-width: 160px; }
     }
+
+    /* ── View / range segmented toggle ── */
+    .seg { display: flex; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .seg-btn { background: transparent; border: none; padding: 0 15px; height: 40px; font-family: var(--ibm-mono); font-size: 12px; color: var(--text2); cursor: pointer; transition: background .15s, color .15s; white-space: nowrap; }
+    .seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+    .seg-btn:hover { background: var(--accent-light); color: var(--accent); }
+    .seg-btn.active { background: var(--accent); color: #fff; }
+
+    /* ── Analytics cards ── */
+    .an-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.1rem 1.3rem; margin-bottom: 1.2rem; }
+    .an-card-head { font-family: var(--grotesk); font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .an-card-head .sub { font-family: var(--ibm-mono); font-size: 10.5px; font-weight: 400; color: var(--text3); letter-spacing: .04em; }
+    .an-card-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .an-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; align-items: start; }
+    @media (max-width: 880px){ .an-grid2 { grid-template-columns: 1fr; } }
+
+    /* trend bars */
+    .an-bars { display: flex; align-items: flex-end; gap: 4px; height: 168px; }
+    .an-bar-col { flex: 1; min-width: 7px; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+    .an-bar-track { width: 100%; flex: 1; display: flex; align-items: flex-end; background: var(--surface2); border: 1px solid var(--border); border-bottom: none; border-radius: 4px 4px 0 0; overflow: hidden; }
+    .an-bar-fill { width: 100%; border-radius: 4px 4px 0 0; transition: height .3s; min-height: 2px; }
+    .an-bar-x { font-family: var(--ibm-mono); font-size: 9px; color: var(--text3); white-space: nowrap; }
+    .an-bar-v { font-family: var(--ibm-mono); font-size: 9px; color: var(--text2); height: 11px; }
+    .an-bar-col.empty .an-bar-track { opacity: .55; }
+
+    /* leaderboard table */
+    .an-scroll { overflow-x: auto; }
+    .an-table { width: 100%; border-collapse: collapse; font-family: var(--ibm-mono); font-size: 12px; }
+    .an-table th { text-align: right; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); font-weight: 600; padding: 6px 9px; border-bottom: 1px solid var(--border2); white-space: nowrap; }
+    .an-table th.l, .an-table td.l { text-align: left; }
+    .an-table td { padding: 8px 9px; border-bottom: 1px solid var(--border); color: var(--text2); white-space: nowrap; text-align: right; }
+    .an-table tbody tr:last-child td { border-bottom: none; }
+    .an-table tbody tr:hover td { background: var(--accent-light); }
+    .an-table td.name { color: var(--text); font-family: var(--grotesk); font-weight: 600; font-size: 13px; }
+    .an-rank { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-light); color: var(--accent); font-size: 10px; font-weight: 700; }
+    .an-rank.r1 { background: var(--success-light); color: var(--success); }
+    .an-pill { padding: 2px 9px; border-radius: 4px; font-size: 10.5px; font-weight: 600; }
+    .pill-A { background: var(--success-light); color: var(--success); }
+    .pill-B { background: var(--accent-light); color: var(--accent); }
+    .pill-C { background: var(--warn-light); color: var(--warn); }
+    .pill-D { background: var(--danger-light); color: var(--danger); }
+    .an-delta.up { color: var(--success); } .an-delta.down { color: var(--danger); } .an-delta.flat { color: var(--text3); }
+
+    /* heatmap */
+    .an-heat { display: grid; gap: 3px; font-family: var(--ibm-mono); min-width: max-content; }
+    .an-heat .hh { font-size: 9px; color: var(--text3); text-align: center; padding-bottom: 2px; }
+    .an-heat .hname { font-size: 11px; color: var(--text); display: flex; align-items: center; white-space: nowrap; padding-right: 8px; }
+    .an-cell { height: 26px; min-width: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 600; color: #fff; }
+    .an-cell.empty { background: var(--surface2); color: var(--text3); border: 1px dashed var(--border); }
+    .an-heat-legend { display: flex; align-items: center; gap: 12px; margin-top: .8rem; font-family: var(--ibm-mono); font-size: 9.5px; color: var(--text3); flex-wrap: wrap; }
+    .an-heat-legend .lg { display: inline-flex; align-items: center; gap: 5px; }
+    .an-heat-legend .sw { width: 11px; height: 11px; border-radius: 3px; }
+
+    /* aging / recurring items */
+    .an-aging-list { display: grid; gap: 8px; }
+    .an-aging-item { display: flex; gap: 10px; align-items: flex-start; font-family: var(--ibm-sans); font-size: 12.5px; color: var(--text2); line-height: 1.5; }
+    .age-badge { flex-shrink: 0; font-family: var(--ibm-mono); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: var(--danger-light); color: var(--danger); }
+    .age-badge.warn { background: var(--warn-light); color: var(--warn); }
+    .an-aging-item b { color: var(--text); }
+    .an-aging-empty { color: var(--text3); font-style: italic; font-family: var(--ibm-mono); font-size: 11.5px; }
   </style>
 <link rel="stylesheet" href="assets/grimoire-theme.css">
   <script src="assets/grimoire-theme.js" defer></script>
@@ -425,6 +492,14 @@
       <button type="button" onclick="shiftDay(1)" title="Next day" aria-label="Next day">›</button>
       <button type="button" onclick="jumpToToday()" title="Today" aria-label="Today" style="border-left:1px solid var(--border);padding:0 12px;font-size:11px">Today</button>
     </div>
+    <div class="seg" role="group" aria-label="View mode">
+      <button type="button" class="seg-btn active" id="seg-day" onclick="setView('day')">Daily</button>
+      <button type="button" class="seg-btn" id="seg-analytics" onclick="setView('analytics')">Analytics</button>
+    </div>
+    <div class="seg" id="range-seg" role="group" aria-label="Analytics range" style="display:none">
+      <button type="button" class="seg-btn active" id="seg-week" onclick="setRange('week')">Week</button>
+      <button type="button" class="seg-btn" id="seg-month" onclick="setRange('month')">Month</button>
+    </div>
     <select id="filter-person" onchange="render()" aria-label="Filter by person">
       <option value="">All people</option>
     </select>
@@ -453,20 +528,21 @@
     <div class="tri-grid">
       <div class="tri-col done">
         <div class="tri-head"><div class="tri-dot"></div>Done</div>
-        <textarea id="f-done" placeholder="One task per line..."></textarea>
-        <div class="tri-hint">Completed &amp; closed. One task per line.</div>
+        <input type="number" class="num-in" id="f-done" min="0" step="1" placeholder="0" inputmode="numeric" oninput="updateFormScore()">
+        <div class="tri-hint">How many tasks completed &amp; closed.</div>
       </div>
       <div class="tri-col block">
         <div class="tri-head"><div class="tri-dot"></div>Can't process</div>
-        <textarea id="f-block" placeholder="Blocked tasks — waiting on vendor, approval, missing info..."></textarea>
-        <div class="tri-hint">Blocked. Flag the reason next to the task if useful.</div>
+        <input type="number" class="num-in" id="f-block" min="0" step="1" placeholder="0" inputmode="numeric" oninput="updateFormScore()">
+        <div class="tri-hint">How many blocked — vendor, approval, data.</div>
       </div>
       <div class="tri-col not">
         <div class="tri-head"><div class="tri-dot"></div>Not done</div>
-        <textarea id="f-not" placeholder="Not yet worked on or dropped from the day..."></textarea>
-        <div class="tri-hint">Carried over. Deserves follow-up tomorrow.</div>
+        <input type="number" class="num-in" id="f-not" min="0" step="1" placeholder="0" inputmode="numeric" oninput="updateFormScore()">
+        <div class="tri-hint">How many carried over to tomorrow.</div>
       </div>
     </div>
+    <div class="tri-hint" id="form-live-score" style="text-align:right;margin-top:-2px;">Completion = Done ÷ total · —</div>
     <div class="form-actions">
       <span class="left-note" id="form-left-note"></span>
       <button class="btn-sm" onclick="resetForm()">Reset</button>
@@ -494,6 +570,9 @@
     <div class="sug-body" id="sug-body"></div>
   </div>
 
+  <!-- Analytics view (week / month rollup, trend, leaderboard, heatmap, aging) -->
+  <div id="analytics-view" style="display:none"></div>
+
   <div class="page-footer">
     codingkuh.my.id<span class="fsep">·</span>Siemens GP · Task Reviewer<br>
     <a href="index.html">Grimoire Home</a><span class="fsep">·</span><a href="qa-siemens.html">SGP Knowledge Base</a><span class="fsep">·</span><a href="standard-wording.html">Standard Wording</a>
@@ -520,15 +599,15 @@
     <div class="tri-grid">
       <div class="tri-col done">
         <div class="tri-head"><div class="tri-dot"></div>Done</div>
-        <textarea id="e-done" placeholder="One task per line..."></textarea>
+        <input type="number" class="num-in" id="e-done" min="0" step="1" placeholder="0" inputmode="numeric">
       </div>
       <div class="tri-col block">
         <div class="tri-head"><div class="tri-dot"></div>Can't process</div>
-        <textarea id="e-block"></textarea>
+        <input type="number" class="num-in" id="e-block" min="0" step="1" placeholder="0" inputmode="numeric">
       </div>
       <div class="tri-col not">
         <div class="tri-head"><div class="tri-dot"></div>Not done</div>
-        <textarea id="e-not"></textarea>
+        <input type="number" class="num-in" id="e-not" min="0" step="1" placeholder="0" inputmode="numeric">
       </div>
     </div>
     <div class="modal-actions">
@@ -616,6 +695,8 @@ let editId = null;
 let saving = false;
 let currentDate = null; /* the day being viewed (local midnight) */
 let sugVisible = true;
+let viewMode = 'day';        /* 'day' | 'analytics' */
+let analyticsRange = 'week'; /* 'week' | 'month' — only used in analytics view */
 let currentUser = null; /* { uid, name, nameKey } — null until signed in */
 
 /* ── Digest (Slack / Teams) config — stored locally per browser ── */
@@ -684,7 +765,15 @@ function isoDate(d){ const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2
 function dayKey(d){ return isoDate(d); }
 
 function shiftDay(delta){
-  currentDate = addDays(currentDate, delta);
+  if (viewMode === 'analytics'){
+    if (analyticsRange === 'month'){
+      currentDate = startOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth()+delta, 1));
+    } else {
+      currentDate = addDays(currentDate, delta*7);
+    }
+  } else {
+    currentDate = addDays(currentDate, delta);
+  }
   updateDayUI();
   render();
 }
@@ -695,6 +784,13 @@ function jumpToToday(){
 }
 function updateDayUI(){
   const d = currentDate;
+  document.getElementById('f-day').value = fmtDayFull(d);
+  if (viewMode === 'analytics'){
+    const pb = periodBounds(d, analyticsRange);
+    document.getElementById('day-label-main').textContent = pb.label;
+    document.getElementById('day-label-sub').textContent  = pb.sub;
+    return;
+  }
   const today = startOfDay(new Date());
   const diff = Math.round((d - today) / 86400000);
   let rel = '';
@@ -703,7 +799,6 @@ function updateDayUI(){
   else if (diff === 1)  rel = ' · tomorrow';
   document.getElementById('day-label-main').textContent = fmtDayFull(d);
   document.getElementById('day-label-sub').textContent  = `${isoDate(d)} · ${weekKey(d)}${rel}`;
-  document.getElementById('f-day').value = fmtDayFull(d);
 }
 
 /* ── Data helpers ── */
@@ -740,10 +835,20 @@ function reviewFor(person, date){
   const pk = personKey(person), k = dayKey(date);
   return reviews.find(r=>reviewDayKey(r)===k && personKey(r.person)===pk) || null;
 }
+/* A review's done / blocked / notDone is a numeric count (new records) or an
+   array of task lines (legacy records). countOf normalizes either to a count;
+   itemsOf yields the task list when one exists, else []. */
+function countOf(v){
+  if (Array.isArray(v)) return v.length;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+}
+function itemsOf(v){ return Array.isArray(v) ? v : []; }
 function totals(r){
-  const d=(r&&r.done||[]).length, b=(r&&r.blocked||[]).length, n=(r&&r.notDone||[]).length;
+  const d=countOf(r&&r.done), b=countOf(r&&r.blocked), n=countOf(r&&r.notDone);
   return {done:d, blocked:b, notDone:n, total:d+b+n};
 }
+/* Completion = done ÷ (done + can't process + not done) for the person. */
 function completionPct(t){ return t.total===0 ? 0 : Math.round((t.done / t.total) * 100); }
 function gradeFromPct(pct, total){
   if(total===0) return 'N/A';
@@ -767,6 +872,8 @@ function refreshPersonList(){
 
 function render(){
   refreshPersonList();
+  applyViewVisibility();
+  if (viewMode === 'analytics'){ renderAnalytics(); return; }
   const dayReviews = reviewsForDay(currentDate);
   const filterPerson = document.getElementById('filter-person').value;
 
@@ -839,14 +946,22 @@ function renderPerson(r){
         ${t.notDone>0?`<div class="pc-bar-not" style="flex:${t.notDone}" title="${t.notDone} not done"></div>`:''}
       </div>`;
 
-  const bucket = (cls, label, arr) => {
-    const sorted = arr.slice().sort(naturalCompare);
+  const bucket = (cls, label, count, items) => {
+    const sorted = items.slice().sort(naturalCompare);
     return `
     <div class="pc-bucket ${cls}">
-      <div class="pc-bucket-head"><div class="dot"></div>${label} · ${sorted.length}</div>
+      <div class="pc-bucket-head"><div class="dot"></div>${label} · ${count}</div>
       <ul>${sorted.length===0 ? '<li class="muted">—</li>' : sorted.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>
     </div>`;
   };
+  /* Only legacy records carry per-task text; numeric records show counts only. */
+  const hasItems = itemsOf(r.done).length || itemsOf(r.blocked).length || itemsOf(r.notDone).length;
+  const tasksHtml = hasItems ? `
+      <div class="pc-tasks">
+        ${bucket('done','Done', t.done, itemsOf(r.done))}
+        ${bucket('block',"Can't process", t.blocked, itemsOf(r.blocked))}
+        ${bucket('not','Not done', t.notDone, itemsOf(r.notDone))}
+      </div>` : '';
 
   const initials = (r.person||'?').trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
   const insights = buildPersonInsights(r, t, pct, prev, prevPct);
@@ -874,11 +989,7 @@ function renderPerson(r){
         <span class="c-not">Not done · <b>${t.notDone}</b></span>
       </div>
       ${barHtml}
-      <div class="pc-tasks">
-        ${bucket('done','Done', r.done||[])}
-        ${bucket('block',"Can't process", r.blocked||[])}
-        ${bucket('not','Not done', r.notDone||[])}
-      </div>
+      ${tasksHtml}
       <div class="pc-insights">
         ${insights.map(i=>`<div class="insight ${i.kind}"><div class="ic">${i.icon}</div><div>${esc(i.text)}</div></div>`).join('')}
       </div>
@@ -919,10 +1030,11 @@ function buildPersonInsights(r, t, pct, prev, prevPct){
     else if (delta <= -10) out.push({kind:'bad', icon:'▼', text:`Declining trend: ${Math.abs(delta)}pp worse than yesterday (${prevPct}% → ${pct}%). Check what changed.`});
   }
 
-  /* Recurrence hint — blocked / not-done items repeated from previous day */
+  /* Recurrence hint — blocked / not-done items repeated from previous day
+     (only possible when both days carry per-task text). */
   if (prev){
-    const prevOpen = new Set([...(prev.blocked||[]), ...(prev.notDone||[])].map(s=>s.toLowerCase().trim()));
-    const repeated = [...(r.blocked||[]), ...(r.notDone||[])]
+    const prevOpen = new Set([...itemsOf(prev.blocked), ...itemsOf(prev.notDone)].map(s=>s.toLowerCase().trim()));
+    const repeated = [...itemsOf(r.blocked), ...itemsOf(r.notDone)]
       .filter(s=>prevOpen.has(s.toLowerCase().trim()));
     if (repeated.length){
       out.push({kind:'warn', icon:'⟲', text:`${repeated.length} item${repeated.length>1?'s':''} repeated from yesterday. If it's stuck 2+ days, escalate or de-scope.`});
@@ -954,15 +1066,12 @@ function renderSuggestions(dayReviews){
     sugs.push({ic:'↻', t:'Auto carry-over to tomorrow', x:`${tot.notDone} items are "not done". A 1-click "carry forward to tomorrow" would cut manual re-typing.`});
   }
   if (people >= 2){
-    sugs.push({ic:'🏆', t:'Team leaderboard + averages', x:'With multiple people reviewed, a podium of top 3 completion-% and a team average trendline would add motivation.'});
-  }
-  if (tot.total >= 10){
-    sugs.push({ic:'🔥', t:'Heatmap of blockers per category', x:'A small per-person heatmap across the week (done vs blocked vs not-done) helps spot when in the week people stall.'});
+    sugs.push({ic:'📈', t:'Open the Analytics tab', x:'Switch to Analytics (top toolbar) for the week/month leaderboard, completion trend, person×day heatmap and aging-item report across these reviews.'});
   }
 
   /* Always-on foundational suggestions */
-  sugs.push({ic:'📊', t:'Monthly / quarterly rollup', x:'Aggregate days into a monthly scorecard per person: average completion %, total tasks, top recurring blockers.'});
-  sugs.push({ic:'📤', t:'Export to Excel / PDF', x:'One-click export of the current day\'s review as XLSX or a printable PDF briefing.'});
+  sugs.push({ic:'🏷', t:'Blocker reason tags', x:'Tag each blocker (vendor / approval / data / system) so the aging-item report can group recurring root causes by category.'});
+  sugs.push({ic:'📤', t:'Export to Excel / PDF', x:'The Analytics tab already exports the period as CSV — a printable PDF briefing would round out reporting.'});
   sugs.push({ic:'🎯', t:'Per-person daily target', x:'Let the reviewer set a target number of tasks per person per day and highlight over/under-performance against it.'});
   sugs.push({ic:'🔗', t:'Link tasks to SGP Oracle entries', x:'Let each task reference a knowledge-base entry so reviewers can click through to the process doc.'});
   sugs.push({ic:'🗣', t:'Private reviewer notes', x:'Add a 1:1 notes field per person per day, visible only to the reviewer, for follow-up talking points.'});
@@ -985,6 +1094,306 @@ function toggleSug(){
   document.getElementById('sug-toggle').textContent = sugVisible ? 'Hide' : 'Show';
 }
 
+/* ════════════════════════════════════════════════════════════════════════════
+   Analytics view — multi-day rollup over a selectable period (week / month).
+   Pure aggregation over the same `reviews` array the daily view uses; no extra
+   reads. Sections: period metrics · daily completion trend · per-person
+   leaderboard (with trend vs the prior period) · person×day heatmap ·
+   recurring & aging items (blocked / not-done that persist 2+ days).
+   ════════════════════════════════════════════════════════════════════════════ */
+
+function setView(mode){
+  viewMode = mode;
+  document.getElementById('seg-day').classList.toggle('active', mode==='day');
+  document.getElementById('seg-analytics').classList.toggle('active', mode==='analytics');
+  document.getElementById('range-seg').style.display = mode==='analytics' ? '' : 'none';
+  updateDayUI();
+  render();
+}
+function setRange(r){
+  analyticsRange = r;
+  document.getElementById('seg-week').classList.toggle('active', r==='week');
+  document.getElementById('seg-month').classList.toggle('active', r==='month');
+  updateDayUI();
+  render();
+}
+function applyViewVisibility(){
+  const an = viewMode==='analytics';
+  ['metrics','add-box','people-section-title','people-grid','sug-panel'].forEach(id=>{
+    const el = document.getElementById(id); if (el) el.style.display = an ? 'none' : '';
+  });
+  document.getElementById('analytics-view').style.display = an ? '' : 'none';
+}
+
+/* ── Period helpers ── */
+function startOfMonth(d){ return startOfDay(new Date(d.getFullYear(), d.getMonth(), 1)); }
+function endOfMonth(d){ return startOfDay(new Date(d.getFullYear(), d.getMonth()+1, 0)); }
+function periodBounds(date, range){
+  if (range === 'month'){
+    const start = startOfMonth(date), end = endOfMonth(date);
+    const prevEnd = addDays(start, -1), prevStart = startOfMonth(prevEnd);
+    return { range, start, end, prevStart, prevEnd,
+      label: start.toLocaleDateString(undefined,{month:'long', year:'numeric'}),
+      sub:   `${fmtDay(start)} — ${fmtDayYear(end)}` };
+  }
+  const start = startOfWeek(date), end = endOfWeek(start);
+  const prevStart = addDays(start, -7), prevEnd = addDays(start, -1);
+  return { range, start, end, prevStart, prevEnd,
+    label: `${fmtDay(start)} — ${fmtDayYear(end)}`,
+    sub:   `${weekKey(start)} · Mon — Sun` };
+}
+function reviewsForRange(start, end){
+  const a = isoDate(start), b = isoDate(end);
+  return reviews.filter(r=>{ const dk = reviewDayKey(r); return dk && dk >= a && dk <= b; });
+}
+/* Team completion per calendar day across [start,end], honoring an optional predicate. */
+function dailySeries(start, end, pred){
+  const out = [];
+  let d = new Date(start);
+  while (d <= end){
+    const k = isoDate(d);
+    const dayR = reviews.filter(r=>reviewDayKey(r)===k && (!pred || pred(r)));
+    let done=0, total=0;
+    dayR.forEach(r=>{ const t=totals(r); done+=t.done; total+=t.total; });
+    out.push({ date:new Date(d), key:k, people:dayR.length, done, total, pct: total ? Math.round(done/total*100) : null });
+    d = addDays(d, 1);
+  }
+  return out;
+}
+function rollupByPerson(list){
+  const m = new Map(); /* key -> { name, done, blocked, notDone, total, days:Set } */
+  list.forEach(r=>{
+    const key = personKey(r.person);
+    if (!m.has(key)) m.set(key, { name:normPerson(r.person), done:0, blocked:0, notDone:0, total:0, days:new Set() });
+    const p = m.get(key), t = totals(r);
+    p.done += t.done; p.blocked += t.blocked; p.notDone += t.notDone; p.total += t.total;
+    const dk = reviewDayKey(r); if (dk) p.days.add(dk);
+  });
+  return m;
+}
+function spanDays(daysSet){
+  const arr = [...daysSet].sort();
+  if (arr.length < 2) return 1;
+  const a = new Date(arr[0]+'T00:00:00'), b = new Date(arr[arr.length-1]+'T00:00:00');
+  return Math.round((b - a) / 86400000) + 1;
+}
+/* Items that stay open (blocked / not-done) on 2+ distinct days within the range. */
+function agingItems(list){
+  const m = new Map(); /* personKey|itemNorm -> { person, item, days:Set, states:Set } */
+  list.forEach(r=>{
+    const dk = reviewDayKey(r); if (!dk) return;
+    const add = (item, state) => {
+      const norm = String(item).toLowerCase().trim(); if (!norm) return;
+      const k = personKey(r.person) + '|' + norm;
+      if (!m.has(k)) m.set(k, { person:normPerson(r.person), item:String(item).trim(), days:new Set(), states:new Set() });
+      const e = m.get(k); e.days.add(dk); e.states.add(state);
+    };
+    itemsOf(r.blocked).forEach(x=>add(x, 'blocked'));
+    itemsOf(r.notDone).forEach(x=>add(x, 'not done'));
+  });
+  return [...m.values()]
+    .filter(e=>e.days.size >= 2)
+    .map(e=>({ person:e.person, item:e.item, count:e.days.size, span:spanDays(e.days), states:[...e.states] }))
+    .sort((a,b)=> b.count - a.count || b.span - a.span || a.person.localeCompare(b.person));
+}
+function gradeColorVar(pct){
+  if (pct == null) return 'var(--text3)';
+  if (pct >= 85) return 'var(--success)';
+  if (pct >= 70) return 'var(--accent)';
+  if (pct >= 50) return 'var(--warn)';
+  return 'var(--danger)';
+}
+
+function renderAnalytics(){
+  const host = document.getElementById('analytics-view');
+  const filterPerson = document.getElementById('filter-person').value;
+  const pred = r => !filterPerson || personKey(r.person) === personKey(filterPerson);
+  const pb = periodBounds(currentDate, analyticsRange);
+  const rangeReviews = reviewsForRange(pb.start, pb.end).filter(pred);
+
+  if (!rangeReviews.length){
+    host.innerHTML = `
+      <div class="an-card"><div class="empty">
+        <div class="empty-icon">📊</div>
+        <div>No reviews in ${esc(pb.label)}${filterPerson ? ` for ${esc(filterPerson)}` : ''}.</div>
+        <div class="empty-sub">Log daily reviews and they roll up here automatically.</div>
+      </div></div>`;
+    return;
+  }
+
+  const perPerson     = rollupByPerson(rangeReviews);
+  const prevPerPerson = rollupByPerson(reviewsForRange(pb.prevStart, pb.prevEnd).filter(pred));
+  const people = [...perPerson.values()];
+  const tot = people.reduce((a,p)=>({ done:a.done+p.done, blocked:a.blocked+p.blocked, notDone:a.notDone+p.notDone, total:a.total+p.total }), {done:0,blocked:0,notDone:0,total:0});
+  const teamPct = tot.total ? Math.round(tot.done/tot.total*100) : 0;
+  const prevTot = [...prevPerPerson.values()].reduce((a,p)=>({ done:a.done+p.done, total:a.total+p.total }), {done:0,total:0});
+  const prevPct = prevTot.total ? Math.round(prevTot.done/prevTot.total*100) : null;
+
+  const series = dailySeries(pb.start, pb.end, pred);
+  const daysLogged = series.filter(s=>s.people>0).length;
+  const avgLoad = people.length ? tot.total/people.length : 0;
+
+  /* Leaderboard rows (sorted best completion first) — reused by the heatmap order. */
+  const rows = people.map(p=>{
+    const pct = p.total ? Math.round(p.done/p.total*100) : 0;
+    const grade = gradeFromPct(pct, p.total);
+    const prev = prevPerPerson.get(personKey(p.name));
+    const delta = (prev && prev.total) ? pct - Math.round(prev.done/prev.total*100) : null;
+    return { name:p.name, days:p.days.size, total:p.total, done:p.done, blocked:p.blocked, notDone:p.notDone, pct, grade, delta };
+  }).sort((a,b)=> b.pct - a.pct || b.total - a.total || a.name.localeCompare(b.name));
+
+  /* ── 1 · Period metrics ── */
+  let deltaSub;
+  if (prevPct === null) deltaSub = 'no prior data';
+  else { const dd = teamPct - prevPct; deltaSub = `${dd>=0?'▲ +':'▼ '}${dd<0?Math.abs(dd):dd}pp vs prev`; }
+  const metricsHtml = `
+    <div class="metrics">
+      <div class="metric"><div class="metric-lbl">Active people</div><div class="metric-val">${people.length}</div><div class="metric-sub">${daysLogged} day${daysLogged===1?'':'s'} logged</div></div>
+      <div class="metric m-done"><div class="metric-lbl">Done</div><div class="metric-val">${tot.done}</div><div class="metric-sub">of ${tot.total} tasks</div></div>
+      <div class="metric m-block"><div class="metric-lbl">Can't process</div><div class="metric-val">${tot.blocked}</div><div class="metric-sub">blocked</div></div>
+      <div class="metric m-not"><div class="metric-lbl">Not done</div><div class="metric-val">${tot.notDone}</div><div class="metric-sub">carried over</div></div>
+      <div class="metric"><div class="metric-lbl">Team completion</div><div class="metric-val">${teamPct}%</div><div class="metric-sub">${esc(deltaSub)}</div></div>
+      <div class="metric"><div class="metric-lbl">Avg load</div><div class="metric-val">${avgLoad.toFixed(1)}</div><div class="metric-sub">tasks / person</div></div>
+    </div>`;
+
+  /* ── 2 · Daily completion trend ── */
+  const showVals = series.length <= 14;
+  const bars = series.map(s=>{
+    const color = gradeColorVar(s.pct);
+    const h = s.pct == null ? 0 : Math.max(s.pct, 3);
+    const lbl = analyticsRange === 'month' ? String(s.date.getDate()) : fmtWeekday(s.date);
+    const title = `${fmtDayFull(s.date)} — ${s.pct == null ? 'no log' : `${s.pct}% (${s.done}/${s.total})`}`;
+    return `<div class="an-bar-col ${s.pct==null?'empty':''}" title="${esc(title)}">
+      ${showVals ? `<div class="an-bar-v">${s.pct==null?'·':s.pct}</div>` : ''}
+      <div class="an-bar-track"><div class="an-bar-fill" style="height:${h}%;background:${color}"></div></div>
+      <div class="an-bar-x">${esc(lbl)}</div>
+    </div>`;
+  }).join('');
+  const trendHtml = `
+    <div class="an-card">
+      <div class="an-card-head">Daily completion trend <span class="sub">${esc(pb.label)}</span></div>
+      <div class="an-bars">${bars}</div>
+    </div>`;
+
+  /* ── 3 · Leaderboard ── */
+  const lbBody = rows.map((p,i)=>{
+    const d = p.delta;
+    const deltaCell = d == null ? `<span class="an-delta flat">—</span>`
+      : d > 0 ? `<span class="an-delta up">▲ ${d}pp</span>`
+      : d < 0 ? `<span class="an-delta down">▼ ${Math.abs(d)}pp</span>`
+      :         `<span class="an-delta flat">→ 0pp</span>`;
+    return `<tr>
+      <td class="l"><span class="an-rank ${i===0?'r1':''}">${i+1}</span></td>
+      <td class="l name">${esc(p.name)}</td>
+      <td>${p.days}</td><td>${p.total}</td><td>${p.done}</td><td>${p.blocked}</td><td>${p.notDone}</td>
+      <td>${p.pct}%</td>
+      <td><span class="an-pill pill-${p.grade==='N/A'?'B':p.grade}">${p.grade}</span></td>
+      <td class="l">${deltaCell}</td>
+    </tr>`;
+  }).join('');
+  const leaderboardHtml = `
+    <div class="an-card">
+      <div class="an-card-head">Leaderboard <span class="sub">${people.length} ${people.length===1?'person':'people'} · ranked by completion</span></div>
+      <div class="an-scroll"><table class="an-table">
+        <thead><tr>
+          <th class="l">#</th><th class="l">Person</th><th>Days</th><th>Tasks</th><th>Done</th><th>Block</th><th>Not</th><th>Compl.</th><th>Grade</th><th class="l">vs prev</th>
+        </tr></thead>
+        <tbody>${lbBody}</tbody>
+      </table></div>
+    </div>`;
+
+  /* ── 4 · Heatmap (person × day) ── */
+  const days = series.map(s=>s.date);
+  const cellMap = new Map(); /* personKey|dayKey -> {pct,done,total} */
+  rangeReviews.forEach(r=>{
+    const dk = reviewDayKey(r); if (!dk) return;
+    const t = totals(r);
+    cellMap.set(personKey(r.person)+'|'+dk, { pct: t.total ? Math.round(t.done/t.total*100) : null, done:t.done, total:t.total });
+  });
+  const cols = `minmax(110px,150px) repeat(${days.length}, minmax(26px,1fr))`;
+  let heat = `<div class="an-scroll"><div class="an-heat" style="grid-template-columns:${cols}">`;
+  heat += `<div class="hh"></div>` + days.map(d=>`<div class="hh">${analyticsRange==='month' ? d.getDate() : fmtWeekday(d).slice(0,1)}</div>`).join('');
+  rows.forEach(p=>{
+    heat += `<div class="hname">${esc(p.name)}</div>`;
+    days.forEach(d=>{
+      const c = cellMap.get(personKey(p.name)+'|'+isoDate(d));
+      if (!c){
+        heat += `<div class="an-cell empty" title="${esc(p.name)} · ${esc(fmtDay(d))} · no log">·</div>`;
+      } else {
+        heat += `<div class="an-cell" style="background:${gradeColorVar(c.pct)}" title="${esc(p.name)} · ${esc(fmtDayFull(d))} · ${c.pct==null?'no tasks':`${c.pct}% (${c.done}/${c.total})`}">${c.pct==null?'–':c.pct}</div>`;
+      }
+    });
+  });
+  heat += `</div></div>
+    <div class="an-heat-legend">
+      <span class="lg"><span class="sw" style="background:var(--success)"></span>85%+</span>
+      <span class="lg"><span class="sw" style="background:var(--accent)"></span>70–84%</span>
+      <span class="lg"><span class="sw" style="background:var(--warn)"></span>50–69%</span>
+      <span class="lg"><span class="sw" style="background:var(--danger)"></span>&lt;50%</span>
+      <span class="lg"><span class="sw" style="background:var(--surface2);border:1px dashed var(--border)"></span>no log</span>
+    </div>`;
+  const heatmapHtml = `
+    <div class="an-card">
+      <div class="an-card-head">Activity heatmap <span class="sub">completion % per person per day</span></div>
+      ${heat}
+    </div>`;
+
+  /* ── 5 · Recurring & aging items ── */
+  const aging = agingItems(rangeReviews);
+  const hasItemText = rangeReviews.some(r=>itemsOf(r.blocked).length || itemsOf(r.notDone).length);
+  const agingBody = aging.length
+    ? `<div class="an-aging-list">${aging.slice(0,12).map(a=>`
+        <div class="an-aging-item">
+          <span class="age-badge ${a.count>=3?'':'warn'}">${a.count}×</span>
+          <div><b>${esc(a.person)}</b> — ${esc(a.item)}
+            <span style="color:var(--text3)"> · ${esc(a.states.join(' / '))} across ${a.span} day${a.span===1?'':'s'}</span></div>
+        </div>`).join('')}</div>`
+    : `<div class="an-aging-empty">${hasItemText
+        ? 'Nothing stayed blocked or not-done for 2+ days this period. 👌'
+        : 'Logs are counts only — item-level tracking needs task text.'}</div>`;
+  const agingHtml = `
+    <div class="an-card">
+      <div class="an-card-head">Recurring &amp; aging items <span class="sub">open 2+ days — escalate or de-scope</span></div>
+      ${agingBody}
+    </div>`;
+
+  host.innerHTML = metricsHtml + trendHtml + leaderboardHtml +
+    `<div class="an-grid2">${heatmapHtml}${agingHtml}</div>`;
+}
+
+/* CSV export of the current analytics period (per-person rollup + trend vs prior). */
+function exportAnalyticsCSV(){
+  const filterPerson = document.getElementById('filter-person').value;
+  const pred = r => !filterPerson || personKey(r.person) === personKey(filterPerson);
+  const pb = periodBounds(currentDate, analyticsRange);
+  const rangeReviews = reviewsForRange(pb.start, pb.end).filter(pred);
+  if (!rangeReviews.length){ showToast('Nothing to export for this period.', true); return; }
+
+  const perPerson     = rollupByPerson(rangeReviews);
+  const prevPerPerson = rollupByPerson(reviewsForRange(pb.prevStart, pb.prevEnd).filter(pred));
+  const rows = [...perPerson.values()].map(p=>{
+    const pct = p.total ? Math.round(p.done/p.total*100) : 0;
+    const prev = prevPerPerson.get(personKey(p.name));
+    const ppct = (prev && prev.total) ? Math.round(prev.done/prev.total*100) : '';
+    return { name:p.name, days:p.days.size, total:p.total, done:p.done, blocked:p.blocked, notDone:p.notDone,
+             pct, grade:gradeFromPct(pct, p.total), ppct, delta: ppct==='' ? '' : (pct - ppct) };
+  }).sort((a,b)=> b.pct - a.pct || b.total - a.total || a.name.localeCompare(b.name));
+
+  const cell = s => /[",\n]/.test(String(s)) ? '"'+String(s).replace(/"/g,'""')+'"' : String(s);
+  const head = ['Person','DaysLogged','Tasks','Done','Blocked','NotDone','Completion%','Grade','PrevCompletion%','DeltaPP'];
+  let csv = head.join(',') + '\n';
+  rows.forEach(r=>{ csv += [r.name,r.days,r.total,r.done,r.blocked,r.notDone,r.pct,r.grade,r.ppct,r.delta].map(cell).join(',') + '\n'; });
+
+  const tag = analyticsRange === 'month' ? isoDate(pb.start).slice(0,7) : weekKey(pb.start);
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `sgp-task-analytics-${tag}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+  showToast('Exported analytics CSV.');
+}
+
 /* ── Form handlers ── */
 function scrollToForm(){
   document.getElementById('add-box').scrollIntoView({behavior:'smooth',block:'center'});
@@ -996,6 +1405,21 @@ function resetForm(){
   document.getElementById('form-left-note').textContent = '';
   ['f-done','f-block','f-not'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-person').value = currentUser ? currentUser.name : '';
+  updateFormScore();
+}
+/* Read a count field as a non-negative integer (blank → 0). */
+function readCount(id){
+  const n = parseInt(document.getElementById(id).value, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+/* Live "completion = done ÷ total" preview under the input row. */
+function updateFormScore(){
+  const el = document.getElementById('form-live-score'); if (!el) return;
+  const t = { done:readCount('f-done'), blocked:readCount('f-block'), notDone:readCount('f-not') };
+  t.total = t.done + t.blocked + t.notDone;
+  if (t.total === 0){ el.textContent = 'Completion = Done ÷ total · —'; return; }
+  const pct = completionPct(t), g = gradeFromPct(pct, t.total);
+  el.textContent = `Completion = ${t.done} ÷ ${t.total} = ${pct}% · Grade ${g}`;
 }
 async function saveReview(){
   if (saving) return;
@@ -1003,11 +1427,11 @@ async function saveReview(){
   const person = normPerson(currentUser.name);
   if (!person){ showToast('Your account has no name set.', true); return; }
   document.getElementById('f-person').value = person;
-  const done    = lines(document.getElementById('f-done').value);
-  const blocked = lines(document.getElementById('f-block').value);
-  const notDone = lines(document.getElementById('f-not').value);
-  if (done.length+blocked.length+notDone.length === 0){
-    showToast('Add at least one task in any column.', true); return;
+  const done    = readCount('f-done');
+  const blocked = readCount('f-block');
+  const notDone = readCount('f-not');
+  if (done + blocked + notDone === 0){
+    showToast('Enter at least one count above 0.', true); return;
   }
 
   const d = currentDate;
@@ -1056,17 +1480,17 @@ function openEdit(id){
   const dk = reviewDayKey(r);
   const d = dk ? new Date(dk + 'T00:00:00') : currentDate;
   document.getElementById('e-day').value = fmtDayFull(d);
-  document.getElementById('e-done').value  = (r.done||[]).join('\n');
-  document.getElementById('e-block').value = (r.blocked||[]).join('\n');
-  document.getElementById('e-not').value   = (r.notDone||[]).join('\n');
+  document.getElementById('e-done').value  = countOf(r.done);
+  document.getElementById('e-block').value = countOf(r.blocked);
+  document.getElementById('e-not').value   = countOf(r.notDone);
   document.getElementById('edit-modal').classList.add('open');
 }
 function closeEdit(){ document.getElementById('edit-modal').classList.remove('open'); editId = null; }
 async function saveEdit(){
   if (!editId) return;
-  const done    = lines(document.getElementById('e-done').value);
-  const blocked = lines(document.getElementById('e-block').value);
-  const notDone = lines(document.getElementById('e-not').value);
+  const done    = readCount('e-done');
+  const blocked = readCount('e-block');
+  const notDone = readCount('e-not');
   const btn = document.getElementById('e-save-btn'); btn.disabled = true; btn.textContent = 'Saving...';
   try{
     await col.doc(editId).update({
@@ -1092,6 +1516,7 @@ async function deleteFromEdit(){
 
 /* ── Export ── */
 function exportDay(){
+  if (viewMode === 'analytics'){ exportAnalyticsCSV(); return; }
   const dayReviews = reviewsForDay(currentDate);
   if (!dayReviews.length){ showToast('Nothing to export for this day.', true); return; }
   const d = currentDate;
@@ -1099,9 +1524,9 @@ function exportDay(){
   dayReviews.forEach(r=>{
     const t = totals(r), pct = completionPct(t), g = gradeFromPct(pct, t.total);
     txt += `── ${r.person} · Grade ${g} · ${pct}% (${t.done}/${t.total}) ──\n`;
-    txt += `DONE (${(r.done||[]).length}):\n`;      (r.done||[]).forEach(x=>txt+=`  + ${x}\n`);
-    txt += `CAN'T PROCESS (${(r.blocked||[]).length}):\n`; (r.blocked||[]).forEach(x=>txt+=`  ! ${x}\n`);
-    txt += `NOT DONE (${(r.notDone||[]).length}):\n`; (r.notDone||[]).forEach(x=>txt+=`  - ${x}\n`);
+    txt += `DONE (${t.done}):\n`;          itemsOf(r.done).forEach(x=>txt+=`  + ${x}\n`);
+    txt += `CAN'T PROCESS (${t.blocked}):\n`; itemsOf(r.blocked).forEach(x=>txt+=`  ! ${x}\n`);
+    txt += `NOT DONE (${t.notDone}):\n`;   itemsOf(r.notDone).forEach(x=>txt+=`  - ${x}\n`);
     txt += `\n`;
   });
   const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
