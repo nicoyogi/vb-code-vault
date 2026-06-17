@@ -481,9 +481,25 @@ function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,
 function num(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
 function isoToday(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtDate(iso){ if(!iso) return '—'; const d=new Date(iso+'T00:00:00'); if(isNaN(d)) return iso; return d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}); }
-function splitStaff(s){ return String(s||'').split(/\s*[,;&]\s*|\s*\/\s*/).map(x=>x.trim()).filter(Boolean); }
-function staffArr(r){ return Array.isArray(r.staff) ? r.staff : splitStaff(r.staff); }
-function cleanName(tok){ return String(tok).replace(/\(.*?\)/g,'').trim(); }   /* drop "(checking)" etc. */
+/* Staff is always a list of people. Split on , ; & + / and the word "dan"
+   (Indonesian "and") so a joint entry like "Nico+Arya" becomes two people —
+   never a combined name. (EKSPEDITUR like "S+S" is a different field, untouched.) */
+function splitStaff(s){ return String(s||'').split(/\s*[,;&+/]\s*|\s+dan\s+/i).map(x=>x.trim()).filter(Boolean); }
+/* Read-time re-split: legacy records stored as ["Nico+Arya"] decompose too — no migration needed. */
+function staffArr(r){ const raw = Array.isArray(r.staff) ? r.staff : splitStaff(r.staff); return raw.flatMap(splitStaff); }
+function cleanName(tok){ return String(tok).replace(/\(.*?\)/g,'').replace(/\s+/g,' ').trim(); }   /* drop "(checking)" etc. */
+/* Known spelling variants that should fold into one person.
+   Key = lowercased variant as typed; value = canonical display name. Add pairs here. */
+const NAME_ALIASES = {
+  'shintia': 'Shintya',
+};
+/* Canonical person name — Title Case (so "NICO"/"nico"/"Nico " are one), then alias-folded. */
+function personName(tok){
+  const base = cleanName(tok).toLowerCase();
+  if (!base) return '';
+  if (NAME_ALIASES[base]) return NAME_ALIASES[base];
+  return base.split(' ').map(w=>w?w[0].toUpperCase()+w.slice(1):w).join(' ');
+}
 function recComp(r){ const t=num(r.total); return t>0 ? Math.round(num(r.done)/t*100) : 0; }
 function normStatus(s){ const t=String(s||'').toLowerCase(); if(t.startsWith('seles')) return 'Selesai'; if(t.startsWith('pro')) return 'Proses'; return s ? 'Proses' : ''; }
 function effStatus(r){ return r.status || (num(r.done)>=num(r.total)&&num(r.total)>0 ? 'Selesai':'Proses'); }
@@ -513,7 +529,7 @@ function showLoading(){
 /* ── Dropdowns / datalists ── */
 function uniqueProjects(){ return [...new Set([...PROJECTS_SEED, ...records.map(r=>r.project).filter(Boolean)])].sort((a,b)=>a.localeCompare(b)); }
 function uniqueEksp(){ return [...new Set([...EKSP_SEED, ...records.map(r=>r.ekspeditur).filter(Boolean)])].sort((a,b)=>a.localeCompare(b)); }
-function uniqueStaff(){ const s=new Set(); records.forEach(r=>staffArr(r).forEach(t=>{ const n=cleanName(t); if(n) s.add(n); })); return [...s].sort((a,b)=>a.localeCompare(b)); }
+function uniqueStaff(){ const s=new Set(); records.forEach(r=>staffArr(r).forEach(t=>{ const n=personName(t); if(n) s.add(n); })); return [...s].sort((a,b)=>a.localeCompare(b)); }
 function refreshDatalists(){
   document.getElementById('dl-project').innerHTML = uniqueProjects().map(p=>`<option value="${esc(p)}">`).join('');
   document.getElementById('dl-eksp').innerHTML = uniqueEksp().map(p=>`<option value="${esc(p)}">`).join('');
@@ -543,7 +559,7 @@ function applyFilters(list){
     if (f.status && effStatus(r)!==f.status) return false;
     if (f.from && (r.date||'') < f.from) return false;
     if (f.to && (r.date||'') > f.to) return false;
-    if (f.staff && !staffArr(r).some(t=>cleanName(t).toLowerCase()===f.staff.toLowerCase())) return false;
+    if (f.staff && !staffArr(r).some(t=>personName(t)===personName(f.staff))) return false;
     if (f.q){
       const hay = [r.project, r.ekspeditur, staffArr(r).join(' '), r.status, r.date].join(' ').toLowerCase();
       if (!hay.includes(f.q)) return false;
@@ -683,7 +699,7 @@ function renderAnalytics(list){
   const teamPct = totalData ? Math.round(doneData/totalData*100) : 0;
   const inProg = list.filter(r=>effStatus(r)==='Proses');
   const backlog = inProg.reduce((a,r)=>a+Math.max(0,num(r.total)-num(r.done)),0);
-  const staffSet = new Set(); list.forEach(r=>staffArr(r).forEach(t=>{ const n=cleanName(t); if(n) staffSet.add(n); }));
+  const staffSet = new Set(); list.forEach(r=>staffArr(r).forEach(t=>{ const n=personName(t); if(n) staffSet.add(n); }));
   const projSet = new Set(list.map(r=>r.project).filter(Boolean));
 
   /* metrics */
@@ -723,7 +739,7 @@ function renderAnalytics(list){
     <div class="an-scroll"><table class="an-table"><thead><tr><th class="l">#</th><th class="l">Project</th><th>Recs</th><th>Total</th><th>Done</th><th>Completion</th><th>% Selesai</th></tr></thead><tbody>${projRows}</tbody></table></div></div>`;
 
   /* per-staff leaderboard (attribute record totals to each named staff) */
-  const staff = {}; list.forEach(r=>{ const names=[...new Set(staffArr(r).map(cleanName).filter(Boolean))]; names.forEach(n=>{ const o=staff[n]=staff[n]||{recs:0,total:0,done:0,projs:new Set()}; o.recs++; o.total+=num(r.total); o.done+=num(r.done); if(r.project)o.projs.add(r.project); }); });
+  const staff = {}; list.forEach(r=>{ const names=[...new Set(staffArr(r).map(personName).filter(Boolean))]; names.forEach(n=>{ const o=staff[n]=staff[n]||{recs:0,total:0,done:0,projs:new Set()}; o.recs++; o.total+=num(r.total); o.done+=num(r.done); if(r.project)o.projs.add(r.project); }); });
   const staffRows = Object.entries(staff).map(([n,o])=>({n,...o,pct:o.total?Math.round(o.done/o.total*100):0}))
     .sort((a,b)=> b.done-a.done || b.total-a.total).slice(0,15).map((o,i)=>`<tr>
       <td class="l"><span class="an-rank ${i===0?'r1':''}">${i+1}</span></td>
@@ -758,7 +774,7 @@ function renderAnalytics(list){
   const openRecs = list.filter(r=>effStatus(r)==='Proses').map(r=>({r, age:ageOf(r.date), rem:Math.max(0,num(r.total)-num(r.done))})).sort((a,b)=> b.age-a.age || b.rem-a.rem);
   const agingRows = openRecs.slice(0,12).map(o=>`<tr>
       <td class="l name">${esc(o.r.project||'—')}</td><td class="l">${esc(o.r.ekspeditur||'—')}</td>
-      <td class="l">${esc(staffArr(o.r).map(cleanName).join(', ')||'—')}</td><td>${o.rem.toLocaleString()}</td>
+      <td class="l">${esc(staffArr(o.r).map(personName).join(', ')||'—')}</td><td>${o.rem.toLocaleString()}</td>
       <td><span class="age-pill ${o.age>7?'old':o.age>2?'mid':''}">${o.age}d</span></td></tr>`).join('');
   const agingCard = `<div class="an-card"><div class="an-card-head">Aging backlog <span class="sub">${openRecs.length} open record${openRecs.length===1?'':'s'} · oldest first</span></div>
     ${openRecs.length ? `<div class="an-scroll"><table class="an-table"><thead><tr><th class="l">Project</th><th class="l">Ekspeditur</th><th class="l">Staff</th><th>Remaining</th><th>Age</th></tr></thead><tbody>${agingRows}</tbody></table></div>` : `<div style="color:var(--text3);font-family:var(--ibm-mono);font-size:11.5px">No open (Proses) records — everything is Selesai. 👌</div>`}</div>`;
@@ -771,7 +787,7 @@ function gradeFromComp(pct,total){ if(!total) return 'N/A'; if(pct>=85)return 'A
 function peopleRollup(list){
   const m = {};
   list.forEach(r=>{
-    const names = [...new Set(staffArr(r).map(cleanName).filter(Boolean))];
+    const names = [...new Set(staffArr(r).map(personName).filter(Boolean))];
     const open = effStatus(r)==='Proses' ? Math.max(0, num(r.total)-num(r.done)) : 0;
     names.forEach(n=>{
       const o = m[n] = m[n] || { name:n, recs:0, total:0, done:0, backlog:0, projects:new Set(), days:new Set(), byDay:{} };
