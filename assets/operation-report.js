@@ -5,9 +5,12 @@
    • Custom name + password login (no Firebase Auth), mirroring
      the Holiday Tracker. Each user may only edit the row that
      carries their own name; admins may edit everyone.
-   • History is seeded from REPORT DATA.xlsx via report-data-seed.js
-     and pushed to Firestore once with the admin "Import history"
-     button (idempotent — safe to run twice).
+   • History is imported by an admin who UPLOADS REPORT DATA.xlsx
+     on the Admin tab: the workbook is parsed in the browser (SheetJS)
+     and the parsed person-days + category-days are pushed to Firestore
+     (idempotent — existing days are overwritten, not duplicated).
+     report-data-seed.js still provides the default roster / metric /
+     category definitions for the sign-in screen and grid.
    ══════════════════════════════════════════════════════════════ */
 
 /* ── Firebase guard ─────────────────────────────────────────── */
@@ -524,15 +527,147 @@ async function renderDashboard(){
 }
 
 /* ════════════════════════════════════════════
+   EXCEL IMPORT  (parse REPORT DATA.xlsx in the browser)
+   ────────────────────────────────────────────
+   Admins upload the workbook on the Admin tab; we read it client-side
+   with SheetJS and turn it into the same { people, entries,
+   categoryEntries } shape the old baked-in seed used, then push it to
+   Firestore via runImport(). Same CDN as alokasi-project.html.
+════════════════════════════════════════════ */
+function loadXLSX(){
+  return new Promise((res, rej) => {
+    if (window.XLSX) return res(window.XLSX);
+    const s = document.createElement('script');
+    s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+    s.onload  = () => res(window.XLSX);
+    s.onerror = () => rej(new Error('Could not load the Excel library (offline?).'));
+    document.head.appendChild(s);
+  });
+}
+
+/* Which workbook sheet carries what. Matched case/space-insensitively so
+   small header drift in REPORT DATA.xlsx still imports cleanly. */
+const SHEET_MAP = {
+  'TOTAL TARIF CHECKING':            { kind:'category', side:'tarif'   },
+  'TOTAL FAKTUAL CHECKING':          { kind:'category', side:'faktual' },
+  'TOTAL SUDAH SELESAI TARIF CHECK': { kind:'person',   metric:'selesaiTarif'   },
+  'DATA YG GK BISA DI CHECK':        { kind:'person',   metric:'tidakBisaCheck' },
+  'TOTAL BELUM SELESAI TARIF CHECK': { kind:'person',   metric:'belumTarif'     },
+  'TOTAL SELESAI FAKTUAL':           { kind:'person',   metric:'selesaiFaktual' },
+  'TOTAL BELUM SELESAI FAKTUAL':     { kind:'person',   metric:'belumFaktual'   },
+};
+const normSheet = s => String(s||'').toUpperCase().replace(/\s+/g,' ').trim();
+const sideOfMetric = k => (METRICS.find(m => m.key === k) || {}).side;
+
+/* Dates in REPORT DATA.xlsx are mostly "DD.MM.YYYY" strings, but the workbook
+   is hand-kept and messy: real Excel dates (JS Date), a date that lost its
+   separator and became a number (13.112025 → 13.11.2025), and stray/duplicated
+   separators ("23.12..2025", "10/04/.2026"). Recover all of them so an upload
+   matches the data the team actually typed. Returns 'YYYY-MM-DD' or '' when the
+   cell isn't a date. */
+function toISO(v){
+  if (v == null || v === '') return '';
+  if (v instanceof Date){
+    if (isNaN(v)) return '';
+    const off = v.getTimezoneOffset();
+    return new Date(v.getTime() - off*60000).toISOString().slice(0,10);
+  }
+  if (typeof v === 'number'){
+    if (Number.isInteger(v) && v >= 20000 && v <= 60000){      // genuine Excel 1900 serial
+      const d = new Date(Math.round((v - 25569) * 86400000));
+      return isNaN(d) ? '' : d.toISOString().slice(0,10);
+    }
+    v = String(v);   // typo'd date that became a decimal number → parse as text below
+  }
+  let s = String(v).trim();
+  let m = s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);   // clean DD.MM.YYYY
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;                  // already ISO
+  m = s.match(/^(\d{1,2})[.\/-](\d{2})(\d{4})$/);              // dropped separator: 13.112025
+  if (m) return `${m[3]}-${m[2]}-${m[1].padStart(2,'0')}`;
+  s = s.replace(/[.\/\-\s]+/g, '.');                            // collapse messy separators
+  m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return '';
+}
+
+function parseReportWorkbook(buf, XLSX){
+  const wb = XLSX.read(buf, { type:'array', cellDates:true });
+  const entriesMap = new Map();   // `${iso}__${person}` -> entry
+  const catMap     = new Map();   // `${iso}__${side}`   -> category-day
+  const peopleSeen = new Map();   // name -> { name, doesTarif, doesFaktual, order }
+  let order = 0;
+  const matchedSheets = [], skippedSheets = [];
+
+  wb.SheetNames.forEach(sheetName => {
+    const spec = SHEET_MAP[normSheet(sheetName)];
+    if (!spec){ skippedSheets.push(sheetName); return; }
+    const ws = wb.Sheets[sheetName];
+    const grid = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' });
+    if (!grid.length) return;
+    matchedSheets.push(sheetName);
+
+    const header  = (grid[0] || []).map(h => String(h == null ? '' : h).trim());
+    let dateCol = header.findIndex(h => /^date$/i.test(h));
+    if (dateCol < 0) dateCol = 0;
+
+    if (spec.kind === 'category'){
+      // header: date, FNP, KSP, OPP, PS1, SUMME  (FNP sometimes has a stray space)
+      const cols = {}; // colIndex -> category
+      header.forEach((h, ci) => { const k = h.toUpperCase().replace(/\s+/g,''); if (CATEGORIES.includes(k)) cols[ci] = k; });
+      for (let r = 1; r < grid.length; r++){
+        const row = grid[r]; if (!row) continue;
+        const iso = toISO(row[dateCol]); if (!iso) continue;
+        const key = `${iso}__${spec.side}`;
+        const obj = catMap.get(key) || { date:iso, side:spec.side };
+        Object.entries(cols).forEach(([ci, cat]) => { const val = n(row[ci]); if (val) obj[cat] = val; });
+        catMap.set(key, obj);
+      }
+    } else {
+      // person sheet: header DATE, <people…>, SUMME
+      const cols = {}; // colIndex -> person name
+      header.forEach((h, ci) => {
+        if (ci === dateCol) return;
+        const name = h.trim();
+        if (!name || /^(summe|total|date|tanggal)$/i.test(name)) return;
+        cols[ci] = name;
+        let p = peopleSeen.get(name);
+        if (!p){ p = { name, doesTarif:false, doesFaktual:false, order:order++ }; peopleSeen.set(name, p); }
+        if (spec.metric && sideOfMetric(spec.metric) === 'faktual') p.doesFaktual = true; else p.doesTarif = true;
+      });
+      for (let r = 1; r < grid.length; r++){
+        const row = grid[r]; if (!row) continue;
+        const iso = toISO(row[dateCol]); if (!iso) continue;
+        Object.entries(cols).forEach(([ci, name]) => {
+          const val = n(row[ci]); if (!val) return;   // keep entries sparse; blanks/zeros default to 0 on write
+          const key = `${iso}__${name}`;
+          const e = entriesMap.get(key) || { date:iso, person:name };
+          e[spec.metric] = val;
+          entriesMap.set(key, e);
+        });
+      }
+    }
+  });
+
+  return {
+    people:          [...peopleSeen.values()],
+    entries:         [...entriesMap.values()],
+    categoryEntries: [...catMap.values()],
+    matchedSheets, skippedSheets,
+  };
+}
+
+/* ════════════════════════════════════════════
    ADMIN  (import + accounts)
 ════════════════════════════════════════════ */
+let pendingImport = null;   // parsed workbook awaiting the admin's confirm
+
 async function renderAdmin(){
   if (!currentUser.isAdmin){ document.getElementById('adminBody').innerHTML = '<p class="muted">Admins only.</p>'; return; }
   const body = document.getElementById('adminBody');
   body.innerHTML = `<p class="muted">Loading accounts…</p>`;
   let profs = [];
   try { profs = await GrimoireAuth.listProfiles(); } catch(e){}
-  const seedCount = (SEED.entries||[]).length + (SEED.categoryEntries||[]).length;
   const accRows = profs.map(p=>`<tr>
       <td class="name-col">${esc(p.displayName)} ${p.isAdmin?'<span class="crown">👑</span>':''}</td>
       <td>${p.uid===currentUser.uid?'<span class="muted">this is you</span>':
@@ -543,11 +678,17 @@ async function renderAdmin(){
   body.innerHTML = `
     <div class="admin-card">
       <h3 class="sub-h">Import history</h3>
-      <p class="muted">Push the ${seedCount.toLocaleString()} records bundled from <code>REPORT DATA.xlsx</code>
-        (${(SEED.entries||[]).length} person-days + ${(SEED.categoryEntries||[]).length} category-days) into Firebase.
-        Safe to run again — existing days are overwritten, not duplicated.</p>
+      <p class="muted">Upload <code>REPORT DATA.xlsx</code> to push its full history into the shared board.
+        The file is read in your browser — nothing is uploaded anywhere except the parsed numbers, which go to Firebase.
+        Safe to re-run — existing days are overwritten, not duplicated.</p>
       <div class="row-gap">
-        <button class="btn primary" id="importBtn">Import history → Firebase</button>
+        <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none">
+        <button class="btn" id="chooseFileBtn">📄 Choose Excel file…</button>
+        <span id="fileName" class="muted"></span>
+      </div>
+      <div id="importPreview" class="muted" style="margin-top:10px"></div>
+      <div class="row-gap">
+        <button class="btn primary" id="importBtn" disabled>Import history → Firebase</button>
         <span id="importStatus" class="muted"></span>
       </div>
       <div class="progress" id="importProg" style="display:none"><span></span></div>
@@ -557,9 +698,45 @@ async function renderAdmin(){
       <table class="grid"><tbody>${accRows}</tbody></table>
     </div>`;
 
-  document.getElementById('importBtn').addEventListener('click', runImport);
+  pendingImport = null;
+  const fileInput = document.getElementById('importFile');
+  document.getElementById('chooseFileBtn').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => onImportFile(fileInput.files[0]));
+  document.getElementById('importBtn').addEventListener('click', () => runImport(pendingImport));
   body.querySelectorAll('[data-promote]').forEach(b=>b.addEventListener('click',()=>setAdmin(b.dataset.promote,true)));
   body.querySelectorAll('[data-demote]').forEach(b=>b.addEventListener('click',()=>setAdmin(b.dataset.demote,false)));
+}
+
+/* Read + parse the chosen workbook, show a summary, and arm the Import button. */
+async function onImportFile(file){
+  const preview   = document.getElementById('importPreview');
+  const nameEl    = document.getElementById('fileName');
+  const importBtn = document.getElementById('importBtn');
+  const status    = document.getElementById('importStatus');
+  pendingImport = null; importBtn.disabled = true; status.textContent = '';
+  if (!file){ nameEl.textContent = ''; preview.innerHTML = ''; return; }
+  nameEl.textContent = file.name;
+  preview.innerHTML = 'Reading…';
+  try {
+    const XLSX = await loadXLSX();
+    const buf  = await file.arrayBuffer();
+    const data = parseReportWorkbook(buf, XLSX);
+    if (!data.entries.length && !data.categoryEntries.length){
+      preview.innerHTML = `<span style="color:var(--red)">No recognisable sheets found — expected sheets like “TOTAL SUDAH SELESAI TARIF CHECK”.</span>`;
+      return;
+    }
+    pendingImport = data;
+    const dates = [...data.entries, ...data.categoryEntries].map(x => x.date).filter(Boolean).sort();
+    const span  = dates.length ? `${fmtDate(dates[0])} – ${fmtDate(dates[dates.length-1])}` : '—';
+    preview.innerHTML =
+      `Parsed <b>${data.entries.length.toLocaleString()}</b> person-days + ` +
+      `<b>${data.categoryEntries.length.toLocaleString()}</b> category-days · ` +
+      `<b>${data.people.length}</b> people · ${esc(span)}.` +
+      (data.skippedSheets.length ? `<br><span class="muted">Skipped sheets: ${esc(data.skippedSheets.join(', '))}</span>` : '');
+    importBtn.disabled = false;
+  } catch(e){
+    preview.innerHTML = `<span style="color:var(--red)">Couldn’t read file: ${esc(e.message)}</span>`;
+  }
 }
 
 async function setAdmin(uid, val){
@@ -567,23 +744,26 @@ async function setAdmin(uid, val){
   catch(e){ toast('Failed: '+e.message,'err'); }
 }
 
-async function runImport(){
+async function runImport(data){
   if (!currentUser.isAdmin) return;
+  if (!data || (!data.entries?.length && !data.categoryEntries?.length)){
+    toast('Choose a REPORT DATA.xlsx file first.', 'err'); return;
+  }
   const btn = document.getElementById('importBtn');
   const status = document.getElementById('importStatus');
   const prog = document.getElementById('importProg');
   btn.disabled = true; prog.style.display = ''; const bar = prog.querySelector('span');
 
-  // Build the full write list
+  // Build the full write list from the uploaded workbook
   const writes = [];
-  (SEED.people||[]).forEach(p => writes.push({ ref: peopleCol.doc(GrimoireAuth.makeUid(p.name)),
+  (data.people||[]).forEach(p => writes.push({ ref: peopleCol.doc(GrimoireAuth.makeUid(p.name)),
     data: { name:p.name, doesTarif:p.doesTarif!==false, doesFaktual:!!p.doesFaktual, order:p.order ?? 99 } }));
-  (SEED.entries||[]).forEach(e => {
+  (data.entries||[]).forEach(e => {
     const d = { date:e.date, person:e.person, updatedAt:SERVER_TS(), importedAt:SERVER_TS() };
     METRIC_KEYS.forEach(k => d[k] = n(e[k]));
     writes.push({ ref: entryCol.doc(`${e.date}__${e.person}`), data:d });
   });
-  (SEED.categoryEntries||[]).forEach(c => {
+  (data.categoryEntries||[]).forEach(c => {
     const d = { date:c.date, side:c.side, updatedAt:SERVER_TS(), importedAt:SERVER_TS() };
     CATEGORIES.forEach(cat => d[cat] = n(c[cat]));
     writes.push({ ref: catCol.doc(`${c.date}__${c.side}`), data:d });
