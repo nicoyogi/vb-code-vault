@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#050509">
+<meta name="description" content="Operation Report — daily tarif & faktual checking tracker. Sign in and log your own numbers.">
+<title>Operation Report · The Grimoire</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;500;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/grimoire-core.css">
+<script src="assets/grimoire-core.js"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#050509; --bg-soft:#0b0b16; --ink:#f3efe3;
+    --muted:rgba(243,239,227,0.62); --faint:rgba(243,239,227,0.38);
+    --gold:#d8b56e; --gold-2:#f0dca6; --gold-dim:rgba(216,181,110,0.55);
+    --gold-soft:rgba(216,181,110,0.28); --gold-faint:rgba(216,181,110,0.10);
+    --violet:rgba(110,80,200,0.30);
+    --glass:rgba(18,18,28,0.55); --glass-2:rgba(34,30,52,0.64);
+    --line:rgba(216,181,110,0.18); --line-soft:rgba(243,239,227,0.08);
+    --green:#6ee7b7; --red:#f87171;
+    --f-display:'Cinzel',serif; --f-body:'Syne',sans-serif; --f-mono:'DM Mono',monospace;
+    --radius:14px; --ease:cubic-bezier(0.2,0.8,0.2,1);
+  }
+  html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--f-body);overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:-50%;z-index:0;pointer-events:none;opacity:0.7;
+    background:radial-gradient(circle at 22% 16%,var(--violet) 0%,transparent 38%),radial-gradient(circle at 84% 6%,var(--gold-faint) 0%,transparent 32%),radial-gradient(circle at 60% 105%,rgba(60,40,120,0.22) 0%,transparent 50%)}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
+  a{color:var(--gold)}
+  code{font-family:var(--f-mono);color:var(--gold-2);font-size:0.85em}
+  [hidden]{display:none!important}
+
+  /* ── Auth gate ─────────────────────────────── */
+  #authGate{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:radial-gradient(circle at 50% 20%,rgba(34,30,52,0.6),var(--bg) 70%)}
+  .auth-card{position:relative;width:100%;max-width:400px;background:var(--glass);backdrop-filter:blur(20px);
+    border:1px solid var(--line);border-radius:20px;padding:34px 30px;box-shadow:0 30px 80px rgba(0,0,0,0.6)}
+  .auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+  .auth-logo-icon{width:46px;height:46px;display:grid;place-items:center;font-size:24px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,0.35)}
+  .auth-logo-text{font-family:var(--f-display);font-size:17px;letter-spacing:0.06em;line-height:1.1}
+  .auth-logo-text span{display:block;font-family:var(--f-mono);font-size:9px;letter-spacing:0.22em;color:var(--faint);margin-top:3px}
+  .auth-tabs{display:flex;gap:6px;background:rgba(0,0,0,0.3);padding:5px;border-radius:11px;margin-bottom:20px;border:1px solid var(--line-soft)}
+  .auth-tab{flex:1;padding:9px;border:none;background:transparent;color:var(--muted);font-family:var(--f-body);font-weight:600;font-size:13px;border-radius:8px;cursor:pointer;transition:.25s}
+  .auth-tab.active{background:var(--gold);color:#1a1305}
+  .auth-form{display:flex;flex-direction:column;gap:14px}
+  .auth-input-label{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  .auth-input,.auth-select{width:100%;padding:11px 13px;background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:var(--f-body);font-size:14px}
+  .auth-select{appearance:none;cursor:pointer}
+  .auth-error{color:var(--red);font-size:12px;min-height:0;display:none}
+  .auth-error.show{display:block}
+  .auth-btn{margin-top:4px;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#1a1305;font-family:var(--f-body);font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s}
+  .auth-btn:hover{filter:brightness(1.08)}
+  .auth-btn:disabled{opacity:.6;cursor:default}
+  .spin{width:14px;height:14px;border:2px solid rgba(26,19,5,0.3);border-top-color:#1a1305;border-radius:50%;animation:sp .7s linear infinite;display:none}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .auth-foot{margin-top:18px;text-align:center;font-size:11px;color:var(--faint)}
+
+  /* ── App shell ─────────────────────────────── */
+  #mainApp{position:relative;z-index:1}
+  .topbar{position:sticky;top:0;z-index:30;backdrop-filter:blur(16px);background:linear-gradient(180deg,rgba(5,5,9,0.9),rgba(5,5,9,0.5));border-bottom:1px solid var(--line-soft)}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+  .brand-mark{width:34px;height:34px;display:grid;place-items:center;font-size:18px;border:1px solid var(--line);border-radius:9px;background:rgba(0,0,0,0.35)}
+  .brand-name{font-family:var(--f-display);font-size:14px;letter-spacing:0.14em;text-transform:uppercase}
+  .brand-name b{color:var(--gold);font-weight:600}
+  .spacer{margin-left:auto}
+  .user-chip{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border:1px solid var(--line);border-radius:30px;background:rgba(0,0,0,0.3);font-size:13px}
+  .user-chip-avatar{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#1a1305}
+  .crown,.admin-crown{font-size:12px}
+  .icon-btn{border:1px solid var(--line);background:rgba(0,0,0,0.3);color:var(--muted);border-radius:9px;padding:7px 11px;cursor:pointer;font-family:var(--f-body);font-size:12px;transition:.2s}
+  .icon-btn:hover{color:var(--ink);border-color:var(--gold-dim)}
+
+  .wrap{max-width:1120px;margin:0 auto;padding:22px 18px 80px}
+  .page-head{margin-bottom:18px}
+  .page-title{font-family:var(--f-display);font-size:clamp(1.7rem,1.2rem+2vw,2.4rem);font-weight:900}
+  .page-sub{color:var(--muted);font-size:14px;margin-top:4px}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;border-bottom:1px solid var(--line-soft);padding-bottom:0}
+  .tab{padding:10px 16px;border:none;background:transparent;color:var(--muted);font-family:var(--f-body);font-weight:600;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;transition:.2s}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+  .panel{display:none;animation:fade .4s var(--ease)}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .card-box{background:var(--glass);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+
+  /* date controls */
+  .date-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .date-bar input[type=date]{padding:9px 12px;background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:var(--f-mono);font-size:13px;color-scheme:dark}
+  .date-meta{font-family:var(--f-mono);font-size:12px;color:var(--faint);letter-spacing:.08em}
+  .hint{font-size:12px;color:var(--faint);margin-left:auto}
+
+  /* grid table */
+  .table-scroll{overflow-x:auto}
+  table.grid{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+  table.grid th,table.grid td{padding:8px 9px;text-align:center;border-bottom:1px solid var(--line-soft)}
+  table.grid th{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:500;position:sticky;top:0}
+  table.grid td.name-col,table.grid th.name-col{text-align:left;font-weight:600;white-space:nowrap}
+  table.grid tr.mine{background:var(--gold-faint)}
+  table.grid tr.locked td{color:var(--muted)}
+  table.grid tr.grand td{font-weight:700;color:var(--gold-2);border-top:1px solid var(--line)}
+  td.total-col{font-weight:700;color:var(--gold-2)}
+  td.na{color:var(--faint)}
+  td.ro{color:var(--muted)}
+  .you{font-family:var(--f-mono);font-size:9px;background:var(--gold);color:#1a1305;padding:1px 5px;border-radius:5px;letter-spacing:.05em;vertical-align:middle}
+  .lock{opacity:.5}
+  .num-in{width:60px;padding:6px;text-align:center;background:rgba(0,0,0,0.4);border:1px solid var(--line);border-radius:7px;color:var(--ink);font-family:var(--f-mono);font-size:13px}
+  .num-in:focus{border-color:var(--gold);outline:none}
+  .mini-btn{padding:5px 11px;border:1px solid var(--gold-dim);background:var(--gold-faint);color:var(--gold-2);border-radius:7px;font-family:var(--f-body);font-weight:600;font-size:12px;cursor:pointer;transition:.2s}
+  .mini-btn:hover{background:var(--gold);color:#1a1305}
+  .mini-btn:disabled{opacity:.5;cursor:default}
+  .err-line{color:var(--red);font-size:13px;padding:12px}
+
+  /* stats */
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+  .stat{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .stat.hero{background:linear-gradient(135deg,rgba(216,181,110,0.16),rgba(34,30,52,0.5));border-color:var(--gold-dim)}
+  .stat-num{font-family:var(--f-display);font-size:28px;font-weight:900;color:var(--gold-2);line-height:1}
+  .stat-lbl{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:6px}
+  .bar{height:5px;background:rgba(0,0,0,0.4);border-radius:4px;margin-top:8px;overflow:hidden}
+  .bar span{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-2))}
+
+  .sub-h{font-family:var(--f-display);font-size:18px;margin:24px 0 12px}
+  .leaderboard{display:flex;flex-direction:column;gap:8px}
+  .lb-row{display:grid;grid-template-columns:28px 1fr 2fr auto;align-items:center;gap:10px}
+  .lb-rank{font-family:var(--f-mono);color:var(--faint);font-size:12px;text-align:center}
+  .lb-name{font-weight:600;font-size:13px}
+  .lb-bar{height:9px;background:rgba(0,0,0,0.4);border-radius:5px;overflow:hidden}
+  .lb-bar span{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold-2))}
+  .lb-val{font-family:var(--f-mono);font-weight:600;color:var(--gold-2);font-size:13px}
+
+  .muted{color:var(--muted);font-size:13px}
+  .sel{padding:8px 11px;background:rgba(0,0,0,0.35);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-family:var(--f-body);font-size:13px;cursor:pointer}
+
+  .admin-card{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+  .btn{padding:11px 18px;border:none;border-radius:10px;font-family:var(--f-body);font-weight:700;font-size:13px;cursor:pointer}
+  .btn.primary{background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#1a1305}
+  .btn:disabled{opacity:.55;cursor:default}
+  .row-gap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px}
+  .progress{height:8px;background:rgba(0,0,0,0.4);border-radius:5px;margin-top:14px;overflow:hidden}
+  .progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--green));transition:width .3s}
+
+  /* toast */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:60;padding:12px 20px;border-radius:11px;background:var(--glass-2);border:1px solid var(--line);backdrop-filter:blur(14px);font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.3s;max-width:90vw}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{border-color:var(--red);color:#fecaca}
+  .toast.ok{border-color:var(--green)}
+
+  @media(max-width:560px){
+    .page-sub{font-size:13px}
+    .hint{width:100%;margin-left:0}
+  }
+</style>
+</head>
+<body>
+
+<!-- ════ AUTH GATE ════ -->
+<div id="authGate" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">📋</div>
+      <div class="auth-logo-text">Operation Report<span>THE GRIMOIRE · WMF</span></div>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Register</button>
+    </div>
+
+    <div id="loginPanel">
+      <div class="auth-form">
+        <div>
+          <label class="auth-input-label" for="loginName">Your Name</label>
+          <select class="auth-select" id="loginName"><option value="">— Loading… —</option></select>
+        </div>
+        <div>
+          <label class="auth-input-label" for="loginPassword">Password</label>
+          <input class="auth-input" type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div class="auth-error" id="loginError"></div>
+        <button class="auth-btn" id="loginBtn" onclick="doLogin()"><span class="spin" id="loginSpinner"></span>Sign In</button>
+      </div>
+    </div>
+
+    <div id="registerPanel" style="display:none">
+      <div class="auth-form">
+        <div>
+          <label class="auth-input-label" for="registerName">Your Name</label>
+          <select class="auth-select" id="registerName"><option value="">— Loading… —</option></select>
+        </div>
+        <div>
+          <label class="auth-input-label" for="registerPassword">Password</label>
+          <input class="auth-input" type="password" id="registerPassword" placeholder="At least 4 characters" autocomplete="new-password">
+        </div>
+        <div>
+          <label class="auth-input-label" for="registerConfirm">Confirm Password</label>
+          <input class="auth-input" type="password" id="registerConfirm" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div class="auth-error" id="registerError"></div>
+        <button class="auth-btn" id="registerBtn" onclick="doRegister()"><span class="spin" id="registerSpinner"></span>Create Account</button>
+      </div>
+    </div>
+
+    <div class="auth-foot">Pick your name, set a password — then only you can fill in your own row.</div>
+  </div>
+</div>
+
+<!-- ════ MAIN APP ════ -->
+<div id="mainApp" style="display:none">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="brand" aria-label="The Grimoire — home">
+        <span class="brand-mark">📋</span>
+        <span class="brand-name">The <b>Grimoire</b></span>
+      </a>
+      <div class="spacer"></div>
+      <div class="user-chip">
+        <span class="user-chip-avatar" id="chipAvatar">?</span>
+        <span id="chipName">…</span>
+        <span class="admin-crown" id="chipCrown" style="display:none">👑</span>
+      </div>
+      <button class="icon-btn" id="signOutBtn">Sign out</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="page-head">
+      <div class="page-title">Operation Report</div>
+      <div class="page-sub">Daily tarif &amp; faktual checking. Everyone shares one board — you can only edit the row with your name.</div>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="entry">Daily Entry</button>
+      <button class="tab" data-tab="mystats">My Stats</button>
+      <button class="tab" data-tab="dashboard">Team Dashboard</button>
+      <button class="tab" data-tab="categories">Categories</button>
+      <button class="tab" data-tab="admin" id="adminTab" style="display:none">Admin</button>
+    </nav>
+
+    <!-- DAILY ENTRY -->
+    <section class="panel active" data-panel="entry">
+      <div class="date-bar">
+        <button class="icon-btn" id="prevDay" title="Previous day">‹</button>
+        <input type="date" id="dateInput">
+        <button class="icon-btn" id="nextDay" title="Next day">›</button>
+        <button class="icon-btn" id="todayBtn">Today</button>
+        <span class="date-meta" id="entryMeta"></span>
+        <span class="hint">Fill your row → press <b>Save</b>. 🔒 rows belong to other people.</span>
+      </div>
+      <div class="card-box table-scroll"><div id="entryGrid"></div></div>
+    </section>
+
+    <!-- MY STATS -->
+    <section class="panel" data-panel="mystats">
+      <div id="myStats"></div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section class="panel" data-panel="dashboard">
+      <div class="date-bar">
+        <label class="muted" for="rangeSel">Range:</label>
+        <select class="sel" id="rangeSel">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="all">All time</option>
+        </select>
+      </div>
+      <div id="dashboard"><div class="dash-body"></div></div>
+    </section>
+
+    <!-- CATEGORIES -->
+    <section class="panel" data-panel="categories">
+      <div class="date-bar">
+        <span class="date-meta" id="catMeta"></span>
+        <span class="hint">FNP / KSP / OPP / PS1 daily totals. Admin-editable; uses the date picker on Daily Entry.</span>
+      </div>
+      <div class="card-box table-scroll"><div id="catGrid"></div></div>
+    </section>
+
+    <!-- ADMIN -->
+    <section class="panel" data-panel="admin">
+      <div id="adminBody"></div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" integrity="sha384-AQ3POAMqIhwS81FrUH95ekxqBZHeP5tG2JfEL3+7GuTtfRLWnrRh32UxwzM+//A9" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/grimoire-auth.js"></script>
+<script src="assets/report-data-seed.js"></script>
+<script src="assets/operation-report.js"></script>
+</body>
+</html>
