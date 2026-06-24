@@ -40,19 +40,18 @@ const TARIF_KEYS  = METRICS.filter(m => m.side === 'tarif').map(m => m.key);
 const FAKTUAL_KEYS= METRICS.filter(m => m.side === 'faktual').map(m => m.key);
 const CATEGORIES  = SEED.categories.length ? SEED.categories : ['FNP','KSP','OPP','PS1'];
 
-/* ── Belum-Selesai reason gate ──────────────────────────────────
-   Rule: when a person's unfinished work ("Belum Selesai" — both the
-   tarif and faktual sides) is MORE THAN 50% of their done +
-   un-checkable work ("Selesai" + "Tidak Bisa"), they must record a
-   reason when saving. The reason is stored on the entry and shown on
-   the shared daily board, so anyone can see it. */
-const BELUM_KEYS      = METRIC_KEYS.filter(k => /belum/i.test(k));               // belumTarif, belumFaktual
-const DONE_KEYS       = METRIC_KEYS.filter(k => /selesai/i.test(k) && !/belum/i.test(k)); // selesaiTarif, selesaiFaktual
-const TIDAKBISA_KEYS  = METRIC_KEYS.filter(k => /tidak/i.test(k));               // tidakBisaCheck
-const BELUM_THRESHOLD = 0.5;
+/* ── Belum-Tarif reason gate ────────────────────────────────────
+   Rule: when a person's unfinished tarif work ("Belum Tarif") is
+   MORE THAN 50% of their TOTAL tarif work ("Selesai Tarif" +
+   "Tidak Bisa" + "Belum Tarif"), they must record a reason when
+   saving. The reason is stored on the entry and shown on the shared
+   daily board, so anyone can see it. Faktual-only people have no
+   tarif numbers, so the gate never applies to them. */
+const BELUM_TARIF_KEYS = TARIF_KEYS.filter(k => /belum/i.test(k));  // belumTarif
+const BELUM_THRESHOLD  = 0.5;
 function belumStats(e){
-  const belum = BELUM_KEYS.reduce((a,k) => a + n(e && e[k]), 0);
-  const base  = [...DONE_KEYS, ...TIDAKBISA_KEYS].reduce((a,k) => a + n(e && e[k]), 0); // Selesai + Tidak Bisa
+  const belum = BELUM_TARIF_KEYS.reduce((a,k) => a + n(e && e[k]), 0);
+  const base  = TARIF_KEYS.reduce((a,k) => a + n(e && e[k]), 0); // Selesai Tarif + Tidak Bisa + Belum Tarif
   return { belum, base, over: belum > base * BELUM_THRESHOLD };
 }
 
@@ -336,7 +335,7 @@ function reasonRowHTML(p, e, editable){
     return `<tr class="reason-row" data-reason-for="${esc(p.name)}" style="display:${show?'':'none'}">
       <td></td><td colspan="${colspan}" class="reason-cell">
         <div class="reason-wrap">
-          <span class="reason-flag">⚠ Belum Selesai is over 50% of Selesai + Tidak Bisa — reason required</span>
+          <span class="reason-flag">⚠ Belum Tarif is over 50% of total Tarif (Selesai + Tidak Bisa + Belum) — reason required</span>
           <input class="reason-in" type="text" maxlength="300" data-person="${esc(p.name)}"
                  value="${esc(reason)}" placeholder="Explain why so much is unfinished…">
         </div></td></tr>`;
@@ -344,7 +343,7 @@ function reasonRowHTML(p, e, editable){
   if (reason){
     return `<tr class="reason-row ro" data-reason-for="${esc(p.name)}">
       <td></td><td colspan="${colspan}" class="reason-cell">
-        <div class="reason-wrap"><span class="reason-flag">⚠ Belum Selesai over 50%:</span>
+        <div class="reason-wrap"><span class="reason-flag">⚠ Belum Tarif over 50%:</span>
         <span class="reason-text">${esc(reason)}</span></div></td></tr>`;
   }
   return '';
@@ -374,7 +373,7 @@ async function saveRow(personName, btn){
     const row = document.querySelector(`#entryGrid tr.reason-row[data-reason-for="${CSS.escape(personName)}"]`);
     if (row) row.style.display = '';
     if (reasonInput) reasonInput.focus();
-    toast(`Belum Selesai (${stats.belum}) is over 50% of Selesai + Tidak Bisa (${stats.base}). Add a reason to save.`, 'err');
+    toast(`Belum Tarif (${stats.belum}) is over 50% of total Tarif checked (${stats.base}). Add a reason to save.`, 'err');
     return;
   }
   payload.belumReason = stats.over ? reason : '';   // clear stale reason once back under threshold
