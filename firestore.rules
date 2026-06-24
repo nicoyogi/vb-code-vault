@@ -1,0 +1,108 @@
+rules_version = '2';
+
+/* ══════════════════════════════════════════════════════════════
+   FIRESTORE SECURITY RULES — vb-code-vault
+   ──────────────────────────────────────────────────────────────
+   Source of truth for the Firestore rules. Editing this file does
+   NOT deploy anything — publish via Firebase Console → Firestore →
+   Rules, or `firebase deploy --only firestore:rules`.
+
+   ⚠️  SECURITY NOTE: every collection below is currently
+   `allow read, write: if true` — i.e. world-readable/writable by
+   anyone with the (public) Firebase config. Auth is enforced
+   client-side only. See README / open issue before relying on this
+   for anything sensitive. `wmf_user_profiles` exposes passwordHash.
+   ══════════════════════════════════════════════════════════════ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── EXISTING UNCHANGED ──
+    match /snippets/{id} {
+      allow read, write: if true;
+    }
+    match /_config/auth {
+      allow read: if true;
+      allow write: if !exists(/databases/$(database)/documents/_config/auth);
+    }
+    match /_config/auth_wmf {
+      allow read: if true;
+      allow write: if !exists(/databases/$(database)/documents/_config/auth_wmf);
+    }
+    match /_config/auth_sgp {
+      allow read: if true;
+      allow write: if !exists(/databases/$(database)/documents/_config/auth_sgp);
+    }
+    match /qa_entries/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_entries/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_wording/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_entries/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_tasks/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_forwarders/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_scribes/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_task_reviews/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_task_reviews_daily/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_reviewer_profiles/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_alokasi_records/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_alokasi_profiles/{id} {
+      allow read, write: if true;
+    }
+
+
+    // ── HOLIDAY TRACKER (no Firebase Auth — access control handled in app) ──
+    match /wmf_user_profiles/{uid} {
+      allow read, write: if true;
+    }
+    match /wmf_holiday_people/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_holidays/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_vac_resets/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_activity_log/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_public_holidays/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_settings/{id} {
+      allow read, write: if true;
+    }
+
+
+    // ── OPERATION REPORT (login-gated via wmf_user_profiles; row-level access enforced in app) ──
+    match /wmf_op_people/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_op_entries/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_op_categories/{id} {
+      allow read, write: if true;
+    }
+  }
+}
