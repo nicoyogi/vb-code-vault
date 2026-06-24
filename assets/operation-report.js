@@ -40,6 +40,22 @@ const TARIF_KEYS  = METRICS.filter(m => m.side === 'tarif').map(m => m.key);
 const FAKTUAL_KEYS= METRICS.filter(m => m.side === 'faktual').map(m => m.key);
 const CATEGORIES  = SEED.categories.length ? SEED.categories : ['FNP','KSP','OPP','PS1'];
 
+/* ── Belum-Selesai reason gate ──────────────────────────────────
+   Rule: when a person's unfinished work ("Belum Selesai" — both the
+   tarif and faktual sides) is MORE THAN 50% of their done +
+   un-checkable work ("Selesai" + "Tidak Bisa"), they must record a
+   reason when saving. The reason is stored on the entry and shown on
+   the shared daily board, so anyone can see it. */
+const BELUM_KEYS      = METRIC_KEYS.filter(k => /belum/i.test(k));               // belumTarif, belumFaktual
+const DONE_KEYS       = METRIC_KEYS.filter(k => /selesai/i.test(k) && !/belum/i.test(k)); // selesaiTarif, selesaiFaktual
+const TIDAKBISA_KEYS  = METRIC_KEYS.filter(k => /tidak/i.test(k));               // tidakBisaCheck
+const BELUM_THRESHOLD = 0.5;
+function belumStats(e){
+  const belum = BELUM_KEYS.reduce((a,k) => a + n(e && e[k]), 0);
+  const base  = [...DONE_KEYS, ...TIDAKBISA_KEYS].reduce((a,k) => a + n(e && e[k]), 0); // Selesai + Tidak Bisa
+  return { belum, base, over: belum > base * BELUM_THRESHOLD };
+}
+
 /* ── State ──────────────────────────────────────────────────── */
 let currentUser = null;            // { uid, personName, displayName, isAdmin }
 let people      = [];              // merged seed + Firestore people
@@ -284,9 +300,10 @@ function renderEntryGrid(){
     const saveBtn = editable
       ? `<button class="mini-btn" data-save="${esc(p.name)}">Save</button>`
       : `<span class="lock" title="Only ${esc(p.name)} or an admin can edit this row">🔒</span>`;
-    return `<tr class="${mine?'mine':''} ${editable?'':'locked'}">
+    const mainRow = `<tr class="${mine?'mine':''} ${editable?'':'locked'}">
       <td class="name-col">${esc(p.name)}${mine?' <span class="you">you</span>':''}</td>
       ${cells}<td class="total-col">${total||''}</td><td class="act-col">${saveBtn}</td></tr>`;
+    return mainRow + reasonRowHTML(p, e, editable);
   }).join('');
 
   // daily totals row
@@ -302,14 +319,66 @@ function renderEntryGrid(){
 
   document.querySelectorAll('#entryGrid [data-save]').forEach(btn =>
     btn.addEventListener('click', () => saveRow(btn.dataset.save, btn)));
+  // Reveal/hide the reason field live as the numbers change.
+  document.querySelectorAll('#entryGrid input.num-in').forEach(inp =>
+    inp.addEventListener('input', () => recomputeRow(inp.dataset.person)));
+}
+
+/* Reason sub-row shown under a person when Belum Selesai > 50% of
+   Selesai + Tidak Bisa. Editable rows get an input (always rendered,
+   hidden until the threshold trips); other people's rows show the
+   saved reason as read-only text so anyone can look. */
+function reasonRowHTML(p, e, editable){
+  const colspan = METRICS.length + 2;
+  const reason  = (e.belumReason || '').trim();
+  if (editable){
+    const show = belumStats(e).over;
+    return `<tr class="reason-row" data-reason-for="${esc(p.name)}" style="display:${show?'':'none'}">
+      <td></td><td colspan="${colspan}" class="reason-cell">
+        <div class="reason-wrap">
+          <span class="reason-flag">⚠ Belum Selesai is over 50% of Selesai + Tidak Bisa — reason required</span>
+          <input class="reason-in" type="text" maxlength="300" data-person="${esc(p.name)}"
+                 value="${esc(reason)}" placeholder="Explain why so much is unfinished…">
+        </div></td></tr>`;
+  }
+  if (reason){
+    return `<tr class="reason-row ro" data-reason-for="${esc(p.name)}">
+      <td></td><td colspan="${colspan}" class="reason-cell">
+        <div class="reason-wrap"><span class="reason-flag">⚠ Belum Selesai over 50%:</span>
+        <span class="reason-text">${esc(reason)}</span></div></td></tr>`;
+  }
+  return '';
+}
+
+/* Recompute one row's live values and toggle its reason field. */
+function recomputeRow(name){
+  const e = {};
+  document.querySelectorAll(`#entryGrid input.num-in[data-person="${CSS.escape(name)}"]`)
+    .forEach(inp => { e[inp.dataset.key] = n(inp.value); });
+  const row = document.querySelector(`#entryGrid tr.reason-row[data-reason-for="${CSS.escape(name)}"]`);
+  if (row) row.style.display = belumStats(e).over ? '' : 'none';
 }
 
 async function saveRow(personName, btn){
   if (!canEdit(personName)){ toast('You can only edit your own row.', 'err'); return; }
-  const inputs = document.querySelectorAll(`#entryGrid input[data-person="${CSS.escape(personName)}"]`);
+  const inputs = document.querySelectorAll(`#entryGrid input.num-in[data-person="${CSS.escape(personName)}"]`);
   const payload = { date: entryDate, person: personName, updatedAt: SERVER_TS(), updatedByUid: currentUser.uid };
   METRIC_KEYS.forEach(k => payload[k] = 0);
   inputs.forEach(inp => { payload[inp.dataset.key] = n(inp.value); });
+
+  // Reason gate: too much unfinished work must be justified before saving.
+  const stats = belumStats(payload);
+  const reasonInput = document.querySelector(`#entryGrid input.reason-in[data-person="${CSS.escape(personName)}"]`);
+  const reason = reasonInput ? reasonInput.value.trim() : '';
+  if (stats.over && !reason){
+    const row = document.querySelector(`#entryGrid tr.reason-row[data-reason-for="${CSS.escape(personName)}"]`);
+    if (row) row.style.display = '';
+    if (reasonInput) reasonInput.focus();
+    toast(`Belum Selesai (${stats.belum}) is over 50% of Selesai + Tidak Bisa (${stats.base}). Add a reason to save.`, 'err');
+    return;
+  }
+  payload.belumReason = stats.over ? reason : '';   // clear stale reason once back under threshold
+
   const old = btn.textContent; btn.disabled = true; btn.textContent = '…';
   try {
     await entryCol.doc(`${entryDate}__${personName}`).set(payload, { merge: true });

@@ -105,3 +105,8 @@ redesign.js
 # validate the Anmerkung engine; must stay out of the repo.
 *Soll-Ist*.xls*
 data/*Soll-Ist*
+
+# Operation Report source data (named-staff person-days). The seed is baked
+# into assets/report-data-seed.js; the raw workbook stays local only.
+*REPORT DATA*.xls*
+data/REPORT DATA*
