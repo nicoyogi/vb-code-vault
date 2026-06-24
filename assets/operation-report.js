@@ -145,9 +145,24 @@ function personByName(name){ return people.find(p => p.name === name); }
 /* ════════════════════════════════════════════
    AUTH GATE
 ════════════════════════════════════════════ */
-/* currentUser carries a `personName` alias (= displayName) used throughout
-   the grid/stats to match a row to the signed-in person. */
+/* currentUser carries a `personName` alias used throughout the grid/stats to
+   match a row to the signed-in person. It starts as the account's displayName
+   and is snapped to the canonical roster name by resolvePersonName() once the
+   roster is loaded — see that function for why. */
 function setUser(user){ currentUser = { ...user, personName: user.displayName }; }
+
+/* Snap the signed-in account to its roster person by nameKey (case/space-
+   insensitive). Entries store `person` in roster casing (e.g. "NICO", "Rizky"),
+   but accounts can be registered with different casing (e.g. "Nico") — directly
+   or via shared SSO from another Grimoire app. Without this, the exact-match
+   `where('person','==',personName)` query hides the user's My Stats and the
+   canEdit / "mine" checks lock them out of their own Daily Entry row. */
+function resolvePersonName(){
+  if (!currentUser) return;
+  const key = GrimoireAuth.nameKey(currentUser.displayName);
+  const match = people.find(p => GrimoireAuth.nameKey(p.name) === key);
+  currentUser.personName = match ? match.name : currentUser.displayName;
+}
 
 async function initAuth(){
   const user = await GrimoireAuth.restore();
@@ -162,6 +177,7 @@ function showAuthGate(){
   populateAuthDropdowns();
 }
 function showApp(){
+  resolvePersonName();   // align personName with the roster casing used in entries
   document.getElementById('authGate').style.display = 'none';
   document.getElementById('mainApp').style.display  = '';
   paintUserChip();
