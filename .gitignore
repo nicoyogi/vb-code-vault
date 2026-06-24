@@ -97,3 +97,11 @@ diff.txt
 apply_redesign.py
 redesign.py
 redesign.js
+
+# =========================
+# Confidential source data — local only, never commit
+# =========================
+# Real customer invoice-audit workbooks (Soll-Ist-Vergleich). Used locally to
+# validate the Anmerkung engine; must stay out of the repo.
+*Soll-Ist*.xls*
+data/*Soll-Ist*

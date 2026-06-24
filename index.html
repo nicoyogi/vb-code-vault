@@ -237,8 +237,6 @@
     opacity:0;will-change:transform;
   }
   .card.enter{animation:cardIn .65s var(--ease) forwards}
-  .card.pending{opacity:.55;cursor:not-allowed}
-  .card.pending .ctitle::after{content:' · soon';font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;color:var(--gold-dim);text-transform:uppercase}
   @keyframes cardIn{from{opacity:0;translate:0 22px}to{opacity:1;translate:0 0}}
   @keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 
@@ -344,7 +342,7 @@
       <span class="switch-label">Project</span>
       <button type="button" class="seg" data-project="wmf" aria-pressed="false">WMF <kbd>1</kbd></button>
       <button type="button" class="seg" data-project="siemens" aria-pressed="false">Siemens GP <kbd>2</kbd></button>
-      <button type="button" class="seg" data-project="operations" aria-pressed="false">Operations <kbd>3</kbd></button>
+      <button type="button" class="seg" data-project="ops" aria-pressed="false">Operations <kbd>3</kbd></button>
     </div>
   </div>
 </div>
@@ -424,14 +422,14 @@
         <button type="button" class="seal" data-project="siemens">
           <span class="emblem"><svg class="ico" aria-hidden="true"><use href="#i-tower"/></svg></span>
           <span class="seal-name">Siemens GP</span>
-          <span class="seal-sub">General Procurement &mdash; knowledge, wording, review &amp; the splitter.</span>
-          <span class="seal-meta">IV tomes &middot; press <kbd>2</kbd></span>
+          <span class="seal-sub">General Procurement &mdash; knowledge, wording &amp; the splitter.</span>
+          <span class="seal-meta">III tomes &middot; press <kbd>2</kbd></span>
         </button>
-        <button type="button" class="seal" data-project="operations">
+        <button type="button" class="seal" data-project="ops">
           <span class="emblem"><svg class="ico" aria-hidden="true"><use href="#i-ledger"/></svg></span>
           <span class="seal-name">Operations</span>
-          <span class="seal-sub">Tarif &amp; faktual checking team &mdash; project allocation &amp; the daily report.</span>
-          <span class="seal-meta">II tomes &middot; press <kbd>3</kbd></span>
+          <span class="seal-sub">Cross-project allocation &amp; production &mdash; daily records, pivots &amp; analyzer.</span>
+          <span class="seal-meta">I tome &middot; press <kbd>3</kbd></span>
         </button>
       </div>
 
@@ -578,20 +576,18 @@ class ProjectManager {
           { num: 'IV',  epithet: 'The Ledger',      title: 'Task Ledger',         desc: 'Track open tasks across forwarders. Log totals, notes &amp; status.',                 href: 'todo.html',      icon: 'ledger',    tags: ['Tasks','Tracking'] }
         ]
       },
-      operations: {
-        name: 'Operations', sub: 'Tarif & Faktual Checking Team',
-        tools: [
-          { num: 'I',  epithet: 'The Roster',  title: 'Project Allocation', desc: 'Who is assigned to which project &mdash; the team allocation board.',                                       href: 'alokasi-project.html',  icon: 'reviewer', tags: ['Allocation','Team'] },
-          { num: 'II', epithet: 'The Tally',   title: 'Operation Report',   desc: 'Daily tarif &amp; faktual checking. Sign in &mdash; only you can fill your own row. Live team dashboard.', href: 'operation-report.html', icon: 'ledger',   tags: ['Daily','Checking','Login'] }
-        ]
-      },
       siemens: {
         name: 'Siemens GP', sub: 'General Procurement',
         tools: [
           { num: 'I',   epithet: 'The Oracle',   title: 'GP Knowledge Base', desc: 'Process knowledge base · Procurement rites &amp; guidelines.',                                              href: 'qa-siemens.html',            icon: 'oracle',   tags: ['Q&amp;A','Process'] },
           { num: 'II',  epithet: 'The Scribe',   title: 'Standard Wording',  desc: 'A searchable library of pre-written phrases. Click any entry to copy instantly.',                            href: 'standard-wording.html',      icon: 'scribe',   tags: ['Phrases','Templates'] },
-          { num: 'III', epithet: 'The Reviewer', title: 'Task Reviewer',     desc: 'Per-person daily reviews. Auto-scored with grades and a Friday digest.',                                    href: 'task-reviewer-siemens.html', icon: 'reviewer', tags: ['Scoring','People'] },
-          { num: 'IV',  epithet: 'The Splitter', title: 'File Splitter',     desc: 'Upload an Excel file, add names, and get equal row portions per person &mdash; shuffled &amp; ready to download.', href: 'File_splitter.html',         icon: 'splitter', tags: ['Excel','Split'] }
+          { num: 'III', epithet: 'The Splitter', title: 'File Splitter',     desc: 'Upload an Excel file, add names, and get equal row portions per person &mdash; shuffled &amp; ready to download.', href: 'File_splitter.html',         icon: 'splitter', tags: ['Excel','Split'] }
+        ]
+      },
+      ops: {
+        name: 'Operations', sub: 'Cross-project allocation & production',
+        tools: [
+          { num: 'I',   epithet: 'The Allocator', title: 'Project Allocation', desc: 'Daily project records &mdash; staff, quantity &amp; status across all clients. Auto pivots, per-person scorecards, backlog aging, analyzer, Excel/PDF export &amp; import.', href: 'alokasi-project.html', icon: 'ledger', tags: ['Projects','People','Analytics'] }
         ]
       }
     };
@@ -626,7 +622,7 @@ class ProjectManager {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === '1') { e.preventDefault(); this.select('wmf'); }
       else if (e.key === '2') { e.preventDefault(); this.select('siemens'); }
-      else if (e.key === '3') { e.preventDefault(); this.select('operations'); }
+      else if (e.key === '3') { e.preventDefault(); this.select('ops'); }
       else if (e.key === 'Escape' && this.active) { e.preventDefault(); this.clear(); }
     });
   }
@@ -654,13 +650,8 @@ class ProjectManager {
   }
 
   renderGrid(proj){
-    const html = proj.tools.map((t) => {
-      const ext  = t.external && t.href && t.href !== '#';
-      const attrs = t.pending
-        ? `href="#" class="card${t.wide ? ' span-2' : ''} pending" aria-disabled="true" title="Link pending — coming soon"`
-        : `href="${t.href}" class="card${t.wide ? ' span-2' : ''}"${ext ? ' target="_blank" rel="noopener"' : ''}`;
-      return `
-      <a ${attrs}>
+    const html = proj.tools.map((t) => `
+      <a href="${t.href}" class="card${t.wide ? ' span-2' : ''}">
         <span class="cnum" aria-hidden="true">${t.num}</span>
         <span class="corners" aria-hidden="true"></span>
         <div class="card-top">
@@ -673,10 +664,9 @@ class ProjectManager {
         <p class="cdesc">${t.desc}</p>
         <div class="cfoot">
           <div class="tags">${t.tags.map((tag) => `<span class="tag">${tag}</span>`).join('')}</div>
-          <span class="arr">${t.pending ? '&hellip;' : (ext ? '&#8599;' : '&rarr;')}</span>
+          <span class="arr">&rarr;</span>
         </div>
-      </a>`;
-    }).join('');
+      </a>`).join('');
 
     this.el.grid.innerHTML = html;
     const cards = this.el.grid.querySelectorAll('.card');
@@ -686,7 +676,7 @@ class ProjectManager {
       c.classList.add('enter');
     });
     this.enchant(cards);
-    this.el.count.textContent = `${proj.tools.length} tomes`;
+    this.el.count.textContent = `${proj.tools.length} tome${proj.tools.length === 1 ? '' : 's'}`;
   }
 
   select(key, { silent = false } = {}){

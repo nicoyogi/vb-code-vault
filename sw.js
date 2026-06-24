@@ -23,6 +23,7 @@ const CACHE = 'alchemist-' + VERSION;
 const CORE = [
   './anmerkung.html',
   './task-reviewer-siemens.html',
+  './alokasi-project.html',
   './assets/grimoire-core.css',
   './assets/grimoire-core.js',
   './assets/anmerkung.css',
