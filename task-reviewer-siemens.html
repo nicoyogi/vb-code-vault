@@ -603,13 +603,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" integrity="sha384-AQ3POAMqIhwS81FrUH95ekxqBZHeP5tG2JfEL3+7GuTtfRLWnrRh32UxwzM+//A9" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/firebase-config.js"></script>
+<script src="assets/grimoire-auth.js"></script>
 
 <script>
 /* ── Firebase — same project/config as the rest of the Grimoire ── */
 if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
 const db = firebase.firestore();
 const col = db.collection('sgp_task_reviews');
-const profilesCol = db.collection('sgp_reviewer_profiles'); /* per-user accounts, scoped to this page only */
 
 let reviews = [];     /* all reviews — listener keeps it fresh */
 let editId = null;
@@ -1126,31 +1126,10 @@ document.addEventListener('keydown', e=>{
   if (e.key === 'Escape'){ closeEdit(); }
 });
 
-/* ── Per-user auth (scoped to this page only) ──
-   • Profiles live in `sgp_reviewer_profiles` — separate from the SGP shared password doc
-     and separate from the WMF holiday-tracker `wmf_user_profiles`.
-   • Password hash = SHA-256(pass + 'sgp_reviewer_salt_2024') — distinct salt to prevent
-     cross-use of hashes with other Grimoire tools.
-   • Session persists in localStorage so users stay signed in across tabs/reloads. */
-const SESSION_KEY = 'sgp_reviewer_session';
-const AUTH_SALT   = 'sgp_reviewer_salt_2024';
-
-async function hashPass(pass){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass + AUTH_SALT));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-function nameToKey(name){
-  return (name||'').trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-}
-function makeUid(name){
-  const key = nameToKey(name) || 'user';
-  const suffix = btoa(unescape(encodeURIComponent(name))).replace(/[^a-zA-Z0-9]/g,'').slice(0, 6) || Math.random().toString(36).slice(2,8);
-  return key + '_' + suffix;
-}
-function saveSession(profile){ localStorage.setItem(SESSION_KEY, JSON.stringify(profile)); }
-function loadSession(){ try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; } }
-function clearSessionLS(){ localStorage.removeItem(SESSION_KEY); }
-
+/* ── Per-user auth — shared Grimoire SSO ──
+   Accounts + session + password hashing are handled by assets/grimoire-auth.js
+   (collection wmf_user_profiles, session 'ht_session', salt 'grimoire_salt'),
+   so one sign-in works across every Grimoire app. */
 function toggleAuthVis(inputId, btn){
   const inp = document.getElementById(inputId);
   if (inp.type === 'password'){ inp.type = 'text'; btn.textContent = '🙈'; }
@@ -1184,27 +1163,15 @@ async function doLogin(){
   if (!name || !pass){ err.textContent = 'Enter your name and password.'; return; }
   setAuthBtn('login-btn', true, 'Sign In');
   try{
-    const hash = await hashPass(pass);
-    const snap = await profilesCol.where('nameKey','==',nameToKey(name)).limit(1).get();
-    if (snap.empty){
-      err.textContent = 'No account found — use Register.';
-      shakeAuth('login-name');
+    const r = await GrimoireAuth.login(name, pass);
+    if (!r.ok){
+      err.textContent = r.message;
+      shakeAuth(r.reason === 'badpass' ? 'login-pass' : 'login-name');
+      if (r.reason === 'badpass') document.getElementById('login-pass').value = '';
       return;
     }
-    const doc = snap.docs[0];
-    const data = doc.data();
-    if (data.passwordHash !== hash){
-      err.textContent = 'Incorrect password.';
-      shakeAuth('login-pass');
-      document.getElementById('login-pass').value = '';
-      return;
-    }
-    currentUser = { uid: doc.id, name: data.name, nameKey: data.nameKey };
-    saveSession(currentUser);
+    currentUser = r.user;
     grantAccess();
-  } catch(e){
-    console.error(e);
-    err.textContent = 'Connection error.';
   } finally {
     setAuthBtn('login-btn', false, 'Sign In');
   }
@@ -1221,25 +1188,14 @@ async function doRegister(){
   if (pass !== pass2)   { err.textContent = 'Passwords do not match.'; shakeAuth('reg-pass2'); return; }
   setAuthBtn('register-btn', true, 'Create Account');
   try{
-    const nameKey = nameToKey(name);
-    const existing = await profilesCol.where('nameKey','==',nameKey).limit(1).get();
-    if (!existing.empty){
-      err.textContent = 'That name is already registered — use Sign In.';
+    const r = await GrimoireAuth.register(name, pass);
+    if (!r.ok){
+      err.textContent = r.message;
       shakeAuth('reg-name');
       return;
     }
-    const hash = await hashPass(pass);
-    const uid  = makeUid(name);
-    await profilesCol.doc(uid).set({
-      name, nameKey, passwordHash: hash,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    currentUser = { uid, name, nameKey };
-    saveSession(currentUser);
+    currentUser = r.user;
     grantAccess();
-  } catch(e){
-    console.error(e);
-    err.textContent = 'Connection error.';
   } finally {
     setAuthBtn('register-btn', false, 'Create Account');
   }
@@ -1247,7 +1203,7 @@ async function doRegister(){
 
 function doSignOut(){
   if (!confirm('Sign out?')) return;
-  clearSessionLS();
+  GrimoireAuth.signOut();
   currentUser = null;
   showAuthGate();
   showToast('Signed out.');
@@ -1278,27 +1234,8 @@ function showAuthGate(){
   setTimeout(()=>document.getElementById('login-name').focus(), 100);
 }
 async function checkAuth(){
-  const session = loadSession();
-  if (session && session.uid){
-    /* Best-effort validation against Firestore; on network failure, still trust local session. */
-    try {
-      const snap = await profilesCol.doc(session.uid).get();
-      if (snap.exists){
-        const d = snap.data();
-        currentUser = { uid: session.uid, name: d.name, nameKey: d.nameKey };
-        saveSession(currentUser);
-        grantAccess();
-        return;
-      } else {
-        clearSessionLS();
-      }
-    } catch(e){
-      /* offline — trust local session */
-      currentUser = session;
-      grantAccess();
-      return;
-    }
-  }
+  const user = await GrimoireAuth.restore();
+  if (user){ currentUser = user; grantAccess(); return; }
   showAuthGate();
 }
 

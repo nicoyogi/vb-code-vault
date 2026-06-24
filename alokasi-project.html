@@ -448,13 +448,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" integrity="sha384-AQ3POAMqIhwS81FrUH95ekxqBZHeP5tG2JfEL3+7GuTtfRLWnrRh32UxwzM+//A9" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/firebase-config.js"></script>
+<script src="assets/grimoire-auth.js"></script>
 
 <script>
 /* ── Firebase ── */
 if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
 const db = firebase.firestore();
 const col = db.collection('sgp_alokasi_records');
-const profilesCol = db.collection('sgp_alokasi_profiles');
 
 let records = [];
 let loaded = false;                     /* first snapshot received */
@@ -1145,14 +1145,8 @@ async function confirmImport(){
   }catch(e){ console.error(e); showToast('Import failed: '+e.message, true); btn.disabled=false; }
 }
 
-/* ── Per-user auth (page-scoped) ── */
-const SESSION_KEY='sgp_alokasi_session', AUTH_SALT='sgp_alokasi_salt_2026';
-async function hashPass(pass){ const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass+AUTH_SALT)); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
-function nameToKey(name){ return (name||'').trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''); }
-function makeUid(name){ const key=nameToKey(name)||'user'; const suffix=btoa(unescape(encodeURIComponent(name))).replace(/[^a-zA-Z0-9]/g,'').slice(0,6)||Math.random().toString(36).slice(2,8); return key+'_'+suffix; }
-function saveSession(p){ localStorage.setItem(SESSION_KEY, JSON.stringify(p)); }
-function loadSession(){ try{ return JSON.parse(localStorage.getItem(SESSION_KEY)); }catch{ return null; } }
-function clearSessionLS(){ localStorage.removeItem(SESSION_KEY); }
+/* ── Per-user auth — shared Grimoire SSO (wmf_user_profiles / ht_session) ── */
+function clearSessionLS(){ GrimoireAuth.clearSession(); }
 function toggleAuthVis(id,btn){ const i=document.getElementById(id); if(i.type==='password'){ i.type='text'; btn.textContent='🙈'; } else { i.type='password'; btn.textContent='👁'; } }
 function switchAuthTab(tab){ const login=tab==='login'; document.getElementById('auth-tab-login').classList.toggle('active',login); document.getElementById('auth-tab-register').classList.toggle('active',!login); document.getElementById('auth-login-panel').style.display=login?'':'none'; document.getElementById('auth-register-panel').style.display=login?'none':''; document.getElementById('auth-subtitle').textContent=login?'Sign in to continue':'Create your account'; ['login-error','register-error'].forEach(id=>document.getElementById(id).textContent=''); }
 function setAuthBtn(id,loading,idle){ const b=document.getElementById(id); b.disabled=loading; b.textContent=loading?'Please wait...':idle; }
@@ -1162,13 +1156,10 @@ async function doLogin(){
   if(!name||!pass){ err.textContent='Enter your name and password.'; return; }
   setAuthBtn('login-btn',true,'Sign In');
   try{
-    const hash=await hashPass(pass); const snap=await profilesCol.where('nameKey','==',nameToKey(name)).limit(1).get();
-    if(snap.empty){ err.textContent='No account found — use Register.'; shakeAuth('login-name'); return; }
-    const doc=snap.docs[0], data=doc.data();
-    if(data.passwordHash!==hash){ err.textContent='Incorrect password.'; shakeAuth('login-pass'); document.getElementById('login-pass').value=''; return; }
-    currentUser={ uid:doc.id, name:data.name, nameKey:data.nameKey }; saveSession(currentUser); grantAccess();
-  }catch(e){ console.error(e); err.textContent='Connection error.'; }
-  finally{ setAuthBtn('login-btn',false,'Sign In'); }
+    const r=await GrimoireAuth.login(name,pass);
+    if(!r.ok){ err.textContent=r.message; shakeAuth(r.reason==='badpass'?'login-pass':'login-name'); if(r.reason==='badpass')document.getElementById('login-pass').value=''; return; }
+    currentUser=r.user; grantAccess();
+  }finally{ setAuthBtn('login-btn',false,'Sign In'); }
 }
 async function doRegister(){
   const name=document.getElementById('reg-name').value.trim(), pass=document.getElementById('reg-pass').value, pass2=document.getElementById('reg-pass2').value, err=document.getElementById('register-error'); err.textContent='';
@@ -1177,24 +1168,18 @@ async function doRegister(){
   if(pass!==pass2){ err.textContent='Passwords do not match.'; shakeAuth('reg-pass2'); return; }
   setAuthBtn('register-btn',true,'Create Account');
   try{
-    const nameKey=nameToKey(name); const existing=await profilesCol.where('nameKey','==',nameKey).limit(1).get();
-    if(!existing.empty){ err.textContent='That name is already registered — use Sign In.'; shakeAuth('reg-name'); return; }
-    const hash=await hashPass(pass); const uid=makeUid(name);
-    await profilesCol.doc(uid).set({ name, nameKey, passwordHash:hash, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    currentUser={ uid, name, nameKey }; saveSession(currentUser); grantAccess();
-  }catch(e){ console.error(e); err.textContent='Connection error.'; }
-  finally{ setAuthBtn('register-btn',false,'Create Account'); }
+    const r=await GrimoireAuth.register(name,pass);
+    if(!r.ok){ err.textContent=r.message; shakeAuth('reg-name'); return; }
+    currentUser=r.user; grantAccess();
+  }finally{ setAuthBtn('register-btn',false,'Create Account'); }
 }
-function doSignOut(){ if(!confirm('Sign out?')) return; clearSessionLS(); currentUser=null; showAuthGate(); showToast('Signed out.'); }
+function doSignOut(){ if(!confirm('Sign out?')) return; GrimoireAuth.signOut(); currentUser=null; showAuthGate(); showToast('Signed out.'); }
 function updateUserChip(){ if(!currentUser) return; const initials=(currentUser.name||'?').trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase()||'?'; document.getElementById('user-chip-avatar').textContent=initials; document.getElementById('user-chip-name').textContent=currentUser.name; }
 function grantAccess(){ document.getElementById('auth-gate').classList.remove('active'); updateUserChip(); startListener(); }
 function showAuthGate(){ document.getElementById('auth-gate').classList.add('active'); switchAuthTab('login'); ['login-name','login-pass','reg-name','reg-pass','reg-pass2'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; }); setTimeout(()=>document.getElementById('login-name').focus(),100); }
 async function checkAuth(){
-  const session=loadSession();
-  if(session&&session.uid){
-    try{ const snap=await profilesCol.doc(session.uid).get(); if(snap.exists){ const d=snap.data(); currentUser={uid:session.uid,name:d.name,nameKey:d.nameKey}; saveSession(currentUser); grantAccess(); return; } else clearSessionLS(); }
-    catch(e){ currentUser=session; grantAccess(); return; }
-  }
+  const user=await GrimoireAuth.restore();
+  if(user){ currentUser=user; grantAccess(); return; }
   showAuthGate();
 }
 

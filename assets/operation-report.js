@@ -22,7 +22,6 @@ firebase.initializeApp(window.firebaseConfig);
 const db = firebase.firestore();
 
 const peopleCol  = db.collection('wmf_op_people');
-const profCol    = db.collection('wmf_op_profiles');
 const entryCol   = db.collection('wmf_op_entries');
 const catCol     = db.collection('wmf_op_categories');
 const SERVER_TS  = () => firebase.firestore.FieldValue.serverTimestamp();
@@ -54,14 +53,9 @@ let activeTab   = 'entry';
 /* ════════════════════════════════════════════
    AUTH HELPERS (shared scheme with Holiday Tracker)
 ════════════════════════════════════════════ */
-function makeUid(name){ return name.toLowerCase().replace(/\s+/g,'_') + '_' + btoa(unescape(encodeURIComponent(name))).slice(0,6); }
-async function hashPassword(pw){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + 'grimoire_salt'));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-function saveSession(p){ localStorage.setItem('op_session', JSON.stringify(p)); }
-function loadSession(){ try { return JSON.parse(localStorage.getItem('op_session')); } catch { return null; } }
-function clearSession(){ localStorage.removeItem('op_session'); }
+/* Accounts, password hashing and the session are handled by the shared
+   assets/grimoire-auth.js (wmf_user_profiles + ht_session + grimoire_salt),
+   so a single sign-in works across every Grimoire app. */
 
 function withTimeout(promise, ms = 12000, label = 'Request'){
   return Promise.race([
@@ -131,14 +125,13 @@ function personByName(name){ return people.find(p => p.name === name); }
 /* ════════════════════════════════════════════
    AUTH GATE
 ════════════════════════════════════════════ */
+/* currentUser carries a `personName` alias (= displayName) used throughout
+   the grid/stats to match a row to the signed-in person. */
+function setUser(user){ currentUser = { ...user, personName: user.displayName }; }
+
 async function initAuth(){
-  const session = loadSession();
-  if (session && session.uid){
-    try {
-      const snap = await withTimeout(profCol.doc(session.uid).get(), 12000, 'Sign-in check');
-      if (snap.exists){ currentUser = { uid: session.uid, ...snap.data() }; await loadPeople(); showApp(); return; }
-    } catch(e){ clearSession(); }
-  }
+  const user = await GrimoireAuth.restore();
+  if (user){ setUser(user); await loadPeople(); showApp(); return; }
   showAuthGate();
 }
 
@@ -151,7 +144,6 @@ function showAuthGate(){
 function showApp(){
   document.getElementById('authGate').style.display = 'none';
   document.getElementById('mainApp').style.display  = '';
-  saveSession(currentUser);
   paintUserChip();
   document.getElementById('adminTab').style.display = currentUser.isAdmin ? '' : 'none';
   document.getElementById('dateInput').value = entryDate;
@@ -174,20 +166,22 @@ async function populateAuthDropdowns(){
   const regSel   = document.getElementById('registerName');
   loginSel.innerHTML = regSel.innerHTML = '<option value="">— Loading… —</option>';
   await loadPeople();
-  let profs = [];
-  try { profs = (await withTimeout(profCol.get(), 12000, 'Loading accounts')).docs.map(d => d.data().personName); }
+  let accounts = [];
+  try { accounts = await GrimoireAuth.listAccounts(); }
   catch(e){ loginSel.innerHTML = regSel.innerHTML = '<option value="">— Couldn’t load — refresh —</option>'; return; }
-  const registered = new Set(profs);
+  // Match case-insensitively so a roster name like "ARYA" recognises an
+  // existing "Arya" account instead of offering a duplicate registration.
+  const registeredKeys = new Set(accounts.map(a => GrimoireAuth.nameKey(a)));
 
-  loginSel.innerHTML = '<option value="">— Select your name —</option>';
-  regSel.innerHTML   = '<option value="">— Select your name —</option>';
-  people.forEach(p => {
-    const opt = `<option value="${esc(p.name)}">${esc(p.name)}</option>`;
-    if ( registered.has(p.name)) loginSel.insertAdjacentHTML('beforeend', opt);
-    if (!registered.has(p.name)) regSel.insertAdjacentHTML('beforeend', opt);
-  });
-  if (loginSel.options.length === 1) loginSel.innerHTML = '<option value="">— No accounts yet — register first —</option>';
-  if (regSel.options.length   === 1) regSel.innerHTML   = '<option value="">— Everyone has an account —</option>';
+  // Sign-in: any registered Grimoire account (shared across apps).
+  loginSel.innerHTML = '<option value="">— Select your name —</option>' +
+    accounts.map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+  if (accounts.length === 0) loginSel.innerHTML = '<option value="">— No accounts yet — register first —</option>';
+
+  // Register: this team's people who don't have an account yet.
+  regSel.innerHTML = '<option value="">— Select your name —</option>';
+  people.forEach(p => { if (!registeredKeys.has(GrimoireAuth.nameKey(p.name))) regSel.insertAdjacentHTML('beforeend', `<option value="${esc(p.name)}">${esc(p.name)}</option>`); });
+  if (regSel.options.length === 1) regSel.innerHTML = '<option value="">— Everyone has an account —</option>';
 }
 
 async function doLogin(){
@@ -197,14 +191,10 @@ async function doLogin(){
   if (!name || !pw){ authErr('loginError','Select your name and enter your password.'); return; }
   setBusy('loginBtn','loginSpinner',true);
   try {
-    const hash = await hashPassword(pw);
-    const snap = await profCol.where('personName','==',name).where('passwordHash','==',hash).get();
-    if (snap.empty){ authErr('loginError','Incorrect name or password.'); return; }
-    currentUser = { uid: snap.docs[0].id, ...snap.docs[0].data() };
-    await loadPeople();
-    showApp();
-  } catch(e){ authErr('loginError', e.message); }
-  finally { if (document.getElementById('authGate').style.display !== 'none') setBusy('loginBtn','loginSpinner',false); }
+    const r = await GrimoireAuth.login(name, pw);
+    if (!r.ok){ authErr('loginError', r.reason === 'notfound' ? 'No account for that name — use Register.' : r.message); return; }
+    setUser(r.user); await loadPeople(); showApp();
+  } finally { if (document.getElementById('authGate').style.display !== 'none') setBusy('loginBtn','loginSpinner',false); }
 }
 
 async function doRegister(){
@@ -217,28 +207,17 @@ async function doRegister(){
   if (pw !== pw2)   { authErr('registerError','Passwords do not match.'); return; }
   setBusy('registerBtn','registerSpinner',true);
   try {
-    const [existing, allProfs] = await Promise.all([
-      profCol.where('personName','==',name).get(),
-      profCol.limit(1).get()
-    ]);
-    if (!existing.empty){ authErr('registerError','This name already has an account.'); return; }
-    const isFirst = allProfs.empty;                       // bootstrap: first account is admin
-    const uid  = makeUid(name);
-    const hash = await hashPassword(pw);
-    const profile = { personName:name, displayName:name, isAdmin:isFirst, passwordHash:hash, createdAt:SERVER_TS() };
-    await profCol.doc(uid).set(profile);
-    currentUser = { uid, ...profile };
-    await loadPeople();
-    showApp();
-    if (isFirst) toast('Account created — you are the first user, so you have admin rights.', 'ok');
-  } catch(e){ authErr('registerError', e.message); }
-  finally { if (document.getElementById('authGate').style.display !== 'none') setBusy('registerBtn','registerSpinner',false); }
+    const r = await GrimoireAuth.register(name, pw);
+    if (!r.ok){ authErr('registerError', r.message); return; }
+    setUser(r.user); await loadPeople(); showApp();
+    if (r.user.isAdmin) toast('Account created — you are the first user, so you have admin rights.', 'ok');
+  } finally { if (document.getElementById('authGate').style.display !== 'none') setBusy('registerBtn','registerSpinner',false); }
 }
 
 function signOut(){
   if (unsubDay) unsubDay();
   if (unsubCat) unsubCat();
-  clearSession(); currentUser = null;
+  GrimoireAuth.signOut(); currentUser = null;
   showAuthGate(); toast('Signed out.');
 }
 
@@ -464,7 +443,7 @@ async function renderAdmin(){
   const body = document.getElementById('adminBody');
   body.innerHTML = `<p class="muted">Loading accounts…</p>`;
   let profs = [];
-  try { profs = (await profCol.get()).docs.map(d=>({uid:d.id, ...d.data()})); } catch(e){}
+  try { profs = await GrimoireAuth.listProfiles(); } catch(e){}
   const seedCount = (SEED.entries||[]).length + (SEED.categoryEntries||[]).length;
   const accRows = profs.map(p=>`<tr>
       <td class="name-col">${esc(p.displayName)} ${p.isAdmin?'<span class="crown">👑</span>':''}</td>
@@ -496,7 +475,7 @@ async function renderAdmin(){
 }
 
 async function setAdmin(uid, val){
-  try { await profCol.doc(uid).update({ isAdmin: val }); toast(val?'Granted admin.':'Revoked admin.'); renderAdmin(); }
+  try { await GrimoireAuth.setAdmin(uid, val); toast(val?'Granted admin.':'Revoked admin.'); renderAdmin(); }
   catch(e){ toast('Failed: '+e.message,'err'); }
 }
 
@@ -509,7 +488,7 @@ async function runImport(){
 
   // Build the full write list
   const writes = [];
-  (SEED.people||[]).forEach(p => writes.push({ ref: peopleCol.doc(makeUid(p.name)),
+  (SEED.people||[]).forEach(p => writes.push({ ref: peopleCol.doc(GrimoireAuth.makeUid(p.name)),
     data: { name:p.name, doesTarif:p.doesTarif!==false, doesFaktual:!!p.doesFaktual, order:p.order ?? 99 } }));
   (SEED.entries||[]).forEach(e => {
     const d = { date:e.date, person:e.person, updatedAt:SERVER_TS(), importedAt:SERVER_TS() };
