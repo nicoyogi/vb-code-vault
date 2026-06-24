@@ -64,6 +64,8 @@ let dayCats     = {};              // side -> category doc (for entryDate)
 let unsubDay    = null;
 let unsubCat    = null;
 let activeTab   = 'entry';
+let lastDashDocs= [];              // entries from the last Team Dashboard render (for export)
+let lastMyDocs  = [];              // entries from the last My Stats render (for export)
 
 /* ════════════════════════════════════════════
    AUTH HELPERS (shared scheme with Holiday Tracker)
@@ -438,6 +440,7 @@ async function renderMyStats(){
   try { docs = (await entryCol.where('person','==',currentUser.personName).get()).docs.map(d=>d.data()); }
   catch(e){ wrap.innerHTML = `<p class="err-line">Couldn’t load: ${esc(e.message)}</p>`; return; }
   docs.sort((a,b)=>b.date.localeCompare(a.date));
+  lastMyDocs = docs;
   const totals = {}; METRIC_KEYS.forEach(k=>totals[k]=0);
   docs.forEach(e=>METRIC_KEYS.forEach(k=>totals[k]+=n(e[k])));
   const grand = Object.values(totals).reduce((a,b)=>a+b,0);
@@ -465,6 +468,7 @@ async function renderDashboard(){
   let docs = [];
   try { docs = (await q.get()).docs.map(d=>d.data()); }
   catch(e){ wrap.querySelector('.dash-body').innerHTML = `<p class="err-line">Couldn’t load: ${esc(e.message)}</p>`; return; }
+  lastDashDocs = docs;
 
   // per-metric totals + per-person
   const mTot = {}; METRIC_KEYS.forEach(k=>mTot[k]=0);
@@ -590,6 +594,55 @@ async function runImport(){
 }
 
 /* ════════════════════════════════════════════
+   EXPORT  (CSV — no dependency, works offline, opens in Excel)
+════════════════════════════════════════════ */
+function csvEscape(v){
+  const s = String(v == null ? '' : v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function downloadCSV(filename, rows){
+  const csv  = rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+  // Leading BOM so Excel reads it as UTF-8 (keeps accented names intact).
+  const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+/* One row per person-day: Date[, Person], every metric, Total, Reason. */
+function entriesToRows(docs, includePerson){
+  const head = ['Date'];
+  if (includePerson) head.push('Person');
+  METRICS.forEach(m => head.push(m.label));
+  head.push('Total', 'Reason');
+  const rows = [head];
+  [...docs]
+    .sort((a,b) => (a.date||'').localeCompare(b.date||'') || (a.person||'').localeCompare(b.person||''))
+    .forEach(e => {
+      const row = [e.date || ''];
+      if (includePerson) row.push(e.person || '');
+      METRIC_KEYS.forEach(k => row.push(n(e[k])));
+      row.push(sumMetrics(e), e.belumReason || '');
+      rows.push(row);
+    });
+  return rows;
+}
+function exportDashboard(){
+  if (!lastDashDocs.length){ toast('Nothing to export for this range.', 'err'); return; }
+  const range = document.getElementById('rangeSel')?.value || '30';
+  const tag   = range === 'all' ? 'all-time' : `last-${range}d`;
+  downloadCSV(`operation-report_${tag}_${todayISO()}.csv`, entriesToRows(lastDashDocs, true));
+  toast(`Exported ${lastDashDocs.length} row(s).`);
+}
+function exportMyStats(){
+  if (!lastMyDocs.length){ toast('No entries to export yet.', 'err'); return; }
+  const who = (currentUser.personName || 'me').replace(/[^\w-]+/g, '_');
+  downloadCSV(`operation-report_${who}_${todayISO()}.csv`, entriesToRows(lastMyDocs, false));
+  toast(`Exported ${lastMyDocs.length} day(s).`);
+}
+
+/* ════════════════════════════════════════════
    WIRE-UP
 ════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
@@ -599,6 +652,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nextDay').addEventListener('click', () => stepDate(1));
   document.getElementById('todayBtn').addEventListener('click', () => changeDate(todayISO()));
   document.getElementById('rangeSel')?.addEventListener('change', renderDashboard);
+  document.getElementById('exportDashBtn')?.addEventListener('click', exportDashboard);
+  document.getElementById('exportMyBtn')?.addEventListener('click', exportMyStats);
   document.getElementById('signOutBtn').addEventListener('click', signOut);
 
   // Enter-to-submit on auth
