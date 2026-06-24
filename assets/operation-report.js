@@ -470,41 +470,57 @@ async function renderDashboard(){
   catch(e){ wrap.querySelector('.dash-body').innerHTML = `<p class="err-line">Couldn’t load: ${esc(e.message)}</p>`; return; }
   lastDashDocs = docs;
 
-  // per-metric totals + per-person
+  // per-metric totals + per-person (overall total and per-metric counts)
   const mTot = {}; METRIC_KEYS.forEach(k=>mTot[k]=0);
   const perPerson = {};
   const dates = new Set();
   docs.forEach(e=>{
     dates.add(e.date);
-    METRIC_KEYS.forEach(k=>mTot[k]+=n(e[k]));
-    perPerson[e.person] = perPerson[e.person] || {name:e.person, total:0};
-    perPerson[e.person].total += sumMetrics(e);
+    const pp = perPerson[e.person] = perPerson[e.person] || { name:e.person, total:0, by:{} };
+    METRIC_KEYS.forEach(k=>{ const v = n(e[k]); mTot[k]+=v; pp.by[k]=(pp.by[k]||0)+v; });
+    pp.total += sumMetrics(e);
   });
   const grand = Object.values(mTot).reduce((a,b)=>a+b,0);
 
+  // Which metric to rank the board by — 'all' = combined total (default).
+  const metric    = document.getElementById('metricSel')?.value || 'all';
+  const metricLbl = metric==='all' ? 'total checked' : (METRICS.find(m=>m.key===metric)?.short || metric);
+  const valueOf   = p => metric==='all' ? (p?.total||0) : (p?.by?.[metric]||0);
+
+  // Metric cards double as filters: click one to rank by it.
   const metricCards = METRICS.map(m=>{
     const pct = grand ? Math.round(mTot[m.key]/grand*100) : 0;
-    return `<div class="stat"><div class="stat-num">${mTot[m.key]}</div><div class="stat-lbl">${esc(m.short)}</div>
+    return `<div class="stat metric-card${m.key===metric?' active':''}" data-metric="${m.key}" title="Rank the leaderboard by ${esc(m.short)}">
+      <div class="stat-num">${mTot[m.key]}</div><div class="stat-lbl">${esc(m.short)}</div>
       <div class="bar"><span style="width:${pct}%"></span></div></div>`;
   }).join('');
 
-  const board = Object.values(perPerson).sort((a,b)=>b.total-a.total);
-  const max = board[0]?.total || 1;
+  const board = Object.values(perPerson).sort((a,b)=>valueOf(b)-valueOf(a));
+  const max = valueOf(board[0]) || 1;
   const boardRows = board.map((p,i)=>`
     <div class="lb-row">
       <span class="lb-rank">${i+1}</span>
       <span class="lb-name">${esc(p.name)}${p.name===currentUser.personName?' <span class="you">you</span>':''}</span>
-      <span class="lb-bar"><span style="width:${Math.round(p.total/max*100)}%"></span></span>
-      <span class="lb-val">${p.total}</span>
+      <span class="lb-bar"><span style="width:${Math.round(valueOf(p)/max*100)}%"></span></span>
+      <span class="lb-val">${valueOf(p)}</span>
     </div>`).join('') || `<p class="muted">No data in range.</p>`;
 
   wrap.querySelector('.dash-body').innerHTML = `
     <div class="stat-row">
-      <div class="stat hero"><div class="stat-num">${grand}</div><div class="stat-lbl">Total checked · ${dates.size} day(s)</div></div>
+      <div class="stat hero metric-card${metric==='all'?' active':''}" data-metric="all" title="Rank by combined total">
+        <div class="stat-num">${grand}</div><div class="stat-lbl">Total checked · ${dates.size} day(s)</div></div>
       ${metricCards}
     </div>
-    <h3 class="sub-h">Leaderboard <span class="muted">— by total checked</span></h3>
+    <h3 class="sub-h">Leaderboard <span class="muted">— by ${esc(metricLbl)}</span></h3>
     <div class="leaderboard">${boardRows}</div>`;
+
+  // Clicking a card (or the hero) re-ranks the board by that metric.
+  wrap.querySelectorAll('.dash-body [data-metric]').forEach(el =>
+    el.addEventListener('click', () => {
+      const sel = document.getElementById('metricSel');
+      if (sel) sel.value = el.dataset.metric;
+      renderDashboard();
+    }));
 }
 
 /* ════════════════════════════════════════════
@@ -651,7 +667,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('prevDay').addEventListener('click', () => stepDate(-1));
   document.getElementById('nextDay').addEventListener('click', () => stepDate(1));
   document.getElementById('todayBtn').addEventListener('click', () => changeDate(todayISO()));
+  const metricSel = document.getElementById('metricSel');
+  if (metricSel) metricSel.innerHTML = '<option value="all">All metrics</option>' +
+    METRICS.map(m => `<option value="${esc(m.key)}">${esc(m.short)}</option>`).join('');
   document.getElementById('rangeSel')?.addEventListener('change', renderDashboard);
+  metricSel?.addEventListener('change', renderDashboard);
   document.getElementById('exportDashBtn')?.addEventListener('click', exportDashboard);
   document.getElementById('exportMyBtn')?.addEventListener('click', exportMyStats);
   document.getElementById('signOutBtn').addEventListener('click', signOut);
