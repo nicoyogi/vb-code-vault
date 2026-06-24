@@ -134,6 +134,9 @@
   .stat-lbl{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:6px}
   .bar{height:5px;background:rgba(0,0,0,0.4);border-radius:4px;margin-top:8px;overflow:hidden}
   .bar span{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-2))}
+  .metric-card{cursor:pointer;transition:border-color .2s,box-shadow .2s}
+  .metric-card:hover{border-color:var(--gold-dim)}
+  .metric-card.active{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold-dim) inset}
 
   .sub-h{font-family:var(--f-display);font-size:18px;margin:24px 0 12px}
   .leaderboard{display:flex;flex-direction:column;gap:8px}
@@ -282,6 +285,10 @@
           <option value="30" selected>Last 30 days</option>
           <option value="90">Last 90 days</option>
           <option value="all">All time</option>
+        </select>
+        <label class="muted" for="metricSel">Metric:</label>
+        <select class="sel" id="metricSel">
+          <option value="all">All metrics</option>
         </select>
         <button class="icon-btn" id="exportDashBtn" style="margin-left:auto">⬇ Export CSV</button>
       </div>
