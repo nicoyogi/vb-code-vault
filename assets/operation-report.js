@@ -5,6 +5,10 @@
    • Custom name + password login (no Firebase Auth), mirroring
      the Holiday Tracker. Each user may only edit the row that
      carries their own name; admins may edit everyone.
+   • Admins set an expected daily TOTAL per person (the Target column on
+     Daily Entry, stored in wmf_op_targets/${date}__${person}). When a
+     person's entered total doesn't match their admin target, the row is
+     flagged live and an alert is raised on save.
    • History is imported by an admin who UPLOADS REPORT DATA.xlsx
      on the Admin tab: the workbook is parsed in the browser (SheetJS)
      and the parsed person-days + category-days are pushed to Firestore
@@ -27,6 +31,7 @@ const db = firebase.firestore();
 const peopleCol  = db.collection('wmf_op_people');
 const entryCol   = db.collection('wmf_op_entries');
 const catCol     = db.collection('wmf_op_categories');
+const targetCol  = db.collection('wmf_op_targets');   // admin-set expected daily total per person
 const SERVER_TS  = () => firebase.firestore.FieldValue.serverTimestamp();
 
 /* ── Constants from the seed (with safe fallbacks) ──────────── */
@@ -64,8 +69,10 @@ let people      = [];              // merged seed + Firestore people
 let entryDate   = todayISO();
 let dayEntries  = {};              // personName -> entry doc (for entryDate)
 let dayCats     = {};              // side -> category doc (for entryDate)
+let dayTargets  = {};              // personName -> admin-set expected total (number) for entryDate
 let unsubDay    = null;
 let unsubCat    = null;
+let unsubTarget = null;
 let activeTab   = 'entry';
 let lastDashDocs= [];              // entries from the last Team Dashboard render (for export)
 let lastMyDocs  = [];              // entries from the last My Stats render (for export)
@@ -253,6 +260,7 @@ async function doRegister(){
 function signOut(){
   if (unsubDay) unsubDay();
   if (unsubCat) unsubCat();
+  if (unsubTarget) unsubTarget();
   GrimoireAuth.signOut(); currentUser = null;
   showAuthGate(); toast('Signed out.');
 }
@@ -291,18 +299,27 @@ function stepDate(delta){ changeDate(addDays(entryDate, delta)); }
 
 function startDayListener(){
   if (unsubDay) unsubDay();
+  if (unsubTarget) unsubTarget();
   document.getElementById('entryMeta').textContent = `${fmtDay(entryDate)} · ${fmtDate(entryDate)}`;
   unsubDay = entryCol.where('date','==',entryDate).onSnapshot(snap => {
     dayEntries = {};
     snap.docs.forEach(d => { const e = d.data(); dayEntries[e.person] = { id:d.id, ...e }; });
     renderEntryGrid();
   }, err => { document.getElementById('entryGrid').innerHTML = `<p class="err-line">Couldn’t load: ${esc(err.message)}</p>`; });
+  // Admin-set targets for the same day (optional — a missing collection/doc just
+  // means no targets, so failures here are swallowed rather than blocking entry).
+  unsubTarget = targetCol.where('date','==',entryDate).onSnapshot(snap => {
+    dayTargets = {};
+    snap.docs.forEach(d => { const t = d.data(); if (t.total != null && t.total !== '') dayTargets[t.person] = n(t.total); });
+    renderEntryGrid();
+  }, () => {});
 }
 
 function renderEntryGrid(){
+  const admin = currentUser.isAdmin;
   const head = `<tr><th class="name-col">Name</th>` +
     METRICS.map(m => `<th title="${esc(m.label)}">${esc(m.short)}</th>`).join('') +
-    `<th>Total</th><th></th></tr>`;
+    `<th>Total</th><th title="Admin-set expected total — a mismatch flags the row">Target</th><th></th></tr>`;
 
   const rows = people.map(p => {
     const e = dayEntries[p.name] || {};
@@ -316,32 +333,45 @@ function renderEntryGrid(){
         ? `<td><input class="num-in" type="number" min="0" inputmode="numeric" data-person="${esc(p.name)}" data-key="${m.key}" value="${val}" placeholder="0"></td>`
         : `<td class="ro">${val === '' ? '·' : val}</td>`;
     }).join('');
-    const total = sumMetrics(e);
+    const total     = sumMetrics(e);
+    const target    = dayTargets[p.name];
+    const hasTarget = typeof target === 'number';
+    const mism      = hasTarget && total !== target;
+    const totalCell = `<td class="total-col${mism?' mismatch':''}" data-total-for="${esc(p.name)}">${total||''}${mism?mismatchFlag(total,target):''}</td>`;
+    // Only admins write targets; everyone else sees the target read-only so they
+    // know the number their daily total is being checked against.
+    const targetCell = admin
+      ? `<td><input class="target-in" type="number" min="0" inputmode="numeric" data-person="${esc(p.name)}" value="${hasTarget?target:''}" placeholder="—" title="Set ${esc(p.name)}'s expected total for this day"></td>`
+      : `<td class="ro target-col">${hasTarget?target:'·'}</td>`;
     const saveBtn = editable
       ? `<button class="mini-btn" data-save="${esc(p.name)}">Save</button>`
       : `<span class="lock" title="Only ${esc(p.name)} or an admin can edit this row">🔒</span>`;
     const mainRow = `<tr class="${mine?'mine':''} ${editable?'':'locked'}">
       <td class="name-col">${esc(p.name)}${mine?' <span class="you">you</span>':''}</td>
-      ${cells}<td class="total-col">${total||''}</td><td class="act-col">${saveBtn}</td></tr>`;
+      ${cells}${totalCell}${targetCell}<td class="act-col">${saveBtn}</td></tr>`;
     return mainRow + reasonRowHTML(p, e, editable);
   }).join('');
 
   // daily totals row
   const totalsByKey = METRIC_KEYS.map(k => people.reduce((a,p) => a + n((dayEntries[p.name]||{})[k]), 0));
   const grand = totalsByKey.reduce((a,b) => a+b, 0);
+  const targetTotal = people.reduce((a,p) => a + (typeof dayTargets[p.name]==='number' ? dayTargets[p.name] : 0), 0);
   const totalRow = `<tr class="grand">
     <td class="name-col">TOTAL</td>
     ${totalsByKey.map(t => `<td>${t||''}</td>`).join('')}
-    <td class="total-col">${grand||''}</td><td></td></tr>`;
+    <td class="total-col">${grand||''}</td><td class="total-col">${targetTotal||''}</td><td></td></tr>`;
 
   document.getElementById('entryGrid').innerHTML =
     `<table class="grid"><thead>${head}</thead><tbody>${rows}${totalRow}</tbody></table>`;
 
   document.querySelectorAll('#entryGrid [data-save]').forEach(btn =>
     btn.addEventListener('click', () => saveRow(btn.dataset.save, btn)));
-  // Reveal/hide the reason field live as the numbers change.
+  // Reveal/hide the reason field + refresh the target-mismatch flag live as numbers change.
   document.querySelectorAll('#entryGrid input.num-in').forEach(inp =>
     inp.addEventListener('input', () => recomputeRow(inp.dataset.person)));
+  // Admin editing a target re-checks that row's mismatch live.
+  document.querySelectorAll('#entryGrid input.target-in').forEach(inp =>
+    inp.addEventListener('input', () => updateMismatch(inp.dataset.person)));
 }
 
 /* Reason sub-row shown under a person when Belum Selesai > 50% of
@@ -349,7 +379,7 @@ function renderEntryGrid(){
    hidden until the threshold trips); other people's rows show the
    saved reason as read-only text so anyone can look. */
 function reasonRowHTML(p, e, editable){
-  const colspan = METRICS.length + 2;
+  const colspan = METRICS.length + 3;   // name + metrics + Total + Target + action, minus the leading spacer cell
   const reason  = (e.belumReason || '').trim();
   if (editable){
     const show = belumStats(e).over;
@@ -370,13 +400,48 @@ function reasonRowHTML(p, e, editable){
   return '';
 }
 
-/* Recompute one row's live values and toggle its reason field. */
+/* Recompute one row's live values: toggle its reason field and refresh the
+   admin-target mismatch flag as the numbers change. */
 function recomputeRow(name){
-  const e = {};
-  document.querySelectorAll(`#entryGrid input.num-in[data-person="${CSS.escape(name)}"]`)
-    .forEach(inp => { e[inp.dataset.key] = n(inp.value); });
+  const e = liveEntry(name);
   const row = document.querySelector(`#entryGrid tr.reason-row[data-reason-for="${CSS.escape(name)}"]`);
   if (row) row.style.display = belumStats(e).over ? '' : 'none';
+  updateMismatch(name);
+}
+
+/* ── Admin-target mismatch ──────────────────────────────────────
+   The admin sets an expected daily Total per person (the Target column,
+   editable only by admins). Whenever a person's entered Total drifts from
+   that target the row is flagged — live while typing and again as an alert
+   on save — so the discrepancy is visible to everyone on the shared board. */
+function mismatchFlag(total, target){
+  const d = total - target;
+  return ` <span class="mismatch-flag" title="Daily total ${total} ≠ admin target ${target} (off by ${d>0?'+':''}${d})">⚠</span>`;
+}
+/* Live sum of a row's metric inputs, falling back to the saved entry for
+   read-only rows (other people's rows, which have no inputs to read). */
+function liveEntry(name){
+  const e = {};
+  document.querySelectorAll(`#entryGrid input.num-in[data-person="${CSS.escape(name)}"]`)
+    .forEach(inp => { if (inp.dataset.key) e[inp.dataset.key] = n(inp.value); });
+  return Object.keys(e).length ? e : (dayEntries[name] || {});
+}
+/* The target in play for a row: the admin's live input if present, else the
+   value pushed down by the targets listener. undefined ⇒ no target set. */
+function targetFor(name){
+  const tInput = document.querySelector(`#entryGrid input.target-in[data-person="${CSS.escape(name)}"]`);
+  if (tInput){ const v = tInput.value.trim(); return v === '' ? undefined : n(v); }
+  const t = dayTargets[name];
+  return typeof t === 'number' ? t : undefined;
+}
+function updateMismatch(name){
+  const cell = document.querySelector(`#entryGrid td[data-total-for="${CSS.escape(name)}"]`);
+  if (!cell) return;
+  const total  = sumMetrics(liveEntry(name));
+  const target = targetFor(name);
+  const mism   = (typeof target === 'number') && total !== target;
+  cell.classList.toggle('mismatch', mism);
+  cell.innerHTML = (total||'') + (mism ? mismatchFlag(total, target) : '');
 }
 
 async function saveRow(personName, btn){
@@ -384,7 +449,7 @@ async function saveRow(personName, btn){
   const inputs = document.querySelectorAll(`#entryGrid input.num-in[data-person="${CSS.escape(personName)}"]`);
   const payload = { date: entryDate, person: personName, updatedAt: SERVER_TS(), updatedByUid: currentUser.uid };
   METRIC_KEYS.forEach(k => payload[k] = 0);
-  inputs.forEach(inp => { payload[inp.dataset.key] = n(inp.value); });
+  inputs.forEach(inp => { if (inp.dataset.key) payload[inp.dataset.key] = n(inp.value); });
 
   // Reason gate: too much unfinished work must be justified before saving.
   const stats = belumStats(payload);
@@ -399,10 +464,30 @@ async function saveRow(personName, btn){
   }
   payload.belumReason = stats.over ? reason : '';   // clear stale reason once back under threshold
 
+  // Admin-set target: admins can set/clear this person's expected total inline.
+  // Everyone else keeps the value already pushed down by the targets listener.
+  const total = sumMetrics(payload);
+  let target = dayTargets[personName];
+  if (currentUser.isAdmin){
+    const tInput = document.querySelector(`#entryGrid input.target-in[data-person="${CSS.escape(personName)}"]`);
+    if (tInput){ const v = tInput.value.trim(); target = v === '' ? null : n(v); }
+  }
+
   const old = btn.textContent; btn.disabled = true; btn.textContent = '…';
   try {
     await entryCol.doc(`${entryDate}__${personName}`).set(payload, { merge: true });
-    toast(`Saved ${personName} · ${fmtDate(entryDate)}`);
+    if (currentUser.isAdmin){
+      await targetCol.doc(`${entryDate}__${personName}`).set(
+        { date: entryDate, person: personName, total: target, updatedAt: SERVER_TS(), updatedByUid: currentUser.uid },
+        { merge: true });
+    }
+    // Alert (non-blocking) when the entered total doesn't match the admin target.
+    if (typeof target === 'number' && total !== target){
+      const d = total - target;
+      toast(`Saved — ⚠ ${personName}'s total ${total} ≠ admin target ${target} (off by ${d>0?'+':''}${d}).`, 'err');
+    } else {
+      toast(`Saved ${personName} · ${fmtDate(entryDate)}`);
+    }
   } catch(e){ toast('Save failed: ' + e.message, 'err'); }
   finally { btn.disabled = false; btn.textContent = old; }
 }
