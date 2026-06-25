@@ -153,7 +153,15 @@
   .admin-card{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
   .btn{padding:11px 18px;border:none;border-radius:10px;font-family:var(--f-body);font-weight:700;font-size:13px;cursor:pointer}
   .btn.primary{background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#1a1305}
+  .btn.ghost{background:rgba(0,0,0,0.3);border:1px solid var(--line);color:var(--ink)}
+  .btn.ghost:hover{border-color:var(--gold-dim)}
+  .btn.danger{background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff}
+  .btn.danger:hover:not(:disabled){filter:brightness(1.1)}
   .btn:disabled{opacity:.55;cursor:default}
+  .danger-zone{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-soft)}
+  .danger-zone .wipe-in{max-width:220px;padding:11px 13px;background:rgba(0,0,0,0.35);border:1px solid var(--red);border-radius:10px;color:var(--ink);font-family:var(--f-mono);font-size:13px;letter-spacing:.1em}
+  .danger-zone .wipe-in:disabled{border-color:var(--line);opacity:.55}
+  .danger-zone .wipe-in:focus{outline:none;border-color:var(--gold)}
   .row-gap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px}
   .progress{height:8px;background:rgba(0,0,0,0.4);border-radius:5px;margin-top:14px;overflow:hidden}
   .progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--green));transition:width .3s}

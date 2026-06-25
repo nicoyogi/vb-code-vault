@@ -69,6 +69,7 @@ let unsubCat    = null;
 let activeTab   = 'entry';
 let lastDashDocs= [];              // entries from the last Team Dashboard render (for export)
 let lastMyDocs  = [];              // entries from the last My Stats render (for export)
+let backupDone  = false;           // a full backup has been downloaded this session → unlocks "Delete all"
 
 /* ════════════════════════════════════════════
    AUTH HELPERS (shared scheme with Holiday Tracker)
@@ -732,6 +733,28 @@ async function renderAdmin(){
     <div class="admin-card">
       <h3 class="sub-h">Accounts</h3>
       <table class="grid"><tbody>${accRows}</tbody></table>
+    </div>
+    <div class="admin-card">
+      <h3 class="sub-h">Backup &amp; reset</h3>
+      <p class="muted">Download a complete backup of the shared board — people, daily entries and category totals — as one JSON file.
+        Keep it somewhere safe: it's the only way to restore the board after a reset.</p>
+      <div class="row-gap">
+        <button class="btn ghost" id="backupBtn">⬇ Download full backup (.json)</button>
+        <span id="backupStatus" class="muted"></span>
+      </div>
+
+      <div class="danger-zone">
+        <p class="muted">Once you've saved a backup you can wipe the board to start fresh.
+          <b style="color:var(--red)">This permanently deletes every entry, category total and imported person — for everyone.</b></p>
+        <div class="row-gap">
+          <input class="wipe-in" id="wipeConfirm" placeholder="Type DELETE" autocomplete="off" spellcheck="false" ${backupDone?'':'disabled'}>
+          <button class="btn danger" id="wipeBtn" disabled>Delete ALL data</button>
+        </div>
+        <div class="progress" id="wipeProg" style="display:none"><span></span></div>
+        <p class="muted" id="wipeHint" style="margin-top:10px">${backupDone
+          ? 'Backup saved. Type DELETE above, then press “Delete ALL data”.'
+          : 'Download a backup first to enable deletion.'}</p>
+      </div>
     </div>`;
 
   pendingImport = null;
@@ -741,6 +764,87 @@ async function renderAdmin(){
   document.getElementById('importBtn').addEventListener('click', () => runImport(pendingImport));
   body.querySelectorAll('[data-promote]').forEach(b=>b.addEventListener('click',()=>setAdmin(b.dataset.promote,true)));
   body.querySelectorAll('[data-demote]').forEach(b=>b.addEventListener('click',()=>setAdmin(b.dataset.demote,false)));
+
+  // Backup & reset — delete stays locked until a backup is taken AND "DELETE" is typed.
+  document.getElementById('backupBtn').addEventListener('click', downloadBackup);
+  const wipeConfirm = document.getElementById('wipeConfirm');
+  const wipeBtn = document.getElementById('wipeBtn');
+  const refreshWipe = () => { wipeBtn.disabled = !(backupDone && wipeConfirm.value.trim().toUpperCase() === 'DELETE'); };
+  wipeConfirm.addEventListener('input', refreshWipe);
+  wipeBtn.addEventListener('click', deleteAllData);
+  refreshWipe();
+}
+
+/* Pull every doc from the three report collections into one JSON file the admin
+   downloads. Marks backupDone so the destructive "Delete all" gate can open. */
+async function downloadBackup(){
+  if (!currentUser.isAdmin) return;
+  const btn = document.getElementById('backupBtn');
+  const status = document.getElementById('backupStatus');
+  const old = btn.textContent; btn.disabled = true; btn.textContent = 'Gathering…'; status.textContent = '';
+  try {
+    const [pSnap, eSnap, cSnap] = await Promise.all([peopleCol.get(), entryCol.get(), catCol.get()]);
+    const backup = {
+      app: 'operation-report',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      exportedBy: currentUser.displayName,
+      counts: { people: pSnap.size, entries: eSnap.size, categories: cSnap.size },
+      people:     pSnap.docs.map(d => ({ id:d.id, ...d.data() })),
+      entries:    eSnap.docs.map(d => ({ id:d.id, ...d.data() })),
+      categories: cSnap.docs.map(d => ({ id:d.id, ...d.data() })),
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `operation-report_backup_${todayISO()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+
+    backupDone = true;
+    document.getElementById('wipeConfirm').disabled = false;
+    document.getElementById('wipeHint').textContent = 'Backup saved to your downloads. Type DELETE, then press “Delete ALL data”.';
+    status.textContent = `✓ ${backup.counts.entries.toLocaleString()} entries · ${backup.counts.categories.toLocaleString()} category-days · ${backup.counts.people.toLocaleString()} people.`;
+    toast('Backup downloaded.');
+  } catch(e){
+    status.textContent = '✗ ' + e.message;
+    toast('Backup failed: ' + e.message, 'err');
+  } finally { btn.disabled = false; btn.textContent = old; }
+}
+
+/* Wipe every entry, category-day and person doc, in batches. Guarded by both
+   backupDone and a typed "DELETE" so it can't fire by accident. */
+async function deleteAllData(){
+  if (!currentUser.isAdmin) return;
+  if (!backupDone){ toast('Download a backup first.', 'err'); return; }
+  const confirmEl = document.getElementById('wipeConfirm');
+  if (confirmEl.value.trim().toUpperCase() !== 'DELETE'){ toast('Type DELETE to confirm.', 'err'); return; }
+
+  const btn  = document.getElementById('wipeBtn');
+  const prog = document.getElementById('wipeProg');
+  const bar  = prog.querySelector('span');
+  btn.disabled = true; confirmEl.disabled = true; prog.style.display = ''; bar.style.width = '0%';
+  try {
+    const snaps = await Promise.all([entryCol.get(), catCol.get(), peopleCol.get()]);
+    const refs  = snaps.flatMap(s => s.docs.map(d => d.ref));
+    if (!refs.length){ toast('Nothing to delete — board is already empty.'); btn.disabled = false; confirmEl.disabled = false; prog.style.display = 'none'; return; }
+
+    const CHUNK = 400; let done = 0;
+    for (let i = 0; i < refs.length; i += CHUNK){
+      const batch = db.batch();
+      refs.slice(i, i + CHUNK).forEach(r => batch.delete(r));
+      await batch.commit();
+      done = Math.min(i + CHUNK, refs.length);
+      bar.style.width = Math.round(done / refs.length * 100) + '%';
+    }
+    toast(`Deleted ${refs.length.toLocaleString()} records — board reset.`);
+    backupDone = false;
+    await loadPeople();
+    renderAdmin();
+  } catch(e){
+    toast('Delete failed: ' + e.message, 'err');
+    btn.disabled = false; confirmEl.disabled = false;
+  }
 }
 
 /* Read + parse the chosen workbook, show a summary, and arm the Import button. */
