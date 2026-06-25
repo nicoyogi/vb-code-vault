@@ -614,6 +614,23 @@ function parseReportWorkbook(buf, XLSX){
   const peopleSeen = new Map();   // name -> { name, doesTarif, doesFaktual, order }
   let order = 0;
   const matchedSheets = [], skippedSheets = [];
+  // Rows that carry real numbers but whose date cell couldn't be read are
+  // silently lost on import — track them so the admin sees the data loss.
+  let skippedRows = 0; const skippedSamples = [];
+  const recordSkip = (raw) => {
+    skippedRows++;
+    const s = raw instanceof Date ? 'Invalid Date' : String(raw).trim();
+    if (s && skippedSamples.length < 8 && !skippedSamples.includes(s)) skippedSamples.push(s);
+  };
+  const rowHasData = (row, cols) => Object.keys(cols).some(ci => n(row[ci]) > 0);
+  // Only flag cells that were clearly *meant* to be a date: a broken Date object,
+  // or text containing a digit. This skips total/label rows like "SUMME".
+  const looksLikeDate = (raw) => {
+    if (raw == null) return false;
+    if (raw instanceof Date) return isNaN(raw);
+    const s = String(raw).trim();
+    return s !== '' && /\d/.test(s);
+  };
 
   wb.SheetNames.forEach(sheetName => {
     const spec = SHEET_MAP[normSheet(sheetName)];
@@ -633,7 +650,8 @@ function parseReportWorkbook(buf, XLSX){
       header.forEach((h, ci) => { const k = h.toUpperCase().replace(/\s+/g,''); if (CATEGORIES.includes(k)) cols[ci] = k; });
       for (let r = 1; r < grid.length; r++){
         const row = grid[r]; if (!row) continue;
-        const iso = toISO(row[dateCol]); if (!iso) continue;
+        const iso = toISO(row[dateCol]);
+        if (!iso){ if (looksLikeDate(row[dateCol]) && rowHasData(row, cols)) recordSkip(row[dateCol]); continue; }
         const key = `${iso}__${spec.side}`;
         const obj = catMap.get(key) || { date:iso, side:spec.side };
         Object.entries(cols).forEach(([ci, cat]) => { const val = n(row[ci]); if (val) obj[cat] = val; });
@@ -653,7 +671,8 @@ function parseReportWorkbook(buf, XLSX){
       });
       for (let r = 1; r < grid.length; r++){
         const row = grid[r]; if (!row) continue;
-        const iso = toISO(row[dateCol]); if (!iso) continue;
+        const iso = toISO(row[dateCol]);
+        if (!iso){ if (looksLikeDate(row[dateCol]) && rowHasData(row, cols)) recordSkip(row[dateCol]); continue; }
         Object.entries(cols).forEach(([ci, name]) => {
           const val = n(row[ci]); if (!val) return;   // keep entries sparse; blanks/zeros default to 0 on write
           const key = `${iso}__${name}`;
@@ -670,6 +689,7 @@ function parseReportWorkbook(buf, XLSX){
     entries:         [...entriesMap.values()],
     categoryEntries: [...catMap.values()],
     matchedSheets, skippedSheets,
+    skippedRows, skippedSamples,
   };
 }
 
@@ -748,6 +768,9 @@ async function onImportFile(file){
       `Parsed <b>${data.entries.length.toLocaleString()}</b> person-days + ` +
       `<b>${data.categoryEntries.length.toLocaleString()}</b> category-days · ` +
       `<b>${data.people.length}</b> people · ${esc(span)}.` +
+      (data.skippedRows ? `<br><span style="color:var(--red)">⚠ ${data.skippedRows.toLocaleString()} row(s) skipped — their date couldn't be read` +
+        (data.skippedSamples.length ? ` (e.g. ${esc(data.skippedSamples.slice(0,5).join(', '))})` : '') +
+        `. Fix those dates in the workbook and re-upload, or they won't be imported.</span>` : '') +
       (data.skippedSheets.length ? `<br><span class="muted">Skipped sheets: ${esc(data.skippedSheets.join(', '))}</span>` : '');
     importBtn.disabled = false;
   } catch(e){
@@ -806,52 +829,70 @@ async function runImport(data){
 }
 
 /* ════════════════════════════════════════════
-   EXPORT  (CSV — no dependency, works offline, opens in Excel)
+   EXPORT  (.xlsx via SheetJS — the Date column is written as a real
+   date typed to dd.mm.yyyy, so Excel can't re-guess DD.MM vs MM.DD per
+   its locale the way it does with a plain-text CSV. Reuses loadXLSX().)
 ════════════════════════════════════════════ */
-function csvEscape(v){
-  const s = String(v == null ? '' : v);
-  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+/* ISO date → Excel serial day number (epoch 1899-12-30). UTC math
+   keeps it free of timezone/DST drift. */
+function excelDateSerial(iso){
+  if (!iso || iso.length < 10) return null;
+  const [y,m,d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return Math.round((Date.UTC(y, m-1, d) - Date.UTC(1899, 11, 30)) / 86400000);
 }
-function downloadCSV(filename, rows){
-  const csv  = rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
-  // Leading BOM so Excel reads it as UTF-8 (keeps accented names intact).
-  const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-/* One row per person-day: Date[, Person], every metric, Total, Reason. */
-function entriesToRows(docs, includePerson){
+/* One row per person-day: Date[, Person], every metric, Total, Reason.
+   Column A is written as a real date locked to one format. */
+async function exportXLSX(filename, sheetName, docs, includePerson){
+  const XLSX = await loadXLSX();
   const head = ['Date'];
   if (includePerson) head.push('Person');
   METRICS.forEach(m => head.push(m.label));
   head.push('Total', 'Reason');
-  const rows = [head];
-  [...docs]
-    .sort((a,b) => (a.date||'').localeCompare(b.date||'') || (a.person||'').localeCompare(b.person||''))
-    .forEach(e => {
-      const row = [e.date || ''];
-      if (includePerson) row.push(e.person || '');
-      METRIC_KEYS.forEach(k => row.push(n(e[k])));
-      row.push(sumMetrics(e), e.belumReason || '');
-      rows.push(row);
-    });
-  return rows;
+
+  const sorted = [...docs].sort((a,b) =>
+    (a.date||'').localeCompare(b.date||'') || (a.person||'').localeCompare(b.person||''));
+
+  const aoa = [head];
+  sorted.forEach(e => {
+    const row = [e.date || '']; // placeholder; turned into a real date cell below
+    if (includePerson) row.push(e.person || '');
+    METRIC_KEYS.forEach(k => row.push(n(e[k])));
+    row.push(sumMetrics(e), e.belumReason || '');
+    aoa.push(row);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Lock column A to a single date format so every row reads the same.
+  for (let r = 1; r < aoa.length; r++){
+    const addr   = XLSX.utils.encode_cell({ r, c: 0 });
+    const serial = excelDateSerial(sorted[r-1].date);
+    ws[addr] = serial == null
+      ? { t:'s', v: sorted[r-1].date || '' }
+      : { t:'n', v: serial, z: 'dd.mm.yyyy' };
+  }
+  ws['!cols'] = head.map((h,i) => ({ wch: i === 0 ? 12 : Math.max(h.length + 2, 10) }));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, filename);
 }
-function exportDashboard(){
+async function exportDashboard(){
   if (!lastDashDocs.length){ toast('Nothing to export for this range.', 'err'); return; }
   const range = document.getElementById('rangeSel')?.value || '30';
   const tag   = range === 'all' ? 'all-time' : `last-${range}d`;
-  downloadCSV(`operation-report_${tag}_${todayISO()}.csv`, entriesToRows(lastDashDocs, true));
-  toast(`Exported ${lastDashDocs.length} row(s).`);
+  try {
+    await exportXLSX(`operation-report_${tag}_${todayISO()}.xlsx`, 'Team Dashboard', lastDashDocs, true);
+    toast(`Exported ${lastDashDocs.length} row(s).`);
+  } catch(e){ toast('Export failed: ' + e.message, 'err'); }
 }
-function exportMyStats(){
+async function exportMyStats(){
   if (!lastMyDocs.length){ toast('No entries to export yet.', 'err'); return; }
   const who = (currentUser.personName || 'me').replace(/[^\w-]+/g, '_');
-  downloadCSV(`operation-report_${who}_${todayISO()}.csv`, entriesToRows(lastMyDocs, false));
-  toast(`Exported ${lastMyDocs.length} day(s).`);
+  try {
+    await exportXLSX(`operation-report_${who}_${todayISO()}.xlsx`, 'My Stats', lastMyDocs, false);
+    toast(`Exported ${lastMyDocs.length} day(s).`);
+  } catch(e){ toast('Export failed: ' + e.message, 'err'); }
 }
 
 /* ════════════════════════════════════════════
