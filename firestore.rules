@@ -104,5 +104,8 @@ service cloud.firestore {
     match /wmf_op_categories/{id} {
       allow read, write: if true;
     }
+    match /wmf_op_targets/{id} {
+      allow read, write: if true;
+    }
   }
 }
