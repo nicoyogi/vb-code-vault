@@ -123,6 +123,19 @@
   .mini-btn:disabled{opacity:.5;cursor:default}
   .err-line{color:var(--red);font-size:13px;padding:12px}
 
+  /* notice box — every flagged row for the day, visible to everyone */
+  .notice-box{background:linear-gradient(135deg,rgba(248,113,113,0.12),rgba(34,30,52,0.45));border:1px solid var(--red);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px}
+  .notice-box.clear{background:linear-gradient(135deg,rgba(110,231,183,0.10),rgba(34,30,52,0.45));border-color:rgba(110,231,183,0.55)}
+  .notice-head{display:flex;align-items:center;gap:9px;margin-bottom:11px;flex-wrap:wrap}
+  .notice-title{font-family:var(--f-display);font-size:15px;font-weight:600;letter-spacing:.04em}
+  .notice-count{font-family:var(--f-mono);font-size:11px;padding:2px 9px;border-radius:20px;background:rgba(248,113,113,0.18);border:1px solid var(--red);color:#fecaca}
+  .notice-list{display:flex;flex-direction:column;gap:8px}
+  .notice-item{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;background:rgba(0,0,0,0.25);border:1px solid var(--line-soft);border-radius:9px;font-size:13px;line-height:1.45}
+  .notice-icon{flex:none;font-size:14px;line-height:1.3}
+  .notice-kind{flex:none;font-family:var(--f-mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:#fca5a5;border:1px solid rgba(248,113,113,0.45);border-radius:5px;padding:2px 6px;white-space:nowrap}
+  .notice-item .who{font-weight:700;color:var(--gold-2)}
+  .notice-empty{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--green)}
+
   /* belum-selesai reason gate */
   table.grid tr.reason-row td{background:rgba(248,113,113,0.07);border-bottom:1px solid var(--line-soft);padding-top:6px;padding-bottom:10px}
   .reason-cell{text-align:left!important}
@@ -278,6 +291,7 @@
         <span class="date-meta" id="entryMeta"></span>
         <span class="hint">Fill your row → press <b>Save</b>. 🔒 rows belong to other people.</span>
       </div>
+      <div id="entryNotices" class="notice-box clear"></div>
       <div class="card-box table-scroll"><div id="entryGrid"></div></div>
     </section>
 

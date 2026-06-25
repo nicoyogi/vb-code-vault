@@ -373,6 +373,75 @@ function renderEntryGrid(){
   // Admin editing a target re-checks that row's mismatch live.
   document.querySelectorAll('#entryGrid input.target-in').forEach(inp =>
     inp.addEventListener('input', () => updateMismatch(inp.dataset.person)));
+
+  renderNotices();
+}
+
+/* ── Daily notice board ──────────────────────────────────────────
+   Gathers every flagged row for the selected day into one box everyone
+   sees: who tripped a notice and why. Surfaces the same two conditions
+   already flagged inline on each row —
+     1. Belum Tarif over 50% of total tarif checked (with its reason)
+     2. Entered total ≠ the admin-set target
+   It reads SAVED data (dayEntries / dayTargets), so it reflects what the
+   shared board actually holds, not someone's in-progress typing. People
+   with no entry for the day are skipped — they haven't reported, so they
+   haven't caused a notice. */
+function collectNotices(){
+  const out = [];
+  people.forEach(p => {
+    const e = dayEntries[p.name];
+    if (!e) return;
+    const bs = belumStats(e);
+    if (bs.over){
+      const reason = (e.belumReason || '').trim();
+      out.push({
+        kind: 'Belum Tarif > 50%',
+        person: p.name,
+        detail: `Belum ${bs.belum} of ${bs.base} tarif checked` +
+          (reason ? ` — “${reason}”` : ' — no reason given'),
+      });
+    }
+    const target = dayTargets[p.name];
+    if (typeof target === 'number'){
+      const total = sumMetrics(e);
+      if (total !== target){
+        const d = total - target;
+        out.push({
+          kind: 'Target mismatch',
+          person: p.name,
+          detail: `Total ${total} ≠ admin target ${target} (off by ${d>0?'+':''}${d})`,
+        });
+      }
+    }
+  });
+  return out;
+}
+
+function renderNotices(){
+  const box = document.getElementById('entryNotices');
+  if (!box) return;
+  const notices = collectNotices();
+  if (!notices.length){
+    box.className = 'notice-box clear';
+    box.innerHTML = `<div class="notice-empty"><span class="notice-icon">✓</span>
+      No notices for ${esc(fmtDate(entryDate))} — every reported row is on target and under the Belum-Tarif limit.</div>`;
+    return;
+  }
+  box.className = 'notice-box';
+  const items = notices.map(no => `
+    <div class="notice-item">
+      <span class="notice-icon">⚠</span>
+      <span class="notice-kind">${esc(no.kind)}</span>
+      <span><span class="who">${esc(no.person)}</span> — ${esc(no.detail)}</span>
+    </div>`).join('');
+  box.innerHTML =
+    `<div class="notice-head">
+       <span class="notice-icon">📢</span>
+       <span class="notice-title">Notices · ${esc(fmtDate(entryDate))}</span>
+       <span class="notice-count">${notices.length}</span>
+     </div>
+     <div class="notice-list">${items}</div>`;
 }
 
 /* Reason sub-row shown under a person when Belum Selesai > 50% of
