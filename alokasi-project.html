@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en" data-grim="alokasi-project" data-grim-cards=".metric,.an-card">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f0f2f5">
+  <title>Project Allocation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;500;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/grimoire-core.css">
+  <script src="assets/grimoire-core.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f2f5; --bg2: #e4e8ee; --surface: #ffffff; --surface2: #f7f9fc;
+      --border: rgba(0,85,180,0.1); --border2: rgba(0,85,180,0.25);
+      --text: #0a1628; --text2: #3a5070; --text3: #7a90a8;
+      --accent: #0055b4; --accent2: #0078d7; --accent-light: rgba(0,85,180,0.08); --accent-mid: rgba(0,85,180,0.15);
+      --danger: #c0392b; --danger-light: rgba(192,57,43,0.08);
+      --warn: #b7791f; --warn-light: rgba(183,121,31,0.1);
+      --success: #1a7a4a; --success-light: rgba(26,122,74,0.08);
+      --ibm-sans: 'IBM Plex Sans', sans-serif; --ibm-mono: 'IBM Plex Mono', monospace; --grotesk: 'Space Grotesk', sans-serif;
+      --radius: 8px; --radius-lg: 12px;
+      --shadow: 0 1px 3px rgba(0,40,100,0.08), 0 4px 16px rgba(0,40,100,0.04);
+      --shadow-lg: 0 4px 24px rgba(0,40,100,0.12), 0 1px 4px rgba(0,40,100,0.06);
+    }
+    html.dark {
+      --bg: #0d1117; --bg2: #0d1117; --surface: #161b22; --surface2: #1c2333;
+      --border: rgba(47,129,247,0.12); --border2: rgba(47,129,247,0.28);
+      --text: #e6edf3; --text2: #8b949e; --text3: #484f58;
+      --accent: #2f81f7; --accent2: #58a6ff; --accent-light: rgba(47,129,247,0.1); --accent-mid: rgba(47,129,247,0.18);
+      --danger: #f85149; --danger-light: rgba(248,81,73,0.1);
+      --warn: #e3b341; --warn-light: rgba(227,179,65,0.1);
+      --success: #3fb950; --success-light: rgba(63,185,80,0.1);
+      --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.25);
+      --shadow-lg: 0 4px 24px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
+    }
+    html, body { min-height: 100vh; background: var(--bg); overflow-x: hidden; transition: background .25s; }
+    body { font-family: var(--ibm-sans); color: var(--text); font-size: 15px; line-height: 1.6; transition: color .25s; }
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image: linear-gradient(rgba(0,85,180,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(0,85,180,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    html.dark body::before { background-image: linear-gradient(rgba(47,129,247,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(47,129,247,0.04) 1px, transparent 1px); }
+
+    header { background: var(--text); border-bottom: 3px solid var(--accent); padding: 0 2rem; display: flex; align-items: center; gap: 16px; height: 58px; position: sticky; top: 0; z-index: 10; }
+    html.dark header { background: #010409; }
+    .logo-back { display: flex; align-items: center; gap: 6px; font-family: var(--ibm-mono); font-size: 11px; letter-spacing: .06em; color: rgba(255,255,255,0.45); text-decoration: none; padding: 5px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; transition: color .2s, border-color .2s; }
+    .logo-back:hover { color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.3); }
+    .logo-divider { width: 1px; height: 26px; background: rgba(255,255,255,0.1); }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: var(--grotesk); font-weight: 700; font-size: 15px; color: #fff; text-decoration: none; letter-spacing: -.01em; }
+    .logo-mark { width: 30px; height: 30px; background: var(--accent); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: var(--ibm-mono); font-size: 10px; font-weight: 600; color: #fff; letter-spacing: .04em; }
+    .logo-sub { font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 400; font-family: var(--ibm-mono); }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .status-wrap { display: flex; align-items: center; gap: 6px; font-family: var(--ibm-mono); font-size: 11px; color: rgba(255,255,255,0.35); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: background .3s; }
+    .status-dot.online { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+    .status-dot.error { background: #f87171; }
+
+    .btn-theme { height: 30px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 0 10px; font-family: var(--ibm-mono); font-size: 11px; color: rgba(255,255,255,0.5); cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all .15s; white-space: nowrap; }
+    .btn-theme:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.3); }
+    .theme-icon { font-size: 13px; line-height: 1; transition: transform .3s; }
+    html.dark .theme-icon { transform: rotate(180deg); }
+    .btn-primary { height: 34px; background: var(--accent); border: none; border-radius: 4px; padding: 0 18px; font-family: var(--ibm-sans); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: #fff; cursor: pointer; white-space: nowrap; transition: background .2s, box-shadow .2s; }
+    .btn-primary:hover { background: var(--accent2); box-shadow: 0 2px 12px rgba(0,85,180,0.4); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-sm { height: 30px; background: var(--surface); border: 1px solid var(--border2); border-radius: 4px; padding: 0 12px; font-family: var(--ibm-mono); font-size: 11px; cursor: pointer; color: var(--text2); transition: background .15s, border-color .15s, color .15s; white-space: nowrap; }
+    .btn-sm:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .btn-danger { color: var(--danger); border-color: rgba(192,57,43,0.3); }
+    .btn-danger:hover { background: var(--danger-light); border-color: var(--danger); }
+
+    main { max-width: 1240px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; position: relative; z-index: 2; }
+    .page-head { margin-bottom: 1.4rem; }
+    .page-eyebrow { font-family: var(--ibm-mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin-bottom: .4rem; display: flex; align-items: center; gap: 8px; }
+    .page-eyebrow::before { content: ''; width: 24px; height: 2px; background: var(--accent); }
+    .page-title { font-family: var(--grotesk); font-size: clamp(1.8rem, 3.5vw, 2.6rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.05; color: var(--text); }
+    .page-title span { color: var(--accent); }
+    .page-meta { font-family: var(--ibm-mono); font-size: 11px; color: var(--text3); margin-top: .5rem; letter-spacing: .04em; }
+    .rule { width: 100%; height: 1px; background: var(--border2); margin: 1.2rem 0 1.6rem; }
+
+    /* tabs + toolbar */
+    .seg { display: flex; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .seg-btn { background: transparent; border: none; padding: 0 15px; height: 40px; font-family: var(--ibm-mono); font-size: 12px; color: var(--text2); cursor: pointer; transition: background .15s, color .15s; white-space: nowrap; }
+    .seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+    .seg-btn:hover { background: var(--accent-light); color: var(--accent); }
+    .seg-btn.active { background: var(--accent); color: #fff; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+    .toolbar select, .toolbar input[type="text"], .toolbar input[type="date"] {
+      height: 40px; border: 1px solid var(--border2); border-radius: var(--radius); padding: 0 12px;
+      font-family: var(--ibm-mono); font-size: 12px; background: var(--surface); color: var(--text); outline: none; box-shadow: var(--shadow); min-width: 130px;
+    }
+    .toolbar select:focus, .toolbar input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,85,180,0.1); }
+    .spacer { flex: 1; }
+
+    /* metrics */
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 10px; margin-bottom: 1.4rem; }
+    .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: .9rem 1.1rem; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    .metric::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--accent); }
+    .metric.m-done::before { background: var(--success); }
+    .metric.m-prog::before { background: var(--warn); }
+    .metric.m-data::before { background: var(--accent2); }
+    .metric-lbl { font-family: var(--ibm-mono); font-size: 9.5px; letter-spacing: .15em; text-transform: uppercase; color: var(--text3); }
+    .metric-val { font-family: var(--grotesk); font-size: 1.7rem; font-weight: 700; color: var(--text); margin-top: 2px; line-height: 1; }
+    .metric-sub { font-family: var(--ibm-mono); font-size: 10.5px; color: var(--text2); margin-top: 4px; }
+
+    /* add/edit form */
+    .add-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.3rem 1.4rem; box-shadow: var(--shadow); margin-bottom: 1.4rem; }
+    .add-box h2 { font-family: var(--grotesk); font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: .9rem; display: flex; align-items: center; gap: 8px; }
+    .add-box h2 .mk { width: 26px; height: 26px; background: var(--accent); border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; }
+    .rec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 10px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-family: var(--ibm-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); }
+    .field input, .field select { width: 100%; border: 1px solid var(--border2); border-radius: var(--radius); padding: 9px 12px; font-family: var(--ibm-mono); font-size: 12.5px; background: var(--surface2); color: var(--text); outline: none; }
+    .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,85,180,0.1); }
+    .field .hint { font-family: var(--ibm-mono); font-size: 10px; color: var(--text3); }
+    .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); align-items: center; flex-wrap: wrap; }
+    .form-actions .left-note { margin-right: auto; font-family: var(--ibm-mono); font-size: 11px; color: var(--text3); }
+    .form-actions .left-note b { color: var(--text); }
+
+    /* data table */
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.1rem 1.2rem; margin-bottom: 1.2rem; }
+    .panel-head { font-family: var(--grotesk); font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: .9rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .panel-head .sub { font-family: var(--ibm-mono); font-size: 10.5px; font-weight: 400; color: var(--text3); }
+    .panel-head .head-actions { margin-left: auto; display: flex; gap: 6px; }
+    .tbl-scroll { overflow-x: auto; }
+    table.data { width: 100%; border-collapse: collapse; font-family: var(--ibm-mono); font-size: 12px; }
+    table.data th { text-align: left; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); font-weight: 600; padding: 7px 9px; border-bottom: 1px solid var(--border2); white-space: nowrap; cursor: pointer; user-select: none; }
+    table.data th.num, table.data td.num { text-align: right; }
+    table.data td { padding: 8px 9px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; }
+    table.data tbody tr:hover td { background: var(--accent-light); }
+    table.data td.proj { color: var(--text); font-weight: 600; }
+    .chip { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 10px; background: var(--accent-light); color: var(--accent); margin: 1px 2px 1px 0; }
+    .pill { padding: 2px 9px; border-radius: 4px; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+    .pill-selesai { background: var(--success-light); color: var(--success); }
+    .pill-proses { background: var(--warn-light); color: var(--warn); }
+    .row-act { display: flex; gap: 4px; }
+    .ib { background: none; border: 1px solid var(--border2); border-radius: 4px; padding: 3px 7px; font-family: var(--ibm-mono); font-size: 10px; cursor: pointer; color: var(--text2); }
+    .ib:hover { border-color: var(--accent); color: var(--accent); }
+    .ib.del:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* pivot */
+    .pivot-scroll { overflow: auto; max-height: 70vh; }
+    table.pivot { border-collapse: collapse; font-family: var(--ibm-mono); font-size: 11.5px; min-width: max-content; }
+    table.pivot th, table.pivot td { border: 1px solid var(--border); padding: 5px 8px; white-space: nowrap; text-align: right; }
+    table.pivot thead th { position: sticky; top: 0; background: var(--surface2); color: var(--text2); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; z-index: 2; }
+    table.pivot td.date, table.pivot th.date { position: sticky; left: 0; background: var(--surface); text-align: left; color: var(--text); font-weight: 600; z-index: 1; }
+    table.pivot thead th.date { z-index: 3; }
+    table.pivot td.zero { color: var(--text3); }
+    table.pivot tfoot td, table.pivot tfoot th { position: sticky; bottom: 0; background: var(--surface2); font-weight: 700; color: var(--text); }
+    table.pivot td.names { text-align: left; font-size: 10.5px; color: var(--text2); white-space: normal; min-width: 140px; max-width: 240px; }
+
+    /* analytics cards (shared look) */
+    .an-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.1rem 1.3rem; margin-bottom: 1.2rem; }
+    .an-card-head { font-family: var(--grotesk); font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .an-card-head .sub { font-family: var(--ibm-mono); font-size: 10.5px; font-weight: 400; color: var(--text3); }
+    .an-card-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .an-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; align-items: start; }
+    @media (max-width: 920px){ .an-grid2 { grid-template-columns: 1fr; } }
+    .an-bars { display: flex; align-items: flex-end; gap: 4px; height: 168px; }
+    .an-bar-col { flex: 1; min-width: 7px; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+    .an-bar-track { width: 100%; flex: 1; display: flex; align-items: flex-end; background: var(--surface2); border: 1px solid var(--border); border-bottom: none; border-radius: 4px 4px 0 0; overflow: hidden; }
+    .an-bar-fill { width: 100%; border-radius: 4px 4px 0 0; transition: height .3s; min-height: 2px; }
+    .an-bar-x { font-family: var(--ibm-mono); font-size: 9px; color: var(--text3); white-space: nowrap; }
+    .an-bar-v { font-family: var(--ibm-mono); font-size: 9px; color: var(--text2); height: 11px; }
+    .an-bar-col.empty .an-bar-track { opacity: .55; }
+    .an-scroll { overflow-x: auto; }
+    .an-table { width: 100%; border-collapse: collapse; font-family: var(--ibm-mono); font-size: 12px; }
+    .an-table th { text-align: right; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); font-weight: 600; padding: 6px 9px; border-bottom: 1px solid var(--border2); white-space: nowrap; }
+    .an-table th.l, .an-table td.l { text-align: left; }
+    .an-table td { padding: 8px 9px; border-bottom: 1px solid var(--border); color: var(--text2); white-space: nowrap; text-align: right; }
+    .an-table tbody tr:last-child td { border-bottom: none; }
+    .an-table tbody tr:hover td { background: var(--accent-light); }
+    .an-table td.name { color: var(--text); font-family: var(--grotesk); font-weight: 600; font-size: 13px; }
+    .an-rank { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-light); color: var(--accent); font-size: 10px; font-weight: 700; }
+    .an-rank.r1 { background: var(--success-light); color: var(--success); }
+    .an-pill { padding: 2px 9px; border-radius: 4px; font-size: 10.5px; font-weight: 600; }
+    .pill-A { background: var(--success-light); color: var(--success); }
+    .pill-B { background: var(--accent-light); color: var(--accent); }
+    .pill-C { background: var(--warn-light); color: var(--warn); }
+    .pill-D { background: var(--danger-light); color: var(--danger); }
+    .an-delta { font-family: var(--ibm-mono); font-size: 11px; }
+    .an-delta.up { color: var(--success); } .an-delta.down { color: var(--danger); } .an-delta.flat { color: var(--text3); }
+    .age-pill { font-family: var(--ibm-mono); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: var(--accent-light); color: var(--accent); }
+    .age-pill.mid { background: var(--warn-light); color: var(--warn); }
+    .age-pill.old { background: var(--danger-light); color: var(--danger); }
+    .mini-bar { height: 7px; border-radius: 4px; background: var(--bg2); overflow: hidden; min-width: 60px; display:inline-block; vertical-align: middle; }
+    .mini-bar > span { display:block; height:100%; background: var(--accent); }
+    .an-heat { display: grid; gap: 3px; font-family: var(--ibm-mono); min-width: max-content; }
+    .an-heat .hh { font-size: 9px; color: var(--text3); text-align: center; padding-bottom: 2px; }
+    .an-heat .hname { font-size: 11px; color: var(--text); display: flex; align-items: center; white-space: nowrap; padding-right: 8px; }
+    .an-cell { height: 26px; min-width: 30px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 600; color: #fff; }
+    .an-cell.empty { background: var(--surface2); color: var(--text3); border: 1px dashed var(--border); }
+    .statusbar { display:flex; height: 22px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); margin-bottom:.6rem; }
+    .statusbar .s-sel { background: var(--success); } .statusbar .s-pro { background: var(--warn); }
+    .legend { display:flex; gap:14px; font-family: var(--ibm-mono); font-size:10.5px; color: var(--text2); flex-wrap:wrap; }
+    .legend .sw { width:11px; height:11px; border-radius:3px; display:inline-block; vertical-align:middle; margin-right:5px; }
+
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--text3); }
+    .empty-icon { font-size: 30px; margin-bottom: 10px; opacity: .45; }
+    .empty-sub { font-family: var(--ibm-mono); font-size: 11px; margin-top: 8px; }
+
+    /* modal + overlay */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(10,22,40,0.6); z-index: 100; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px); }
+    html.dark .overlay { background: rgba(1,4,9,0.75); }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-lg); padding: 1.75rem; width: min(720px, 100%); max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,40,100,0.2); }
+    .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; padding-bottom: .9rem; border-bottom: 1px solid var(--border); }
+    .modal-header-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+    .modal h2 { font-family: var(--grotesk); font-size: 16px; font-weight: 700; color: var(--text); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.2rem; padding-top: .9rem; border-top: 1px solid var(--border); }
+    .dropzone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 1.6rem; text-align: center; font-family: var(--ibm-mono); font-size: 12px; color: var(--text2); cursor: pointer; transition: border-color .15s, background .15s; }
+    .dropzone:hover { border-color: var(--accent); background: var(--accent-light); }
+    .imp-list { font-family: var(--ibm-mono); font-size: 11.5px; color: var(--text2); display:grid; gap:4px; margin-top:.8rem; max-height: 200px; overflow:auto; }
+    .imp-list .row { display:flex; justify-content:space-between; border-bottom: 1px dashed var(--border); padding: 3px 0; }
+    .imp-list b { color: var(--text); }
+
+    /* auth gate */
+    #auth-gate { display: none; position: fixed; inset: 0; background: var(--text); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
+    html.dark #auth-gate { background: #010409; }
+    #auth-gate.active { display: flex; }
+    .auth-tabs { display: flex; gap: 4px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius); padding: 3px; margin-bottom: 16px; width: 100%; }
+    .auth-tab { flex: 1; background: transparent; border: none; color: rgba(255,255,255,0.4); font-family: var(--ibm-mono); font-size: 11px; padding: 8px 0; cursor: pointer; border-radius: calc(var(--radius) - 2px); transition: all .15s; letter-spacing: .04em; }
+    .auth-tab.active { background: rgba(255,255,255,0.08); color: #fff; }
+    .auth-tab:hover:not(.active) { color: rgba(255,255,255,0.7); }
+    .auth-field { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius); padding: 11px 16px; font-family: var(--ibm-mono); font-size: 14px; color: #fff; outline: none; margin-bottom: 10px; }
+    .auth-field::placeholder { color: rgba(255,255,255,0.25); }
+    .auth-field:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(0,120,215,0.2); }
+    .auth-field.shake { animation: shake .35s ease; border-color: #f87171; }
+    .user-chip { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 5px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; font-family: var(--ibm-mono); font-size: 11px; color: rgba(255,255,255,0.65); cursor: pointer; transition: all .15s; }
+    .user-chip:hover { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.25); }
+    .user-chip-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+    .user-chip-out { font-size: 12px; opacity: .5; }
+    .lock-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg); padding: 2.8rem 2.4rem; width: min(380px, 92vw); display: flex; flex-direction: column; align-items: center; position: relative; }
+    .lock-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+    .lock-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 1.8rem; }
+    .lock-logo-mark { width: 44px; height: 44px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--ibm-mono); font-size: 12px; font-weight: 600; color: #fff; }
+    .lock-logo-text { font-family: var(--grotesk); font-size: 18px; font-weight: 700; color: #fff; }
+    .lock-logo-sub { font-family: var(--ibm-mono); font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    .lock-sub { font-family: var(--ibm-mono); font-size: 11px; color: rgba(255,255,255,0.3); margin-bottom: 1.8rem; text-align: center; letter-spacing: .06em; }
+    .lock-input-wrap { position: relative; width: 100%; margin-bottom: 12px; }
+    .lock-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.3); font-size: 14px; padding: 4px; }
+    .lock-toggle:hover { color: rgba(255,255,255,0.7); }
+    .lock-btn { width: 100%; background: var(--accent); border: none; border-radius: var(--radius); padding: 12px; font-family: var(--grotesk); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: #fff; cursor: pointer; transition: background .2s; margin-bottom: 12px; }
+    .lock-btn:hover { background: var(--accent2); }
+    .lock-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .lock-error { font-family: var(--ibm-mono); font-size: 11px; color: #f87171; min-height: 16px; text-align: center; }
+    .lock-hint { font-family: var(--ibm-mono); font-size: 10px; color: rgba(255,255,255,0.2); margin-top: 1.2rem; text-align: center; line-height: 1.8; }
+    @keyframes shake { 0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)} }
+
+    #toast { position: fixed; bottom: 2.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 10px 22px; border-radius: 6px; font-family: var(--ibm-mono); font-size: 12px; opacity: 0; transition: all .25s; pointer-events: none; z-index: 999; max-width: 90vw; text-align: center; }
+    html.dark #toast { background: #21262d; color: var(--text); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.error-toast { background: var(--danger); color: #fff; }
+
+    .page-footer { margin-top: 4rem; font-family: var(--ibm-mono); font-size: 10px; letter-spacing: .08em; color: var(--text3); text-align: center; line-height: 2.5; }
+    .page-footer a { color: var(--text3); text-decoration: none; }
+    .page-footer a:hover { color: var(--accent); }
+    .fsep { margin: 0 10px; opacity: .4; }
+
+    @media (max-width: 640px) {
+      header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+      .header-right { order: 3; width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+      main { padding: 1.5rem 1rem 5rem; }
+    }
+  </style>
+  <link rel="stylesheet" href="assets/grimoire-theme.css">
+  <script src="assets/grimoire-theme.js" defer></script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div id="auth-gate">
+  <div class="lock-box">
+    <div class="lock-logo">
+      <div class="lock-logo-mark">SGP</div>
+      <div>
+        <div class="lock-logo-text">Siemens GP</div>
+        <div class="lock-logo-sub">// Project Allocation</div>
+      </div>
+    </div>
+    <div class="lock-sub" id="auth-subtitle">Sign in to continue</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')">Register</button>
+    </div>
+    <div id="auth-login-panel" style="width:100%;">
+      <input class="auth-field" type="text" id="login-name" placeholder="Name" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="lock-input-wrap" style="margin-bottom:12px;">
+        <input class="auth-field" type="password" id="login-pass" placeholder="Password" autocomplete="current-password" style="margin-bottom:0;padding-right:44px;" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="lock-toggle" onclick="toggleAuthVis('login-pass', this)" id="login-vis-btn">👁</button>
+      </div>
+      <button class="lock-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+      <div class="lock-error" id="login-error"></div>
+    </div>
+    <div id="auth-register-panel" style="display:none;width:100%;">
+      <input class="auth-field" type="text" id="reg-name" placeholder="Name (e.g. Arya)" autocomplete="name" onkeydown="if(event.key==='Enter')doRegister()">
+      <div class="lock-input-wrap" style="margin-bottom:10px;">
+        <input class="auth-field" type="password" id="reg-pass" placeholder="Password (min 6 characters)" autocomplete="new-password" style="margin-bottom:0;padding-right:44px;" onkeydown="if(event.key==='Enter')doRegister()">
+        <button class="lock-toggle" onclick="toggleAuthVis('reg-pass', this)" id="reg-vis-btn">👁</button>
+      </div>
+      <input class="auth-field" type="password" id="reg-pass2" placeholder="Confirm password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()">
+      <button class="lock-btn" id="register-btn" onclick="doRegister()">Create Account</button>
+      <div class="lock-error" id="register-error"></div>
+    </div>
+    <div class="lock-hint">Per-user accounts for Project Allocation only.<br>Shared team data · separate from other Grimoire tools.</div>
+  </div>
+</div>
+
+<header>
+  <a href="index.html" class="logo-back">← Grimoire</a>
+  <div class="logo-divider"></div>
+  <a href="qa-siemens.html" class="logo" role="heading" aria-level="1">
+    <div class="logo-mark">SGP</div>
+    <div><div>Siemens GP</div><div class="logo-sub">Project Allocation</div></div>
+  </a>
+  <div class="header-right">
+    <div class="status-wrap"><div class="status-dot" id="status-dot"></div><span id="status-label">Connecting...</span></div>
+    <button class="btn-theme" onclick="Grimoire.Theme.toggle()" id="theme-btn" title="Toggle dark/light mode">
+      <span class="theme-icon" id="theme-icon">☀️</span><span id="theme-label">Light</span>
+    </button>
+    <button class="user-chip" id="user-chip" onclick="doSignOut()" title="Sign out">
+      <span class="user-chip-avatar" id="user-chip-avatar">?</span><span id="user-chip-name">…</span><span class="user-chip-out">↪</span>
+    </button>
+    <button class="btn-primary" onclick="scrollToForm()">+ Add Record</button>
+  </div>
+</header>
+
+<main id="main">
+  <div class="page-head">
+    <div class="page-eyebrow">Tome · Siemens GP · Alokasi Project</div>
+    <div class="page-title">Project <span>Allocation</span></div>
+    <div class="page-meta">Daily records · Project · Ekspeditur · Staff · Total &amp; Done · Status · Auto Quantity / Personnel pivots · Analyzer</div>
+  </div>
+  <div class="rule"></div>
+
+  <!-- Add / Edit form -->
+  <div class="add-box" id="add-box">
+    <h2><span class="mk">✎</span><span id="form-heading">Add daily record</span></h2>
+    <div class="rec-grid">
+      <div class="field"><label for="f-date">Date</label><input type="date" id="f-date"></div>
+      <div class="field"><label for="f-project">Project</label><input type="text" id="f-project" list="dl-project" placeholder="TRUMPF…"></div>
+      <div class="field"><label for="f-eksp">Ekspeditur / Stream</label><input type="text" id="f-eksp" list="dl-eksp" placeholder="DHL GF…"></div>
+      <div class="field"><label for="f-staff">Staff (comma-separated)</label><input type="text" id="f-staff" list="dl-staff" placeholder="Ihsa, Cantya (checking)"></div>
+      <div class="field"><label for="f-total">Jumlah Seluruh Data (Total)</label><input type="number" id="f-total" min="0" step="1" placeholder="0" inputmode="numeric" oninput="autoStatus()"></div>
+      <div class="field"><label for="f-done">Jumlah Dikerjakan (Done)</label><input type="number" id="f-done" min="0" step="1" placeholder="0" inputmode="numeric" oninput="autoStatus()"></div>
+      <div class="field"><label for="f-status">Status</label>
+        <select id="f-status"><option value="Selesai">Selesai (Done)</option><option value="Proses">Proses (In progress)</option></select>
+        <span class="hint" id="f-comp-hint">—</span>
+      </div>
+    </div>
+    <datalist id="dl-project"></datalist>
+    <datalist id="dl-eksp"></datalist>
+    <datalist id="dl-staff"></datalist>
+    <div class="form-actions">
+      <span class="left-note" id="form-left-note"></span>
+      <button class="btn-sm" onclick="resetForm()">Reset</button>
+      <button class="btn-primary" id="save-btn" onclick="saveRecord()">Save Record</button>
+    </div>
+  </div>
+
+  <!-- Tabs + toolbar -->
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="View">
+      <button class="seg-btn active" id="tab-records"   onclick="setView('records')">Records</button>
+      <button class="seg-btn" id="tab-quantity"  onclick="setView('quantity')">Quantity</button>
+      <button class="seg-btn" id="tab-personnel" onclick="setView('personnel')">Personnel</button>
+      <button class="seg-btn" id="tab-people"    onclick="setView('people')">People</button>
+      <button class="seg-btn" id="tab-analytics" onclick="setView('analytics')">Analytics</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-sm" onclick="openImport()" title="Import from ALOKASI PROJECT.xlsx">⤒ Import</button>
+    <button class="btn-sm" onclick="exportCSV()" title="Export filtered records as CSV">⤓ CSV</button>
+    <button class="btn-sm" onclick="exportXLSX()" title="Export to Excel in the ALOKASI workbook layout">⤓ Excel</button>
+    <button class="btn-sm" onclick="printBriefing()" title="Printable PDF briefing">🖨 Briefing</button>
+  </div>
+
+  <div class="toolbar" id="filter-bar">
+    <input type="text" id="flt-search" placeholder="Search…" oninput="render()" style="min-width:160px">
+    <select id="flt-project" onchange="render()"><option value="">All projects</option></select>
+    <select id="flt-staff" onchange="render()"><option value="">All staff</option></select>
+    <select id="flt-status" onchange="render()"><option value="">All status</option><option>Selesai</option><option>Proses</option></select>
+    <input type="date" id="flt-from" onchange="render()" title="From date">
+    <input type="date" id="flt-to" onchange="render()" title="To date">
+    <button class="btn-sm" onclick="clearFilters()">Clear</button>
+  </div>
+
+  <div id="view-records"></div>
+  <div id="view-quantity" style="display:none"></div>
+  <div id="view-personnel" style="display:none"></div>
+  <div id="view-people" style="display:none"></div>
+  <div id="view-analytics" style="display:none"></div>
+
+  <div class="page-footer">
+    codingkuh.my.id<span class="fsep">·</span>Siemens GP · Project Allocation<br>
+    <a href="index.html">Grimoire Home</a><span class="fsep">·</span><a href="qa-siemens.html">SGP Knowledge Base</a><span class="fsep">·</span><a href="standard-wording.html">Standard Wording</a>
+  </div>
+</main>
+
+<!-- Edit modal -->
+<div class="overlay" id="edit-modal" onclick="if(event.target===this)closeEdit()">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-header-icon">✎</div><h2>Edit Record</h2></div>
+    <div class="rec-grid">
+      <div class="field"><label>Date</label><input type="date" id="e-date"></div>
+      <div class="field"><label>Project</label><input type="text" id="e-project" list="dl-project"></div>
+      <div class="field"><label>Ekspeditur / Stream</label><input type="text" id="e-eksp" list="dl-eksp"></div>
+      <div class="field"><label>Staff</label><input type="text" id="e-staff" list="dl-staff"></div>
+      <div class="field"><label>Total</label><input type="number" id="e-total" min="0" step="1"></div>
+      <div class="field"><label>Done</label><input type="number" id="e-done" min="0" step="1"></div>
+      <div class="field"><label>Status</label><select id="e-status"><option>Selesai</option><option>Proses</option></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-danger" onclick="deleteFromEdit()">Delete</button>
+      <div style="flex:1"></div>
+      <button class="btn-sm" onclick="closeEdit()">Cancel</button>
+      <button class="btn-primary" id="e-save-btn" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import modal -->
+<div class="overlay" id="import-modal" onclick="if(event.target===this)closeImport()">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-header-icon">⤒</div><h2>Import from Excel</h2></div>
+    <p style="font-family:var(--ibm-sans);font-size:12.5px;color:var(--text2);margin-bottom:.8rem;line-height:1.55;">
+      Upload your <b>ALOKASI PROJECT.xlsx</b>. Each <b>RINCIAN &lt;CLIENT&gt;</b> sheet (and <b>ATB</b>) is read as daily records:
+      Date · Ekspeditur/Project · Staff · Total · Done · Status.
+    </p>
+    <label class="dropzone" id="imp-drop">
+      <input type="file" id="imp-file" accept=".xlsx,.xls" style="display:none" onchange="onImportFile(this.files[0])">
+      📄 Click to choose an .xlsx file
+    </label>
+    <div class="imp-list" id="imp-list"></div>
+    <div class="modal-actions">
+      <div class="left-note" id="imp-note" style="margin-right:auto;font-family:var(--ibm-mono);font-size:11px;color:var(--text3);"></div>
+      <label style="margin-right:auto;display:flex;align-items:center;gap:6px;font-family:var(--ibm-mono);font-size:11px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="imp-dedupe" checked style="width:15px;height:15px;cursor:pointer;"> Skip duplicates</label>
+      <button class="btn-sm" onclick="closeImport()">Cancel</button>
+      <button class="btn-primary" id="imp-confirm" onclick="confirmImport()" disabled>Import</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" integrity="sha384-AQ3POAMqIhwS81FrUH95ekxqBZHeP5tG2JfEL3+7GuTtfRLWnrRh32UxwzM+//A9" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/grimoire-auth.js"></script>
+
+<script>
+/* ── Firebase ── */
+if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
+const db = firebase.firestore();
+const col = db.collection('sgp_alokasi_records');
+
+let records = [];
+let loaded = false;                     /* first snapshot received */
+let editId = null;
+let saving = false;
+let viewMode = 'records';
+let currentUser = null;
+let sortKey = 'date', sortDir = -1;     /* records table sort */
+let qtyMetric = 'total';                /* quantity pivot: total | done */
+let importRows = [];                    /* parsed rows pending import */
+
+const PROJECTS_SEED = ['TRUMPF','WMF','SBG','CLAAS','KRONES','OSRAM','NASH','EPT','CONTI','ATB','Siemens Freia','Siemens Tarif','Siemens Faktual','Valeo','Stamp','Sharepoint','SHELL','Währungskurse','Others'];
+const EKSP_SEED = ['S+S','DHL GF','DHL EXPRESS','Kuehne','ERKA','HONOLD','DACHSER','SBG GERICKE','SBG DACHSER','DATA ENTRY'];
+
+/* ── Theme ── */
+function initTheme(){
+  Grimoire.Theme.init({ defaultMode:'dark', mode:'dark', className:'dark', iconEl:'#theme-icon', labelEl:'#theme-label', icons:{light:'☀️', dark:'🌙'}, labels:{light:'Light', dark:'Dark'} });
+}
+function setStatus(s,l){ document.getElementById('status-dot').className='status-dot '+(s||''); document.getElementById('status-label').textContent=l; }
+function showToast(msg, isError){ const t=document.getElementById('toast'); t.textContent=msg; t.className=isError?'error-toast show':'show'; clearTimeout(t._timer); t._timer=setTimeout(()=>{t.className='';}, 2800); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ── Data helpers ── */
+function num(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
+function isoToday(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function fmtDate(iso){ if(!iso) return '—'; const d=new Date(iso+'T00:00:00'); if(isNaN(d)) return iso; return d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}); }
+/* Staff is always a list of people. Split on , ; & + / and the word "dan"
+   (Indonesian "and") so a joint entry like "Nico+Arya" becomes two people —
+   never a combined name. (EKSPEDITUR like "S+S" is a different field, untouched.) */
+function splitStaff(s){ return String(s||'').split(/\s*[,;&+/]\s*|\s+dan\s+/i).map(x=>x.trim()).filter(Boolean); }
+/* Read-time re-split: legacy records stored as ["Nico+Arya"] decompose too — no migration needed. */
+function staffArr(r){ const raw = Array.isArray(r.staff) ? r.staff : splitStaff(r.staff); return raw.flatMap(splitStaff); }
+function cleanName(tok){ return String(tok).replace(/\(.*?\)/g,'').replace(/\s+/g,' ').trim(); }   /* drop "(checking)" etc. */
+/* Known spelling variants that should fold into one person.
+   Key = lowercased variant as typed; value = canonical display name. Add pairs here. */
+const NAME_ALIASES = {
+  'shintia': 'Shintya',
+};
+/* Canonical person name — Title Case (so "NICO"/"nico"/"Nico " are one), then alias-folded. */
+function personName(tok){
+  const base = cleanName(tok).toLowerCase();
+  if (!base) return '';
+  if (NAME_ALIASES[base]) return NAME_ALIASES[base];
+  return base.split(' ').map(w=>w?w[0].toUpperCase()+w.slice(1):w).join(' ');
+}
+function recComp(r){ const t=num(r.total); return t>0 ? Math.round(num(r.done)/t*100) : 0; }
+function normStatus(s){ const t=String(s||'').toLowerCase(); if(t.startsWith('seles')) return 'Selesai'; if(t.startsWith('pro')) return 'Proses'; return s ? 'Proses' : ''; }
+function effStatus(r){ return r.status || (num(r.done)>=num(r.total)&&num(r.total)>0 ? 'Selesai':'Proses'); }
+function validCounts(total, done){
+  if (total<0 || done<0) return 'Counts cannot be negative.';
+  if (done>total) return 'Done cannot exceed total.';
+  return null;
+}
+
+/* ── Firestore listeners ── */
+function startListener(){
+  setStatus('','Connecting...');
+  showLoading();
+  col.orderBy('date','desc').onSnapshot(snap=>{
+    records = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    loaded = true;
+    setStatus('online','Connected');
+    refreshDatalists();
+    render();
+  }, err=>{ console.error(err); setStatus('error','Error'); showToast('Error: '+err.code+' — '+err.message, true); });
+}
+function showLoading(){
+  const v = document.getElementById('view-'+viewMode);
+  if (v) v.innerHTML = `<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading records…</div></div></div>`;
+}
+
+/* ── Dropdowns / datalists ── */
+function uniqueProjects(){ return [...new Set([...PROJECTS_SEED, ...records.map(r=>r.project).filter(Boolean)])].sort((a,b)=>a.localeCompare(b)); }
+function uniqueEksp(){ return [...new Set([...EKSP_SEED, ...records.map(r=>r.ekspeditur).filter(Boolean)])].sort((a,b)=>a.localeCompare(b)); }
+function uniqueStaff(){ const s=new Set(); records.forEach(r=>staffArr(r).forEach(t=>{ const n=personName(t); if(n) s.add(n); })); return [...s].sort((a,b)=>a.localeCompare(b)); }
+function refreshDatalists(){
+  document.getElementById('dl-project').innerHTML = uniqueProjects().map(p=>`<option value="${esc(p)}">`).join('');
+  document.getElementById('dl-eksp').innerHTML = uniqueEksp().map(p=>`<option value="${esc(p)}">`).join('');
+  document.getElementById('dl-staff').innerHTML = uniqueStaff().map(p=>`<option value="${esc(p)}">`).join('');
+  const fp=document.getElementById('flt-project'), prevP=fp.value;
+  fp.innerHTML = '<option value="">All projects</option>' + uniqueProjects().map(p=>`<option${p===prevP?' selected':''}>${esc(p)}</option>`).join('');
+  const fs=document.getElementById('flt-staff'), prevS=fs.value;
+  fs.innerHTML = '<option value="">All staff</option>' + uniqueStaff().map(p=>`<option${p===prevS?' selected':''}>${esc(p)}</option>`).join('');
+}
+
+/* ── Filtering ── */
+function getFilters(){
+  return {
+    q: document.getElementById('flt-search').value.trim().toLowerCase(),
+    project: document.getElementById('flt-project').value,
+    staff: document.getElementById('flt-staff').value,
+    status: document.getElementById('flt-status').value,
+    from: document.getElementById('flt-from').value,
+    to: document.getElementById('flt-to').value
+  };
+}
+function clearFilters(){ ['flt-search','flt-project','flt-staff','flt-status','flt-from','flt-to'].forEach(id=>document.getElementById(id).value=''); render(); }
+function applyFilters(list){
+  const f = getFilters();
+  return list.filter(r=>{
+    if (f.project && r.project!==f.project) return false;
+    if (f.status && effStatus(r)!==f.status) return false;
+    if (f.from && (r.date||'') < f.from) return false;
+    if (f.to && (r.date||'') > f.to) return false;
+    if (f.staff && !staffArr(r).some(t=>personName(t)===personName(f.staff))) return false;
+    if (f.q){
+      const hay = [r.project, r.ekspeditur, staffArr(r).join(' '), r.status, r.date].join(' ').toLowerCase();
+      if (!hay.includes(f.q)) return false;
+    }
+    return true;
+  });
+}
+
+/* ── View switching ── */
+function setView(mode){
+  viewMode = mode;
+  ['records','quantity','personnel','people','analytics'].forEach(m=>{
+    document.getElementById('tab-'+m).classList.toggle('active', m===mode);
+    document.getElementById('view-'+m).style.display = m===mode ? '' : 'none';
+  });
+  render();
+}
+function render(){
+  if (!loaded){ showLoading(); return; }
+  const list = applyFilters(records);
+  if (viewMode==='records')   renderRecords(list);
+  if (viewMode==='quantity')  renderQuantity(list);
+  if (viewMode==='personnel') renderPersonnel(list);
+  if (viewMode==='people')    renderPeople(list);
+  if (viewMode==='analytics') renderAnalytics(list);
+}
+
+/* ── Records table ── */
+function setSort(k){ if(sortKey===k) sortDir=-sortDir; else { sortKey=k; sortDir=1; } render(); }
+function renderRecords(list){
+  const host = document.getElementById('view-records');
+  const sorted = list.slice().sort((a,b)=>{
+    let av, bv;
+    if (sortKey==='total'||sortKey==='done'){ av=num(a[sortKey]); bv=num(b[sortKey]); }
+    else if (sortKey==='comp'){ av=recComp(a); bv=recComp(b); }
+    else { av=String(a[sortKey]||'').toLowerCase(); bv=String(b[sortKey]||'').toLowerCase(); }
+    if (av<bv) return -1*sortDir; if (av>bv) return 1*sortDir; return 0;
+  });
+  if (!sorted.length){
+    host.innerHTML = `<div class="panel"><div class="empty"><div class="empty-icon">📭</div><div>No records match.</div><div class="empty-sub">Add a record above, or import your Excel file.</div></div></div>`;
+    return;
+  }
+  const rows = sorted.map(r=>{
+    const st = effStatus(r), comp = recComp(r);
+    const staff = staffArr(r).map(t=>`<span class="chip">${esc(t)}</span>`).join('');
+    return `<tr>
+      <td>${esc(fmtDate(r.date))}</td>
+      <td class="proj">${esc(r.project||'—')}</td>
+      <td>${esc(r.ekspeditur||'—')}</td>
+      <td style="white-space:normal;min-width:150px">${staff||'<span style="color:var(--text3)">—</span>'}</td>
+      <td class="num">${num(r.total)}</td>
+      <td class="num">${num(r.done)}</td>
+      <td class="num">${comp}%</td>
+      <td><span class="pill pill-${st==='Selesai'?'selesai':'proses'}">${esc(st)}</span></td>
+      <td><div class="row-act"><button class="ib" onclick="openEdit('${esc(r.id)}')">✎</button><button class="ib del" onclick="quickDelete('${esc(r.id)}')">🗑</button></div></td>
+    </tr>`;
+  }).join('');
+  const arrow = k => sortKey===k ? (sortDir>0?' ▲':' ▼') : '';
+  host.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">Records <span class="sub">${sorted.length} of ${records.length}</span></div>
+      <div class="tbl-scroll"><table class="data">
+        <thead><tr>
+          <th onclick="setSort('date')">Date${arrow('date')}</th>
+          <th onclick="setSort('project')">Project${arrow('project')}</th>
+          <th onclick="setSort('ekspeditur')">Ekspeditur${arrow('ekspeditur')}</th>
+          <th>Staff</th>
+          <th class="num" onclick="setSort('total')">Total${arrow('total')}</th>
+          <th class="num" onclick="setSort('done')">Done${arrow('done')}</th>
+          <th class="num" onclick="setSort('comp')">%${arrow('comp')}</th>
+          <th onclick="setSort('status')">Status${arrow('status')}</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+}
+
+/* ── Pivot helpers ── */
+function pivotAxes(list){
+  const dates = [...new Set(list.map(r=>r.date).filter(Boolean))].sort().reverse();
+  const projects = [...new Set(list.map(r=>r.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  return { dates, projects };
+}
+
+function renderQuantity(list){
+  const host = document.getElementById('view-quantity');
+  const { dates, projects } = pivotAxes(list);
+  if (!dates.length){ host.innerHTML = emptyPanel('No data for the Quantity pivot.'); return; }
+  const cell = {}; const colTot = {}; const rowTot = {}; let grand = 0;
+  list.forEach(r=>{ const k=r.date+'|'+r.project; const v=num(r[qtyMetric]); cell[k]=(cell[k]||0)+v; colTot[r.project]=(colTot[r.project]||0)+v; rowTot[r.date]=(rowTot[r.date]||0)+v; grand+=v; });
+  const head = `<tr><th class="date">Date</th>${projects.map(p=>`<th>${esc(p)}</th>`).join('')}<th>Total</th></tr>`;
+  const body = dates.map(d=>{
+    const cells = projects.map(p=>{ const v=cell[d+'|'+p]||0; return `<td class="${v===0?'zero':''}">${v||'·'}</td>`; }).join('');
+    return `<tr><td class="date">${esc(fmtDate(d))}</td>${cells}<td><b>${rowTot[d]||0}</b></td></tr>`;
+  }).join('');
+  const foot = `<tr><th class="date">Total</th>${projects.map(p=>`<td><b>${colTot[p]||0}</b></td>`).join('')}<td><b>${grand}</b></td></tr>`;
+  host.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">Quantity by date × project <span class="sub">${qtyMetric==='total'?'Jumlah Seluruh Data':'Jumlah Dikerjakan'}</span>
+        <div class="head-actions">
+          <button class="btn-sm ${qtyMetric==='total'?'':''}" onclick="qtyMetric='total';render()" style="${qtyMetric==='total'?'border-color:var(--accent);color:var(--accent)':''}">Total</button>
+          <button class="btn-sm" onclick="qtyMetric='done';render()" style="${qtyMetric==='done'?'border-color:var(--accent);color:var(--accent)':''}">Done</button>
+        </div>
+      </div>
+      <div class="pivot-scroll"><table class="pivot"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>
+    </div>`;
+}
+
+function renderPersonnel(list){
+  const host = document.getElementById('view-personnel');
+  const { dates, projects } = pivotAxes(list);
+  if (!dates.length){ host.innerHTML = emptyPanel('No data for the Personnel pivot.'); return; }
+  const cell = {};
+  list.forEach(r=>{ const k=r.date+'|'+r.project; if(!cell[k]) cell[k]=new Set(); staffArr(r).forEach(t=>cell[k].add(t)); });
+  const head = `<tr><th class="date">Date</th>${projects.map(p=>`<th>${esc(p)}</th>`).join('')}</tr>`;
+  const body = dates.map(d=>{
+    const cells = projects.map(p=>{ const s=cell[d+'|'+p]; return `<td class="names">${s&&s.size?esc([...s].join(', ')):'<span style="color:var(--text3)">·</span>'}</td>`; }).join('');
+    return `<tr><td class="date">${esc(fmtDate(d))}</td>${cells}</tr>`;
+  }).join('');
+  host.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">Personnel by date × project <span class="sub">who was assigned</span></div>
+      <div class="pivot-scroll"><table class="pivot"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    </div>`;
+}
+function emptyPanel(msg){ return `<div class="panel"><div class="empty"><div class="empty-icon">📊</div><div>${esc(msg)}</div><div class="empty-sub">Adjust filters, add records, or import the Excel file.</div></div></div>`; }
+
+/* ── Analyzer ── */
+function compColor(pct){ if(pct==null) return 'var(--text3)'; if(pct>=85) return 'var(--success)'; if(pct>=70) return 'var(--accent)'; if(pct>=50) return 'var(--warn)'; return 'var(--danger)'; }
+function renderAnalytics(list){
+  const host = document.getElementById('view-analytics');
+  if (!list.length){ host.innerHTML = emptyPanel('No records to analyze.'); return; }
+
+  const totalData = list.reduce((a,r)=>a+num(r.total),0);
+  const doneData  = list.reduce((a,r)=>a+num(r.done),0);
+  const teamPct = totalData ? Math.round(doneData/totalData*100) : 0;
+  const inProg = list.filter(r=>effStatus(r)==='Proses');
+  const backlog = inProg.reduce((a,r)=>a+Math.max(0,num(r.total)-num(r.done)),0);
+  const staffSet = new Set(); list.forEach(r=>staffArr(r).forEach(t=>{ const n=personName(t); if(n) staffSet.add(n); }));
+  const projSet = new Set(list.map(r=>r.project).filter(Boolean));
+
+  /* metrics */
+  const metrics = `<div class="metrics">
+    <div class="metric m-data"><div class="metric-lbl">Total data</div><div class="metric-val">${totalData.toLocaleString()}</div><div class="metric-sub">${list.length} records</div></div>
+    <div class="metric m-done"><div class="metric-lbl">Done</div><div class="metric-val">${doneData.toLocaleString()}</div><div class="metric-sub">${teamPct}% of total</div></div>
+    <div class="metric m-prog"><div class="metric-lbl">In progress</div><div class="metric-val">${inProg.length}</div><div class="metric-sub">${backlog.toLocaleString()} data backlog</div></div>
+    <div class="metric"><div class="metric-lbl">Projects</div><div class="metric-val">${projSet.size}</div><div class="metric-sub">active</div></div>
+    <div class="metric"><div class="metric-lbl">Staff</div><div class="metric-val">${staffSet.size}</div><div class="metric-sub">involved</div></div>
+  </div>`;
+
+  /* daily trend (by date asc) */
+  const byDate = {}; list.forEach(r=>{ const d=r.date||'?'; (byDate[d]=byDate[d]||{total:0,done:0}); byDate[d].total+=num(r.total); byDate[d].done+=num(r.done); });
+  const days = Object.keys(byDate).filter(d=>d!=='?').sort();
+  const maxTotal = Math.max(1, ...days.map(d=>byDate[d].total));
+  const showVals = days.length<=20;
+  const bars = days.map(d=>{
+    const o=byDate[d]; const pct=o.total?Math.round(o.done/o.total*100):null;
+    const h=Math.max(2, Math.round(o.total/maxTotal*100));
+    return `<div class="an-bar-col" title="${esc(fmtDate(d))} — ${o.done}/${o.total} (${pct==null?'-':pct}%)">
+      ${showVals?`<div class="an-bar-v">${o.total}</div>`:''}
+      <div class="an-bar-track"><div class="an-bar-fill" style="height:${h}%;background:${compColor(pct)}"></div></div>
+      <div class="an-bar-x">${esc(new Date(d+'T00:00:00').toLocaleDateString(undefined,{day:'2-digit',month:'short'}))}</div>
+    </div>`;
+  }).join('');
+  const trend = `<div class="an-card"><div class="an-card-head">Daily volume trend <span class="sub">bar height = total data · color = completion %</span></div><div class="an-bars">${bars}</div></div>`;
+
+  /* per-project rollup */
+  const proj = {}; list.forEach(r=>{ const p=r.project||'—'; const o=proj[p]=proj[p]||{total:0,done:0,recs:0,sel:0}; o.total+=num(r.total); o.done+=num(r.done); o.recs++; if(effStatus(r)==='Selesai') o.sel++; });
+  const projRows = Object.entries(proj).map(([p,o])=>({p, ...o, pct:o.total?Math.round(o.done/o.total*100):0, selPct:o.recs?Math.round(o.sel/o.recs*100):0}))
+    .sort((a,b)=> b.total-a.total).map((o,i)=>`<tr>
+      <td class="l"><span class="an-rank ${i===0?'r1':''}">${i+1}</span></td>
+      <td class="l name">${esc(o.p)}</td><td>${o.recs}</td><td>${o.total.toLocaleString()}</td><td>${o.done.toLocaleString()}</td>
+      <td>${o.pct}% <span class="mini-bar" style="width:54px"><span style="width:${o.pct}%;background:${compColor(o.pct)}"></span></span></td>
+      <td>${o.selPct}%</td></tr>`).join('');
+  const projCard = `<div class="an-card"><div class="an-card-head">Projects <span class="sub">by volume</span></div>
+    <div class="an-scroll"><table class="an-table"><thead><tr><th class="l">#</th><th class="l">Project</th><th>Recs</th><th>Total</th><th>Done</th><th>Completion</th><th>% Selesai</th></tr></thead><tbody>${projRows}</tbody></table></div></div>`;
+
+  /* per-staff leaderboard (attribute record totals to each named staff) */
+  const staff = {}; list.forEach(r=>{ const names=[...new Set(staffArr(r).map(personName).filter(Boolean))]; names.forEach(n=>{ const o=staff[n]=staff[n]||{recs:0,total:0,done:0,projs:new Set()}; o.recs++; o.total+=num(r.total); o.done+=num(r.done); if(r.project)o.projs.add(r.project); }); });
+  const staffRows = Object.entries(staff).map(([n,o])=>({n,...o,pct:o.total?Math.round(o.done/o.total*100):0}))
+    .sort((a,b)=> b.done-a.done || b.total-a.total).slice(0,15).map((o,i)=>`<tr>
+      <td class="l"><span class="an-rank ${i===0?'r1':''}">${i+1}</span></td>
+      <td class="l name">${esc(o.n)}</td><td>${o.recs}</td><td>${o.projs.size}</td><td>${o.total.toLocaleString()}</td><td>${o.done.toLocaleString()}</td><td>${o.pct}%</td></tr>`).join('');
+  const staffCard = `<div class="an-card"><div class="an-card-head">Staff leaderboard <span class="sub">data handled (shared records counted for each)</span></div>
+    <div class="an-scroll"><table class="an-table"><thead><tr><th class="l">#</th><th class="l">Staff</th><th>Recs</th><th>Projects</th><th>Total</th><th>Done</th><th>Compl.</th></tr></thead><tbody>${staffRows}</tbody></table></div></div>`;
+
+  /* status breakdown */
+  const sel = list.filter(r=>effStatus(r)==='Selesai').length, pro = list.length-sel;
+  const selW = list.length?Math.round(sel/list.length*100):0;
+  const statusCard = `<div class="an-card"><div class="an-card-head">Status <span class="sub">${sel} done · ${pro} in progress</span></div>
+    <div class="statusbar"><div class="s-sel" style="width:${selW}%" title="Selesai ${selW}%"></div><div class="s-pro" style="width:${100-selW}%" title="Proses ${100-selW}%"></div></div>
+    <div class="legend"><span><span class="sw" style="background:var(--success)"></span>Selesai ${selW}%</span><span><span class="sw" style="background:var(--warn)"></span>Proses ${100-selW}%</span><span style="color:var(--text3)">Backlog: ${backlog.toLocaleString()} data in ${pro} open records</span></div></div>`;
+
+  /* heatmap date × project (completion) */
+  const { dates, projects } = pivotAxes(list);
+  const hdates = dates.slice(0, 31).reverse();
+  const hcell = {}; list.forEach(r=>{ const k=r.date+'|'+r.project; const o=hcell[k]=hcell[k]||{total:0,done:0}; o.total+=num(r.total); o.done+=num(r.done); });
+  const cols = `minmax(90px,120px) repeat(${hdates.length}, minmax(28px,1fr))`;
+  let heat = `<div class="an-scroll"><div class="an-heat" style="grid-template-columns:${cols}">`;
+  heat += `<div class="hh"></div>` + hdates.map(d=>`<div class="hh">${new Date(d+'T00:00:00').toLocaleDateString(undefined,{day:'2-digit'})}</div>`).join('');
+  projects.forEach(p=>{
+    heat += `<div class="hname">${esc(p)}</div>`;
+    hdates.forEach(d=>{ const o=hcell[d+'|'+p]; if(!o){ heat+=`<div class="an-cell empty" title="${esc(p)} · ${esc(fmtDate(d))} · no data">·</div>`; } else { const pct=o.total?Math.round(o.done/o.total*100):null; heat+=`<div class="an-cell" style="background:${compColor(pct)}" title="${esc(p)} · ${esc(fmtDate(d))} · ${o.done}/${o.total} (${pct==null?'-':pct}%)">${o.total}</div>`; } });
+  });
+  heat += `</div></div>`;
+  const heatCard = `<div class="an-card"><div class="an-card-head">Activity heatmap <span class="sub">total data per project per day · color = completion</span></div>${heat}</div>`;
+
+  /* aging backlog — open (Proses) records by age */
+  const today = isoToday();
+  const ageOf = d => { if(!d) return 0; const a=new Date(d+'T00:00:00'), b=new Date(today+'T00:00:00'); return Math.max(0, Math.round((b-a)/86400000)); };
+  const openRecs = list.filter(r=>effStatus(r)==='Proses').map(r=>({r, age:ageOf(r.date), rem:Math.max(0,num(r.total)-num(r.done))})).sort((a,b)=> b.age-a.age || b.rem-a.rem);
+  const agingRows = openRecs.slice(0,12).map(o=>`<tr>
+      <td class="l name">${esc(o.r.project||'—')}</td><td class="l">${esc(o.r.ekspeditur||'—')}</td>
+      <td class="l">${esc(staffArr(o.r).map(personName).join(', ')||'—')}</td><td>${o.rem.toLocaleString()}</td>
+      <td><span class="age-pill ${o.age>7?'old':o.age>2?'mid':''}">${o.age}d</span></td></tr>`).join('');
+  const agingCard = `<div class="an-card"><div class="an-card-head">Aging backlog <span class="sub">${openRecs.length} open record${openRecs.length===1?'':'s'} · oldest first</span></div>
+    ${openRecs.length ? `<div class="an-scroll"><table class="an-table"><thead><tr><th class="l">Project</th><th class="l">Ekspeditur</th><th class="l">Staff</th><th>Remaining</th><th>Age</th></tr></thead><tbody>${agingRows}</tbody></table></div>` : `<div style="color:var(--text3);font-family:var(--ibm-mono);font-size:11.5px">No open (Proses) records — everything is Selesai. 👌</div>`}</div>`;
+
+  host.innerHTML = metrics + trend + `<div class="an-grid2">${projCard}${staffCard}</div>` + `<div class="an-grid2">${statusCard}${heatCard}</div>` + agingCard;
+}
+
+/* ════ People view — per-person scorecards derived from the allocation records ════ */
+function gradeFromComp(pct,total){ if(!total) return 'N/A'; if(pct>=85)return 'A'; if(pct>=70)return 'B'; if(pct>=50)return 'C'; return 'D'; }
+function peopleRollup(list){
+  const m = {};
+  list.forEach(r=>{
+    const names = [...new Set(staffArr(r).map(personName).filter(Boolean))];
+    const open = effStatus(r)==='Proses' ? Math.max(0, num(r.total)-num(r.done)) : 0;
+    names.forEach(n=>{
+      const o = m[n] = m[n] || { name:n, recs:0, total:0, done:0, backlog:0, projects:new Set(), days:new Set(), byDay:{} };
+      o.recs++; o.total+=num(r.total); o.done+=num(r.done); o.backlog+=open;
+      if (r.project) o.projects.add(r.project);
+      if (r.date){ o.days.add(r.date); const bd=o.byDay[r.date]=o.byDay[r.date]||{total:0,done:0}; bd.total+=num(r.total); bd.done+=num(r.done); }
+    });
+  });
+  return Object.values(m).map(o=>{
+    const pct = o.total ? Math.round(o.done/o.total*100) : 0;
+    const ds = Object.keys(o.byDay).sort();
+    let trend = null;
+    if (ds.length>=2){ const a=o.byDay[ds[ds.length-2]], b=o.byDay[ds[ds.length-1]]; const pa=a.total?Math.round(a.done/a.total*100):0, pb=b.total?Math.round(b.done/b.total*100):0; trend=pb-pa; }
+    return { ...o, pct, grade:gradeFromComp(pct,o.total), avgDay: o.days.size?Math.round(o.done/o.days.size):0, trend };
+  });
+}
+function renderPeople(list){
+  const host = document.getElementById('view-people');
+  const people = peopleRollup(list);
+  if (!people.length){ host.innerHTML = emptyPanel('No people to score yet.'); return; }
+  const totalDone = people.reduce((a,p)=>a+p.done,0);
+  const teamTotal = list.reduce((a,r)=>a+num(r.total),0), teamDone = list.reduce((a,r)=>a+num(r.done),0);
+  const teamPct = teamTotal?Math.round(teamDone/teamTotal*100):0;
+  const avgDonePerPerson = people.length ? totalDone/people.length : 0;
+  const busiest = people.slice().sort((a,b)=>b.done-a.done)[0];
+  const mostBacklog = people.slice().sort((a,b)=>b.backlog-a.backlog)[0];
+
+  const metrics = `<div class="metrics">
+    <div class="metric"><div class="metric-lbl">People</div><div class="metric-val">${people.length}</div><div class="metric-sub">scored from records</div></div>
+    <div class="metric m-done"><div class="metric-lbl">Team completion</div><div class="metric-val">${teamPct}%</div><div class="metric-sub">${teamDone.toLocaleString()} / ${teamTotal.toLocaleString()}</div></div>
+    <div class="metric m-data"><div class="metric-lbl">Busiest</div><div class="metric-val" style="font-size:1.2rem">${esc(busiest?busiest.name:'—')}</div><div class="metric-sub">${busiest?busiest.done.toLocaleString()+' done':''}</div></div>
+    <div class="metric m-prog"><div class="metric-lbl">Most backlog</div><div class="metric-val" style="font-size:1.2rem">${esc(mostBacklog&&mostBacklog.backlog?mostBacklog.name:'—')}</div><div class="metric-sub">${mostBacklog&&mostBacklog.backlog?mostBacklog.backlog.toLocaleString()+' open':'clear'}</div></div>
+  </div>`;
+
+  /* scorecard table */
+  const rows = people.slice().sort((a,b)=> b.pct-a.pct || b.done-a.done || a.name.localeCompare(b.name)).map((p,i)=>{
+    const t = p.trend;
+    const trendCell = t==null ? `<span class="an-delta flat">—</span>` : t>0 ? `<span class="an-delta up">▲ ${t}pp</span>` : t<0 ? `<span class="an-delta down">▼ ${Math.abs(t)}pp</span>` : `<span class="an-delta flat">→ 0pp</span>`;
+    return `<tr>
+      <td class="l"><span class="an-rank ${i===0?'r1':''}">${i+1}</span></td>
+      <td class="l name">${esc(p.name)}</td>
+      <td>${p.recs}</td><td>${p.projects.size}</td><td>${p.days.size}</td>
+      <td>${p.total.toLocaleString()}</td><td>${p.done.toLocaleString()}</td>
+      <td>${p.pct}% <span class="an-pill pill-${p.grade==='N/A'?'B':p.grade}">${p.grade}</span></td>
+      <td>${p.backlog?`<span style="color:var(--warn)">${p.backlog.toLocaleString()}</span>`:'0'}</td>
+      <td>${p.avgDay.toLocaleString()}</td>
+      <td class="l">${trendCell}</td>
+    </tr>`;
+  }).join('');
+  const scoreCard = `<div class="an-card"><div class="an-card-head">People scorecards <span class="sub">completion · grade · backlog · avg/day · last-day trend</span></div>
+    <div class="an-scroll"><table class="an-table"><thead><tr>
+      <th class="l">#</th><th class="l">Person</th><th>Recs</th><th>Projects</th><th>Days</th><th>Total</th><th>Done</th><th>Completion</th><th>Backlog</th><th>Avg/day</th><th class="l">Trend</th>
+    </tr></thead><tbody>${rows}</tbody></table></div></div>`;
+
+  /* workload balance — done per person vs team average */
+  const maxDone = Math.max(1, ...people.map(p=>p.done));
+  const balRows = people.slice().sort((a,b)=>b.done-a.done).map(p=>{
+    const overload = p.done >= avgDonePerPerson*1.5, under = p.done <= avgDonePerPerson*0.5;
+    const flag = overload ? `<span class="an-delta down" title="well above average">overloaded</span>` : under ? `<span class="an-delta flat" title="well below average">light</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-family:var(--ibm-mono);font-size:11.5px">
+      <span style="min-width:110px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name)}</span>
+      <span class="mini-bar" style="flex:1;height:10px"><span style="width:${Math.round(p.done/maxDone*100)}%;background:${compColor(p.pct)}"></span></span>
+      <span style="min-width:54px;text-align:right;color:var(--text2)">${p.done.toLocaleString()}</span>
+      <span style="min-width:74px;text-align:right">${flag}</span>
+    </div>`;
+  }).join('');
+  const balCard = `<div class="an-card"><div class="an-card-head">Workload balance <span class="sub">data done per person · avg ${Math.round(avgDonePerPerson).toLocaleString()}</span></div>${balRows}</div>`;
+
+  host.innerHTML = metrics + scoreCard + balCard;
+}
+
+/* ════ Excel export — rebuilds the ALOKASI workbook layout ════ */
+function sanitizeSheet(n){ return n.replace(/[\\\/?*\[\]:]/g,' ').slice(0,31).trim(); }
+async function exportXLSX(){
+  const list = applyFilters(records);
+  if (!list.length){ showToast('Nothing to export.', true); return; }
+  let XLSX; try { XLSX = await loadXLSX(); } catch(e){ showToast(e.message, true); return; }
+  const wb = XLSX.utils.book_new();
+  const { dates, projects } = pivotAxes(list);
+  const dts = dates.slice().reverse(); /* ascending */
+  /* QUANTITY DATA (sum total) */
+  const qcell={}; list.forEach(r=>{ const k=r.date+'|'+r.project; qcell[k]=(qcell[k]||0)+num(r.total); });
+  const qaoa=[['DATE',...projects]]; dts.forEach(d=>qaoa.push([d,...projects.map(p=>qcell[d+'|'+p]||'')]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(qaoa), 'QUANTITY DATA');
+  /* Alokasi Personal (staff) */
+  const pcell={}; list.forEach(r=>{ const k=r.date+'|'+r.project; (pcell[k]=pcell[k]||new Set()); staffArr(r).forEach(t=>pcell[k].add(t)); });
+  const paoa=[['DATE',...projects]]; dts.forEach(d=>paoa.push([d,...projects.map(p=>{ const s=pcell[d+'|'+p]; return s?[...s].join(', '):''; })]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(paoa), 'Alokasi Personal');
+  /* per-project RINCIAN detail sheets */
+  const byProj={}; list.forEach(r=>{ (byProj[r.project||'—']=byProj[r.project||'—']||[]).push(r); });
+  const used=new Set();
+  Object.keys(byProj).sort().forEach(p=>{
+    const rows=[['DATE','EKSPEDITUR','Nama Staff','Jumlah Seluruh Data','Jumlah yang dikerjakan','Status']];
+    byProj[p].slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(r=>rows.push([r.date||'', r.ekspeditur||'', staffArr(r).join(', '), num(r.total), num(r.done), effStatus(r)]));
+    let name = sanitizeSheet('RINCIAN '+p) || 'RINCIAN'; let base=name, k=2; while(used.has(name)){ name = sanitizeSheet(base.slice(0,28)+' '+k); k++; } used.add(name);
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), name);
+  });
+  XLSX.writeFile(wb, `ALOKASI PROJECT ${isoToday()}.xlsx`);
+  showToast('Exported Excel workbook.');
+}
+
+/* ════ Printable PDF briefing (opens a clean print window) ════ */
+function printBriefing(){
+  const list = applyFilters(records);
+  if (!list.length){ showToast('Nothing to print.', true); return; }
+  const datesAll = list.map(r=>r.date).filter(Boolean).sort();
+  const f = getFilters();
+  const from = f.from || datesAll[0] || '', to = f.to || datesAll[datesAll.length-1] || '';
+  const totalData=list.reduce((a,r)=>a+num(r.total),0), doneData=list.reduce((a,r)=>a+num(r.done),0);
+  const pct = totalData?Math.round(doneData/totalData*100):0;
+  const open = list.filter(r=>effStatus(r)==='Proses');
+  const backlog = open.reduce((a,r)=>a+Math.max(0,num(r.total)-num(r.done)),0);
+  /* project rollup */
+  const proj={}; list.forEach(r=>{ const p=r.project||'—'; const o=proj[p]=proj[p]||{total:0,done:0}; o.total+=num(r.total); o.done+=num(r.done); });
+  const projRows = Object.entries(proj).map(([p,o])=>({p,...o,pct:o.total?Math.round(o.done/o.total*100):0})).sort((a,b)=>b.total-a.total)
+    .map(o=>`<tr><td>${esc(o.p)}</td><td class="r">${o.total.toLocaleString()}</td><td class="r">${o.done.toLocaleString()}</td><td class="r">${o.pct}%</td></tr>`).join('');
+  /* people rollup */
+  const people = peopleRollup(list).sort((a,b)=>b.pct-a.pct||b.done-a.done)
+    .map(p=>`<tr><td>${esc(p.name)}</td><td class="r">${p.recs}</td><td class="r">${p.total.toLocaleString()}</td><td class="r">${p.done.toLocaleString()}</td><td class="r">${p.pct}%</td><td class="r">${p.backlog.toLocaleString()}</td></tr>`).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Project Allocation Briefing</title>
+    <style>
+      body{font-family:'Segoe UI',Arial,sans-serif;color:#0a1628;margin:32px;font-size:13px}
+      h1{font-size:20px;margin:0 0 2px} .meta{color:#667;font-size:12px;margin-bottom:18px}
+      .kpis{display:flex;gap:24px;margin:0 0 22px;flex-wrap:wrap}
+      .kpi{border:1px solid #d6dde8;border-radius:8px;padding:10px 16px;min-width:120px}
+      .kpi .l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#889}
+      .kpi .v{font-size:22px;font-weight:700}
+      h2{font-size:14px;margin:22px 0 8px;border-bottom:2px solid #0055b4;padding-bottom:4px}
+      table{width:100%;border-collapse:collapse;font-size:12px} th,td{padding:6px 8px;border-bottom:1px solid #e3e8f0;text-align:left}
+      th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667} td.r,th.r{text-align:right}
+      .foot{margin-top:28px;color:#99a;font-size:10px}
+      @media print{body{margin:12mm}}
+    </style></head><body>
+    <h1>Siemens GP · Project Allocation Briefing</h1>
+    <div class="meta">${from?esc(fmtDate(from)):'—'} → ${to?esc(fmtDate(to)):'—'} · ${list.length} records · generated ${esc(fmtDate(isoToday()))}</div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">Total data</div><div class="v">${totalData.toLocaleString()}</div></div>
+      <div class="kpi"><div class="l">Done</div><div class="v">${doneData.toLocaleString()}</div></div>
+      <div class="kpi"><div class="l">Completion</div><div class="v">${pct}%</div></div>
+      <div class="kpi"><div class="l">Open records</div><div class="v">${open.length}</div></div>
+      <div class="kpi"><div class="l">Backlog</div><div class="v">${backlog.toLocaleString()}</div></div>
+    </div>
+    <h2>By project</h2>
+    <table><thead><tr><th>Project</th><th class="r">Total</th><th class="r">Done</th><th class="r">Completion</th></tr></thead><tbody>${projRows}</tbody></table>
+    <h2>By person</h2>
+    <table><thead><tr><th>Person</th><th class="r">Recs</th><th class="r">Total</th><th class="r">Done</th><th class="r">Completion</th><th class="r">Backlog</th></tr></thead><tbody>${people}</tbody></table>
+    <div class="foot">codingkuh.my.id · Siemens GP · Project Allocation — print to PDF (Ctrl/Cmd+P → Save as PDF)</div>
+    </body></html>`;
+  const w = window.open('', '_blank');
+  if (!w){ showToast('Allow pop-ups to print the briefing.', true); return; }
+  w.document.write(html); w.document.close(); w.focus();
+  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 350);
+}
+
+/* ── Form ── */
+function scrollToForm(){ document.getElementById('add-box').scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>document.getElementById('f-project').focus(),250); }
+function autoStatus(){
+  const total=num(document.getElementById('f-total').value), done=num(document.getElementById('f-done').value);
+  const hint=document.getElementById('f-comp-hint');
+  if (total>0){ hint.textContent = `${done} / ${total} = ${Math.round(done/total*100)}%`; document.getElementById('f-status').value = done>=total ? 'Selesai':'Proses'; }
+  else hint.textContent='—';
+}
+function resetForm(){
+  editId=null;
+  document.getElementById('form-heading').textContent='Add daily record';
+  document.getElementById('form-left-note').textContent='';
+  document.getElementById('f-date').value = isoToday();
+  ['f-project','f-eksp','f-staff'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-total').value=''; document.getElementById('f-done').value='';
+  document.getElementById('f-status').value='Selesai';
+  autoStatus();
+}
+async function saveRecord(){
+  if (saving) return;
+  if (!currentUser){ showToast('Sign in first.', true); return; }
+  const date=document.getElementById('f-date').value;
+  const project=document.getElementById('f-project').value.trim();
+  if (!date){ showToast('Pick a date.', true); return; }
+  if (!project){ showToast('Enter a project.', true); return; }
+  const total = num(document.getElementById('f-total').value);
+  const done  = num(document.getElementById('f-done').value);
+  const vErr = validCounts(total, done); if (vErr){ showToast(vErr, true); return; }
+  const payload = {
+    date, project,
+    ekspeditur: document.getElementById('f-eksp').value.trim(),
+    staff: splitStaff(document.getElementById('f-staff').value),
+    total, done,
+    status: document.getElementById('f-status').value,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedByName: currentUser.name, updatedByUid: currentUser.uid
+  };
+  saving=true; const btn=document.getElementById('save-btn'); btn.disabled=true; btn.textContent='Saving...';
+  try{
+    payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    payload.createdByName = currentUser.name; payload.createdByUid = currentUser.uid;
+    await col.add(payload);
+    showToast('Record saved.');
+    resetForm();
+  }catch(e){ console.error(e); showToast('Save failed: '+e.message, true); }
+  finally{ saving=false; btn.disabled=false; btn.textContent='Save Record'; }
+}
+
+function openEdit(id){
+  const r=records.find(x=>x.id===id); if(!r) return; editId=id;
+  document.getElementById('e-date').value=r.date||'';
+  document.getElementById('e-project').value=r.project||'';
+  document.getElementById('e-eksp').value=r.ekspeditur||'';
+  document.getElementById('e-staff').value=staffArr(r).join(', ');
+  document.getElementById('e-total').value=num(r.total);
+  document.getElementById('e-done').value=num(r.done);
+  document.getElementById('e-status').value=effStatus(r);
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeEdit(){ document.getElementById('edit-modal').classList.remove('open'); editId=null; }
+async function saveEdit(){
+  if (!editId) return;
+  const date = document.getElementById('e-date').value;
+  const project = document.getElementById('e-project').value.trim();
+  if (!date){ showToast('Pick a date.', true); return; }
+  if (!project){ showToast('Enter a project.', true); return; }
+  const total = num(document.getElementById('e-total').value);
+  const done  = num(document.getElementById('e-done').value);
+  const vErr = validCounts(total, done); if (vErr){ showToast(vErr, true); return; }
+  const btn=document.getElementById('e-save-btn'); btn.disabled=true; btn.textContent='Saving...';
+  try{
+    await col.doc(editId).update({
+      date, project,
+      ekspeditur: document.getElementById('e-eksp').value.trim(),
+      staff: splitStaff(document.getElementById('e-staff').value),
+      total, done,
+      status: document.getElementById('e-status').value,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedByName: currentUser?currentUser.name:null, updatedByUid: currentUser?currentUser.uid:null
+    });
+    showToast('Record updated.'); closeEdit();
+  }catch(e){ showToast('Save failed: '+e.message, true); }
+  finally{ btn.disabled=false; btn.textContent='Save'; }
+}
+/* Delete with a 6s Undo window (Firestore deletes are permanent, so we re-add on undo). */
+async function softDelete(id){
+  const r = records.find(x=>x.id===id); if(!r) return;
+  const { id:_omit, ...data } = r;
+  try{ await col.doc(id).delete(); showUndo('Record deleted.', data); }
+  catch(e){ showToast('Delete failed: '+e.message, true); }
+}
+function deleteFromEdit(){ if(!editId) return; const id=editId; closeEdit(); softDelete(id); }
+function quickDelete(id){ softDelete(id); }
+function showUndo(msg, data){
+  const t=document.getElementById('toast');
+  t.innerHTML = esc(msg)+' <button id="undo-btn" style="margin-left:10px;background:transparent;border:1px solid rgba(255,255,255,0.45);color:inherit;border-radius:4px;padding:2px 9px;font-family:var(--ibm-mono);font-size:11px;cursor:pointer">Undo</button>';
+  t.className='show'; clearTimeout(t._timer);
+  document.getElementById('undo-btn').onclick = async ()=>{
+    clearTimeout(t._timer); t.className=''; t.innerHTML='';
+    try{ await col.add(data); showToast('Restored.'); }catch(e){ showToast('Undo failed: '+e.message, true); }
+  };
+  t._timer = setTimeout(()=>{ t.className=''; t.innerHTML=''; }, 6000);
+}
+
+/* ── Export (current view / filtered records) ── */
+function exportCSV(){
+  const list = applyFilters(records);
+  if (!list.length){ showToast('Nothing to export.', true); return; }
+  const cell = s => /[",\n]/.test(String(s)) ? '"'+String(s).replace(/"/g,'""')+'"' : String(s);
+  const head=['Date','Project','Ekspeditur','Staff','Total','Done','Completion%','Status'];
+  let csv=head.join(',')+'\n';
+  list.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(r=>{
+    csv += [r.date, r.project, r.ekspeditur, staffArr(r).join('; '), num(r.total), num(r.done), recComp(r), effStatus(r)].map(cell).join(',')+'\n';
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`alokasi-project-${isoToday()}.csv`; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},0);
+  showToast('Exported '+list.length+' records.');
+}
+
+/* ── Excel import ── */
+function loadXLSX(){ return new Promise((res,rej)=>{ if(window.XLSX) return res(window.XLSX); const s=document.createElement('script'); s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'; s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('Could not load the Excel library (offline?).')); document.head.appendChild(s); }); }
+function openImport(){ importRows=[]; document.getElementById('imp-list').innerHTML=''; document.getElementById('imp-note').textContent=''; document.getElementById('imp-confirm').disabled=true; document.getElementById('imp-file').value=''; document.getElementById('import-modal').classList.add('open'); }
+function closeImport(){ document.getElementById('import-modal').classList.remove('open'); }
+function excelDate(serial){ const d=new Date(Date.UTC(1899,11,30)+serial*86400000); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`; }
+function parseImportDate(v){
+  if (v==null||v==='') return '';
+  if (v instanceof Date && !isNaN(v)){ return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`; }
+  if (typeof v==='number'){ return v>10000 ? excelDate(v) : ''; }
+  const s=String(v).trim();
+  let m=s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);   /* dd/mm/yyyy */
+  if (m){ let [_,d,mo,y]=m; if(y.length===2)y='20'+y; return `${y}-${String(+mo).padStart(2,'0')}-${String(+d).padStart(2,'0')}`; }
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+  const n=Number(s); if(Number.isFinite(n)&&n>10000) return excelDate(n);
+  return '';
+}
+async function onImportFile(file){
+  if (!file) return;
+  document.getElementById('imp-note').textContent='Reading…';
+  try{
+    const XLSX = await loadXLSX();
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array', cellDates:true});
+    const recs=[]; const perSheet={};
+    wb.SheetNames.forEach(name=>{
+      const isDetail = /^RINCIAN\s+/i.test(name) || name.trim().toUpperCase()==='ATB';
+      if (!isDetail) return;
+      const project = name.trim().toUpperCase()==='ATB' ? 'ATB' : name.replace(/^RINCIAN\s+/i,'').trim();
+      const ws = wb.Sheets[name];
+      const grid = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+      let n=0;
+      for (let i=1;i<grid.length;i++){
+        const row=grid[i]; if(!row) continue;
+        const date=parseImportDate(row[0]);
+        const eksp=String(row[1]==null?'':row[1]).trim();
+        const staff=String(row[2]==null?'':row[2]).trim();
+        const total=row[3]===''||row[3]==null?null:num(row[3]);
+        const done=row[4]===''||row[4]==null?null:num(row[4]);
+        const status=normStatus(row[5]);
+        if (!date && !eksp && !staff && total==null && done==null) continue;
+        recs.push({ date, project, ekspeditur:eksp, staff:splitStaff(staff), total: total||0, done: done==null?0:done, status: status || (done!=null && total!=null && done>=total && total>0 ? 'Selesai':'Proses') });
+        n++;
+      }
+      if (n) perSheet[project]=n;
+    });
+    importRows = recs;
+    const items = Object.entries(perSheet).map(([p,n])=>`<div class="row"><b>${esc(p)}</b><span>${n} records</span></div>`).join('');
+    document.getElementById('imp-list').innerHTML = items || '<div class="row"><span>No detail sheets (RINCIAN… / ATB) found.</span></div>';
+    document.getElementById('imp-note').textContent = recs.length ? `Ready to import ${recs.length} records.` : 'Nothing to import.';
+    document.getElementById('imp-confirm').disabled = recs.length===0;
+    document.getElementById('imp-confirm').textContent = `Import ${recs.length}`;
+  }catch(e){ console.error(e); document.getElementById('imp-note').textContent='Failed: '+e.message; showToast('Import failed: '+e.message, true); }
+}
+function recSig(r){ return [r.date, r.project, String(r.ekspeditur||'').toLowerCase(), staffArr(r).map(x=>x.toLowerCase()).sort().join('|'), num(r.total), num(r.done)].join('#'); }
+async function confirmImport(){
+  if (!importRows.length) return;
+  if (!currentUser){ showToast('Sign in first.', true); return; }
+  const btn=document.getElementById('imp-confirm'); btn.disabled=true;
+  let rows=importRows.slice();
+  if (document.getElementById('imp-dedupe').checked){
+    const have=new Set(records.map(recSig));
+    const before=rows.length;
+    rows=rows.filter(r=>!have.has(recSig(r)));
+    const skipped=before-rows.length;
+    if (!rows.length){ showToast(`All ${before} rows already exist — nothing to import.`, true); btn.disabled=false; return; }
+    if (skipped) showToast(`Skipping ${skipped} duplicate${skipped===1?'':'s'}.`);
+  }
+  let written=0;
+  try{
+    for (let i=0;i<rows.length;i+=400){
+      const batch=db.batch();
+      rows.slice(i,i+400).forEach(r=>{
+        const ref=col.doc();
+        batch.set(ref, { ...r, source:'xlsx', createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), createdByName: currentUser.name, createdByUid: currentUser.uid });
+      });
+      await batch.commit(); written += Math.min(400, rows.length-i);
+      btn.textContent = `Importing ${written}/${rows.length}…`;
+    }
+    showToast(`Imported ${written} records.`);
+    closeImport();
+  }catch(e){ console.error(e); showToast('Import failed: '+e.message, true); btn.disabled=false; }
+}
+
+/* ── Per-user auth — shared Grimoire SSO (wmf_user_profiles / ht_session) ── */
+function clearSessionLS(){ GrimoireAuth.clearSession(); }
+function toggleAuthVis(id,btn){ const i=document.getElementById(id); if(i.type==='password'){ i.type='text'; btn.textContent='🙈'; } else { i.type='password'; btn.textContent='👁'; } }
+function switchAuthTab(tab){ const login=tab==='login'; document.getElementById('auth-tab-login').classList.toggle('active',login); document.getElementById('auth-tab-register').classList.toggle('active',!login); document.getElementById('auth-login-panel').style.display=login?'':'none'; document.getElementById('auth-register-panel').style.display=login?'none':''; document.getElementById('auth-subtitle').textContent=login?'Sign in to continue':'Create your account'; ['login-error','register-error'].forEach(id=>document.getElementById(id).textContent=''); }
+function setAuthBtn(id,loading,idle){ const b=document.getElementById(id); b.disabled=loading; b.textContent=loading?'Please wait...':idle; }
+function shakeAuth(id){ const el=document.getElementById(id); el.classList.add('shake'); setTimeout(()=>el.classList.remove('shake'),400); }
+async function doLogin(){
+  const name=document.getElementById('login-name').value.trim(), pass=document.getElementById('login-pass').value, err=document.getElementById('login-error'); err.textContent='';
+  if(!name||!pass){ err.textContent='Enter your name and password.'; return; }
+  setAuthBtn('login-btn',true,'Sign In');
+  try{
+    const r=await GrimoireAuth.login(name,pass);
+    if(!r.ok){ err.textContent=r.message; shakeAuth(r.reason==='badpass'?'login-pass':'login-name'); if(r.reason==='badpass')document.getElementById('login-pass').value=''; return; }
+    currentUser=r.user; grantAccess();
+  }finally{ setAuthBtn('login-btn',false,'Sign In'); }
+}
+async function doRegister(){
+  const name=document.getElementById('reg-name').value.trim(), pass=document.getElementById('reg-pass').value, pass2=document.getElementById('reg-pass2').value, err=document.getElementById('register-error'); err.textContent='';
+  if(!name){ err.textContent='Enter your name.'; shakeAuth('reg-name'); return; }
+  if(pass.length<6){ err.textContent='Password must be at least 6 characters.'; shakeAuth('reg-pass'); return; }
+  if(pass!==pass2){ err.textContent='Passwords do not match.'; shakeAuth('reg-pass2'); return; }
+  setAuthBtn('register-btn',true,'Create Account');
+  try{
+    const r=await GrimoireAuth.register(name,pass);
+    if(!r.ok){ err.textContent=r.message; shakeAuth('reg-name'); return; }
+    currentUser=r.user; grantAccess();
+  }finally{ setAuthBtn('register-btn',false,'Create Account'); }
+}
+function doSignOut(){ if(!confirm('Sign out?')) return; GrimoireAuth.signOut(); currentUser=null; showAuthGate(); showToast('Signed out.'); }
+function updateUserChip(){ if(!currentUser) return; const initials=(currentUser.name||'?').trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase()||'?'; document.getElementById('user-chip-avatar').textContent=initials; document.getElementById('user-chip-name').textContent=currentUser.name; }
+function grantAccess(){ document.getElementById('auth-gate').classList.remove('active'); updateUserChip(); startListener(); }
+function showAuthGate(){ document.getElementById('auth-gate').classList.add('active'); switchAuthTab('login'); ['login-name','login-pass','reg-name','reg-pass','reg-pass2'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; }); setTimeout(()=>document.getElementById('login-name').focus(),100); }
+async function checkAuth(){
+  const user=await GrimoireAuth.restore();
+  if(user){ currentUser=user; grantAccess(); return; }
+  showAuthGate();
+}
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeEdit(); closeImport(); } });
+
+/* ── Init ── */
+initTheme();
+resetForm();
+/* Deep-link: task-reviewer redirect lands on the People view. */
+if (location.hash === '#people') setView('people');
+checkAuth();
+if (window.Grimoire && window.Grimoire.Offline) window.Grimoire.Offline.register();
+</script>
+</body>
+</html>

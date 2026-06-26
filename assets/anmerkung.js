@@ -27,8 +27,8 @@
     [{x:W*.15,y:H*-.08,rx:W*.55,ry:H*.35,c:[52,211,153],a:.022},{x:W*.8,y:H*-.1,rx:W*.45,ry:H*.3,c:[91,156,246],a:.02},{x:W*.5,y:H*1.05,rx:W*.55,ry:H*.35,c:[212,175,100],a:.014}].forEach(a=>{
       const p=a.a+.007*Math.sin(t*1.3+a.x*.004);const g=cx.createRadialGradient(a.x,a.y,0,a.x,a.y,Math.hypot(a.rx,a.ry)*.62);g.addColorStop(0,`rgba(${a.c},${p})`);g.addColorStop(.5,`rgba(${a.c},${p*.25})`);g.addColorStop(1,'transparent');cx.save();cx.translate(a.x,a.y);cx.scale(a.rx/a.ry,1);cx.translate(-a.x,-a.y);cx.fillStyle=g;cx.beginPath();cx.arc(a.x,a.y,a.ry,0,Math.PI*2);cx.fill();cx.restore();
     });
-    for(let i=0;i<pts.length;i++){const p=pts[i];for(let j=i+1;j<pts.length;j++){const q=pts[j];const d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){cx.strokeStyle=`rgba(${p.c},${(1-d/120)*.045})`;cx.lineWidth=.4;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(q.x,q.y);cx.stroke()}}const md=Math.hypot(p.x-mouse.x,p.y-mouse.y);if(md<160){cx.strokeStyle=`rgba(${p.c},${(1-md/160)*.22})`;cx.lineWidth=.6;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(mouse.x,mouse.y);cx.stroke()}}
-    pts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.da*dt;if(p.a<.04||p.a>.48)p.da*=-1;if(p.x<-15)p.x=W+15;if(p.x>W+15)p.x=-15;if(p.y<-15)p.y=H+15;if(p.y>H+15)p.y=-15;const rdx=p.x-mouse.x,rdy=p.y-mouse.y,rd=Math.sqrt(rdx*rdx+rdy*rdy);if(rd<100&&rd>0){const f=(1-rd/100)*.4;p.vx+=(rdx/rd)*f*.035;p.vy+=(rdy/rd)*f*.035}const sp=Math.hypot(p.vx,p.vy);if(sp>.45){p.vx*=.45/sp;p.vy*=.45/sp}const bx=.5*Math.sin(t*1.1+p.ph),by=.5*Math.cos(t*.88+p.ph*1.3);cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a})`;cx.fill()});
+    for(let i=0;i<pts.length;i++){const p=pts[i];for(let j=i+1;j<pts.length;j++){const q=pts[j];const dx=p.x-q.x,dy=p.y-q.y;if(Math.abs(dx)<120&&Math.abs(dy)<120){const dSq=dx*dx+dy*dy;if(dSq<14400){const d=Math.sqrt(dSq);cx.strokeStyle=`rgba(${p.c},${(1-d/120)*.045})`;cx.lineWidth=.4;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(q.x,q.y);cx.stroke()}}}const mdx=p.x-mouse.x,mdy=p.y-mouse.y;if(Math.abs(mdx)<160&&Math.abs(mdy)<160){const mdSq=mdx*mdx+mdy*mdy;if(mdSq<25600){const md=Math.sqrt(mdSq);cx.strokeStyle=`rgba(${p.c},${(1-md/160)*.22})`;cx.lineWidth=.6;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(mouse.x,mouse.y);cx.stroke()}}}
+    pts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.da*dt;if(p.a<.04||p.a>.48)p.da*=-1;if(p.x<-15)p.x=W+15;if(p.x>W+15)p.x=-15;if(p.y<-15)p.y=H+15;if(p.y>H+15)p.y=-15;const rdx=p.x-mouse.x,rdy=p.y-mouse.y;if(Math.abs(rdx)<100&&Math.abs(rdy)<100){const rdSq=rdx*rdx+rdy*rdy;if(rdSq<10000&&rdSq>0){const rd=Math.sqrt(rdSq);const f=(1-rd/100)*.4;p.vx+=(rdx/rd)*f*.035;p.vy+=(rdy/rd)*f*.035}}const spSq=p.vx*p.vx+p.vy*p.vy;if(spSq>.2025){const sp=Math.sqrt(spSq);p.vx*=.45/sp;p.vy*=.45/sp}const bx=.5*Math.sin(t*1.1+p.ph),by=.5*Math.cos(t*.88+p.ph*1.3);cx.beginPath();cx.arc(p.x+bx,p.y+by,p.r,0,Math.PI*2);cx.fillStyle=`rgba(${p.c},${p.a})`;cx.fill()});
     scheduleFrame();
   }
   window.addEventListener('resize',init);window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});window.addEventListener('mouseleave',()=>{mouse.x=-9999;mouse.y=-9999});
@@ -36,40 +36,6 @@
   if (window.Grimoire && window.Grimoire.reducedMotion) { frame(0); }
   else { scheduleFrame(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) scheduleFrame(); }); }
 })();
-
-/* ══════════════════════════════════════════════════════════
-   SUBSCRIPTION GATE
-══════════════════════════════════════════════════════════ */
-let subPendingAction = null;
-
-function openRunGate() {
-  subPendingAction = 'run';
-  openSubModal();
-}
-function openSubModal() {
-  document.getElementById('sub-default').style.display = '';
-  document.getElementById('sub-thankyou').classList.remove('show');
-  document.getElementById('sub-overlay').classList.add('open');
-}
-function closeSubModal() {
-  document.getElementById('sub-overlay').classList.remove('open');
-  subPendingAction = null;
-}
-function handleSubBgClick(e) {
-  if (e.target === document.getElementById('sub-overlay')) closeSubModal();
-}
-function handleBuySubscription() {
-  document.getElementById('sub-default').style.display = 'none';
-  document.getElementById('sub-thankyou').classList.add('show');
-}
-function proceedAfterPurchase() {
-  document.getElementById('sub-overlay').classList.remove('open');
-  const action = subPendingAction;
-  subPendingAction = null;
-  if (action === 'run') runProcess();
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSubModal(); });
 
 /* ══════════════════════════════════════════════════════════
    STATE
@@ -260,10 +226,14 @@ const PHRASES={
   // Wackler
   fremdnummer:                'Fremdnummer Doppelt berechnet',
   nlFix:                      'NL-FIX',
+  terminzustellung:           'Terminzustellung',
   b2cLine:                    'hätte B2C-Line abrechnen dürfen',
   buendelMuessen:             'hätte gebündelt werden müssen',
   avisTelefonisch:            'hätte Avisgebühr telefonisch abrechnen dürfen',
+  hebebuehne:                 'hätte Hebebühne abrechnen dürfen',
   differenzAvisOk:            'Differenz avis, ok?',
+  differenzEnergiezuschlag:   'Differenz Energiezuschlag',
+  dieselzuschlag:             'Dieselzuschlag ok?',
   returnOk:                   'Return, ok?',
   frachtDiff:                 'Frachtdifferenz',
 };
@@ -294,9 +264,26 @@ const P=PHRASES;
    consumer can spot truly unmapped emissions and add a key.
 ══════════════════════════════════════════════════════════ */
 const PHRASES_REVERSE=(function(){
-  const m=new Map();
-  for(const[k,v]of Object.entries(PHRASES))m.set(String(v).toLowerCase().trim(),k);
-  return m;
+  const exact=new Map(),folded=new Map();
+  for(const[k,v]of Object.entries(PHRASES)){
+    /* A catalog value can be COMPOUND — two phrases pre-joined with the
+       ' // ' separator (elevatedRestricted). A diff consumer never sees that
+       joined form: every cell goes through splitTriggers first, so index each
+       half under the same key, or both halves come back as ?:-unmapped.
+       Lookup is two-layered: exact raw string first (lets the case-variant
+       Kontierung?/kontierung? entries resolve to their own keys), then the
+       normPhrase fold (case/whitespace/NFC/dash-noise tolerant — the SAME
+       fold classifyDiff compares with, so two phrases the diff scores equal
+       can never resolve to different keys). First declaration wins on folded
+       ties, matching catalog order. */
+    for(const part of splitTriggers(String(v))){
+      const raw=part.trim();
+      if(raw&&!exact.has(raw))exact.set(raw,k);
+      const f=normPhrase(part);
+      if(f&&!folded.has(f))folded.set(f,k);
+    }
+  }
+  return{exact,folded};
 })();
 
 /* Direct literals emitted by processors but NOT in PHRASES (yet).
@@ -308,7 +295,8 @@ const PHRASE_LITERALS={
   'pauschalfracht, ok?'           :'lit_pauschalfrachtOk',          /* Wackler |SNK|>=tariff flat-rate */
   'terminzustellung, ok?'         :'lit_terminzustellungOk',        /* Wackler |SNK|≈180 */
   'zone korrekt?'                 :'lit_zoneKorrekt',               /* Wackler NL-FIX zone corollary */
-  'differenztreibstof'            :'lit_differenzTreibstofWackler', /* Wackler additive TZ */
+  'differenztreibstof'            :'lit_differenzTreibstofWackler', /* Wackler legacy fuel wording — superseded by PHRASES.differenzEnergiezuschlag; kept so older slot-A exports that used "DifferenzTreibstof" still resolve to a stable key */
+  'differenzenergiezuschlag'      :'differenzEnergiezuschlag',      /* Wackler legacy no-space fuel wording — the canonical phrase is now "Differenz Energiezuschlag" (with a space, matching the auditor's ground truth); this maps the older glued spelling onto the SAME catalog key so historic exports stay mappable */
 };
 
 /* Phrases that interpolate runtime values. The key identifies the
@@ -328,9 +316,19 @@ const PHRASE_TEMPLATES=[
    `?:<phrase>` sentinel via phraseKeysFor. */
 function phraseToKey(phrase){
   if(phrase==null)return null;
-  const norm=String(phrase).toLowerCase().trim();
+  const raw=String(phrase).trim();
+  if(!raw)return null;
+  if(PHRASES_REVERSE.exact.has(raw))return PHRASES_REVERSE.exact.get(raw);
+  /* The folded lookup shares normPhrase with classifyDiff / computePhraseDiff,
+     so any two phrases the diff treats as EQUAL resolve to the SAME key — a
+     whitespace-/NFD-/dash-noisy truth cell must not split one failure pattern
+     into two in buildTrainingSummary, nor export a ?: sentinel for a phrase
+     that is in the catalog. (Previously this only lowercased+trimmed, so
+     "Differenz  treibstoff" compared equal in the diff but came out
+     ?:-unmapped here.) */
+  const norm=normPhrase(raw);
   if(!norm)return null;
-  if(PHRASES_REVERSE.has(norm))return PHRASES_REVERSE.get(norm);
+  if(PHRASES_REVERSE.folded.has(norm))return PHRASES_REVERSE.folded.get(norm);
   if(Object.prototype.hasOwnProperty.call(PHRASE_LITERALS,norm))return PHRASE_LITERALS[norm];
   for(const t of PHRASE_TEMPLATES)if(t.regex.test(norm))return t.key;
   return null;
@@ -408,6 +406,8 @@ function fwKeydown(e){
     urls: window.Grimoire.Offline.defaultUrls().concat([
       './assets/anmerkung.css',
       './assets/anmerkung.js',
+      './assets/wackler-ratecard.js',
+      './assets/wackler-national-ratecard.js',
       './assets/anmerkung-changelog.json'
     ]),
     idleLabel:    'Download for offline',
@@ -669,40 +669,43 @@ function processDachser(ws,r,cols){
     else if(sachkonto.toUpperCase()==='X')res=join(res,'VORHOLUNG');
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
     else if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
-    /* Negative FR with no special flags (no ZW, no Vorholung, no Sonderfahrt, single
-       shipment). The audit splits these along magnitude: a small-magnitude negative
-       FR (just above the rounding threshold) is a Frachtzu/abschlag — a freight
-       surcharge/credit adjustment (training row 357: FR=-0.09 → expected
-       "Differenz Frachtzu/ abschlag" alongside other triggers). A large-magnitude
-       FR is a real freight discrepancy that falls through to the weight-deviation
-       wording (training row 241: FR=-26.24, no VKG → expected
-       "Differenz aufgrund von abweichendem Gewicht", NOT Frachtzu/abschlag). The
-       1.0-EUR cutoff sits comfortably between the two observed cases (0.09 vs 26.24). */
-    else if(frVal<0&&Math.abs(frVal)<1.0)res=join(res,'Differenz Frachtzu/ abschlag');
     else {
-      /* Weight-tier guard, consistent with the K+N and Wackler engines. When
-         `Volumen kg` and `Volumen kg DL` are both populated AND fall into
-         DIFFERENT Dachser tariff buckets (DACHSER_BP), the FR delta is a real
-         weight miscalc → plural "Differenz aufgrund abweichender Gewichte".
-         When they stay in the same bucket (or one of the volumes is missing /
-         non-positive — e.g. dummy-zero rows where the auditor doesn't attribute
-         the gap to weight at all), the row falls through to the legacy singular
-         "Differenz aufgrund von abweichendem Gewicht". Tier table is
-         `DACHSER_BP` above — sourced from the data/Dachser-weight.xlsx rate
-         card.
+      /* No special flag (ZW / Vorholung / Sonderfahrt / bundling). Classify the
+         FR delta against the audit (`Volumen kg`) vs DL (`Volumen kg DL`) weights.
+         Tier table is `DACHSER_BP` above — sourced from the data/Dachser-weight.xlsx
+         rate card; mirrors the K+N / Wackler weight-tier guards.
 
-         Trade-off note: training row 346 (VKG=54, VKG_DL=40) crosses the 50/100
-         bracket boundary so this rule labels it plural; the auditor labeled it
-         singular. Choosing tier-crossing here mirrors the K+N / Wackler
-         behavior and keeps the three forwarder engines consistent — the row 346
-         label is treated as a one-off auditor variation. */
+           both weights known & EQUAL  → emit NOTHING. There is no weight
+               discrepancy, so the residual FR gap is rounding noise (sub-EUR) or
+               a manual adjustment the auditor annotates by hand — attaching a
+               weight/Frachtzu phrase over-fires. (bundle 2026-06-11 rows 276/277/
+               278: FR=-0.09, VKG==VKG_DL → truth carries no Frachtzu/abschlag;
+               row 269: FR=134.91, VKG==VKG_DL → truth carries no abweich.Gewicht.)
+           both weights known & DIFFER → genuine weight miscalc. Crossing a
+               DACHSER_BP bucket → plural "abweichender Gewichte"; staying in the
+               same bucket → singular "abweichendem Gewicht".
+           weight basis missing (one or both volumes 0/blank) → the gap can't be
+               attributed to weight:
+                 · negative FR → freight surcharge/discount "Differenz Frachtzu/
+                   abschlag". Covers both the sub-EUR legacy case (FR=-0.09, no
+                   weights) and large credits where only the DL weight was recorded
+                   (bundle row 163: FR=-31.65, VKG=0, VKG_DL=2313).
+                 · positive FR → legacy singular weight wording (no usable tier
+                   basis — preserves the FR=+26.24 / no-VKG behaviour). */
       const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
       const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
-      const tiersKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
-      const crossTier=tiersKnown&&(dachserGetTier(v1)!==dachserGetTier(v2));
-      res=join(res, crossTier
-        ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
-        : 'Differenz aufgrund von abweichendem Gewicht'); /* singular — same tier or weights unknown */
+      const bothKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
+      if(bothKnown&&v1===v2){
+        /* weights identical — no discrepancy, emit nothing */
+      }else if(bothKnown){
+        res=join(res, (dachserGetTier(v1)!==dachserGetTier(v2))
+          ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
+          : 'Differenz aufgrund von abweichendem Gewicht'); /* singular — same tier, real diff */
+      }else if(frVal<0&&(Math.abs(frVal)<1.0||v2>0)){
+        res=join(res,'Differenz Frachtzu/ abschlag');
+      }else{
+        res=join(res,'Differenz aufgrund von abweichendem Gewicht'); /* legacy fallback — weights unknown */
+      }
     }
   }
   if(cols.snk_dl>=0&&cellNum(ws,r,cols.snk_dl)===14&&cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))
@@ -796,18 +799,262 @@ function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.
    into a different bucket (→ "Differenz aufgrund abweichender Gewichte", real classification
    discrepancy). The matched tier is also reported in the output so the auditor sees which
    rate-card row Wackler billed against. */
-const WACKLER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
+/* Tier breakpoints are sourced from the standalone rate-card asset (assets/wackler-ratecard.js,
+   generated from data/Wackler International Rate.xlsx) so the tier table and the EUR rate lookup
+   share a single source of truth and the big rate matrix never has to live inside this engine.
+   The literal below is an identical fallback for when the rate-card asset isn't loaded (e.g. a
+   bare unit-test context), keeping the engine self-sufficient and deterministic. */
+const WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
+/* National (domestic German) rate card — standalone asset assets/wackler-national-ratecard.js,
+   generated from data/Wackler National Rate.xlsx. It carries the EUR rates for the German zones
+   DE1‑DE9 that the international card leaves blank, and is what enriches the "Wackler rechnet"
+   note with the actual domestic rate Wackler billed against. Optional: null when not loaded
+   (e.g. a bare unit-test context), in which case the note degrades to the plain tier wording. */
+const WACKLER_NAT_RC=(typeof WACKLER_NATIONAL_RATECARD!=='undefined'&&WACKLER_NATIONAL_RATECARD)?WACKLER_NATIONAL_RATECARD:null;
+const WACKLER_BP=(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.length)
+  ? WACKLER_RC.tiers.slice()
+  : [50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
 function wacklerGetTier(kg){if(kg<=0)return 0;for(const b of WACKLER_BP)if(kg<=b)return b;return 999999;}
 function wacklerGetTierIdx(kg){if(kg<=0)return -1;for(let i=0;i<WACKLER_BP.length;i++)if(kg<=WACKLER_BP[i])return i;return WACKLER_BP.length-1;}
+/* Largest tier breakpoint at or below kg — the rate-card bracket a weight has already CLEARED
+   (the floor, as opposed to wacklerGetTier's ceiling). Used by the volumetric "Wackler rechnet"
+   note (rule 5) to report the lower tier Wackler billed against when VKG/VKG_DL are two
+   measurements of one consignment. Returns 0 when kg is below the first step. */
+function wacklerFloorTier(kg){let last=0;for(const b of WACKLER_BP){if(b<=kg)last=b;else break;}return last;}
 /* Format a tier breakpoint for display: regular numbers as-is, the open ceiling as ">10000". */
 function wacklerTierLabel(tierKg){return tierKg>=999999?'>10000':String(tierKg);}
+/* Origin/destination country token for a row, normalised to its leading two letters
+   ('DE','FR','PL','TR'…); '' when the column is absent or blank. */
+function wacklerLand(ws,r,col){
+  if(col==null||col<0)return'';
+  return String(cellStr(ws,r,col)||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,2);
+}
+/* Classify a row from Abg.-Land / Empf.-Land into the lane that decides which rate card + zone its
+   freight is published under. A German forwarder's DOMESTIC tariff applies when both ends are in
+   Germany (the origin may be blank — a German destination dominates); a foreign end means an
+   INTERNATIONAL lane, keyed by the NON-German country (the destination on an export, the origin on
+   an import) and that side's PLZ. Returns {scope:'national'|'international',country,postal} or null
+   when neither Land is known. Knowing the country here is what makes the numeric PLZ safe to read:
+   a 'DE' classification guarantees a German postal code, so the old foreign-PLZ false positives
+   (HR "10450"→DE8, SE "556 52"→DE5) can no longer happen — those rows now classify as
+   international and never resolve a German zone. */
+function wacklerLane(ws,r,cols){
+  if(!cols)return null;
+  const abg=wacklerLand(ws,r,cols.abg_land),empf=wacklerLand(ws,r,cols.empf_land);
+  const plzOf=c=>(c!=null&&c>=0)?cellStr(ws,r,c):'';
+  if(empf==='DE'&&(abg===''||abg==='DE'))return{scope:'national',country:'DE',postal:plzOf(cols.empf_plz)};
+  if(empf&&empf!=='DE')return{scope:'international',country:empf,postal:plzOf(cols.empf_plz)};
+  if(empf==='DE'&&abg&&abg!=='DE')return{scope:'international',country:abg,postal:plzOf(cols.abg_plz)};
+  return null;
+}
+/* Resolve a row's destination to a German national rate zone (DE1..DE9), or null when it is not a
+   resolvable domestic shipment. An explicit DEn token (Tarifzone) wins; otherwise we trust the
+   Abg.-Land/Empf.-Land classification — only a genuinely domestic (DE→DE) lane resolves a zone
+   from the numeric Empf.-PLZ. Because the country is known to be DE, that postal code is
+   unambiguously German: this is the country-guarded successor to the bare-PLZ fallback that was
+   removed for mis-tagging foreign rows (AI-bundle 2026-06-05 rows 68959963 HR & d97ce4ec SE),
+   which now classify as international and never reach here. Used to enrich the note AND, via the
+   rate probe, to re-tier "Wackler rechnet". */
+function wacklerResolveNatZone(ws,r,cols){
+  if(!WACKLER_NAT_RC||!cols)return null;
+  if(cols.zone!=null&&cols.zone>=0){
+    const z=WACKLER_NAT_RC.normalizeZone(cellStr(ws,r,cols.zone));
+    if(z)return z;
+  }
+  const lane=wacklerLane(ws,r,cols);
+  if(lane&&lane.scope==='national')return WACKLER_NAT_RC.resolveZone('DE',lane.postal);
+  return null;
+}
+/* Compose the "Wackler rechnet Frachtrate für <tier>kg ab" note — plain tier wording ONLY.
+   The auditor strips ANY rate-card EUR decoration from this phrase: the international-card
+   suffix was rejected first, and AI-bundle 2026-06-12 shows the national "(DEn: … €)" suffix
+   is rejected too (every ground-truth "Wackler rechnet" row — 9ab8df23 / 52fa91df / e3d56631 /
+   941d66f0 / 169d8baa — carries the bare tier wording, and the suffix alone labeled otherwise
+   tier-correct rows `wrong`). The national rate card stays loaded for the billed-tier
+   re-tiering probe below — it just never decorates the phrase anymore. */
+function wacklerRechnetNote(tierKg){
+  return 'Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
+}
+/* ── International rate-card zone + actually-billed tier ──────────────────────────────────────
+   The "Wackler rechnet Frachtrate für <tier>kg ab" note must name the tier Wackler ACTUALLY
+   billed against — which is not always the tier the chargeable weight falls in. When an FR
+   credit is exactly the rate-card gap to the NEXT tier up, Wackler billed that neighbouring
+   tier's rate, and the auditor reports that tier. Translating the FR delta back into a tier
+   needs the destination's published rate, so we resolve the international rate-card zone and
+   read WACKLER_RATECARD. */
+/* EUR tolerance when matching an implied billed-rate back to the IMMEDIATE neighbour tier (±1
+   step): loose enough to cover cent rounding in the published cells, since the common re-tiering is
+   a single neighbouring step. */
+const WACKLER_RATE_TOL=0.5;
+/* Tighter tolerance for a NON-ADJACENT (multi-step) re-tiering. A far tier re-tiers only when the
+   implied billed rate hits its published rate near-exactly — a genuine billing signature, since FR
+   is the EXACT published gap between the weight tier and the billed tier (AI-bundle 2026-06-16 row
+   ec0469d0: GB2, VKG 2496 → 2600 weight tier, FR=+310.3 = rate(2600,GB2)−rate(2000,GB2) EXACTLY →
+   2000, three steps down). A loose far match stays coincidence and is rejected — this keeps the
+   2026-06-12 ghost guard intact (941d66f0: DE4 200 tier, FR=+12.99, implied 29.05 vs
+   rate(50,DE4)=29.50 is 0.45 off: far AND inexact → the note stays 200). */
+const WACKLER_RETIER_EXACT_TOL=0.1;
+/* Resolve a row to an INTERNATIONAL rate-card zone (AT1/CH2/FR3/TR/…). Primary path is the
+   Abg.-Land/Empf.-Land classification: an international lane resolves via its non-German country
+   code + that side's PLZ (Empf.-PLZ on an export, Abg.-PLZ on an import), which is exactly
+   WACKLER_RATECARD.resolveZone's contract — a single-zone country resolves from the code alone,
+   a multi-zone one (CH/FR/ES/PL…) is disambiguated by the postal code. Falls back to an explicit
+   Tarifzone token when no Land columns are present. Returns null when the rate card isn't loaded
+   or nothing resolves; a bare numeric PLZ is never trusted without a country (a foreign code can
+   masquerade as a German prefix). */
+function wacklerResolveIntlZone(ws,r,cols){
+  if(!WACKLER_RC||typeof WACKLER_RC.resolveZone!=='function'||!cols)return null;
+  const lane=wacklerLane(ws,r,cols);
+  if(lane&&lane.scope==='international'){
+    const z=WACKLER_RC.resolveZone(lane.country,lane.postal);
+    if(z)return z;
+  }
+  if(cols.zone!=null&&cols.zone>=0){
+    const raw=cellStr(ws,r,cols.zone);
+    if(raw){
+      const plz=(cols.empf_plz!=null&&cols.empf_plz>=0)?cellStr(ws,r,cols.empf_plz):'';
+      const z=WACKLER_RC.resolveZone(raw,plz);
+      if(z)return z;
+    }
+  }
+  /* GB fallback when neither a Land column nor a Tarifzone token is present. A UK postcode is
+     alphanumeric and ALWAYS leads with letters (RG30, EH12, UB8…), so it can never be mistaken for
+     a German PLZ (five digits) — the foreign-numeric-masquerade risk the country guard exists for
+     simply does not apply to a letter-led code. So when the Empf.-PLZ leads with a letter and the
+     rate card's GB area division recognises it, resolve the GB zone straight from the postcode.
+     Numeric codes (German PLZ, NL "8242 PN") and other-country alphanumerics that aren't GB areas
+     (Irish "D24") fall through to null, exactly as before. AI-bundle 2026-06-16 row ec0469d0:
+     Empf.-PLZ "RG30 1BD", no Land column → GB2, which is what lets the billed-tier re-tiering run. */
+  if(typeof WACKLER_RC.resolveZoneByPostal==='function'&&cols.empf_plz!=null&&cols.empf_plz>=0){
+    const plz=String(cellStr(ws,r,cols.empf_plz)||'').trim();
+    if(/^[A-Za-z]/.test(plz)){
+      const z=WACKLER_RC.resolveZoneByPostal('GB',plz);
+      if(z)return z;
+    }
+  }
+  return null;
+}
+/* Bind a row to the rate card + zone its freight is published under, returned as a
+   {rateAt(kg),tiers} probe so the billed-tier math is card-agnostic. The NATIONAL DE card is
+   tried first (DE1‑DE9 — the international card leaves those cells blank) using the SAME
+   explicit-zone-token guard wacklerResolveNatZone documents (a bare numeric PLZ is never trusted,
+   so a foreign code can't masquerade as a German zone); then the international card
+   (AT/CH/FR/TR/…). This is what lets the "Wackler rechnet" billed-tier re-tiering work for
+   DOMESTIC German shipments too — not just international ones. Returns null when neither resolves
+   or the rate cards aren't loaded. */
+function wacklerRateProbe(ws,r,cols){
+  const natZone=wacklerResolveNatZone(ws,r,cols);
+  if(natZone&&WACKLER_NAT_RC)return{rateAt:kg=>WACKLER_NAT_RC.rate(kg,natZone),tiers:WACKLER_NAT_RC.tiers||WACKLER_BP};
+  const intlZone=wacklerResolveIntlZone(ws,r,cols);
+  if(intlZone&&WACKLER_RC)return{rateAt:kg=>WACKLER_RC.rate(kg,intlZone),tiers:WACKLER_BP};
+  return null;
+}
+/* ── The tier named in the "Wackler rechnet Frachtrate für <kg> ab" note ──────────────────────
+   That <kg> is the rate-card tier the freight is rated at PER THE TARIFF — the tier whose published
+   rate equals FR Kosten lt. Tarif (the tariff freight). It is NOT necessarily the tier Wackler
+   billed: on an over/undercharge the bill (FR Kosten DL) sits at a different tier, and the gap
+   (FR Differenz = Kosten DL − Kosten lt. Tarif) is the audit finding itself. Two signals name the
+   tier, in order of directness (see wacklerRechnetTier):
+
+   1. DIRECT (preferred) — the tariff freight (FR Kosten lt. Tarif, or FR Kosten DL − FR Differenz)
+      looked up STRAIGHT against the rate card via wacklerRateToTier: the tier whose published rate
+      equals it. No VKG assumption — it reads which kg the tariff used. Validated on the real
+      workbooks: ec0469d0 GB2 Tarif 691.10 = rate(2000) → 2000; f6cb2770 NL Tarif 389.73 =
+      rate(2000) → 2000; 0bf186a7 IT1 Tarif 605.59 = rate(2600) → 2600.
+   2. FALLBACK (FR Kosten columns absent) — Wackler bills the rate at the VKG weight tier, so infer
+      the tariff rate as rate(weightTier) − frVal and walk the tiers toward it (overcharge frVal>0 →
+      tariff below → down: ec0469d0 GB2 2600→2000 three steps; undercharge frVal<0 → tariff above →
+      up: e40698ee TR 7000→7500). The immediate neighbour matches within the loose cent-rounding
+      tolerance (WACKLER_RATE_TOL); a FARTHER tier must match near-exactly (WACKLER_RETIER_EXACT_TOL),
+      so a coincidental far hit is rejected — keeping the 2026-06-12 guard intact (941d66f0: DE4 200
+      tier, +12.99, implied 29.05 is 0.45 off rate(50,DE4)=29.50 → stays 200) and 52fa91df (DE9
+      1500, −80.79 implies 281.18, no fit → stays 1500).
+   Both degrade to weightTierKg when the rate card / destination zone is unavailable. */
+/* The tariff freight (EUR) — FR Kosten lt. Tarif, the cost the rate card prescribes — used to name
+   the "Wackler rechnet" tier directly. Prefers the explicit Kosten lt. Tarif cell; otherwise
+   derives it from FR Kosten DL − FR Differenz (Differenz = Kosten DL − Kosten lt. Tarif, so
+   Kosten lt. Tarif = Kosten DL − Differenz). Returns 0 when neither freight column is on the sheet,
+   so callers fall back to the rate(weightTier) − FR-delta inference. */
+function wacklerTariffFreight(ws,r,cols,frVal){
+  if(cols&&cols.fr_tar!=null&&cols.fr_tar>=0){
+    const tar=cellNum(ws,r,cols.fr_tar);
+    if(tar>0)return tar;
+  }
+  if(cols&&cols.fr_dl!=null&&cols.fr_dl>=0){
+    const dl=cellNum(ws,r,cols.fr_dl);
+    if(dl>0)return dl-frVal;
+  }
+  return 0;
+}
+/* Reverse rate-card lookup: the tier breakpoint whose published rate equals a known freight cost
+   (here the tariff freight). Returns the nearest-matching tier kg within WACKLER_RATE_TOL; ties and
+   flat rate regions resolve to the SMALLEST such tier (the most conservative reading). 0 when no
+   published rate fits, so the weight tier stands. */
+function wacklerRateToTier(probe,freight){
+  if(!probe||!(freight>0))return 0;
+  let best=0,bestErr=Infinity;
+  for(const t of probe.tiers){
+    const rt=probe.rateAt(t);
+    if(!(rt>0))continue;
+    const err=Math.abs(rt-freight);
+    if(err<bestErr){bestErr=err;best=t;}
+  }
+  return bestErr<=WACKLER_RATE_TOL?best:0;
+}
+function wacklerRechnetTier(weightTierKg,frVal,ws,r,cols){
+  if(!(Math.abs(frVal)>T_WACKLER))return weightTierKg;
+  const probe=wacklerRateProbe(ws,r,cols);
+  if(!probe)return weightTierKg;
+  /* Preferred: the tariff freight (FR Kosten lt. Tarif, or FR Kosten DL − FR Differenz) looked up
+     STRAIGHT against the rate card. Names the tier from the published rate itself rather than from
+     VKG + the FR delta, so it is right even when a volumetric VKG rounds into a different weight tier
+     than the tariff rated — "compare to the rate card which kg was used". Only overrides when a
+     published tier rate matches the tariff freight within tolerance. */
+  const tariffFreight=wacklerTariffFreight(ws,r,cols,frVal);
+  if(tariffFreight>0){
+    const t=wacklerRateToTier(probe,tariffFreight);
+    if(t>0)return t;
+  }
+  /* Fallback (FR Kosten columns absent): Wackler bills the rate at the weight tier, so the tariff
+     rate is rate(weightTier) − frVal. Walk the tiers toward it — overcharge (frVal>0) → down,
+     undercharge (frVal<0) → up — matching the immediate neighbour within the loose cent-rounding
+     tolerance, a farther tier only on a near-exact match. */
+  const weightRate=probe.rateAt(weightTierKg);
+  if(!(weightRate>0))return weightTierKg;
+  const idx=probe.tiers.indexOf(weightTierKg);
+  if(idx<0)return weightTierKg;
+  const tariffRate=weightRate-frVal;
+  const step=frVal<0?1:-1;
+  for(let j=idx+step,dist=1;j>=0&&j<probe.tiers.length;j+=step,dist++){
+    const tier=probe.tiers[j],tierRate=probe.rateAt(tier);
+    if(!(tierRate>0))continue;
+    const tol=dist===1?WACKLER_RATE_TOL:WACKLER_RETIER_EXACT_TOL;
+    if(Math.abs(tierRate-tariffRate)<=tol)return tier;
+  }
+  return weightTierKg;
+}
 /* Wackler SNK surcharge code book — sign-insensitive (reversibles like NL-FIX show as ±value).
    Tolerance handles real-world rounding (NL-FIX seen as 38.00 / 38.08). */
 const WACKLER_SNK_CODES=[
   {abs:38,   tol:0.5,  label:'NL-FIX'},
   {abs:11.5, tol:0.1,  label:'hätte B2C-Line abrechnen dürfen'},
   {abs:22,   tol:0.5,  label:'2. Zustellung ok?'},
-  {abs:180,  tol:0.5,  label:'Terminzustellung, ok?'}
+  {abs:25,   tol:0.5,  label:'Terminzustellung'},
+  /* SNK≈170 is the same Terminzustellung surcharge billed at the higher (multi-stop / heavier)
+     parcel rate — the auditor classifies it as plain "Terminzustellung", not as the ", ok?"
+     query variant. Sits alongside an AVIS code on these rows (AI-bundle 2026-06-05 rows
+     27104fc7 / 7d69dfc0: AVIS=7.5, SNK=170, FR domestic destinations → "Avis, ok? // Terminzustellung"). */
+  {abs:170,  tol:0.5,  label:'Terminzustellung'},
+  {abs:180,  tol:0.5,  label:'Terminzustellung, ok?'},
+  /* SNK≈43 with no freight tariff backing is the auditor's "2.Zustellung ok?" finding — a second
+     delivery attempt billed as a bare surcharge on an un-tariffed row (AI-bundle rows b7111e68 /
+     fa68e7cb: TARIF blank, SNK=43, German destination). Note the spelling has no space after the
+     dot ("2.Zustellung"), distinct from the freight-side "2. Zustellung ok?" code above. */
+  {abs:43,   tol:0.5,  label:'2.Zustellung ok?'},
+  /* SNK≈289 with no freight tariff backing is an "Umverfügung" (re-disposition / re-routing fee)
+     billed as a bare surcharge on an un-tariffed row (AI-bundle row 0f1d3d96: TARIF blank,
+     SNK=289, AT destination Pasching). */
+  {abs:289,  tol:0.5,  label:'Umverfügung'}
 ];
 function wacklerSnkCode(snk){const a=Math.abs(snk);for(const c of WACKLER_SNK_CODES)if(Math.abs(a-c.abs)<=c.tol)return c.label;return null;}
 /* Wackler AVIS surcharge codes — sign-insensitive (a credit AVIS=-6.5 is the same code as 6.5).
@@ -819,8 +1066,7 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
 /* Resolve the audit wording for a Wackler AVIS code. The 8.7 credit (negative) is the
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
-function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO')};}
-const WACKLER_PROTECTED=['Fremdnummer doppelt berechnet','hätte gebündelt werden müssen','hätte Avisgebühr telefonisch abrechnen dürfen','Return, ok?','Differenz aufgrund abweichender Gewichte','Wackler rechnet'];
+function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),fr_tar:fc('FR','Kosten lt. Tarif'),fr_dl:fc('FR','Kosten DL'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),abg_land:fcAny('Abg.-Land','Absenderland','Versandland'),empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),abg_plz:fcAny('Abg.-PLZ','Absender-PLZ','Versand-PLZ'),zone:fcAny('Tarifzone','Tarifgebiet','Zone')};}
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
 const WACKLER_SNK_NOISE=5.0;
@@ -830,10 +1076,48 @@ const WACKLER_SNK_NOISE=5.0;
    training case (TARIF=54.95, SNK=80, ratio 1.45×) without overfiring on standard SNK Differenz
    residuals which run far below the booked tariff value. */
 const WACKLER_PAUSCHAL_RATIO=1.0;
+/* Terminzustellung surcharge billed at the ≈80 € rate. Same timed-delivery finding as the SNK
+   25 / 170 codes, just a different published amount — but it is WEIGHT-GATED, because an 80 € SNK
+   tells two different stories depending on whether the row carries a real chargeable weight:
+     • weighed shipment (VKG & VKG_DL > 0) → a timed-delivery surcharge riding on real freight →
+       "Terminzustellung" (AI-bundle 2026-06-16 rows a54fc7ee: 75 kg, tarif 54.91, IT and
+       278691a9: 152 kg, tarif 81.7, IT — both expect the plain Terminzustellung code).
+     • no weight, |SNK| ≥ tariff → a flat-rate lump charge → "Pauschalfracht, ok?" (the existing
+       54.95 / 80 no-weight row). So 80 is deliberately NOT in WACKLER_SNK_CODES (which is
+       weight-blind) — keeping it out leaves the no-weight Pauschalfracht reading intact. */
+const WACKLER_SNK_TERMIN80_ABS=80;
+const WACKLER_SNK_TERMIN80_TOL=0.5;
 /* TZ additive threshold: TZ ≥ 2.0 fires DifferenzTreibstof alongside other classifications.
    Below 2.0 the TZ delta is fuel-on-toll math noise (typical FR/MT-percentage spill). */
 const WACKLER_TZ_ADDITIVE=2.0;
-function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(const p of WACKLER_PROTECTED){if(existing.toLowerCase().includes(p.toLowerCase()))return null;}
+/* Hebebühne (liftgate) credit signature: a large negative SNK ≈ -150 that matches no recognised
+   SNK code is the auditor's "should have been allowed to bill the Hebebühne (liftgate) surcharge"
+   finding — a specific classification, not a generic SNK gap. The window is deliberately narrow
+   so it never poaches real SNK Differenz residuals. Resolves AI-bundle training rows 1 & 42. */
+const WACKLER_HEBEBUEHNE_ABS=150;
+const WACKLER_HEBEBUEHNE_TOL=2.0;
+/* Bundling weight ceiling (kg): a same-tier multi-reference row with (near-)identical weights
+   reads as "hätte gebündelt werden müssen" only while the combined weight is light enough that
+   the consignments could realistically have ridden one booking. Heavy rows are already at
+   full-load tier rates — the auditor records the rate-card note there, not a bundling finding.
+   Bracketed by AI-bundle 2026-06-12: cf56daaa (231 kg, 2 refs, DE5 → bundling) vs 9ab8df23
+   (2556 kg, 4 refs, DE6 → "Wackler rechnet für 2600kg"), consistent with the 2026-06-05 heavy
+   rows 08a0d985 (8565 kg) / d97ce4ec (9760 kg) / f04300d4 (~6850 kg) that all read as
+   "Wackler rechnet". */
+const WACKLER_BUENDEL_MAX_KG=1000;
+/* Cross-tier near-weight band: on a multi-reference row whose two weights land in DIFFERENT
+   rate tiers, a bundling finding needs the weights to roughly agree (within 20% of the larger)
+   AND a positive FR delta (system tariff above the bill — the system rated the references
+   separately while Wackler billed them as one). AI-bundle 2026-06-12 row 447856d4 (5465,44 vs
+   6158 kg, 12.7% apart, FR=+65.6 → bundling) vs 2026-06-05 row 3ac4d429 (8019 vs 11141 kg, 39%
+   apart, FR=+1110.86 → abweichende Gewichte) and the FR-credit rows f8ce2bae / 3aaa6bed /
+   9de2427a (all → abweichende Gewichte). */
+const WACKLER_XTIER_NEAR_BAND=0.2;
+/* The engine is fully deterministic: every Anmerkung is recomputed from the
+   row's inputs, regardless of any value already sitting in the target cell.
+   There is no "preserve existing / protected phrase" short-circuit — the rules
+   below are the single source of truth for a row's output. */
+function processWackler(ws,r,cols){
   /* STAT gate: on stat≠10 only the Kontierung check runs; all other rules are skipped. */
   const statOk=(cols.stat<0)||(cellNum(ws,r,cols.stat)===10);
   if(!statOk){
@@ -880,12 +1164,40 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
   const frHasVal=Math.abs(frVal)>T_WACKLER;
   const mtHasVal=Math.abs(mtVal)>T_WACKLER;
   const snkHasVal=Math.abs(snkVal)>T_WACKLER;
+  /* Real chargeable weight on the row — the gate that tells an 80 € SNK Terminzustellung surcharge
+     (weighed shipment) apart from a flat-rate Pauschalfracht (no weight). */
+  const vkgNum=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
+  const vkgDlNum=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
+  const hasWeights=vkgNum>0&&vkgDlNum>0;
+  const terminAt80=hasWeights&&Math.abs(Math.abs(snkVal)-WACKLER_SNK_TERMIN80_ABS)<=WACKLER_SNK_TERMIN80_TOL;
+  /* 1b. Lagergeld — warehouse storage fee. Signature: the booked tariff is BLANK (no freight
+     tariff backing) and the ONLY cost signal on the row is an SNK charge (no FR/MT/TZ delta and
+     no AVIS surcharge code) that does NOT match a recognised SNK code. A bare, code-less SNK gap
+     on an un-tariffed row is a storage fee, not an SNK surcharge discrepancy, so it must NOT fall
+     through to the generic "SNK Differenz" fallback (rule 10) — which is what these rows used to
+     hit. The empty-tariff + FR/MT/TZ-signal case is already claimed by Fremdnummer above; this is
+     the SNK-only remainder. The `!wacklerSnkCode(snkVal)` guard hands recognised bare-SNK codes
+     (2.Zustellung ok? @43, Umverfügung @289, …) to the SNK code book in rule 4 instead — AI-bundle
+     rows 0f1d3d96 (SNK=289 → Umverfügung) and b7111e68 / fa68e7cb (SNK=43 → 2.Zustellung ok?) were
+     previously swallowed here as Lagergeld. Terminal: the expected wording is "Lagergeld" alone, so
+     we early-return (still appending Kontierung? when KOST/SACH are blank/X, mirroring Fremdnummer). */
+  if(cols.tarif>=0&&cellStr(ws,r,cols.tarif)===''&&snkHasVal&&!frHasVal&&!mtHasVal
+     &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE&&!isWacklerAvisCode(avisVal)
+     &&!wacklerSnkCode(snkVal)){
+    let out=P.lagergeld;
+    if(cols.kostenstelle>=0&&cols.sachkonto>=0){
+      const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
+      if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
+    }
+    return out;
+  }
   /* 2. Pauschalfracht — |SNK| ≥ tariff, no FR/MT/TZ, SNK not a known code, no AVIS surcharge.
      The booked tariff was a placeholder and the actual was a flat-rate freight charge. */
   if(cols.tarif>=0&&cols.snk_diff>=0&&snkHasVal&&!frHasVal&&!mtHasVal
      &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE
      &&tarifNum>0&&Math.abs(snkVal)>=WACKLER_PAUSCHAL_RATIO*tarifNum
      &&!wacklerSnkCode(snkVal)
+     &&!terminAt80
      &&!isWacklerAvisCode(avisVal)){
     return'Pauschalfracht, ok?';
   }
@@ -893,28 +1205,110 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
   /* 3. AVIS surcharge codes (sign-insensitive: 7.5 / 8.5 / 6.5 / 8.7 ± credit).
      AVIS=-8.7 is the "should have billed telephonically" signature → specific wording. */
   if(cols.avis_diff>=0){const al=wacklerAvisLabel(avisVal);if(al)res=join(res,al);}
-  /* 4. SNK surcharge codes (NL-FIX / B2C / 2. Zustellung / Terminzustellung). */
+  /* 4. SNK surcharge codes (NL-FIX / B2C / 2. Zustellung / Terminzustellung / Umverfügung). */
   let snkCodeLabel=null;
-  if(cols.snk_diff>=0){snkCodeLabel=wacklerSnkCode(snkVal);if(snkCodeLabel)res=join(res,snkCodeLabel);}
-  /* 5. Gewichte / Bundling cascade. Decision tree:
-     ─ same-tier + FR delta              → "Wackler rechnet Frachtrate für <tier>kg ab"
-     ─ cross-tier + multi-ref + far apart → "hätte gebündelt werden müssen"   (separate shipments)
-     ─ cross-tier + multi-ref + adjacent  → "Differenz aufgrund abweichender Gewichte" (rounding crossed one boundary)
-     ─ cross-tier + single-ref            → "Differenz aufgrund abweichender Gewichte"
-     ─ no weight diff + multi-ref + FR    → "hätte gebündelt werden müssen"   (legacy bundling)
-     The "far apart" cutoff is tier-index distance > 1: non-adjacent BP buckets imply genuinely
-     different shipments, not rounding spillover. */
-  let gewichteTriggered=false;
-  if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0){
+  if(cols.snk_diff>=0){
+    snkCodeLabel=wacklerSnkCode(snkVal);
+    /* SNK≈80 on a weighed shipment is the Terminzustellung surcharge (weight-gated above so a
+       no-weight 80 € SNK stays a flat-rate Pauschalfracht). */
+    if(!snkCodeLabel&&terminAt80)snkCodeLabel='Terminzustellung';
+    if(snkCodeLabel)res=join(res,snkCodeLabel);
+  }
+  /* 5. Gewichte / Bundling cascade. Decision tree (both weights real + FR delta):
+     ─ same tier + multi-ref + UNEQUAL weights   → "hätte gebündelt werden müssen"
+                                                   (separate consignments that should have ridden
+                                                    one booking)
+     ─ same tier + multi-ref + equal weights:
+         · combined ≤ WACKLER_BUENDEL_MAX_KG     → "hätte gebündelt werden müssen"
+                                                   (light refs billed as one tier rate — bundle
+                                                    2026-06-12 row cf56daaa: 231 kg, 2 refs)
+         · heavier                               → "Wackler rechnet Frachtrate für <tier>kg ab"
+                                                   (full-load tier billing — rows 9ab8df23 /
+                                                    08a0d985 / d97ce4ec; MT and TZ stay additive)
+     ─ same tier + multi-ref + volumetric weight → "Wackler rechnet" at the FLOOR tier
+                                                   (one consignment measured twice)
+     ─ same tier, single ref                     → "Wackler rechnet Frachtrate für <tier>kg ab"
+                                                   (terminal: Wackler billed the tier rate, so the
+                                                    FR/TZ deltas are systemic rounding for that
+                                                    tier — see wacklerRechnetFired suppression below)
+     ─ different rate tier:
+         · multi-ref + positive FR + weights
+           within WACKLER_XTIER_NEAR_BAND        → "hätte gebündelt werden müssen"
+                                                   (bundle 2026-06-12 row 447856d4: 5465,44 vs
+                                                    6158 kg, FR=+65.6)
+         · otherwise                             → "Differenz aufgrund abweichender Gewichte"
+                                                   (a genuine weight discrepancy — far-apart gaps
+                                                    and every FR-credit row: 2026-06-05 rows
+                                                    f8ce2bae / 3aaa6bed / 9de2427a / 3ac4d429)
+     ─ no real weights + multi-ref + FR          → "hätte gebündelt werden müssen"   (legacy bundling)
+     MT and TZ stay additive on every branch except same-tier "Wackler rechnet" (see rules 9 & 11). */
+  let gewichteTriggered=false,wacklerRechnetFired=false,hebebuehneFired=false;
+  if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0&&frHasVal){
     const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl);
-    const vkgStr=cellStr(ws,r,cols.vkg),vkgDlStr=cellStr(ws,r,cols.vkg_dl);
-    const volDiff=(vkgStr!==vkgDlStr)&&(vkg!==vkgDl);
-    if(volDiff&&frHasVal){
+    /* Both VKG and VKG_DL must carry a real weight. When they do, an FR delta is always a
+       Wackler weight/rate-card finding — never a bare Frachtdifferenz. Blank weights
+       (vkg/vkgDl === 0) fall through to the Frachtdifferenz fallback in rule 8. */
+    if(vkg>0&&vkgDl>0){
       const tA=wacklerGetTier(vkg),tB=wacklerGetTier(vkgDl);
+      /* The weight tier is the rate-card ceiling of the chargeable weight, but the "Wackler rechnet"
+         note reports the tier the freight is rated at PER THE TARIFF (FR Kosten lt. Tarif), which an
+         over/undercharge puts at a different bracket. Degrades to tA when the rate card / destination
+         zone can't resolve it (AI-bundle row e40698ee: 7000 weight tier → tariff tier 7500). */
+      const reportTier=wacklerRechnetTier(tA,frVal,ws,r,cols);
       if(tA===tB){
-        res=join(res,'Wackler rechnet Frachtrate für '+wacklerTierLabel(tA)+'kg ab');
-      } else if(isBundle&&Math.abs(wacklerGetTierIdx(vkg)-wacklerGetTierIdx(vkgDl))>1){
-        res=join(res,'hätte gebündelt werden müssen');
+        /* A multi-reference row whose two weights share a rate tier is normally separate
+           consignments that should have ridden one booking → "hätte gebündelt werden müssen".
+           EXCEPTION — a non-integer (volumetric) chargeable weight, e.g. VKG 3058,5 vs VKG_DL
+           3059: VKG/VKG_DL are then two measurements of ONE consignment, not distinct parcels.
+           Wackler simply billed that tier's rate and the FR gap is systemic rounding, so the row
+           reads as "Wackler rechnet Frachtrate für <tier>kg ab". The tier reported is the FLOOR
+           bracket the weight has cleared (3058,5 → 3000), reflecting the lower rate Wackler billed
+           against — AI-bundle training row 22 (3 refs, same tier, VKG 3058,5 / VKG_DL 3059). */
+        const volumetric=(vkg%1!==0)||(vkgDl%1!==0);
+        /* "Near-equal" weights: the two measurements differ by at most 1% of the larger (with a
+           1 kg floor). At or below that, the references rode one shared tier rate — the gap is
+           rounding, not two distinct parcels — so the row reads as "Wackler rechnet". Above it,
+           a multi-ref row is separate consignments that should have been bundled. The 1% band
+           keeps the genuine-bundle case intact (e.g. 120 vs 130 kg, ~8% apart → bundling) while
+           catching AI-bundle row f04300d4 (6840 vs 6862 kg, 0.3% apart → one 7000 kg tier rate). */
+        const sameWeight=Math.abs(vkg-vkgDl)<=Math.max(1,0.01*Math.max(vkg,vkgDl));
+        if(isBundle&&!volumetric&&!sameWeight){
+          /* Same-tier but materially UNEQUAL whole-kg weights on a multi-reference row: the auditor
+             reads it as separate consignments that should have been combined onto a single booking,
+             not a single-shipment rate-card rounding. Do NOT set wacklerRechnetFired, so MT and TZ
+             stay additive below. */
+          res=join(res,P.buendelMuessen);
+        } else if(isBundle&&!volumetric&&sameWeight){
+          /* Same-tier multi-reference row whose two weights are (near-)IDENTICAL whole-kg values:
+             the COMBINED WEIGHT decides. Light rows (≤ WACKLER_BUENDEL_MAX_KG) are consignments
+             that should have ridden one booking → "hätte gebündelt werden müssen" (AI-bundle
+             2026-06-12 row cf56daaa: 231 kg / 2 refs / DE5). Heavier rows were billed against one
+             shared tier rate → "Wackler rechnet Frachtrate für <tier>kg ab" (2026-06-12 row
+             9ab8df23: 2556 kg / 4 refs / DE6, and 2026-06-05 rows 08a0d985: 9000kg / 3 refs /
+             AVIS=1, d97ce4ec: 10000kg / 2 refs / AVIS=6.5, f04300d4: ~6850kg / 2 refs). On
+             NEITHER path is wacklerRechnetFired set — unlike the single-shipment rounding case
+             below — because the auditor still itemises the Maut and (positive-FR) Energiezuschlag
+             deltas on these rows. Tier = reportTier: the weight's ceiling bracket, or the tier the
+             tariff freight (FR Kosten lt. Tarif) maps to when it differs (2026-06-16 row f6cb2770:
+             NL 2125 kg, Tarif 389.73 = rate(2000) vs the 2200 weight tier → the 2000 tier). */
+          if(Math.max(vkg,vkgDl)<=WACKLER_BUENDEL_MAX_KG){
+            res=join(res,P.buendelMuessen);
+          } else {
+            res=join(res,wacklerRechnetNote(reportTier));
+          }
+        } else if(isBundle&&volumetric){
+          res=join(res,wacklerRechnetNote(wacklerFloorTier(Math.max(vkg,vkgDl))));
+          wacklerRechnetFired=true;
+        } else {
+          res=join(res,wacklerRechnetNote(reportTier));
+          wacklerRechnetFired=true;
+        }
+      } else if(isBundle&&frVal>0&&Math.abs(vkg-vkgDl)<=WACKLER_XTIER_NEAR_BAND*Math.max(vkg,vkgDl)){
+        /* Cross-tier multi-reference row whose weights still roughly agree, with a POSITIVE FR
+           delta (system tariff above the bill): the system rated the references separately while
+           Wackler billed them as one — the booking should have been bundled. Far-apart weights or
+           an FR credit stay a genuine weight discrepancy below. */
+        res=join(res,P.buendelMuessen);
       } else {
         res=join(res,'Differenz aufgrund abweichender Gewichte');
       }
@@ -933,17 +1327,51 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
   if(cols.fr>=0&&!gewichteTriggered&&hasErr(frVal,T_WACKLER)&&!res.toLowerCase().includes('gebündelt')&&!res.toLowerCase().includes('return')){
     res=join(res,'Frachtdifferenz');
   }
-  /* 9. Mautdifferenz — toll delta is additive. */
+  /* 9. Mautdifferenz — the toll delta is always additive whenever it clears the threshold.
+     (Previously suppressed on same-tier "Wackler rechnet" rows; the AI bundle shows the auditor
+     keeps Mautdifferenz on those rows too — it appears on 23 of the 46 ground-truth rows,
+     including every "Wackler rechnet …" case that carries an MT delta.) */
   if(cols.maut>=0&&hasErr(mtVal,T_WACKLER))res=join(res,'Mautdifferenz');
   /* 10. SNK Differenz fallback — unknown SNK code, above noise floor, not bundled. */
   if(cols.snk_diff>=0&&!snkCodeLabel&&snkHasVal
      &&Math.abs(snkVal)>=WACKLER_SNK_NOISE
      &&!res.toLowerCase().includes('gebündelt')){
-    res=join(res,'SNK Differenz');
+    /* A large negative SNK ≈ -150 with no recognised SNK code is the Hebebühne (liftgate)
+       credit signature: Wackler should have been allowed to bill the liftgate surcharge.
+       Specific wording instead of the generic SNK Differenz. Resolves training rows 1 & 42. */
+    if(snkVal<0&&Math.abs(Math.abs(snkVal)-WACKLER_HEBEBUEHNE_ABS)<=WACKLER_HEBEBUEHNE_TOL){
+      res=join(res,P.hebebuehne);
+      hebebuehneFired=true;
+    }
+    else
+      res=join(res,'SNK Differenz');
   }
-  /* 11. DifferenzTreibstof — TZ is additive above the 2.0 threshold; below it the delta
-     is fuel-on-(freight+toll) math spillover, not a separate classification. */
-  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE)res=join(res,'DifferenzTreibstof');
+  /* 11. DifferenzEnergiezuschlag — the fuel/energy surcharge delta is additive above the 2.0
+     threshold. It is emitted whenever it clears that threshold, EXCEPT:
+       (a) same-tier "Wackler rechnet" rows, where the fuel gap is part of that tier's
+           systemic rounding (wacklerRechnetFired), and
+       (b) rows that carry a negative FR Differenz (an FR *credit*: frHasVal && frVal < 0).
+           When Wackler over-billed the freight, the TZ gap is just the fuel percentage riding
+           on that freight credit — it is absorbed into the freight/weight finding and the
+           auditor does NOT list it as its own classification. (AI bundle 2026-06-05 rows
+           f8ce2bae / 3aaa6bed / b47976d1 / 9de2427a / 8b5ae67c / f04300d4: every one carries a
+           negative FR delta with a proportional TZ delta, and the ground truth has no fuel
+           note.) A POSITIVE FR delta is different — the auditor itemises the fuel surcharge
+           there (bundle rows 3ac4d429 / 89025060 / b8d93cb3), so only the credit case is
+           suppressed.
+     (A blanket FR&MT suppression was tried earlier and removed because the auditor keeps the
+     fuel note when FR/MT are present on undercharge rows; the credit-only gate below is the
+     correct, sign-aware refinement.)
+     Wording: "DifferenzEnergiezuschlag" is the engine's canonical fuel wording; the legacy
+     "DifferenzTreibstof" survives only as a literal so older exports still resolve (see
+     PHRASE_LITERALS). */
+  const frIsCredit=frHasVal&&frVal<0;
+  /* On a Hebebühne (liftgate) credit row the auditor QUERIES the diesel surcharge
+     ("Dieselzuschlag ok?") rather than flatly flagging a generic "Differenz Energiezuschlag" —
+     AI-bundle 2026-06-05 row ce9f73d9 (SNK≈-150 Hebebühne credit + TZ=-19.5, no FR). The fuel
+     gate itself is unchanged; only the wording switches when the Hebebühne branch fired. */
+  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!wacklerRechnetFired&&!frIsCredit)
+    res=join(res,hebebuehneFired?P.dieselzuschlag:P.differenzEnergiezuschlag);
   /* 12. NL-FIX zone corollary: when NL-FIX fires AND there's an FR delta AND KOST/SACH are blank,
      the destination zone may be miscoded — surface "Zone korrekt?" up front and drop the
      Frachtdifferenz it triggered (the FR gap is the zone miscode, not a real freight discrepancy). */
@@ -956,8 +1384,8 @@ function processWackler(ws,r,cols){const existing=cellStr(ws,r,cols.target);for(
   }
   /* 13. Kontierung? — both KOST and SACH blank/X. */
   if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}
-  /* 14. Pure TZ fallback — row had nothing but a fuel delta above the noise floor. */
-  if(res===''&&cols.tz>=0&&hasErr(tzVal,T_WACKLER))res='DifferenzTreibstof';
+  /* 14. Pure fuel fallback — row had nothing but a fuel/energy delta above the noise floor. */
+  if(res===''&&cols.tz>=0&&hasErr(tzVal,T_WACKLER))res=P.differenzEnergiezuschlag;
   return res;
 }
 
@@ -985,8 +1413,27 @@ function splitTriggers(s){if(!s)return[];return s.split(/\s*\/\/\s*/).map(x=>x.t
    cells. Folding both out means the phrase diff and the row labels reflect a
    REAL rule disagreement instead of cosmetic formatting noise — historically
    the single biggest source of false `wrong` rows in the exported training
-   data fed to an AI. */
-function normPhrase(p){return String(p==null?'':p).toLowerCase().replace(/\s+/g,' ').trim();}
+   data fed to an AI.
+   Beyond case + whitespace, three invisible-noise folds (all seen in
+   hand-edited Excel truth cells, all previously mislabeling a row `wrong`
+   although the visible text is identical):
+     • Unicode NFC — macOS-edited cells often carry umlauts decomposed (NFD:
+       "u" + combining diaeresis), which never byte-equals the engine's
+       precomposed "ü".
+     • zero-width chars — ZWSP/ZWNJ/ZWJ (U+200B–D), soft hyphen (U+00AD) and
+       a stray BOM (U+FEFF) survive copy-paste invisibly.
+     • dash variants — autocorrected en/em dashes (U+2010–U+2015, U+2212)
+       fold to the ASCII hyphen the catalog uses.
+   (NBSP needs no special case: JS \s already matches U+00A0.) */
+function normPhrase(p){
+  return String(p==null?'':p)
+    .normalize('NFC')
+    .replace(/[\u00ad\u200b-\u200d\ufeff]/g,'')
+    .replace(/[\u2010-\u2015\u2212]/g,'-')
+    .toLowerCase()
+    .replace(/\s+/g,' ')
+    .trim();
+}
 /* Order-insensitive set equality of two phrase lists under normPhrase.
    The Anmerkung column is a list of independent rule outputs, so the order
    they were emitted in does not change correctness. */
@@ -1041,7 +1488,7 @@ function buildReason(fw,ws,r,cols){
 
 /* Run rules across the workbook without mutating files. Returns in-memory results + stats. */
 function runRules(){
-  let total=0,filled=0,skipped=0,empty=0,preserved=0,unreachable=0;
+  let total=0,filled=0,skipped=0,empty=0,unreachable=0;
   const allResults={};
   const trigCounts=new Map();
   const previewRows=[];
@@ -1059,17 +1506,10 @@ function runRules(){
       const excelRow=r+1;
       const result=fn(ws,r,cols);
       if(result===null){
-        let isPreserved=false;
-        /* For Wackler, processor returns null for both stat≠10 and protected existing value.
-           Distinguish via current Stat_Freigabe. */
-        if(selectedFW==='wackler'){
-          const statOk=cols.stat<0||cellNum(ws,r,cols.stat)===10;
-          if(statOk){isPreserved=true;preserved++;}
-          else{skipped++;}
-        } else {
-          skipped++;
-        }
-        previewRows.push({sheet:name,row:excelRow,status:isPreserved?'preserved':'skipped',value:'',reason:''});
+        /* null === out of scope (Stat_Freigabe ≠ 10). No protected/preserved
+           case anymore — the engine always recomputes in-scope rows. */
+        skipped++;
+        previewRows.push({sheet:name,row:excelRow,status:'skipped',value:'',reason:''});
         continue;
       }
       rowMap.set(excelRow,result);
@@ -1082,8 +1522,8 @@ function runRules(){
     }
     allResults[name]={targetCol,rowMap,reasonMap,targetIdx:cols.target};
   }
-  /* previewRows already has status flags set inline above (filled/empty/skipped/preserved). */
-  return{total,filled,skipped,empty,preserved,unreachable,allResults,trigCounts,previewRows};
+  /* previewRows already has status flags set inline above (filled/empty/skipped). */
+  return{total,filled,skipped,empty,unreachable,allResults,trigCounts,previewRows};
 }
 
 /* ── PREVIEW (#1) ── */
@@ -1095,7 +1535,7 @@ function runPreview(){
     const rep=runRules();
     renderStats(rep);
     renderPreview(rep);
-    showLog(`Dry-run — ${rep.filled} would be filled, ${rep.skipped} skipped, ${rep.empty} empty, ${rep.preserved} preserved.`,'ok');
+    showLog(`Dry-run — ${rep.filled} would be filled, ${rep.skipped} skipped, ${rep.empty} empty.`,'ok');
   }catch(e){showLog('Preview failed: '+e.message,'err');console.error(e);}
   btn.disabled=false;btn.textContent='Preview — dry-run without writing';
 }
@@ -1120,7 +1560,6 @@ function renderStats(rep){
   document.getElementById('sFilled').textContent=rep.filled;
   document.getElementById('sSkipped').textContent=rep.skipped;
   document.getElementById('sEmpty').textContent=rep.empty;
-  document.getElementById('sPreserved').textContent=rep.preserved;
   const list=document.getElementById('trigList');
   const entries=[...rep.trigCounts.entries()].sort((a,b)=>b[1]-a[1]);
   if(!entries.length){list.innerHTML='<div class="trig-empty">No triggers fired — all clean.</div>';}
@@ -1175,7 +1614,7 @@ async function runProcess(){
     resultBlob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE',compressionOptions:{level:6}});
     setProgress(100);
     renderStats(rep);
-    showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (Stat_Freigabe ≠ 10)${rep.preserved?`, ${rep.preserved} preserved`:''}${wantReason?' · reason column written':''}.`,'ok');
+    showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (Stat_Freigabe ≠ 10)${wantReason?' · reason column written':''}.`,'ok');
     document.getElementById('btnDl').style.display='block';
   }catch(e){showLog('Ritual failed: '+e.message+'\n'+e.stack,'err');console.error(e);}
   btn.disabled=false;btn.textContent='Invoke the Ritual';
@@ -1224,6 +1663,7 @@ const TESTER_FIELDS={
   wackler:[
     ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],['target','Existing Anmerkung','str'],
     ['avis_diff','AVIS Differenz','num'],['snk_diff','SNK Differenz','num'],['fr','FR Differenz','num'],
+    ['fr_tar','FR Kosten lt.Tarif','num'],['fr_dl','FR Kosten DL','num'],
     ['maut','MT Differenz','num'],['tz','TZ Differenz','num'],
     ['referenz','ReferenzNr','str'],
     ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
@@ -1262,7 +1702,7 @@ const TESTER_PRESETS={
     {name:'Fremdnummer dup',values:{stat:10,tarif:'0'}},
   ],
   wackler:[
-    {name:'Protected existing',values:{stat:10,target:'Return, ok?'}},
+    {name:'Cross-tier weights',values:{stat:10,fr:5,vkg:120,vkg_dl:400,tarif:'100,00',kostenstelle:'1',sachkonto:'2'}},
     {name:'AVIS 7.5',values:{stat:10,avis_diff:7.5,tarif:'60,00'}},
     {name:'Riedlingen return',values:{stat:10,fr:10,empf_plz:'88499',empf_ort:'Riedlingen',tarif:'70,00'}},
     {name:'NL-FIX SNK 38',values:{stat:10,snk_diff:38,tarif:'80,00'}},
@@ -1338,7 +1778,7 @@ function buildSyntheticWs(fw,userVals){
     dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','c502_dl','c503_dl','lg_diff','av_diff'],
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
-    wackler:['target','stat','tarif','avis_diff','snk_diff','fr','maut','tz','referenz','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
+    wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
   }[fw]||[];
   for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
   return{ws,cols};
@@ -1366,7 +1806,7 @@ function runTester(){
   const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   let body;
   if(result===null){
-    body='<div class="to-null">null — row would be skipped (Stat_Freigabe ≠ 10 or protected existing value).</div>';
+    body='<div class="to-null">null — row would be skipped (Stat_Freigabe ≠ 10).</div>';
   } else if(result===''){
     body='<div class="to-empty">empty — no trigger fired, row would be filled with blank.</div>';
   } else {
@@ -1382,6 +1822,13 @@ function runTester(){
    Anmerkung column per sheet/row. Purely client-side.
 ══════════════════════════════════════════════════════════ */
 const diffState={a:null,b:null,results:null};
+
+/* Bulk Diff state — two SETS of workbooks (predicted A-set + expected
+   B-set) that get auto-paired by filename and compared pair-by-pair,
+   all rows feeding the SAME diffState.results so the chips / filters /
+   table / exports below operate on the combined, wider corpus. */
+const bulkDiffFiles={a:[],b:[]};
+let bulkDiffIdCounter=0;
 
 function onDiffDrag(e,slot,over){e.preventDefault();const el=document.getElementById('diffSlot'+slot.toUpperCase());if(el)el.classList.toggle('drag',over);}
 function onDiffDrop(e,slot){e.preventDefault();onDiffDrag(e,slot,false);const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)loadDiffFile(slot,f);}
@@ -1417,6 +1864,7 @@ function clearDiff(){
   document.getElementById('diffEmpty').style.display='none';
   /* Reset filter state + counters */
   diffFilter.label='all';diffFilter.fw='all';diffFilter.sheet='all';diffFilter.q='';
+  diffRenderLimit=DIFF_PAGE;_diffFilterSig='';
   const setCt=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   ['tcAll','tcWrong','tcMissed','tcOverfired','tcDrift','tcCorrect'].forEach(id=>setCt(id,'0'));
   ['ctDiffCsv','ctTrainCsv','ctTrainJsonl'].forEach(id=>setCt(id,''));
@@ -1424,6 +1872,8 @@ function clearDiff(){
   const fwSel=document.getElementById('diffFwFilter');if(fwSel)fwSel.innerHTML='<option value="all">all</option>';
   const shSel=document.getElementById('diffSheetFilter');if(shSel)shSel.innerHTML='<option value="all">all</option>';
   const q=document.getElementById('diffSearch');if(q)q.value='';
+  /* Also clear any bulk-diff file sets so a global Clear truly resets. */
+  if(typeof _resetBulkDiffInputs==='function')_resetBulkDiffInputs();
 }
 
 /* Locate the Anmerkung column by scanning row 3 (and row 2 as a fallback). */
@@ -1564,6 +2014,18 @@ function computePhraseDiff(beforeRaw,afterRaw){
   };
 }
 
+/* Decompose a raw Anmerkung cell into per-phrase render parts for the
+   diff table. `changedList` is the row's extra_phrases (for the A cell)
+   or missing_phrases (for the B cell); phrases whose normalised form
+   appears there are flagged `changed`, so the table can highlight ONLY
+   the phrases that actually differ instead of striking/recoloring the
+   whole cell — on multi-phrase rows the one disagreeing phrase is
+   visible at a glance without opening the detail drawer. */
+function phraseCellParts(raw,changedList){
+  const changed=new Set((changedList||[]).map(normPhrase));
+  return splitTriggers(raw||'').map(p=>({text:p,changed:changed.has(normPhrase(p))}));
+}
+
 /* Granular sub-label refines `wrong` along set-relation lines.
    - exact_match   : strings identical (incl. both empty → empty_match)
    - case_only     : differ only by case
@@ -1573,15 +2035,25 @@ function computePhraseDiff(beforeRaw,afterRaw){
    - phrase_superset: every B-phrase appears in A, A has more (engine OVER-fired)
    - phrase_overlap: both sides have unique phrases AND share at least one
    - phrase_disjoint: no shared phrases
-   - missed_full   : A empty, B non-empty (lifted from top-level label)
-   - overfired_full: A non-empty, B empty (lifted from top-level label) */
+   - missed_full   : A has no phrases, B has phrases (lifted from top-level label)
+   - overfired_full: A has phrases, B has none (lifted from top-level label) */
 function granularLabel(beforeRaw,afterRaw,pd){
   const a=(beforeRaw||'').trim(), b=(afterRaw||'').trim();
   if(a===b)return a===''?'empty_match':'exact_match';
-  if(a===''&&b!=='')return 'missed_full';
-  if(a!==''&&b==='')return 'overfired_full';
-  if(a.toLowerCase()===b.toLowerCase())return 'case_only';
-  if(a.replace(/\s+/g,'')===b.replace(/\s+/g,''))return 'whitespace';
+  /* Emptiness is PHRASE-level (splitTriggers), matching classifyDiff: a cell
+     holding only separator/whitespace garbage (' // ') has no phrases, so it
+     must land in the same empty bucket classifyDiff put it in. The raw-trim
+     check this used to do sub-labeled such a row overfired_full while the
+     top-level label said `correct` — a contradictory training signal. */
+  const nA=pd.predicted_phrases.length, nB=pd.expected_phrases.length;
+  if(nA===0&&nB===0)return 'empty_match';
+  if(nA===0)return 'missed_full';
+  if(nB===0)return 'overfired_full';
+  /* Cosmetic checks fold through NFC so a decomposed-umlaut truth cell of the
+     same visible text stays in the match family instead of falling through. */
+  const ca=a.normalize('NFC'), cb=b.normalize('NFC');
+  if(ca.toLowerCase()===cb.toLowerCase())return 'case_only';
+  if(ca.replace(/\s+/g,'')===cb.replace(/\s+/g,''))return 'whitespace';
   const m=pd.missing_phrases.length, x=pd.extra_phrases.length, c=pd.common_phrases.length;
   /* No missing AND no extra phrases ⇒ identical phrase sets that the flat
      string checks above didn't catch — i.e. emitted in a different order
@@ -1598,9 +2070,17 @@ function granularLabel(beforeRaw,afterRaw,pd){
    row_uid, so training CSVs from successive iterations can be
    joined / deduped / diffed across versions of the rule engine.
    FNV-1a 32-bit, hex-encoded — collision risk negligible at
-   workbook scale. */
-function rowUid(forwarder,sheet,row,inputs){
+   workbook scale.
+
+   `sourceTag` (optional) namespaces the hash by file pair. Single-pair
+   Diff Mode passes nothing, so its uids are unchanged (backward
+   compatible). Bulk Diff passes the pairing key so two rows that share
+   forwarder/sheet/row/inputs across DIFFERENT source files stay
+   distinct instead of being deduped into one — the whole point of
+   aggregating many pairs into one wider corpus. */
+function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
+  if(sourceTag)seedParts.push('@'+sourceTag);
   const keys=Object.keys(inputs||{}).sort();
   for(const k of keys)seedParts.push(k+'='+(inputs[k]==null?'':inputs[k]));
   const seed=seedParts.join('|');
@@ -1631,7 +2111,7 @@ const CANONICAL_INPUT_ORDER={
        'snk_diff','ac_diff','mt_diff','nx_diff','os_diff','tz_diff',
        'kostenstelle','sachkonto'],
   wackler:['stat','tarif','existing_anmerkung',
-           'avis_diff','snk_diff','fr_diff','mt_diff','tz_diff',
+           'avis_diff','snk_diff','fr_diff','fr_tarif','fr_dl','mt_diff','tz_diff',
            'referenz','vkg','vkg_dl','empf_plz','empf_ort',
            'kostenstelle','sachkonto'],
 };
@@ -1662,19 +2142,30 @@ function orderedInputKeys(rows){
   return ordered;
 }
 
-function runDiff(){
-  if(!diffState.a||!diffState.b){showLog('Diff — load both files first.','err');return;}
+/* Walk ONE (A, B) workbook pair and produce the enriched row set +
+   per-pair counters. Extracted from runDiff so that BOTH the
+   single-pair flow and the bulk many-pairs flow share one code path —
+   they only differ in how many pairs they feed through here and how the
+   results are merged (see finalizeDiff).
+
+   `source` is null for single-pair Diff Mode, or {tag,label} for bulk:
+     • tag   → namespaces row_uid so identical rows from different
+               source files stay distinct in the aggregated corpus.
+     • label → shown in the table's Sheet cell + exported as source_file
+               so every training row knows which file pair it came from. */
+function diffWorkbooks(wbA,nameA,wbB,nameB,source){
   const rows=[];
-  let added=0,removed=0,changed=0,total=0;
-  let wrong=0,missed=0,overfired=0,correct=0,drift=0;
+  let total=0,wrong=0,missed=0,overfired=0,correct=0,drift=0;
   const fwSet=new Set(),sheetSet=new Set();
-  const sheetsA=diffState.a.wb.SheetNames,sheetsB=diffState.b.wb.SheetNames;
+  const srcLabel=source?source.label:'';
+  const srcTag=source?source.tag:'';
+  const sheetsA=wbA.SheetNames,sheetsB=wbB.SheetNames;
   const allSheets=[...new Set([...sheetsA,...sheetsB])];
 
   for(const name of allSheets){
-    const wsA=diffState.a.wb.Sheets[name],wsB=diffState.b.wb.Sheets[name];
+    const wsA=wbA.Sheets[name],wsB=wbB.Sheets[name];
     if(!wsA||!wsB){
-      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw:'-',before:wsA?'(present)':'(missing in A)',after:wsB?'(present)':'(missing in B)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false});
+      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw:'-',before:wsA?'(present)':'(missing in A)',after:wsB?'(present)':'(missing in B)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false,source:srcLabel});
       sheetSet.add(name);
       continue;
     }
@@ -1685,7 +2176,7 @@ function runDiff(){
     const cA=colsA&&colsA.target>=0?colsA.target:findAnmerkungCol(wsA,rA);
     const cB=colsB&&colsB.target>=0?colsB.target:findAnmerkungCol(wsB,rB);
     if(cA<0||cB<0){
-      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw,before:cA<0?'(no Anmerkung col)':'(ok)',after:cB<0?'(no Anmerkung col)':'(ok)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false});
+      rows.push({sheet:name,row:'—',label:'sheet',change:'sheet',fw,before:cA<0?'(no Anmerkung col)':'(ok)',after:cB<0?'(no Anmerkung col)':'(ok)',engineNow:'',engineMatchesA:true,reason:'',inputs:{},hasDrift:false,source:srcLabel});
       sheetSet.add(name);
       continue;
     }
@@ -1706,14 +2197,36 @@ function runDiff(){
       else if(label==='overfired'){overfired++;}
 
       /* Engine-now prediction + trigger trace: only meaningful when we
-         have a resolver AND the row isn't a null-sheet error entry. */
-      let engineNow='',engineMatchesA=true,reason='',inputs={};
+         have a resolver AND the row isn't a null-sheet error entry.
+         `engineMatchesB` / `enginePd` stay null until the engine actually
+         runs, so consumers can tell "engine not evaluated" (null) apart
+         from "engine ran and matched/mismatched truth" (true/false). */
+      let engineNow='',engineMatchesA=true,engineMatchesB=null,enginePd=null,reason='',inputs={};
       if(processor&&colsA){
         try{
           const p=processor(wsA,r,colsA);
           engineNow=(p==null?'':String(p));
-          engineMatchesA=engineNow===(vA||'');
+          /* Engine-drift is a PHRASE-SET comparison, not a raw-string one,
+             matching the latest engine rule (v1.11.0): the Anmerkung column is
+             an order-independent, case/whitespace-insensitively-deduped list of
+             ' // '-joined phrases (see join / normPhrase / classifyDiff). So the
+             engine has only genuinely "drifted" from slot A when it emits a
+             DIFFERENT phrase set — reordering, recasing, or respacing the same
+             phrases is not drift. Using samePhraseSet here keeps the drift
+             overlay, the drift chip, and the engine_matches_a export column
+             consistent with how classifyDiff scores wrong/missed/overfired. */
+          engineMatchesA=samePhraseSet(splitTriggers(engineNow),splitTriggers(vA||''));
           if(!engineMatchesA)drift++;
+          /* Engine-vs-TRUTH (#26) — the precise training target. The rows
+             being trained run the CURRENT engine, so what an AI (or human)
+             must act on when fixing process<Forwarder> is how engineNow
+             compares to GROUND TRUTH B, not how the (possibly stale, or
+             foreign-tool) slot-A output compares to B. Same phrase-set
+             semantics as classifyDiff so the engine_label below scores
+             wrong/missed/overfired/correct identically to the A-vs-B label,
+             just with engineNow on the predicted side. */
+          engineMatchesB=samePhraseSet(splitTriggers(engineNow),splitTriggers(vB||''));
+          enginePd=computePhraseDiff(engineNow,vB);
           try{reason=buildReason(fw,wsA,r,colsA)||'';}catch(_){reason='';}
           inputs=collectInputsForRow(fw,wsA,r,colsA);
         }catch(e){engineNow='';reason='engine error: '+(e.message||e);}
@@ -1741,11 +2254,23 @@ function runDiff(){
         ?('process'+fw[0].toUpperCase()+fw.slice(1))
         :'';
       const applicableThreshold=(TH&&TH[fw]!=null)?TH[fw]:null;
+      /* Engine-vs-truth (#26) derived signal. Only populated when the
+         engine actually ran (enginePd!=null); otherwise the row carries
+         empty/null so a consumer can skip it the same way it skips an
+         empty engineNow. `engine_missing_phrases` = phrases ground truth
+         wants that the CURRENT engine fails to emit (→ a branch to add /
+         loosen); `engine_extra_phrases` = phrases the CURRENT engine emits
+         that truth rejects (→ a branch to guard / tighten). */
+      const engineLabel   =enginePd?classifyDiff(engineNow,vB):'';
+      const engineGranular=enginePd?granularLabel(engineNow,vB,enginePd):'';
+      const engineMissing =enginePd?enginePd.missing_phrases:[];
+      const engineExtra   =enginePd?enginePd.extra_phrases:[];
       const rowObj={
         sheet:name,row:r+1,label,
         change:label==='missed'?'added':(label==='overfired'?'removed':(label==='wrong'?'changed':'correct')),
         fw,before:vA,after:vB,
         engineNow,engineMatchesA,hasDrift:!engineMatchesA,
+        engineMatchesB,
         reason,inputs,
         predicted_phrases:phraseDiff.predicted_phrases,
         expected_phrases :phraseDiff.expected_phrases,
@@ -1762,26 +2287,208 @@ function runDiff(){
         extra_phrase_keys    :phraseKeysFor(phraseDiff.extra_phrases),
         engine_phrases       :enginePhrases,
         engine_phrase_keys   :phraseKeysFor(enginePhrases),
+        /* === Engine-vs-truth payload (#26) — the current engine's gap
+           against ground truth, the precise target for rule fixes. === */
+        engine_label              :engineLabel,
+        engine_granular           :engineGranular,
+        engine_vs_expected_jaccard:enginePd?enginePd.phrase_jaccard:null,
+        engine_missing_phrases    :engineMissing,
+        engine_extra_phrases      :engineExtra,
+        engine_missing_phrase_keys:phraseKeysFor(engineMissing),
+        engine_extra_phrase_keys  :phraseKeysFor(engineExtra),
         /* === Source-code anchors === */
         processor            :processorName,
         applicable_threshold :applicableThreshold,
+        /* === Provenance (which file pair this row came from) === */
+        source               :srcLabel,
       };
-      rowObj.row_uid=rowUid(fw,name,r+1,inputs);
+      rowObj.row_uid=rowUid(fw,name,r+1,inputs,srcTag);
       rows.push(rowObj);
     }
   }
+  return{rows,fwSet,sheetSet,counters:{total,wrong,missed,overfired,correct,drift}};
+}
 
+/* Merge one-or-more per-pair results (from diffWorkbooks) into a single
+   diffState.results bundle and render. Single-pair Diff Mode feeds one
+   part; Bulk Diff feeds many. `metaText` is shown in the meta line;
+   `multiSource` toggles the per-row source label in the table. */
+function finalizeDiff(parts,metaText,multiSource){
+  const rows=[];const fwSet=new Set(),sheetSet=new Set();
+  let total=0,wrong=0,missed=0,overfired=0,correct=0,drift=0;
+  for(const p of parts){
+    for(const r of p.rows)rows.push(r);
+    p.fwSet.forEach(f=>fwSet.add(f));
+    p.sheetSet.forEach(s=>sheetSet.add(s));
+    total+=p.counters.total;wrong+=p.counters.wrong;missed+=p.counters.missed;
+    overfired+=p.counters.overfired;correct+=p.counters.correct;drift+=p.counters.drift;
+  }
   /* Keep classic tile semantics: "added" = missed (B filled, A empty),
      "removed" = overfired (A filled, B empty), "changed" = wrong. */
-  added=missed;removed=overfired;changed=wrong;
-
+  const added=missed,removed=overfired,changed=wrong;
   diffState.results={rows,total,added,removed,changed,wrong,missed,overfired,correct,drift,
-    forwarders:[...fwSet].sort(),sheets:[...sheetSet].sort()};
+    forwarders:[...fwSet].sort(),sheets:[...sheetSet].sort(),
+    meta:metaText||'',multiSource:!!multiSource};
   renderDiff();
 }
 
-/* Collect the structured input cells the rules actually read. Mirrors
-   tsCollectInputs but keyed directly by forwarder for the runDiff pass. */
+/* Single-pair Diff Mode entry point (unchanged behavior). */
+function runDiff(){
+  if(!diffState.a||!diffState.b){showLog('Diff — load both files first.','err');return;}
+  const part=diffWorkbooks(diffState.a.wb,diffState.a.name,diffState.b.wb,diffState.b.name,null);
+  finalizeDiff([part],`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}`,false);
+}
+
+/* ══════════════════════════════════════════════════════════
+   BULK DIFF — compare many (predicted, expected) pairs at once
+   for a far wider training corpus than a single file pair. Drop
+   a set of predicted workbooks (A) + expected workbooks (B);
+   they're auto-paired by filename, every pair runs through
+   diffWorkbooks, and all rows merge into one diffState.results.
+══════════════════════════════════════════════════════════ */
+
+/* Normalise a filename to a pairing key: drop the extension + any
+   role words (predicted/expected/truth/output/…) + a trailing a/b
+   marker, then collapse separators. So "Dachser_Jan_predicted.xlsx"
+   and "Dachser-Jan-expected.xlsx" both key to "dachser jan" and pair
+   up. Falls back to the bare basename if stripping leaves nothing. */
+function bulkDiffKey(name){
+  const base=String(name||'').toLowerCase().replace(/\.[^.]+$/,'');
+  const roleWords=new Set(['predicted','prediction','expected','truth','groundtruth','ground','output','out','corrected','correct','actual','manual','tool','baseline','result','results']);
+  let toks=base.split(/[\s_\-.()]+/).filter(Boolean).filter(t=>!roleWords.has(t));
+  if(toks.length>1&&(toks[toks.length-1]==='a'||toks[toks.length-1]==='b'))toks.pop();
+  return toks.join(' ').trim()||base;
+}
+
+/* Pair the two sets by key. 1:1 keys become clean pairs; keys with
+   multiple files on a side are zipped by sorted name order (flagged
+   `ambiguous` so the UI can warn). Leftovers surface as unmatched. */
+function computeBulkDiffPairs(){
+  const aByKey=new Map(),bByKey=new Map();
+  const group=(arr,map)=>arr.forEach(f=>{const k=bulkDiffKey(f.name);if(!map.has(k))map.set(k,[]);map.get(k).push(f);});
+  group(bulkDiffFiles.a,aByKey);group(bulkDiffFiles.b,bByKey);
+  const pairs=[],unmatchedA=[],unmatchedB=[];
+  const keys=[...new Set([...aByKey.keys(),...bByKey.keys()])].sort();
+  for(const k of keys){
+    const as=(aByKey.get(k)||[]).slice().sort((x,y)=>x.name.localeCompare(y.name));
+    const bs=(bByKey.get(k)||[]).slice().sort((x,y)=>x.name.localeCompare(y.name));
+    const n=Math.min(as.length,bs.length);
+    const ambiguous=as.length>1||bs.length>1;
+    for(let i=0;i<n;i++)pairs.push({key:k,a:as[i],b:bs[i],ambiguous});
+    for(let i=n;i<as.length;i++)unmatchedA.push(as[i]);
+    for(let i=n;i<bs.length;i++)unmatchedB.push(bs[i]);
+  }
+  return{pairs,unmatchedA,unmatchedB};
+}
+
+function onBulkDiffDrag(e,slot,over){e.preventDefault();const el=document.getElementById('diffBulkSlot'+slot.toUpperCase());if(el)el.classList.toggle('drag',over);}
+function onBulkDiffDrop(e,slot){e.preventDefault();onBulkDiffDrag(e,slot,false);if(e.dataTransfer.files&&e.dataTransfer.files.length)addBulkDiffFiles(e.dataTransfer.files,slot);}
+function onBulkDiffFile(e,slot){if(e.target.files&&e.target.files.length)addBulkDiffFiles(e.target.files,slot);e.target.value='';}
+
+function addBulkDiffFiles(fileList,slot){
+  let added=0;
+  for(const file of fileList){
+    if(!file.name.toLowerCase().endsWith('.xlsx')){showLog('Bulk Diff — skipped non-xlsx: '+file.name,'err');continue;}
+    /* Read + parse synchronously-ish via FileReader so runBulkDiff can
+       stay a plain loop. Each entry holds the parsed workbook. */
+    const entry={id:++bulkDiffIdCounter,name:file.name,wb:null,slot};
+    bulkDiffFiles[slot].push(entry);
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{entry.wb=XLSX.read(ev.target.result,{type:'array',cellNF:true});}
+      catch(err){showLog('Bulk Diff — could not read '+file.name+': '+err.message,'err');
+        const i=bulkDiffFiles[slot].indexOf(entry);if(i>=0)bulkDiffFiles[slot].splice(i,1);}
+      renderBulkDiffPairs();
+    };
+    r.readAsArrayBuffer(file);
+    added++;
+  }
+  if(added)showLog('Bulk Diff — added '+added+' file(s) to set '+slot.toUpperCase()+'.','ok');
+  renderBulkDiffPairs();
+}
+
+function removeBulkDiffFile(slot,id){
+  const arr=bulkDiffFiles[slot];const i=arr.findIndex(f=>f.id===id);
+  if(i>=0)arr.splice(i,1);
+  renderBulkDiffPairs();
+}
+
+/* Reset only the bulk inputs/preview (leaves any rendered results from a
+   previous run untouched — the global Clear button wipes everything). */
+function _resetBulkDiffInputs(){
+  bulkDiffFiles.a=[];bulkDiffFiles.b=[];
+  ['A','B'].forEach(s=>{
+    const el=document.getElementById('diffBulkSlot'+s);if(el)el.classList.remove('loaded','drag');
+    const nm=document.getElementById('diffBulkName'+s);if(nm)nm.textContent='Click or drop .xlsx files';
+    const inp=document.getElementById('diffBulkInput'+s);if(inp)inp.value='';
+  });
+  renderBulkDiffPairs();
+}
+function clearBulkDiff(){_resetBulkDiffInputs();showLog('Bulk Diff — cleared file sets.','ok');}
+
+function renderBulkDiffPairs(){
+  /* Slot loaded-state + count labels */
+  ['a','b'].forEach(s=>{
+    const S=s.toUpperCase();
+    const el=document.getElementById('diffBulkSlot'+S);
+    const nm=document.getElementById('diffBulkName'+S);
+    const n=bulkDiffFiles[s].length;
+    if(el)el.classList.toggle('loaded',n>0);
+    if(nm)nm.textContent=n?(n+' file(s) loaded'):'Click or drop .xlsx files';
+  });
+  const box=document.getElementById('diffBulkPairs');
+  if(!box)return;
+  const{pairs,unmatchedA,unmatchedB}=computeBulkDiffPairs();
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let html='';
+  if(pairs.length){
+    html+=`<div class="bdp-section-label">${pairs.length} matched pair(s)</div>`;
+    html+=pairs.map(p=>
+      `<div class="bdp-pair">
+        <span class="bdp-file bdp-a" title="${esc(p.a.name)}">${esc(p.a.name)}</span>
+        <span class="bdp-arrow">\u2194</span>
+        <span class="bdp-file bdp-b" title="${esc(p.b.name)}">${esc(p.b.name)}</span>
+        ${p.ambiguous?'<span class="bdp-badge" title="Multiple files share this name key — paired by sorted name order. Rename for an exact 1:1 match if this is wrong.">by order</span>':''}
+        <button type="button" class="bdp-rm" title="Remove this A file" onclick="removeBulkDiffFile('a',${p.a.id})">\u2715</button>
+      </div>`).join('');
+  }
+  const unmatched=[...unmatchedA.map(f=>({f,slot:'a'})),...unmatchedB.map(f=>({f,slot:'b'}))];
+  if(unmatched.length){
+    html+=`<div class="bdp-section-label">${unmatched.length} unmatched \u2014 no partner found</div>`;
+    html+=unmatched.map(({f,slot})=>
+      `<div class="bdp-unmatched">
+        <span class="bdp-file" title="${esc(f.name)}">${slot.toUpperCase()}: ${esc(f.name)}</span>
+        <button type="button" class="bdp-rm" title="Remove" onclick="removeBulkDiffFile('${slot}',${f.id})">\u2715</button>
+      </div>`).join('');
+  }
+  box.innerHTML=html;
+  const btn=document.getElementById('btnBulkDiffRun');
+  if(btn)btn.disabled=pairs.length===0;
+  const ct=document.getElementById('ctBulkDiff');
+  if(ct)ct.textContent=pairs.length?('\u00b7 '+pairs.length):'';
+}
+
+function runBulkDiff(){
+  const{pairs}=computeBulkDiffPairs();
+  if(!pairs.length){showLog('Bulk Diff — no matched A/B pairs. Name predicted & expected files alike (role words like "predicted"/"expected" are ignored).','err');return;}
+  const notReady=pairs.filter(p=>!p.a.wb||!p.b.wb);
+  if(notReady.length){showLog('Bulk Diff — '+notReady.length+' file(s) still parsing, try again in a moment.','err');return;}
+  const parts=[];
+  for(const p of pairs){
+    const base=p.a.name.replace(/\.[^.]+$/,'');
+    const source={tag:p.key||base,label:base};
+    parts.push(diffWorkbooks(p.a.wb,p.a.name,p.b.wb,p.b.name,source));
+  }
+  finalizeDiff(parts,`Bulk diff \u00b7 ${pairs.length} file pair(s)`,true);
+  showLog(`Bulk Diff — compared ${pairs.length} pair(s) into one corpus. Use the chips, filters, and exports below on the combined set.`,'ok');
+  document.getElementById('diffResults').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* Collect the structured input cells the rules actually read, keyed by
+   forwarder. This is the SINGLE source of input features for the whole
+   Diff Mode pipeline — table detail drawer, diff CSV, and training set
+   all read `row.inputs` produced here, so there is no second collector to
+   drift out of sync. */
 function collectInputsForRow(fw,ws,r,cols){
   const o={};
   const get=(k,c)=>{if(c===undefined||c<0)return;const v=cellStr(ws,r,c);if(v!=='')o[k]=v;};
@@ -1814,6 +2521,7 @@ function collectInputsForRow(fw,ws,r,cols){
   } else if(fw==='wackler'){
     get('stat',cols.stat);get('tarif',cols.tarif);get('existing_anmerkung',cols.target);
     get('avis_diff',cols.avis_diff);get('snk_diff',cols.snk_diff);get('fr_diff',cols.fr);
+    get('fr_tarif',cols.fr_tar);get('fr_dl',cols.fr_dl);
     get('mt_diff',cols.maut);get('tz_diff',cols.tz);
     get('referenz',cols.referenz);
     get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
@@ -1836,11 +2544,16 @@ function filterDiffRows(){
     if(r.change==='sheet')return label==='all'&&fw==='all'&&(sheet==='all'||sheet===r.sheet);
     if(label==='drift'){if(!r.hasDrift)return false;}
     else if(label!=='all'){if(r.label!==label)return false;}
-    else {if(r.label==='correct'&&!includeMatches)return false;}
+    /* In the default 'all' view, hide `correct` (A==B) rows — EXCEPT when
+       the current engine disagrees with ground truth (engine_matches_b===
+       false): the tool was right but the engine being trained is wrong, so
+       surface it. Pure positives (engine also matches truth, or not
+       evaluated → null) stay hidden until "Include matching rows" is on. */
+    else {if(r.label==='correct'&&!includeMatches&&r.engineMatchesB!==false)return false;}
     if(fw!=='all'&&r.fw!==fw)return false;
     if(sheet!=='all'&&r.sheet!==sheet)return false;
     if(needle){
-      const hay=((r.before||'')+' '+(r.after||'')+' '+(r.reason||'')+' '+(r.engineNow||'')).toLowerCase();
+      const hay=((r.before||'')+' '+(r.after||'')+' '+(r.reason||'')+' '+(r.engineNow||'')+' '+(r.source||'')).toLowerCase();
       if(!hay.includes(needle))return false;
     }
     return true;
@@ -1849,6 +2562,7 @@ function filterDiffRows(){
 
 function renderDiff(){
   if(!diffState.results)return;
+  diffRenderLimit=DIFF_PAGE; /* fresh compare → snap the table back to one page */
   const{total,added,removed,changed,wrong,missed,overfired,correct,drift,forwarders,sheets}=diffState.results;
 
   /* Classic top-4 tiles */
@@ -1910,18 +2624,43 @@ function renderDiff(){
   showLog(`Diff \u2014 ${wrong} wrong, ${missed} missed, ${overfired} overfired, ${drift} engine-drift (${total} rows scanned across ${forwarders.length||1} forwarder(s)).`,'ok');
 }
 
+/* Incremental render cap. The table renders DIFF_PAGE rows at a time;
+   "Show more" in the footer raises the cap by another page instead of
+   forcing the user to filter. The cap snaps back to one page whenever
+   the filter state changes (tracked by signature) or a new compare runs,
+   so a stale deep scroll never carries into an unrelated view. */
+const DIFF_PAGE=500;
+let diffRenderLimit=DIFF_PAGE;
+let _diffFilterSig='';
+function expandDiffLimit(){diffRenderLimit+=DIFF_PAGE;refreshDiffView();}
+
 /* Rebuild the visible table + meta line + export-button counters from
    the current filter state. Called by runDiff, the chip buttons, the
    filter inputs, and the include-matches checkbox. */
 function refreshDiffView(){
   if(!diffState.results)return;
+  /* Pull the live control values FIRST. The inline onchange/oninput
+     handlers on the selects + search box fire BEFORE the DOMContentLoaded
+     mirror listeners (inline attributes register at parse time), so
+     reading diffFilter here without this sync would filter on the
+     previous value — and the old reverse-sync at the bottom of this
+     function then wrote that stale value back into the select, reverting
+     the user's dropdown choice outright. The DOM controls are the source
+     of truth; diffFilter mirrors them for the export paths. */
+  const qEl=document.getElementById('diffSearch');if(qEl)diffFilter.q=qEl.value;
+  const fwEl=document.getElementById('diffFwFilter');if(fwEl)diffFilter.fw=fwEl.value;
+  const shEl=document.getElementById('diffSheetFilter');if(shEl)diffFilter.sheet=shEl.value;
+  const sig=[diffFilter.label,diffFilter.fw,diffFilter.sheet,diffFilter.q,
+    !!document.getElementById('diffIncludeMatch')?.checked].join('\u0001');
+  if(sig!==_diffFilterSig){_diffFilterSig=sig;diffRenderLimit=DIFF_PAGE;}
   const filtered=filterDiffRows();
   const{rows,total,forwarders}=diffState.results;
-  const MAX=500;
+  const MAX=diffRenderLimit;
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+  const metaPrefix=diffState.results.meta||(diffState.a&&diffState.b?`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}`:'');
   document.getElementById('diffMeta').textContent=
-    `A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}  \u00b7  ${total} rows scanned across ${forwarders.length||1} forwarder(s)`;
+    `${metaPrefix}  \u00b7  ${total} rows scanned across ${forwarders.length||1} forwarder(s)`;
 
   const tbody=document.querySelector('#diffTable tbody');
   const slice=filtered.slice(0,MAX);
@@ -1930,7 +2669,7 @@ function refreshDiffView(){
   const foot=document.getElementById('diffTableFoot');
   if(foot){
     if(!filtered.length){foot.textContent='// no rows match the current filter — loosen a chip or clear the search.';}
-    else if(filtered.length>MAX){foot.textContent=`// showing first ${MAX} of ${filtered.length} matching rows — use filters to narrow.`;}
+    else if(filtered.length>MAX){foot.innerHTML=`// showing first ${MAX} of ${filtered.length} matching rows — <button type="button" class="df-show-more" onclick="expandDiffLimit()">show ${Math.min(DIFF_PAGE,filtered.length-MAX)} more</button> or use filters to narrow.`;}
     else if(filtered.length<rows.length){foot.textContent=`// showing ${filtered.length} of ${rows.length} rows (filtered).`;}
     else{foot.textContent=`// showing all ${filtered.length} rows.`;}
   }
@@ -1946,20 +2685,39 @@ function refreshDiffView(){
   /* Active chip visual state */
   document.querySelectorAll('#trainChips .train-chip').forEach(b=>
     b.classList.toggle('active',b.dataset.label===diffFilter.label));
+  /* The classic summary tiles double as filter shortcuts (added→missed,
+     removed→overfired, changed→wrong) — mirror the same active state. */
+  document.querySelectorAll('.diff-summary .diff-stat[data-label]').forEach(b=>{
+    const on=b.dataset.label===diffFilter.label;
+    b.classList.toggle('active',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+  });
 
-  /* Keep select values in sync (handles programmatic changes). */
-  const fwSel=document.getElementById('diffFwFilter');if(fwSel&&fwSel.value!==diffFilter.fw)fwSel.value=diffFilter.fw;
-  const shSel=document.getElementById('diffSheetFilter');if(shSel&&shSel.value!==diffFilter.sheet)shSel.value=diffFilter.sheet;
 }
 
 function renderDiffRow(r,i,esc){
+  const multi=diffState.results&&diffState.results.multiSource;
+  const sheetCell=multi&&r.source
+    ? `<span class="df-src" title="Source file pair">${esc(r.source)}</span>${esc(r.sheet)}`
+    : esc(r.sheet);
   if(r.change==='sheet'){
-    return `<tr class="df-sheet"><td>${esc(r.sheet)}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-sheet">sheet</span></td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td><td class="df-engine"></td><td class="df-actions"></td></tr>`;
+    return `<tr class="df-sheet"><td>${sheetCell}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-sheet">sheet</span></td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td><td class="df-engine"></td><td class="df-actions"></td></tr>`;
   }
   const labelCls=LABEL_CLASS[r.label]||'';
   const engine=renderEngineCell(r,esc);
   const actions=`<button type="button" class="df-expand-btn" aria-expanded="false" title="Show inputs + reason trace" onclick="toggleDiffDetail(${i})">›</button>`;
-  return `<tr class="${labelCls}" data-row-i="${i}"><td>${esc(r.sheet)}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-${r.label}">${r.label}</span></td><td class="df-before">${esc(r.before||'\u2014')}</td><td class="df-after">${esc(r.after||'\u2014')}</td>${engine}<td class="df-actions">${actions}</td></tr>`;
+  /* Per-phrase highlighting: only the phrases that actually differ get
+     the removed/added treatment; phrases both sides agree on render
+     neutral, so on multi-phrase rows the disagreeing phrase pops out
+     without opening the detail drawer. Empty cells render an em-dash. */
+  const phraseCell=(cls,raw,changedList,changedCls)=>{
+    const parts=phraseCellParts(raw,changedList);
+    if(!parts.length)return `<td class="${cls}">\u2014</td>`;
+    return `<td class="${cls}">${parts.map(p=>`<span class="dfp ${p.changed?changedCls:'dfp-common'}">${esc(p.text)}</span>`).join('<span class="dfp-sep"> // </span>')}</td>`;
+  };
+  const beforeCell=phraseCell('df-before',r.before,r.extra_phrases,'dfp-extra');
+  const afterCell =phraseCell('df-after' ,r.after ,r.missing_phrases,'dfp-missing');
+  return `<tr class="${labelCls}" data-row-i="${i}"><td>${sheetCell}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-${r.label}">${r.label}</span></td>${beforeCell}${afterCell}${engine}<td class="df-actions">${actions}</td></tr>`;
 }
 
 function renderEngineCell(r,esc){
@@ -1983,9 +2741,12 @@ function toggleDiffDetail(i){
   const filtered=filterDiffRows();const r=filtered[i];if(!r)return;
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const keys=Object.keys(r.inputs||{});
-  const kv=keys.length
+  const srcKv=(diffState.results&&diffState.results.multiSource&&r.source)
+    ? `<div class="df-detail-kv"><span class="kv-k">source_file</span><span class="kv-v" title="${esc(r.source)}">${esc(r.source)}</span></div>`
+    : '';
+  const kv=srcKv+(keys.length
     ? keys.map(k=>`<div class="df-detail-kv"><span class="kv-k">${esc(k)}</span><span class="kv-v" title="${esc(r.inputs[k])}">${esc(r.inputs[k])}</span></div>`).join('')
-    : '<div class="df-detail-kv empty"><span class="kv-k">inputs</span><span class="kv-v">(no rule-visible cells captured — unknown forwarder)</span></div>';
+    : '<div class="df-detail-kv empty"><span class="kv-k">inputs</span><span class="kv-v">(no rule-visible cells captured — unknown forwarder)</span></div>');
   /* Phrase-level diff visualisation. Only render when meaningful — for
      `correct` rows there's nothing to show; for missed/overfired/wrong
      the breakdown is the whole point of the precision pass. */
@@ -2009,6 +2770,26 @@ function toggleDiffDetail(i){
          ${phrSection('common' ,r.common_phrases ,'phr-common')}
        </div>`
     : '';
+  /* Engine-vs-truth (#26): how the CURRENT engine compares to ground
+     truth B — the actionable target for a rule fix. Rendered whenever the
+     engine ran AND disagrees with truth (engine_label set and not
+     'correct'), including the case where the tool (A) was right but the
+     engine drifted. "should add" = phrases truth wants the engine to emit;
+     "should remove" = phrases the engine emits that truth rejects. */
+  const engineRan=r.engine_label!=='' && r.engine_label!=null;
+  const engineWrong=engineRan && r.engine_label!=='correct';
+  const evtBlock=engineWrong
+    ? `<div class="df-phr-block df-evt-block">
+         <div class="df-phr-head">
+           <span class="df-phr-title" title="Current engine output vs ground truth B — this is what a rule fix must close">engine vs truth</span>
+           <span class="lbl-pill lbl-${esc(r.engine_label)}">${esc(r.engine_label)}</span>
+           ${r.engine_granular?`<span class="df-gran-badge df-gran-${esc(r.engine_granular)}">${esc(r.engine_granular.replace(/_/g,' '))}</span>`:''}
+           ${r.engine_vs_expected_jaccard!=null?`<span class="df-phr-jac" title="Jaccard similarity of the CURRENT engine's output vs ground-truth phrase sets (1.0 = identical, 0 = disjoint)">jaccard ${(r.engine_vs_expected_jaccard).toFixed(2)}</span>`:''}
+         </div>
+         ${phrSection('should add'   ,r.engine_missing_phrases,'phr-missing')}
+         ${phrSection('should remove',r.engine_extra_phrases  ,'phr-extra')}
+       </div>`
+    : '';
   const reasonHtml=r.reason
     ? `<div class="df-reason-block"><span class="rb-label">trigger trace</span>${esc(r.reason)}</div>`
     : '<div class="df-reason-block empty"><span class="rb-label">trigger trace</span>(engine produced no reason — either no rule fired or forwarder unknown)</div>';
@@ -2018,7 +2799,7 @@ function toggleDiffDetail(i){
     : '';
   const tr=document.createElement('tr');
   tr.className='df-detail';tr.dataset.for=String(i);
-  tr.innerHTML=`<td colspan="8"><div class="df-detail-wrap"><div class="df-detail-grid">${kv}${phrBlock}${reasonHtml}</div>${sendBtn?`<div>${sendBtn}</div>`:''}</div></td>`;
+  tr.innerHTML=`<td colspan="8"><div class="df-detail-wrap"><div class="df-detail-grid">${kv}${phrBlock}${evtBlock}${reasonHtml}</div>${sendBtn?`<div>${sendBtn}</div>`:''}</div></td>`;
   mainTr.after(tr);
   btn.classList.add('open');btn.setAttribute('aria-expanded','true');btn.textContent='\u00b7';
 }
@@ -2064,7 +2845,7 @@ function sendDiffToTester(i){
       kostenstelle:'kost',sachkonto:'sach',
     },
     wackler:{
-      existing_anmerkung:'target',fr_diff:'fr',mt_diff:'maut',tz_diff:'tz',
+      existing_anmerkung:'target',fr_diff:'fr',fr_tarif:'fr_tar',mt_diff:'maut',tz_diff:'tz',
     },
   };
   const remap=REMAP_BY_FW[r.fw]||{};
@@ -2129,7 +2910,7 @@ function downloadDiffCsv(){
   const trainable=rows.filter(r=>r.change!=='sheet');
   const inputKeys=orderedInputKeys(trainable);
   const header=[
-    'row_uid','sheet','row','forwarder','processor','applicable_threshold',
+    'row_uid','source_file','sheet','row','forwarder','processor','applicable_threshold',
     'label','granular_label','change',
     'before','after','engine_now','engine_matches_a','phrase_jaccard',
     'predicted_phrases','expected_phrases','common_phrases',
@@ -2137,6 +2918,9 @@ function downloadDiffCsv(){
     'predicted_phrase_keys','expected_phrase_keys','common_phrase_keys',
     'missing_phrase_keys','extra_phrase_keys',
     'engine_phrases','engine_phrase_keys',
+    'engine_label','engine_matches_b','engine_granular','engine_vs_expected_jaccard',
+    'engine_missing_phrases','engine_extra_phrases',
+    'engine_missing_phrase_keys','engine_extra_phrase_keys',
     'reason',
     ...inputKeys.map(k=>'in_'+k),
   ];
@@ -2145,6 +2929,7 @@ function downloadDiffCsv(){
     const isSheet=r.change==='sheet';
     const base=[
       isSheet?'':(r.row_uid||''),
+      r.source||'',
       r.sheet,r.row,r.fw,
       isSheet?'':(r.processor||''),
       isSheet?'':(r.applicable_threshold==null?'':r.applicable_threshold),
@@ -2163,6 +2948,14 @@ function downloadDiffCsv(){
       isSheet?'':joinPhr(r.extra_phrase_keys),
       isSheet?'':joinPhr(r.engine_phrases),
       isSheet?'':joinPhr(r.engine_phrase_keys),
+      isSheet?'':(r.engine_label||''),
+      isSheet?'':(r.engineMatchesB==null?'':(r.engineMatchesB?'true':'false')),
+      isSheet?'':(r.engine_granular||''),
+      isSheet?'':(r.engine_vs_expected_jaccard==null?'':r.engine_vs_expected_jaccard),
+      isSheet?'':joinPhr(r.engine_missing_phrases),
+      isSheet?'':joinPhr(r.engine_extra_phrases),
+      isSheet?'':joinPhr(r.engine_missing_phrase_keys),
+      isSheet?'':joinPhr(r.engine_extra_phrase_keys),
       r.reason||'',
     ];
     for(const k of inputKeys){const v=isSheet?'':(r.inputs||{})[k];base.push(v==null?'':v);}
@@ -2194,109 +2987,17 @@ function downloadDiffCsv(){
    the most known columns; falls back to the currently-selected forwarder.
 ══════════════════════════════════════════════════════════ */
 
-const FW_RESOLVERS={dachser:resolveDachser,kn:resolveKN,dhl:resolveDHL,wackler:resolveWackler};
-
-/* Count how many known columns a resolver finds for a given sheet.
-   More matches = better confidence that this is the right forwarder. */
-function tsResolverScore(resolveFn,ws,range){
-  try{
-    const cols=resolveFn(ws,range);
-    let score=0;
-    for(const k of Object.keys(cols))if(cols[k]>=0)score++;
-    return score;
-  }catch(_){return 0;}
-}
-
-/* Pick the best forwarder for a sheet. Requires target (Anmerkung) col present.
-   Ties broken in this order: dachser, kn, dhl, wackler (most-specific first). */
-function tsDetectForwarder(ws,range){
-  const order=['dachser','kn','dhl','wackler'];
-  let best=null,bestScore=-1;
-  for(const fw of order){
-    const cols=FW_RESOLVERS[fw](ws,range);
-    if(cols.target<0)continue;
-    const score=tsResolverScore(FW_RESOLVERS[fw],ws,range);
-    if(score>bestScore){bestScore=score;best=fw;}
-  }
-  if(best)return best;
-  return selectedFW||'unknown';
-}
-
-/* Classify a mismatch — see comment block above for the label taxonomy. */
-function tsLabelFor(before,after){
-  const a=(before||'').trim(),b=(after||'').trim();
-  if(a===b)return 'correct';
-  if(!a&&b)return 'missed';
-  if(a&&!b)return 'overfired';
-  return 'wrong';
-}
-
-/* Collect structured (key -> value) input features for a single row,
-   joined by forwarder. Returns an ordered array of {key,value} pairs
-   so column order is stable in CSV output. */
-function tsCollectInputs(fw,ws,r,cols){
-  const pairs=[];
-  const push=(k,c)=>{
-    if(c===undefined||c<0)return;
-    const v=cellStr(ws,r,c);
-    pairs.push({key:k,value:v});
-  };
-  if(fw==='dachser'){
-    push('stat',cols.stat);push('tarif',cols.tarif);
-    push('fr_diff',cols.fr);
-    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
-    push('snk_dl',cols.snk_dl);push('snk_diff',cols.snk_diff);push('snk_tarif',cols.snk_tar);
-    push('zz_diff',cols.zz);push('sam_diff',cols.sam);push('dgr_diff',cols.dgr);
-    push('exp_diff',cols.exp);push('exp_dl',cols.exp_dl);
-    push('maut_diff',cols.maut);push('sbfu_diff',cols.sbfu);push('tz_diff',cols.tz);
-    push('lg_diff',cols.lg_diff);push('av_diff',cols.av_diff);
-    /* Hard-coded Dachser columns (position-based, same as processor). */
-    pairs.push({key:'referenz3',value:cellStr(ws,r,DA_COL_REFERENZ3)});
-    pairs.push({key:'empf_plz', value:cellStr(ws,r,DA_COL_EMPF_PLZ)});
-    pairs.push({key:'empf_ort', value:cellStr(ws,r,DA_COL_EMPF_ORT)});
-    pairs.push({key:'anz_sdg',  value:cellStr(ws,r,DA_COL_ANZ_SDG)});
-    pairs.push({key:'serv_art', value:cellStr(ws,r,DA_COL_SERV_ART)});
-    pairs.push({key:'sachkonto',value:cellStr(ws,r,DA_COL_SACHKONTO)});
-  } else if(fw==='kn'){
-    push('stat',cols.stat);
-    push('fr_diff',cols.fr);push('exp_diff',cols.exp);push('mt_diff',cols.toll);push('tz_diff',cols.fuel);
-    push('snk_dl',cols.snk_dl);push('snk_diff',cols.snk_diff);
-    push('referenz',cols.referenz);push('recip',cols.recip);
-    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
-    push('kostenstelle',cols.kost);push('sachkonto',cols.sach);
-  } else if(fw==='dhl'){
-    push('stat',cols.stat);push('tarif',cols.tarif);
-    push('fr_diff',cols.addr);push('pal_diff',cols.stack);push('ow_diff',cols.weight);
-    push('yo_diff',cols.conv);push('yl_diff',cols.irr);push('nd_diff',cols.neut);push('sf_diff',cols.sign);
-    push('snk_diff',cols.snk);push('ac_diff',cols.diff);push('mt_diff',cols.maut);
-    push('nx_diff',cols.surc);push('os_diff',cols.over);push('tz_diff',cols.tz);
-    push('kostenstelle',cols.kost);push('sachkonto',cols.sach);
-  } else if(fw==='wackler'){
-    push('stat',cols.stat);push('tarif',cols.tarif);push('existing_anmerkung',cols.target);
-    push('avis_diff',cols.avis_diff);push('snk_diff',cols.snk_diff);push('fr_diff',cols.fr);
-    push('mt_diff',cols.maut);push('tz_diff',cols.tz);
-    push('referenz',cols.referenz);
-    push('vkg',cols.vkg);push('vkg_dl',cols.vkg_dl);
-    push('empf_plz',cols.empf_plz);push('empf_ort',cols.empf_ort);
-    push('kostenstelle',cols.kostenstelle);push('sachkonto',cols.sachkonto);
-  }
-  return pairs;
-}
-
-/* Re-run the actual production processor on slot-A's row to capture
-   the trigger trace + verify what the rule engine would produce right
-   now. This is how we recover the "reason" / "why" for training data. */
-function tsRunRule(fw,ws,r,cols){
-  try{
-    let predicted=null;
-    if(fw==='dachser')predicted=processDachser(ws,r,cols);
-    else if(fw==='kn')predicted=processKN(ws,r,cols);
-    else if(fw==='dhl')predicted=processDHL(ws,r,cols);
-    else if(fw==='wackler')predicted=processWackler(ws,r,cols);
-    const reason=buildReason(fw,ws,r,cols);
-    return{predicted,reason};
-  }catch(e){return{predicted:null,reason:'error: '+(e.message||e)};}
-}
+/* NOTE: the legacy per-sheet helpers that used to live here
+   (FW_RESOLVERS / tsResolverScore / tsDetectForwarder / tsLabelFor /
+   tsCollectInputs / tsRunRule) were removed once Diff Mode unified on the
+   single `diffWorkbooks` walk. Forwarder detection now goes through
+   `detectForwarderForSheet`, labels through `classifyDiff`, input capture
+   through `collectInputsForRow`, and the engine re-run is inline in
+   `diffWorkbooks`. The old copies had silently drifted from the live path
+   (e.g. their K+N input collector dropped the `tarif` feature), which is
+   exactly the kind of split-brain that corrupts the exported training set —
+   so there is now ONE code path that the table, the detail drawer, and every
+   export read from. */
 
 /* Build the training-set records directly from the enriched rows
    produced by runDiff — no second sheet walk. Honors the current
@@ -2325,7 +3026,13 @@ function buildTrainingSet(){
   const seenUids=new Set();
   for(const r of scope){
     if(r.change==='sheet')continue;
-    if(r.label==='correct'&&!includeMatches)continue;
+    /* Keep a `correct` (A==B) row when the CURRENT engine disagrees with
+       ground truth (engine_matches_b===false): the tool was coincidentally
+       right but the engine being trained is wrong here — a prime training
+       case that would otherwise be dropped. Pure positives (engine also
+       matches truth, or engine not evaluated → null) stay gated behind the
+       "Include matching rows" toggle. */
+    if(r.label==='correct'&&!includeMatches&&r.engineMatchesB!==false)continue;
     /* Drop padding rows: nothing on either side, no inputs, no engine. */
     const hasInputs=Object.keys(r.inputs||{}).length>0;
     const hasContent=(r.before||'').trim()!==''||(r.after||'').trim()!==''||(r.engineNow||'').trim()!=='';
@@ -2335,6 +3042,7 @@ function buildTrainingSet(){
     if(r.row_uid)seenUids.add(r.row_uid);
     records.push({
       row_uid:r.row_uid||'',
+      source_file:r.source||'',
       sheet:r.sheet,
       row:r.row,
       forwarder:r.fw,
@@ -2365,12 +3073,125 @@ function buildTrainingSet(){
       extra_phrase_keys    :r.extra_phrase_keys||[],
       engine_phrases       :r.engine_phrases||[],
       engine_phrase_keys   :r.engine_phrase_keys||[],
+      /* Engine-vs-truth (#26): how the CURRENT engine compares to ground
+         truth B — the precise target for rule fixes. `engine_label` scores
+         the engine (not the tool) against truth; `engine_missing_phrase_keys`
+         are PHRASES branches to ADD/loosen, `engine_extra_phrase_keys` are
+         branches to GUARD/tighten. Null/empty when the engine wasn't run. */
+      engine_label              :r.engine_label||'',
+      engine_matches_b          :r.engineMatchesB==null?null:!!r.engineMatchesB,
+      engine_granular           :r.engine_granular||'',
+      engine_vs_expected_jaccard:r.engine_vs_expected_jaccard==null?null:r.engine_vs_expected_jaccard,
+      engine_missing_phrases    :r.engine_missing_phrases||[],
+      engine_extra_phrases      :r.engine_extra_phrases||[],
+      engine_missing_phrase_keys:r.engine_missing_phrase_keys||[],
+      engine_extra_phrase_keys  :r.engine_extra_phrase_keys||[],
       inputs:r.inputs||{},
     });
   }
+  /* Deterministic record order: forwarder → source pair → sheet → row.
+     The walk order above depends on workbook sheet order and (for Bulk)
+     pair order, so without this sort two exports of the same corpus
+     could disagree line-for-line — sorting makes successive bundles
+     diffable and downstream dedup/join stable. */
+  records.sort((a,b)=>
+    String(a.forwarder).localeCompare(String(b.forwarder))||
+    String(a.source_file||'').localeCompare(String(b.source_file||''))||
+    String(a.sheet).localeCompare(String(b.sheet))||
+    (a.row-b.row));
   /* Canonical, deterministic input-key ordering across all records. */
   const inputKeys=orderedInputKeys(records.map(r=>({fw:r.forwarder,inputs:r.inputs})));
   return{records,inputKeys};
+}
+
+/* Aggregate a training-record array (buildTrainingSet output) into the
+   compact, AI-first failure-pattern summary shipped as summary.json in
+   the AI Bundle. Pure — no DOM, no globals — so it's unit-testable and
+   the caller stamps engine_version / exported_at / filter scope.
+
+   Why: the documented rule-update workflow STARTS with "group records by
+   forwarder, then by engine_missing/extra_phrase_keys patterns" — this
+   does that grouping up front, so an AI consumer (often context-limited)
+   can prioritise by pattern count and only then pull the matching JSONL
+   records by row_uid.
+
+   Pattern semantics:
+     • Basis is engine-vs-truth (the authoritative fix target) whenever
+       the engine ran; rows where it didn't (unknown forwarder) fall back
+       to the A-vs-B keys and are marked basis:'a_vs_b'.
+     • Rows the engine already solves (engine_label==='correct') count
+       toward engine_solved but produce NO pattern — nothing to fix.
+     • shared_inputs are the input cells that hold the IDENTICAL value on
+       every row of the pattern — prime gate-signal candidates; keys
+       present on every row but with differing values land in
+       varying_inputs. Keys missing from some rows are omitted. */
+function buildTrainingSummary(records){
+  const byLabel={},byEngineLabel={},byForwarder={};
+  let solved=0,actionable=0,notEvaluated=0;
+  const patterns=new Map();
+  for(const r of (records||[])){
+    byLabel[r.label]=(byLabel[r.label]||0)+1;
+    const el=r.engine_label||'not_evaluated';
+    byEngineLabel[el]=(byEngineLabel[el]||0)+1;
+    const fwB=byForwarder[r.forwarder]||(byForwarder[r.forwarder]={
+      records:0,engine_correct:0,engine_wrong:0,engine_missed:0,engine_overfired:0,engine_not_evaluated:0});
+    fwB.records++;
+    const useEngine=!!r.engine_label;
+    if(!useEngine){fwB.engine_not_evaluated++;notEvaluated++;}
+    else if(r.engine_label==='correct'){fwB.engine_correct++;solved++;continue;}
+    else{fwB['engine_'+r.engine_label]++;actionable++;}
+    const missK =(useEngine?r.engine_missing_phrase_keys:r.missing_phrase_keys)||[];
+    const extraK=(useEngine?r.engine_extra_phrase_keys :r.extra_phrase_keys )||[];
+    if(!missK.length&&!extraK.length)continue;
+    const key=r.forwarder+'|'+missK.slice().sort().join(',')+'|'+extraK.slice().sort().join(',')+'|'+(useEngine?'e':'a');
+    let p=patterns.get(key);
+    if(!p){
+      p={forwarder:r.forwarder,processor:r.processor||'',
+        basis:useEngine?'engine_vs_truth':'a_vs_b',
+        missing_phrase_keys:missK.slice().sort(),
+        extra_phrase_keys:extraK.slice().sort(),
+        missing_phrases:((useEngine?r.engine_missing_phrases:r.missing_phrases)||[]).slice(),
+        extra_phrases:((useEngine?r.engine_extra_phrases:r.extra_phrases)||[]).slice(),
+        suggested_action:missK.length&&extraK.length?'fix_both'
+          :(missK.length?'add_or_loosen_branch':'guard_or_tighten_branch'),
+        count:0,labels:{},example_row_uids:[],_inputsList:[]};
+      patterns.set(key,p);
+    }
+    p.count++;
+    p.labels[r.label]=(p.labels[r.label]||0)+1;
+    if(p.example_row_uids.length<5&&r.row_uid)p.example_row_uids.push(r.row_uid);
+    p._inputsList.push(r.inputs||{});
+  }
+  const out=[...patterns.values()];
+  for(const p of out){
+    const lists=p._inputsList;delete p._inputsList;
+    const allKeys=new Set();
+    for(const o of lists)for(const k of Object.keys(o))allKeys.add(k);
+    const shared={},varying=[];
+    for(const k of [...allKeys].sort()){
+      const vals=lists.map(o=>o[k]);
+      if(vals.some(v=>v==null))continue; /* not on every row → omit */
+      if(vals.every(v=>v===vals[0]))shared[k]=vals[0];
+      else varying.push(k);
+    }
+    p.shared_inputs=shared;p.varying_inputs=varying;
+  }
+  out.sort((a,b)=>(b.count-a.count)||
+    String(a.forwarder).localeCompare(String(b.forwarder))||
+    String(a.missing_phrase_keys).localeCompare(String(b.missing_phrase_keys))||
+    String(a.extra_phrase_keys).localeCompare(String(b.extra_phrase_keys)));
+  return{
+    schema:'anmerkung.training-summary/v1',
+    total_records:(records||[]).length,
+    by_label:byLabel,
+    by_engine_label:byEngineLabel,
+    by_forwarder:byForwarder,
+    engine_solved:solved,
+    engine_actionable:actionable,
+    engine_not_evaluated:notEvaluated,
+    pattern_count:out.length,
+    patterns:out,
+  };
 }
 
 function downloadTrainingSet(format){
@@ -2389,7 +3210,7 @@ function downloadTrainingSet(format){
     const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
     const joinPhr=arr=>Array.isArray(arr)?arr.join(' | '):'';
     const header=[
-      'row_uid','sheet','row','forwarder','processor','applicable_threshold',
+      'row_uid','source_file','sheet','row','forwarder','processor','applicable_threshold',
       'label','granular_label',
       'predicted','expected','rule_engine_now','engine_matches_a',
       'phrase_jaccard',
@@ -2398,13 +3219,16 @@ function downloadTrainingSet(format){
       'predicted_phrase_keys','expected_phrase_keys','common_phrase_keys',
       'missing_phrase_keys','extra_phrase_keys',
       'engine_phrases','engine_phrase_keys',
+      'engine_label','engine_matches_b','engine_granular','engine_vs_expected_jaccard',
+      'engine_missing_phrases','engine_extra_phrases',
+      'engine_missing_phrase_keys','engine_extra_phrase_keys',
       'reason',
       ...inputKeys.map(k=>'in_'+k),
     ];
     const lines=[header.join(',')];
     for(const r of records){
       const row=[
-        r.row_uid,r.sheet,r.row,r.forwarder,
+        r.row_uid,r.source_file||'',r.sheet,r.row,r.forwarder,
         r.processor||'',
         r.applicable_threshold==null?'':r.applicable_threshold,
         r.label,r.granular_label||'',
@@ -2422,6 +3246,14 @@ function downloadTrainingSet(format){
         joinPhr(r.extra_phrase_keys),
         joinPhr(r.engine_phrases),
         joinPhr(r.engine_phrase_keys),
+        r.engine_label||'',
+        r.engine_matches_b==null?'':(r.engine_matches_b?'true':'false'),
+        r.engine_granular||'',
+        r.engine_vs_expected_jaccard==null?'':r.engine_vs_expected_jaccard,
+        joinPhr(r.engine_missing_phrases),
+        joinPhr(r.engine_extra_phrases),
+        joinPhr(r.engine_missing_phrase_keys),
+        joinPhr(r.engine_extra_phrase_keys),
         r.reason,
       ];
       for(const k of inputKeys)row.push(r.inputs[k]==null?'':r.inputs[k]);
@@ -2481,6 +3313,8 @@ const INPUT_GLOSSARY={
   stat              :'Stat_Freigabe — approval state. 10 = approved (engine runs). Anything else gates most rules off.',
   tarif             :'Total Kosten lt. Tarif — booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
   fr_diff           :'FR Differenz — freight-charge delta vs tariff (numeric, signed).',
+  fr_tarif          :'FR Kosten lt. Tarif — the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier.',
+  fr_dl             :'FR Kosten DL — the freight Wackler actually billed (numeric) = rate(billedTier, zone) = fr_tarif + fr_diff. Differs from fr_tarif on an over/undercharge (fr_diff = Kosten DL − Kosten lt. Tarif); used to derive fr_tarif when the Kosten lt. Tarif column is absent.',
   exp_diff          :'EXP Differenz — express/priority surcharge delta (numeric, signed).',
   exp_dl            :'EXP Kosten DL — DL-side express cost (Dachser-only signal).',
   mt_diff           :'MT/Maut Differenz — toll delta (numeric, signed).',
@@ -2516,7 +3350,7 @@ const INPUT_GLOSSARY={
   serv_art          :'Serv.-Art — service category code (Dachser). K1AV / K1AS gate several SNK branches.',
   kostenstelle      :'KOSTENSTELLE — cost-center. Empty or "X" triggers Kontierung?.',
   sachkonto         :'SACHKONTO — GL account. Empty or "X" triggers Kontierung? (or VORHOLUNG on Dachser when "X").',
-  existing_anmerkung:'Existing Anmerkung — Wackler reads this; matching any WACKLER_PROTECTED phrase causes the row to be preserved (no overwrite).',
+  existing_anmerkung:'Existing Anmerkung — exported for context only. The engine is fully deterministic and recomputes every row from its inputs; it never reads this cell back (the old protected-phrase preservation was removed in v1.15.0).',
 };
 
 /* Per-forwarder gate + signature. Mirrors the gate doc-comments in
@@ -2544,7 +3378,7 @@ const FORWARDER_SPEC={
     processor:'processWackler',
     resolver :'resolveWackler',
     gate     :'Stat_Freigabe == 10 (partial: Kontierung still emitted on stat≠10 if KOST/SACH blank)',
-    notes    :'Existing Anmerkung is read first; if it matches WACKLER_PROTECTED it short-circuits to null (preserved). AVIS/SNK code-book is sign-insensitive with rounding tolerance.',
+    notes    :'Fully deterministic — the existing Anmerkung cell is never read back (no protected-phrase preservation since v1.15.0). AVIS/SNK code-book is sign-insensitive with rounding tolerance.',
   },
 };
 
@@ -2611,17 +3445,18 @@ function buildRuleSpec(){
     },
     forwarders,
     instructions:{
-      summary:'Each training record describes one rule-engine output vs ground truth. Use forwarder + processor to find the function in assets/anmerkung.js. Use missing_phrase_keys / extra_phrase_keys to know which PHRASES branches to add or guard. Use inputs.* as the gating signals.',
+      summary:'Each training record describes one rule-engine output vs ground truth. Use forwarder + processor to find the function in assets/anmerkung.js. The CURRENT engine\'s gap against truth is carried by engine_missing_phrase_keys (branches to ADD/loosen) and engine_extra_phrase_keys (branches to GUARD/tighten) — prefer these over the A-vs-B missing_/extra_phrase_keys when fixing rules, because A may be a stale or foreign-tool output. Use inputs.* as the gating signals.',
       edit_target:'process<Forwarder> functions in assets/anmerkung.js (resolver columns are already wired; add/edit branches inside the processor).',
       phrase_catalog_target:'PHRASES object near the top of assets/anmerkung.js — add new entries here, then reference via P.<key> with join().',
       threshold_helper:'hasErr(value, T_FORWARDER) — returns true when |value| > threshold. Use this as the gating predicate on numeric *_diff inputs.',
+      engine_vs_truth:'engine_label / engine_matches_b / engine_missing_phrase_keys / engine_extra_phrase_keys / engine_vs_expected_jaccard compare what process<Forwarder> emits TODAY against ground truth B — this is the precise fix target. The top-level label (and missing_/extra_phrase_keys) compare slot A (the tool output) against B and can differ from the engine\'s own gap; when label=="correct" but engine_label!="correct" the engine has regressed on a row the tool got right. Treat engine_label as authoritative for rule edits; a fix is complete when engine_matches_b flips to true and engine_missing/extra_phrase_keys are empty.',
       rule_update_workflow:[
-        '1. Group records by forwarder, then by missing_phrase_keys / extra_phrase_keys patterns.',
-        '2. For missed rows: locate the existing branch that emits the missing key (or add one). Loosen its gate using the inputs.* signals on the failing rows.',
-        '3. For overfired rows: locate the branch that emits the extra key. Tighten its gate so the inputs.* signature on these rows no longer matches.',
-        '4. For wrong rows: handle the missing and extra key sets independently.',
+        '1. Group records by forwarder, then by engine_missing_phrase_keys / engine_extra_phrase_keys patterns (fall back to missing_/extra_phrase_keys when engine_label is blank, e.g. unknown forwarder).',
+        '2. For engine_missing (engine UNDER-fired vs truth): locate the existing branch that emits the missing key (or add one). Loosen its gate using the inputs.* signals on the failing rows.',
+        '3. For engine_extra (engine OVER-fired vs truth): locate the branch that emits the extra key. Tighten its gate so the inputs.* signature on these rows no longer matches.',
+        '4. For rows that are both: handle the missing and extra key sets independently.',
         '5. Preserve the join() pattern — phrases are de-duplicated case-insensitively automatically.',
-        '6. After editing, the user re-runs Train & Compare; engine_drift turns into "correct" when fixed.',
+        '6. After editing, the user re-runs Train & Compare; engine_matches_b flips to true and the row drops out of the wrong/missed/overfired (and engine-drift) buckets.',
       ],
     },
   };
@@ -2638,6 +3473,54 @@ function downloadRuleSpec(){
     Object.keys(spec.forwarders).length+' forwarders, engine v'+spec.engine_version+'.','ok');
 }
 
+/* Build prompt.md — the READY-TO-PASTE prompt the bundle has always
+   promised. The user attaches the bundle files to any AI assistant and
+   pastes this verbatim; it encodes the authoritative-field rule
+   (engine_* over A-vs-B), the pattern-first workflow, the engine
+   constraints, and the expected output shape, with the live pattern
+   counts interpolated so the assistant knows the size of the job. */
+function buildAiBundlePrompt(spec,summary){
+  const topPatterns=(summary.patterns||[]).slice(0,3).map(p=>
+    '  - '+p.forwarder+' · '+p.count+'× · '+p.suggested_action+
+    (p.missing_phrase_keys.length?' · missing: '+p.missing_phrase_keys.join(', '):'')+
+    (p.extra_phrase_keys.length?' · extra: '+p.extra_phrase_keys.join(', '):'')).join('\n');
+  return [
+'# Prompt — paste into your AI assistant together with this bundle\'s files',
+'',
+'> Attach `training.jsonl`, `rule_spec.json`, and `summary.json` (and `assets/anmerkung.js` if the assistant cannot read the repository), then paste everything below the line.',
+'',
+'---',
+'',
+'You are maintaining `assets/anmerkung.js` (engine v'+spec.engine_version+'), a deterministic, browser-side rule engine that fills the German "Anmerkung" column of forwarder invoice audits. I am giving you labeled training data from the engine\'s Diff Mode:',
+'',
+'- `summary.json` — failure patterns, pre-grouped by forwarder and by the phrase keys the CURRENT engine gets wrong vs ground truth. '+summary.pattern_count+' pattern(s) over '+summary.engine_actionable+' actionable row(s); '+summary.engine_solved+' row(s) the engine already solves. Top patterns:',
+topPatterns||'  - (none)',
+'- `training.jsonl` — one JSON record per row; join to patterns via `row_uid`.',
+'- `rule_spec.json` — the PHRASES catalog, per-forwarder thresholds, processor/resolver symbols, and an English glossary for every `inputs.*` key.',
+'',
+'## Task',
+'',
+'Propose a minimal patch to `assets/anmerkung.js` that closes the failure patterns, largest `count` first.',
+'',
+'## Rules',
+'',
+'1. The `engine_*` fields are authoritative: `engine_missing_phrase_keys` = phrases ground truth wants that the engine fails to emit (ADD a branch or LOOSEN its gate); `engine_extra_phrase_keys` = phrases the engine emits that truth rejects (GUARD or TIGHTEN the branch). Ignore the plain `predicted`/`missing_*`/`extra_*` fields unless `engine_label` is blank — they compare a possibly-stale tool output, not the current engine.',
+'2. Diagnose gates from `summary.json` first: each pattern\'s `shared_inputs` are the cell values identical on EVERY failing row (prime gate signals); `varying_inputs` differ across rows and must not become gate conditions. Pull the matching `training.jsonl` records by `example_row_uids` for the full picture.',
+'3. Emit phrases only via the existing `PHRASES` catalog and `join()` helper (it dedupes case-insensitively). New wording goes into `PHRASES` first; keys prefixed `lit_`/`tpl_`/`?:` are explained in `rule_spec.json`.',
+'4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Do not weaken a gate so far that it would fire on rows the engine currently gets right ('+summary.engine_solved+' solved rows are the regression set).',
+'5. Keep edits inside the `process<Forwarder>` functions (resolvers are already wired) unless a pattern clearly needs a new resolver column.',
+'',
+'## Output format',
+'',
+'For each pattern you fix, in priority order:',
+'1. **Diagnosis** — which branch/gate is wrong and why, citing the `shared_inputs` evidence.',
+'2. **Patch** — the exact code change (unified diff or before/after snippet).',
+'3. **Coverage** — the `row_uid`s this change fixes, and any solved rows it could plausibly affect.',
+'',
+'A fix is complete when re-running Train & Compare flips the row\'s `engine_matches_b` to `true` and empties its `engine_missing_phrase_keys` / `engine_extra_phrase_keys`.',
+''].join('\n');
+}
+
 /* Build the README.md a downstream AI agent reads first. Hard-coded
    so the bundle is self-explanatory; the schema description echoes
    what's actually in rule_spec.json. */
@@ -2652,13 +3535,18 @@ function buildAiBundleReadme(spec,recordCount,filterScope){
   lines.push('');
   lines.push('## Files in this bundle');
   lines.push('');
+  lines.push('- `prompt.md` — ready-to-paste prompt. Attach the other files to your AI assistant and paste this; it encodes the whole workflow below.');
+  lines.push('- `summary.json` — failure patterns, pre-grouped: every (forwarder × engine_missing/extra_phrase_keys) combination with its row count, label distribution, example `row_uid`s, and the input cells shared by every failing row (gate-signal candidates). Records are sorted deterministically (forwarder → source pair → sheet → row) so bundles diff cleanly across runs.');
   lines.push('- `training.jsonl` — one JSON record per line, one record per failing/correct row from Diff Mode.');
   lines.push('- `rule_spec.json` — the schema. Lists every PHRASES key, every threshold, every input field per forwarder, and the exact source-code symbol an AI should edit to update rules.');
   lines.push('- `README.md` — this file.');
   lines.push('');
   lines.push('## How an AI assistant should use this bundle');
   lines.push('');
-  lines.push('### 1. Read `rule_spec.json` first');
+  lines.push('### 0. Start with `summary.json`');
+  lines.push('It already does workflow step 1 (grouping) for you: patterns are sorted by row count, each carries `suggested_action` (`add_or_loosen_branch` / `guard_or_tighten_branch` / `fix_both`), `shared_inputs` (cell values identical on every failing row — prime gate signals), `varying_inputs` (present everywhere but differing — must NOT become gate conditions), and `example_row_uids` to pull the full records from `training.jsonl`. Rows the engine already solves are counted in `engine_solved` and excluded from patterns — they are the regression set a fix must not break.');
+  lines.push('');
+  lines.push('### 1. Read `rule_spec.json`');
   lines.push('It tells you:');
   lines.push('- The exact source file (`assets/anmerkung.js`) and the four processor symbols to edit (`processDachser`, `processKN`, `processDHL`, `processWackler`).');
   lines.push('- The `PHRASES` catalog: every key you can emit and the German string it produces.');
@@ -2681,9 +3569,17 @@ function buildAiBundleReadme(spec,recordCount,filterScope){
   lines.push('| `missing_phrase_keys` | in expected, NOT in predicted → engine UNDER-fired |');
   lines.push('| `extra_phrase_keys` | in predicted, NOT in expected → engine OVER-fired |');
   lines.push('| `engine_phrase_keys` | what `process<Forwarder>` would output today (drift detector) |');
+  lines.push('| `engine_label` | how the CURRENT engine scores against ground truth B (`correct`/`wrong`/`missed`/`overfired`) — **the authoritative fix target** |');
+  lines.push('| `engine_matches_b` | `true` once the current engine matches truth; the goal is to flip this to `true` |');
+  lines.push('| `engine_missing_phrase_keys` | in truth, NOT in the current engine output → branch to **add / loosen** |');
+  lines.push('| `engine_extra_phrase_keys` | in the current engine output, NOT in truth → branch to **guard / tighten** |');
+  lines.push('| `engine_vs_expected_jaccard` | phrase-set similarity of current engine output vs truth (1.0 = solved) |');
   lines.push('| `inputs` | per-row map of cell values the rules read; keys explained in `rule_spec.forwarders.<fw>.input_glossary` |');
   lines.push('| `reason` | trigger trace (raw cell values that fired branches) |');
   lines.push('| `row_uid` | stable hash for joining across runs |');
+  lines.push('| `source_file` | which predicted/expected file pair this row came from (set when exported from Bulk Diff; blank for a single-pair run) |');
+  lines.push('');
+  lines.push('> **Use the `engine_*` fields, not the plain `predicted`/`missing`/`extra` fields, to drive rule edits.** The plain fields compare slot A (your tool output, which may be stale or from another tool) against truth B; the `engine_*` fields compare what `process<Forwarder>` emits *today* against truth B. When `label == "correct"` but `engine_label != "correct"`, the tool was right but the current engine regressed on that row — fix it.');
   lines.push('');
   lines.push('Synthetic key prefixes:');
   lines.push('- `lit_*` — phrase string is hard-coded inside a processor (not yet in `PHRASES`). Promote it to `PHRASES` if you need to fire it from a new branch.');
@@ -2712,7 +3608,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope){
   lines.push('- Treat the missing and extra sets independently. Often a single branch picked the wrong phrase: change the phrase emitted, not the gate.');
   lines.push('');
   lines.push('### 5. Verify');
-  lines.push('Re-run Diff Mode → Train & Compare. The chip counts should move from `wrong`/`missed`/`overfired` toward `correct`. `engine drift` rows turn into `correct` once the rule emits what slot A says.');
+  lines.push('Re-run Diff Mode → Train & Compare. Each fixed row\'s `engine_matches_b` flips to `true`, its `engine_missing_phrase_keys` / `engine_extra_phrase_keys` empty out, and the `engine drift` overlay clears. Watch the chip counts move from `wrong`/`missed`/`overfired` toward `correct`.');
   return lines.join('\n')+'\n';
 }
 
@@ -2729,18 +3625,29 @@ async function downloadAiBundle(){
       diffFilter.q?'search='+diffFilter.q:''].filter(Boolean).join(', ')
     :'';
   const jsonl=records.map(r=>JSON.stringify(r)).join('\n')+'\n';
+  /* summary.json: pure aggregation + provenance stamps the tests don't
+     need to see (kept out of buildTrainingSummary so it stays pure). */
+  const summary=buildTrainingSummary(records);
+  summary.engine_version=spec.engine_version;
+  summary.exported_at=spec.exported_at;
+  summary.filter_scope=filterScope||'';
   const readme=buildAiBundleReadme(spec,records.length,filterScope);
+  const prompt=buildAiBundlePrompt(spec,summary);
   const zip=new JSZip();
+  zip.file('README.md',readme);
+  zip.file('prompt.md',prompt);
+  zip.file('summary.json',JSON.stringify(summary,null,2)+'\n');
   zip.file('training.jsonl',jsonl);
   zip.file('rule_spec.json',JSON.stringify(spec,null,2)+'\n');
-  zip.file('README.md',readme);
   const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='anmerkung_ai_bundle_'+stamp+'.zip';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  showLog('AI Bundle exported \u2014 '+records.length+' record(s) + rule_spec.json + README.md'+
-    (filterScope?' (filter: '+filterScope+')':'')+'. Drop into any AI assistant to update rules.','ok');
+  showLog('AI Bundle exported \u2014 '+records.length+' record(s) \u00b7 '+summary.pattern_count+
+    ' failure pattern(s) ('+summary.engine_actionable+' actionable, '+summary.engine_solved+' already solved)'+
+    ' \u00b7 training.jsonl + summary.json + rule_spec.json + prompt.md + README.md'+
+    (filterScope?' (filter: '+filterScope+')':'')+'.','ok');
 }
 
 /* ══════════════════════════════════════════════════════════

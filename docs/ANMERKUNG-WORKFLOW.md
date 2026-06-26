@@ -29,7 +29,7 @@ flowchart TD
   D -- thresholds --> D2["Advanced thresholds<br/>per-forwarder, persisted locally"]
   D1 --> E
   D2 --> E
-  E --> F["Review stats + per-row table<br/>filled / empty / skipped / preserved"]
+  E --> F["Review stats + per-row table<br/>filled / empty / skipped"]
   F --> G{"Happy?"}
   G -- no --> D
   G -- yes --> H["Invoke the Ritual<br/>subscription gate"]
@@ -75,13 +75,12 @@ The file name + sheet count appear under the drop zone, and a timestamped log li
 Click **Preview — dry-run without writing**. No file is produced. You get:
 
 - **3-up stats**: rows scanned · anmerkung filled · skipped (stat ≠ 10)
-- **2 mini-stats**: empty (no trigger) · preserved (protected value, Wackler only)
+- **1 mini-stat**: empty (no trigger)
 - **Trigger breakdown** — bar chart of which rule fired how many times, sorted descending.
 - **Per-row table** (up to 200 rows) with color-coded status dots:
   - `filled` — a rule fired, this would be written
   - `empty` — row is in scope but no rule matched
   - `skipped` — out of scope (usually `Stat_Freigabe ≠ 10`)
-  - `preserved` — Wackler row whose existing Anmerkung is protected
 
 Preview is non-destructive — iterate thresholds/options freely.
 
@@ -129,7 +128,7 @@ Click **✦ Train & Compare**. The engine walks both files in one pass and label
 | `missed` | A empty, B filled — rule should have fired |
 | `overfired` | A filled, B empty — rule fired when it shouldn't |
 | `drift` | Current engine would disagree with slot A → rules changed since A was generated |
-| `correct` | A and B carry the same phrase set, ignoring order/case/whitespace (positive example; off by default, opt-in) |
+| `correct` | A and B carry the same phrase set, ignoring order/case/whitespace (positive example; off by default, opt-in) — **except** when the current engine disagrees with truth on that row (`engine_matches_b = false`), in which case it is surfaced and exported as an engine-vs-truth regression |
 
 The Anmerkung column is a list of `' // '`-joined phrases, so every row also carries a **phrase-level diff** (`computePhraseDiff`):
 
@@ -156,7 +155,7 @@ Resolution rules (first hit wins):
 
 1. **PHRASES catalog hit** → returns the catalog key (e.g. `snkAvis`, `frachtDiff`, `kontierungQ`). These are the keys an AI greps in source to find the rule branch.
 2. **`PHRASE_LITERALS` table hit** → returns a `lit_*` synthetic id for phrases hard-coded inside processors but not yet promoted to `PHRASES` (e.g. `lit_pauschalfrachtOk`, `lit_terminzustellungOk`, `lit_zoneKorrekt`, `lit_differenzHebebuehnen`, `lit_differenzTreibstofWackler`).
-3. **`PHRASE_TEMPLATES` regex match** → returns a template key for dynamic interpolating phrases (`zwPrefix` for Dachser ZW lines, `tpl_wacklerRechnet` for the Wackler same-tier `Wackler rechnet Frachtrate für <N>kg ab` template).
+3. **`PHRASE_TEMPLATES` regex match** → returns a template key for dynamic interpolating phrases (`zwPrefix` for Dachser ZW lines, `tpl_wacklerRechnet` for the Wackler same-tier `Wackler rechnet Frachtrate für <N>kg ab` template — the optional ` (<zone>: <amount> €)` rate-card suffix is part of the same template and still resolves to `tpl_wacklerRechnet`).
 4. **No match** → `?:<raw phrase>` so unmapped emissions are visible at a glance and easy to promote to `PHRASES`.
 
 Two more anchors per row:
@@ -166,18 +165,44 @@ Two more anchors per row:
 
 Each row also gets a stable **`row_uid`** (FNV-1a 32-bit hex of `forwarder | sheet | row | sorted-inputs`), so identical rows across multiple Train & Compare runs share the same hash. Useful for joining/deduping/diffing training CSVs across rule-engine iterations.
 
+#### Engine-vs-truth — the precise fix target (#26)
+
+The top-level `label` and the `*_phrase(_keys)` arrays above compare **slot A (your tool's output) against truth B**. But the thing you actually iterate on in the Rule Tester is the **current engine** (`process<Forwarder>`), and slot A may be stale or come from a different tool entirely. So every row also carries a parallel comparison of **what the current engine emits today vs ground truth B**:
+
+- `engine_label` — `correct` / `wrong` / `missed` / `overfired` of the *current engine* against truth (same phrase-set semantics as the top-level label, but with `engine_now` on the predicted side). **This is the authoritative target for rule edits.**
+- `engine_matches_b` — `true` once the current engine matches truth. `null` when the engine wasn't evaluated (unknown forwarder / engine error). A fix is done when this flips to `true`.
+- `engine_granular` — the granular sub-label of engine-now vs truth.
+- `engine_vs_expected_jaccard` — phrase-set similarity of engine-now vs truth (`1.0` = solved).
+- `engine_missing_phrases` / `engine_missing_phrase_keys` — phrases truth wants that the current engine fails to emit → a branch to **add / loosen**.
+- `engine_extra_phrases` / `engine_extra_phrase_keys` — phrases the current engine emits that truth rejects → a branch to **guard / tighten**.
+
+This closes the gap that previously existed: the export told you how the *tool* differed from truth, but not how the *engine being trained* differs from truth. When a row is `label = correct` (the tool was right) yet `engine_label ≠ correct` (the engine regressed on it), it is now **kept in the default training export** and **shown in the default table view** — these engine-vs-truth regressions used to be dropped unless "Include matching rows" was ticked. Pure positives (engine also matches truth) stay opt-in as before.
+
+> When fixing rules, prefer `engine_missing_phrase_keys` / `engine_extra_phrase_keys` over the A-vs-B `missing_`/`extra_phrase_keys`. Fall back to the A-vs-B keys only when `engine_label` is blank (e.g. unknown forwarder).
+
 Output:
 
 - **Click-to-filter chips** (all / wrong / missed / overfired / drift / correct) — the table, counts, and *export buttons* all honor the active filter.
 - **Filter bar** — by forwarder, by sheet, and free-text search (scans before/after/reason/engine-now).
-- **Per-row expansion** — chevron reveals the exact input cells the engine read, the granular-label badge, the Jaccard score, the row_uid, the missing/extra/common phrase chips, and the trigger trace.
+- **Per-row expansion** — chevron reveals the exact input cells the engine read, the granular-label badge, the Jaccard score, the row_uid, the missing/extra/common phrase chips, an **engine-vs-truth** block (`should add` / `should remove` chips with the engine's own label + jaccard, shown whenever the current engine disagrees with truth), and the trigger trace.
 - **Send to Tester** (✦ on any row) — switches to that forwarder, opens the Rule Tester, pre-fills every matching field with the row's inputs, auto-evaluates, and scrolls you there. Tighten the rule → re-run Train & Compare.
 - **Exports** (filter-scoped; buttons carry live `· N` counters):
-  - `↓ Diff CSV` — `row_uid` + classic before/after + forwarder + label + `granular_label` + engine_now + engine_matches_a + `phrase_jaccard` + the five phrase columns + the five phrase-key columns + engine_phrases + engine_phrase_keys + `processor` + `applicable_threshold` + trigger trace + one column per rule-visible input cell. Columns appear in canonical per-forwarder order so successive exports diff cleanly.
+  - `↓ Diff CSV` — `row_uid` + classic before/after + forwarder + label + `granular_label` + engine_now + engine_matches_a + `phrase_jaccard` + the five phrase columns + the five phrase-key columns + engine_phrases + engine_phrase_keys + the engine-vs-truth columns (`engine_label`, `engine_matches_b`, `engine_granular`, `engine_vs_expected_jaccard`, `engine_missing_phrases`, `engine_extra_phrases`, `engine_missing_phrase_keys`, `engine_extra_phrase_keys`) + `processor` + `applicable_threshold` + trigger trace + one column per rule-visible input cell. Columns appear in canonical per-forwarder order so successive exports diff cleanly.
   - `↓ Training Set (CSV)` — same precision payload, padding rows dropped, deduped by `row_uid`. Phrase arrays serialise as `' | '`-joined strings.
   - `↓ Training Set (JSONL)` — one JSON record per line; phrase arrays remain native JSON arrays. ML-friendly.
   - `↓ Rule Spec (JSON)` — self-describing schema sidecar. Lists every PHRASES key (key → German string), every `PHRASE_LITERALS` entry, every `PHRASE_TEMPLATES` regex, per-forwarder thresholds, gate condition, processor + resolver symbol, canonical input order, and an English glossary entry for every input key. Engine version stamped from the changelog. Pair with any Training Set export and an AI consumer has the complete rule contract.
   - `✦ AI Bundle (ZIP)` — one-click bundle of `training.jsonl` + `rule_spec.json` + `README.md` (with prompt template). The README walks an AI assistant through the rule-update workflow: read the spec, group records by `forwarder` and `missing_phrase_keys`/`extra_phrase_keys`, locate the branch in `process<Forwarder>`, loosen/tighten gates using `inputs.*`, re-run Train & Compare to verify. Recommended export for AI-driven rule updates — drop into any AI assistant and it has everything to propose a patch to `assets/anmerkung.js` without reading the source.
+
+#### Bulk — many pairs at once (#25)
+
+The single A/B slots compare exactly one workbook pair. The **Bulk** sub-panel (inside Diff Mode) compares *many* pairs in one pass, so the training corpus spans every file at once instead of one:
+
+1. Drop a set of **predicted** workbooks into the **A — Predicted set** zone and the matching **expected** workbooks into **B — Expected set** (both accept multi-select + drag-drop).
+2. Files auto-pair by a normalized filename key (`bulkDiffKey`): the extension, common role words (`predicted` / `expected` / `truth` / `groundtruth` / `output` / `corrected` / `actual` / `manual` / `tool` / `baseline` / `result`), and a trailing `a`/`b` marker are stripped, then separators collapse. So `Dachser_Jan_predicted.xlsx` and `Dachser-Jan-expected.xlsx` both key to `dachser jan` and pair up.
+3. The live pairing preview lists every matched pair, badges name-collisions that had to be paired by sorted order (`by order`), and shows any **unmatched** files so nothing is silently dropped. Remove a file with its `✕`.
+4. **✦ Train & Compare All** runs `diffWorkbooks` for every pair and merges all rows into the same `diffState.results` via `finalizeDiff`. From there the chips, filters, table, Send-to-Tester, and every export work on the combined set exactly as in single-pair mode.
+
+Provenance: every bulk row carries a **`source_file`** (the predicted file's basename) — surfaced in the table's Sheet cell, the row detail drawer, and the free-text search, and exported as a `source_file` column in Diff CSV / Training Set CSV and a `source_file` field in Training Set JSONL. The row's `row_uid` is also namespaced by the pair key (`@<key>` segment in the FNV-1a seed) so identical rows from *different* source files stay distinct rather than being deduped into one. Single-pair runs leave `source_file` blank and produce byte-identical `row_uid`s to before.
 
 ---
 
@@ -221,7 +246,7 @@ flowchart TD
     S3 -- yes --> S4["for r = 3 to last row"]
     S4 --> S5["processor(ws, r, cols)"]
     S5 --> S6{"result"}
-    S6 -- null --> S7["classify skipped or preserved"]
+    S6 -- null --> S7["classify skipped (Stat ≠ 10)"]
     S6 -- string --> S8["splitTriggers, bump trigCounts<br/>buildReason into reasonMap"]
     S7 --> S9["push to previewRows"]
     S8 --> S9
@@ -435,21 +460,17 @@ flowchart TD
 
 ### Wackler — `resolveWackler` / `processWackler`
 
-**Gate (two-part):**
+**Gate (Stat only):**
 
-1. **Protected phrases** — if the existing `Anmerkung` already contains any of:
-   - `Fremdnummer Doppelt berechnet`
-   - `hätte gebündelt werden müssen`
-   - `Return, ok?`
-   - `Differenz aufgrund abweichender Gewichte`
-   - `Wackler rechnet`
+The Wackler engine is fully deterministic — it always recomputes the `Anmerkung`
+from the row's inputs and never preserves a value already in the cell. There is
+no protected-phrase short-circuit; the rules below are the single source of truth.
 
-   processor returns `null` and the row is classified `preserved` in stats.
-2. **Partial Stat gate** — on `Stat_Freigabe != 10`, the rest of the engine is silent except Kontierung:
+- **Stat gate** — on `Stat_Freigabe != 10`, the rest of the engine is silent except Kontierung:
    - if `KOSTENSTELLE` and `SACHKONTO` are both empty or `X` → return `Kontierung?`
    - otherwise → return `null` (skipped).
 
-**Signals (Stat == 10 path):** `Total Kosten lt. Tarif · AVIS Diff · SNK Diff · FR Diff · MT · TZ · ReferenzNr · Volumen kg · Volumen kg DL · Empf.-PLZ · Empf.-Ort · KOSTENSTELLE · SACHKONTO`.
+**Signals (Stat == 10 path):** `Total Kosten lt. Tarif · AVIS Diff · SNK Diff · FR Diff · MT · TZ · ReferenzNr · Volumen kg · Volumen kg DL · Empf.-PLZ · Empf.-Ort · KOSTENSTELLE · SACHKONTO · Tarifzone/Empf.-Land (destination zone, optional)`.
 
 **Order:**
 
@@ -458,9 +479,13 @@ flowchart TD
 3. `SNK_Diff == 38` → `NL-FIX`
 4. `SNK_Diff == -11.5` → `hätte B2C-Line abrechnen dürfen`
 5. `SNK_Diff == 22` → `2. Zustellung ok?`
-6. **Gewichte tier branch** — when VKG and VKG_DL differ AND FR errs:
-   - same Wackler tier → `Wackler rechnet` (systemic rounding)
-   - cross tier → `Differenz aufgrund abweichender Gewichte`
+6. **Gewichte tier branch** — when VKG and VKG_DL both carry a real weight AND FR errs:
+   - same Wackler tier, single ref → `Wackler rechnet Frachtrate für <tier>kg ab` (systemic rounding; always the plain tier wording — the auditor rejected every rate-card EUR suffix). An FR **credit** that exactly matches the published gap to the **next tier up** re-tiers the note to the tier Wackler actually billed (`wacklerBilledTier`, credit-only + adjacent-only).
+   - same tier, multi-ref, materially unequal weights → `hätte gebündelt werden müssen`.
+   - same tier, multi-ref, (near-)identical weights → combined ≤ 1000 kg (`WACKLER_BUENDEL_MAX_KG`) → `hätte gebündelt werden müssen`; heavier → `Wackler rechnet …` (MT/TZ stay additive).
+   - same tier, multi-ref, volumetric weight → `Wackler rechnet …` at the floor tier (one consignment measured twice).
+   - cross tier, multi-ref, weights within 20% (`WACKLER_XTIER_NEAR_BAND`) AND FR positive → `hätte gebündelt werden müssen`.
+   - cross tier otherwise → `Differenz aufgrund abweichender Gewichte`.
    - sets `gewichteTriggered = true` (suppresses step 10).
 7. **Bundling** (only if step 6 didn't fire) — `ReferenzNr` contains `,` AND FR errs → `hätte gebündelt werden müssen`.
 8. `AVIS == 1` → `Differenz avis, ok?`
@@ -471,7 +496,7 @@ flowchart TD
 13. **Kontierung** — `KOSTENSTELLE` + `SACHKONTO` both empty/`X` → `Kontierung?`.
 14. **TZ fallback** — res still empty AND TZ errs → `Differenz treibstof`.
 
-**Wackler tier table** (`WACKLER_BP`) — `[50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, ..., 10000, 99999]`. Mirrors K+N structure but with Wackler's own breakpoints.
+**Wackler tier table** (`WACKLER_BP`) — `[50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, ..., 10000, 999999]`. Mirrors the K+N structure but with Wackler's own breakpoints. The table is **sourced from the standalone rate-card asset** `assets/wackler-ratecard.js` (generated from `data/Wackler International Rate.xlsx`, sheet `Basis`) so the tier classifier and the EUR rate lookup share one source of truth; an identical inline fallback covers contexts where the asset isn't loaded. The rate card exposes the global `WACKLER_RATECARD` with `tiers`, `zones`, the per-zone `basis` matrix, the `zoneDivision` table, and helpers `getTier` / `tierLabel` / `rate(kg, zone)` / `resolveZone(token[, plz])` / `resolveZoneByPostal(country, plz)` / `fmtEUR(n)`. The `zoneDivision` is the official Zoneneinteilung (generated from `data/Zoneneinteilung_national_international_01.07.24.xlsx`, sheet `Gesamt`): a `country → { postal-prefix → zone }` map for 13 countries (AT, CH, DE, ES, FI, FR, GB, GR, IT, NO, PL, PT, SE). Numeric countries key on the first two postal digits (leading zeros preserved, e.g. IT `00`), GB on the alphabetic postcode area (matched longest-first), and ES carries the source's `AD`/`GI` tokens. The `Wackler rechnet` note itself is always the plain tier wording — the auditor rejected both the international and (per AI-bundle 2026-06-12) the national rate-card EUR suffix. The `rate(tier, zone)` lookup is used only by the billed-tier re-tiering probe (`wacklerRateProbe` / `wacklerBilledTier`), which resolves a zone from an explicit zone code (`FR2`), a single-zone country (`BE`/`NL`), or — for ambiguous multi-zone countries (CH/FR/ES/IT/NO/PL) — from the destination country (`Empf.-Land`) combined with `Empf.-PLZ` via `resolveZoneByPostal`. Destinations that don't resolve keep the chargeable-weight tier.
 
 ---
 
@@ -532,9 +557,13 @@ before   after    →  label
 any                drift    (if engineNow != before; overlay on top)
 ```
 
+Alongside that A-vs-B label it also computes the **engine-vs-truth** view (#26) — the same classifier run on `(engineNow, after)` instead of `(before, after)` — yielding `engine_label`, `engine_matches_b`, `engine_vs_expected_jaccard`, and the `engine_missing_phrases` / `engine_extra_phrases` (+ key) arrays. This is the gap a rule fix must close, since the engine (not slot A) is what's being trained. A `correct` row whose `engine_matches_b` is `false` (tool right, engine regressed) is retained in the default view and export rather than hidden.
+
 The UI chips filter the in-memory result list; every export button (`Diff CSV`, `Training Set CSV`, `Training Set JSONL`) re-serializes whatever the filter currently selects. The button counters always reflect the post-filter row count.
 
 **Send to Tester** uses the `inputs` payload: it flips the forwarder tile, renders tester fields for that forwarder, copies matching keys into the inputs, calls `runTester()`, and scrolls the page. One click from diff-row to interactive rule playground.
+
+**Single vs. bulk.** The per-pair walk lives in `diffWorkbooks(wbA, nameA, wbB, nameB, source)`, which returns `{rows, fwSet, sheetSet, counters}` and never touches the DOM. `runDiff()` calls it once (single A/B slots, `source = null`); `runBulkDiff()` calls it once per auto-matched file pair (`source = {tag, label}`) and feeds every part to `finalizeDiff(parts, metaText, multiSource)`, which sums the counters, unions the forwarder/sheet sets, and assigns `diffState.results` (now also carrying `meta` and `multiSource`). Because both paths converge on the same `diffState.results`, `renderDiff` / `refreshDiffView` / the exports are identical for one pair or fifty. In bulk mode `source.tag` is appended to the `row_uid` seed and `source.label` is stored on each row as `source` (exported as `source_file`).
 
 ---
 

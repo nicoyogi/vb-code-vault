@@ -1,6 +1,186 @@
 {
-  "version": "1.11.0",
+  "version": "1.28.0",
   "entries": [
+    {
+      "ver": "1.28.0",
+      "date": "2026-06-16",
+      "items": [
+        "Wackler — the \"Wackler rechnet für <kg> ab\" tier is now read DIRECTLY off the rate card from the freight cost, not inferred from VKG. The resolver reads two new FR sub-columns — FR Kosten lt. Tarif (the tariff freight the rate card prescribes, = rate(tariffTier, zone)) and FR Kosten DL (the freight Wackler actually billed) — and wacklerRechnetTier reverse-looks-up the TARIFF freight (Kosten lt. Tarif, or Kosten DL − FR Differenz) against the rate card to name the tier whose published rate matches it. Validated against the real Soll-Ist workbooks: the note reports the TARIFF tier, not the billed one (ec0469d0: Kosten lt. Tarif 691,10 = rate(2000,GB2) → 2000, while Wackler billed Kosten DL 1001,40 = rate(2600) — the 310,30 gap IS the overcharge finding). This is correct even when a volumetric VKG rounds into a different weight tier than the tariff rated, which the old VKG + FR-delta inference could not see.",
+        "Wackler — sign convention confirmed from the live data: FR Differenz = Kosten DL − Kosten lt. Tarif (billed − tariff), so a POSITIVE FR Differenz is an overcharge. The v1.27.0 FR-delta fallback already computed rate(weightTier) − FR Differenz = the tariff freight, so its output was right all along; v1.28.0 only corrects the internal naming (was mislabelled \"billed\") and adds the direct read.",
+        "Wackler — the change is additive and ordered: the direct rate-card lookup runs FIRST and only overrides when a published tier rate matches the tariff freight within tolerance; otherwise the v1.27.0 FR-delta walk (immediate neighbour loose, farther tiers near-exact) runs unchanged. On sheets without the FR Kosten columns (every bundle to date) behaviour is identical to v1.27.0 — the 176-row historical replay still changes only ec0469d0, zero regressions.",
+        "AI Bundle — fr_tarif (FR Kosten lt. Tarif) and fr_dl (FR Kosten DL) are now exported in the Wackler training inputs, canonical order and input glossary, and added to the rule tester. Future bundles carry the freight costs so the tariff-tier reading is verifiable in Diff Mode (prior bundles omitted them, so the engine read them from the live workbook but they never reached the export).",
+        "Tests — 3 new cases pin the freight-column reads against real values: FR Kosten lt. Tarif names the tier directly off the card, FR Kosten DL − FR Differenz resolves it when no Tarif column is present, and an off-card FR Kosten lt. Tarif falls back to the FR-delta inference without breaking the row. Validated end-to-end against both real Soll-Ist workbooks: 82/82 data rows match the auditor's truth. Full suite: 121 passing."
+      ]
+    },
+    {
+      "ver": "1.27.0",
+      "date": "2026-06-16",
+      "items": [
+        "Wackler — the \"Wackler rechnet\" billed-tier re-tiering is no longer adjacent-only: it now walks ALL tiers in the FR-implied direction (credit → up, undercharge → down). The immediate neighbour still matches within the loose cent-rounding tolerance (0.5 €), but a FARTHER tier re-tiers only on a NEAR-EXACT gap (0.1 €) — because FR is the exact published rate gap between the weight tier and the billed tier, a clean multi-step signature rather than a coincidence. AI-bundle 2026-06-16 row ec0469d0: GB2, VKG 2496 → 2600 weight tier, FR=+310.3 = rate(2600,GB2)−rate(2000,GB2) EXACTLY → the note now names 2000, three steps down. The tight far-tier band keeps the 2026-06-12 ghost guard intact (941d66f0: DE4 200 tier, FR=+12.99, implied 29.05 vs rate(50,DE4)=29.50 is 0.45 off — far AND inexact, so it stays 200) and 52fa91df (DE9 1500, no rate fits) unchanged.",
+        "Wackler — GB zone now resolves from the Empf.-PLZ alone when there is no Empf.-Land / Tarifzone column. A UK postcode is alphanumeric and always leads with letters (RG30, EH12, UB8…), so it can never be mistaken for a five-digit German PLZ — the foreign-numeric-masquerade risk the country guard exists for does not apply. Numeric codes and non-GB alphanumerics (Irish \"D24\") still fall through to null, exactly as before. This is what lets row ec0469d0 (Empf.-PLZ \"RG30 1BD\", no Land column) resolve GB2 so the billed-tier re-tiering can run.",
+        "Tests — 2 new cases pin the 2026-06-16 rules: the 3-step near-exact down-tiering with a Land-less GB postcode (ec0469d0 → 2000), and a guard that a bare numeric foreign PLZ with no Land column never resolves a GB zone (keeps the raw weight tier). The 941d66f0 ghost guard and 52fa91df comments were rewritten to describe the near-exact far-tier rule that now blocks them. Full suite: 118 passing."
+      ]
+    },
+    {
+      "ver": "1.26.0",
+      "date": "2026-06-16",
+      "items": [
+        "Wackler — an ≈80 € SNK on a WEIGHED shipment now resolves to the \"Terminzustellung\" timed-delivery code (the same finding as the SNK 25 / 170 codes at a different published rate). It is weight-gated: an 80 € SNK with no chargeable weight stays a flat-rate \"Pauschalfracht, ok?\" (|SNK| ≥ tariff), so 80 is deliberately kept OUT of the weight-blind WACKLER_SNK_CODES book. AI-bundle 2026-06-16 rows a54fc7ee (75 kg, tarif 54.91, IT — was mis-read as Pauschalfracht because |SNK| ≥ tariff) and 278691a9 (152 kg, tarif 81.7, IT — was falling through to the generic \"SNK Differenz\").",
+        "Wackler — billed-tier re-tiering (wacklerBilledTier) is now bidirectional but still ADJACENT-ONLY. Besides the existing FR-credit step UP (Wackler billed MORE → next tier up), a POSITIVE FR delta that exactly matches the published gap DOWN to the floor tier now re-tiers the \"Wackler rechnet\" note one step down (Wackler billed LESS, against the floor bracket). AI-bundle 2026-06-16 row f6cb2770: NL, VKG=VKG_DL=2125 → 2200 weight tier, FR=+17.83 = rate(2200,NL)−rate(2000,NL) → the note now names 2000, not 2200. Adjacent-only keeps the 2026-06-12 positive-FR guard intact (941d66f0: DE4 174→200, FR=+12.99 matches no neighbour step → stays 200; no return to the old ghost-tier jumps).",
+        "Tests — 4 new cases pin the 2026-06-16 rules: SNK=80 weighed → Terminzustellung (vs the would-be Pauschalfracht and vs the SNK-Differenz fallback), the no-weight SNK=80 → Pauschalfracht weight-gate guard, and the positive-FR floor-tier down-tiering (2200 → 2000, NL). Full suite: 116 passing."
+      ]
+    },
+    {
+      "ver": "1.25.0",
+      "date": "2026-06-12",
+      "items": [
+        "Wackler — the \"Wackler rechnet Frachtrate für <tier>kg ab\" note is plain tier wording again: the national-card \"(DEn: … €)\" EUR suffix is gone. AI-bundle 2026-06-12 shows the auditor strips ANY rate-card decoration from this phrase (every ground-truth \"Wackler rechnet\" row — 9ab8df23 / 52fa91df / e3d56631 / 941d66f0 / 169d8baa — carries the bare wording, so the suffix alone labeled otherwise tier-correct rows wrong), exactly as the international-card suffix was rejected earlier. The national rate card stays loaded for the billed-tier re-tiering probe; it just never decorates the phrase.",
+        "Wackler — billed-tier re-tiering (wacklerBilledTier) is now credit-only and adjacent-only. A POSITIVE FR delta never re-tiers: bundle rows 941d66f0/169d8baa (DE4, 174 kg → 200 tier, FR=+12.99) showed the old any-sign all-tier search matching the implied billed rate 42,04−12,99=29,05 to rate(50,DE4)=29,50 within tolerance and reporting a ghost \"für 50kg\" note three tiers below the chargeable weight. Only an FR credit (Wackler billed MORE) that exactly matches the published gap to the NEXT tier up re-tiers the note — the only step the confirmed cases show (e40698ee TR 7000→7500, domestic DE2 150→200).",
+        "Wackler — same-tier equal-weight multi-reference rows now split by COMBINED WEIGHT: at or below 1000 kg (WACKLER_BUENDEL_MAX_KG) the consignments could realistically have ridden one booking and the row classifies as \"hätte gebündelt werden müssen\" (bundle row cf56daaa: 231 kg, 2 refs, DE5); heavier rows keep the \"Wackler rechnet Frachtrate für <tier>kg ab\" tier-billing reading with MT/TZ itemised (bundle row 9ab8df23: 2556 kg, 4 refs, DE6 — consistent with the 2026-06-05 heavy rows 08a0d985 / d97ce4ec / f04300d4).",
+        "Wackler — cross-tier multi-reference rows gain a bundling branch: when the two weights still roughly agree (within 20% of the larger, WACKLER_XTIER_NEAR_BAND) AND the FR delta is positive (system tariff above the bill — the system rated the references separately while Wackler billed them as one), the row classifies as \"hätte gebündelt werden müssen\" instead of \"Differenz aufgrund abweichender Gewichte\" (bundle row 447856d4: 5465,44 vs 6158 kg, 12.7% apart, FR=+65.6). Far-apart weights (2026-06-05 row 3ac4d429: 39% apart) and every FR-credit row (f8ce2bae / 3aaa6bed / 9de2427a) keep the genuine weight-discrepancy wording.",
+        "Wackler — two bundle rows are documented as irreducible rather than encoded: 72cd0079 and 250a1f2a expect hand-written \"Fremdnummer … bereits berechnet in <other Beleg>, ok?\" notes that reference ANOTHER workbook's document number (10351346 / 10352648) — cross-document knowledge the engine's row inputs cannot derive. The engine keeps its generic classifications there.",
+        "AI Bundle — the exported rule-spec no longer claims the Wackler engine preserves protected existing phrases (WACKLER_PROTECTED): that mechanism was removed in v1.15.0, but the forwarder notes and the existing_anmerkung glossary entry still described it — a false constraint fed to every AI rule-fixer since.",
+        "Tests — the two domestic billed-tier expectations dropped their EUR suffix, and 8 new cases pin the 2026-06-12 rules: positive-FR no-re-tier (ghost 50kg), credit with no clean adjacent gap, suffix-free domestic note, light vs heavy equal-weight multi-ref split, cross-tier near-weight bundling, and the far-apart / FR-credit guards. Full suite: 112 passing."
+      ]
+    },
+    {
+      "ver": "1.24.0",
+      "date": "2026-06-11",
+      "items": [
+        "Diff Mode — phrase-normalisation hardening for clean training labels: normPhrase now folds Unicode to NFC (macOS-edited truth cells often carry decomposed umlauts that byte-compare unequal to the engine's precomposed ones), strips invisible zero-width characters (ZWSP/ZWNJ/ZWJ, soft hyphen, stray BOM) and folds en/em-dash variants to the ASCII hyphen. Each of these previously mislabeled a visibly-identical row as `wrong` — in the tiles, the table, AND every exported training row, the exact false signal an AI rule-fixer must never be fed. classifyDiff, computePhraseDiff, phraseCellParts and samePhraseSet (drift + engine-vs-truth) all share the helper, so the whole labeling pipeline tightened at once.",
+        "Diff Mode — phrase→key resolution now shares normPhrase semantics with the diff itself. phraseToKey previously only lowercased+trimmed, so a double-space/NFD/dash-noisy catalog phrase compared EQUAL in the diff yet exported as an unmapped `?:` sentinel key — and split one failure pattern into two in summary.json. Lookup is now two-layered: exact raw match first (the case-variant `Kontierung?` / `kontierung?` entries resolve to their own keys again instead of last-declared-wins), then the shared normPhrase fold, then literals/templates as before.",
+        "Diff Mode — compound catalog phrases resolve per half: PHRASES.elevatedRestricted is two phrases pre-joined with ' // ', but cells are split by splitTriggers before any key lookup, so neither half ever matched the joined reverse-index entry and DHL rows exported `?:Eelevated risk ok?` / `?:Restricted destination ok?`. The reverse index now indexes each ' // ' half under the same key.",
+        "Diff Mode — granularLabel emptiness is now PHRASE-level, matching classifyDiff: a cell holding only separator garbage (' // ') has no phrases, but the old raw-trim check sub-labeled such a row overfired_full while the top-level label said `correct` (and phrase_disjoint where classifyDiff said `missed`) — a self-contradictory training signal. Both sides garbage → empty_match; garbage vs filled → missed_full / overfired_full. The case/whitespace cosmetic checks fold through NFC too.",
+        "Tests — 12 new cases pin the hardening: NFC/NFD equality, zero-width/soft-hyphen/NBSP/dash noise, separator-only cells (classifyDiff + granularLabel agreement), noisy-phrase key resolution, compound-phrase halves, exact-case Kontierung resolution, legacy glued-literal + template regressions, and a catalog-wide guard that no two PHRASES entries may normPhrase-fold onto each other (known exception: the Kontierung case pair). Harness now exposes the PHRASES catalog. Full suite: 104 passing."
+      ]
+    },
+    {
+      "ver": "1.23.0",
+      "date": "2026-06-10",
+      "items": [
+        "AI Bundle — new summary.json: the training corpus is pre-aggregated into failure patterns, one per (forwarder × engine_missing/extra_phrase_keys) combination, sorted by row count. Each pattern carries a suggested_action (add_or_loosen_branch / guard_or_tighten_branch / fix_both), the label distribution, up to 5 example_row_uids to pull full records from training.jsonl, shared_inputs (cell values identical on EVERY failing row — prime gate-signal candidates) and varying_inputs (present everywhere but differing — must not become gate conditions). Rows the current engine already solves are counted in engine_solved and excluded from patterns, making them an explicit regression set. This does the documented rule-update workflow's step 1 (grouping) up front, so a context-limited AI assistant can prioritise without walking every JSONL record.",
+        "AI Bundle — new prompt.md: the ready-to-paste prompt the bundle intro always promised but the README only paraphrased. It encodes the authoritative-field rule (engine_* over A-vs-B), the pattern-first workflow, the engine constraints (PHRASES catalog + join(), hasErr thresholds, don't regress solved rows), and the expected output shape (diagnosis → patch → covered row_uids), with the live pattern counts and top-3 patterns interpolated.",
+        "Training exports — records are now sorted deterministically (forwarder → source pair → sheet → row) in buildTrainingSet, so training.jsonl / Training Set CSV from successive runs of the same corpus are diffable line-for-line regardless of workbook sheet order or bulk pair order.",
+        "AI Bundle — README.md gained a 'Start with summary.json' step and the new file inventory; the export log line now reports pattern counts (actionable vs already-solved); the button tooltip lists the new contents.",
+        "Tests — buildTrainingSummary coverage: pattern grouping with solved-row exclusion, shared vs varying input derivation, a_vs_b fallback when the engine was not evaluated, count-descending order and fix_both action. Full suite: 92 passing."
+      ]
+    },
+    {
+      "ver": "1.22.0",
+      "date": "2026-06-10",
+      "items": [
+        "Diff Mode — per-phrase highlighting in the table's Before (A) / After (B) columns. The Anmerkung cell is a ' // '-joined list of independent phrases, and previously the WHOLE Before cell was struck through red and the whole After cell rendered green even when only one phrase out of several differed. Now each phrase renders on its own: phrases both sides agree on stay neutral, a phrase only A has (over-fired) is struck through red, and a phrase only B has (missed) is green — so on multi-phrase rows the one disagreeing phrase is visible at a glance without opening the detail drawer. Powered by the row's existing missing_phrases/extra_phrases buckets (new phraseCellParts helper), so the table now agrees exactly with the phrase-diff block and the exports.",
+        "Diff Mode — the table's hard 500-row render cap is now a pager: the footer grew a \"show 500 more\" button that extends the table page by page instead of forcing a filter. The cap snaps back to one page whenever the filter state changes or a new Train & Compare runs, so a deep scroll never leaks into an unrelated view. Exports are unaffected — they always honored the full filter scope, not the render cap.",
+        "Diff Mode — the four classic summary tiles (total / added / removed / changed) are now clickable filter shortcuts, consistent with the training chips: added filters to missed, removed to overfired, changed to wrong, and total rows back to all. The active tile is highlighted and kept in sync with the chips (aria-pressed included).",
+        "Diff Mode — fixed the Forwarder / Sheet filter dropdowns, which never actually filtered: the inline onchange handler re-rendered the table BEFORE the listener that mirrors the dropdown value into the filter state ran, and the render then wrote the stale value back into the select, silently reverting the user's choice. The free-text search had the same root cause as a one-keystroke lag. refreshDiffView now reads the live control values first (the DOM is the source of truth), and the reverse-sync that caused the revert is gone.",
+        "Tests — added phraseCellParts coverage (changed-phrase flagging, normPhrase case/whitespace-insensitive matching, empty-cell behavior); exposed it from the test harness."
+      ]
+    },
+    {
+      "ver": "1.21.0",
+      "date": "2026-06-05",
+      "items": [
+        "Wackler — added the `Dieselzuschlag ok?` phrase (new `PHRASES.dieselzuschlag`). On a Hebebühne (liftgate) credit row (SNK ≈ -150, the `hätte Hebebühne abrechnen dürfen` branch), a co-occurring TZ/fuel delta is now emitted as the auditor's `Dieselzuschlag ok?` query instead of the generic `Differenz Energiezuschlag`. The fuel gate itself is unchanged — only the wording switches when the Hebebühne branch fired. Resolves AI-bundle 2026-06-05 row ce9f73d9.",
+        "Wackler — the `Wackler rechnet Frachtrate für <tier>kg ab` note now reports the tier Wackler ACTUALLY billed, not just the chargeable-weight tier. When the FR Differenz equals a clean rate-card gap between two neighbouring tiers, `wacklerBilledTier` reads the destination's published rate, computes the billed freight (systemRate(weightTier) - FR), and matches it back to the tier whose rate fits within a tight EUR tolerance. It degrades to the weight tier when the rate card / destination zone is unavailable or the FR gap is a genuine rounding residual rather than a clean tier step. Resolves AI-bundle 2026-06-05 row e40698ee (TR: 6840/6862 kg weigh into the 7000 tier, but FR=-59.34 = rate(7500)-rate(7000), so Wackler billed the 7500 tier).",
+        "Wackler — billed-tier re-tiering and the booked-EUR enrichment are now card-agnostic via a single `wacklerRateProbe` that binds a row to its rate card + zone. The national DE card (DE1-DE9) is tried first (the international card leaves those cells blank), then the international card, so domestic German `Wackler rechnet` rows re-tier off the national rate matrix too — not just international ones.",
+        "Wackler — national vs. international is now classified from the `Abg.-Land` / `Empf.-Land` country columns (`wacklerLand` / `wacklerLane`): DE→DE is domestic (zone resolved from the numeric Empf.-PLZ), while a foreign end is an international lane keyed by the non-German country + that side's PLZ (Empf.-PLZ on an export, Abg.-PLZ on an import). Because the country is known, a numeric PLZ is unambiguous, so the conservative bare-PLZ guard is lifted: domestic zones resolve straight from the PLZ, while foreign rows carrying German-looking postal codes (HR, SE, …) classify as international and no longer pick up a bogus `(DEn: … €)` suffix. `resolveWackler` now captures `abg_land` / `empf_land` / `abg_plz` and narrows the `zone` column to explicit rate-zone tokens (Tarifzone / Tarifgebiet / Zone).",
+        "Tests — added Wackler cases for the Dieselzuschlag wording (with/without a fuel delta), billed-tier re-tiering (explicit zone token, no-zone fallback, and via Empf.-Land), domestic national re-tiering with the zone resolved from Empf.-PLZ, and the foreign-Empf.-Land / German-looking-PLZ guard. Full suite: 85 passing."
+      ]
+    },
+    {
+      "ver": "1.20.0",
+      "date": "2026-06-05",
+      "items": [
+        "Diff Mode / Rule Training — every diff row now carries an engine-vs-truth comparison: how the CURRENT engine (process<Forwarder>) scores against ground truth B, not just how slot A (your tool's output) compares to B. New per-row + export fields: engine_label, engine_matches_b, engine_granular, engine_vs_expected_jaccard, engine_missing_phrases/-_phrase_keys (branches to ADD/loosen) and engine_extra_phrases/-_phrase_keys (branches to GUARD/tighten). Since slot A may be stale or from a different tool, this engine-vs-truth view is the precise target for rule fixes, and a fix is complete when engine_matches_b flips to true.",
+        "Diff Mode — a row where the tool was right (label=correct, A==B) but the current engine disagrees with truth (engine_matches_b=false) is now KEPT in the default table view and the default training export instead of being hidden as a positive. These engine regressions were previously only visible with \"Include matching rows\" ticked. Pure positives (engine also matches truth) stay opt-in as before.",
+        "Diff Mode — the row detail drawer gained an \"engine vs truth\" block (should add / should remove phrase chips with the engine's own label + Jaccard) whenever the current engine disagrees with truth. The Diff CSV, Training Set CSV/JSONL, AI Bundle README, and Rule Spec instructions all document and emit the new engine_* fields.",
+        "Diff Mode — removed the dead legacy helper cluster (FW_RESOLVERS / tsResolverScore / tsDetectForwarder / tsLabelFor / tsCollectInputs / tsRunRule) left over from before the unified diffWorkbooks walk. The copies had silently drifted from the live path (their K+N input collector dropped the tarif feature), so collapsing to one code path removes a source of corrupted training rows.",
+        "Tests — added tests/diff.test.mjs covering classifyDiff, computePhraseDiff, granularLabel, rowUid, and the engine-vs-truth derivation; exposed those primitives from the test harness. Full suite: 69 passing."
+      ]
+    },
+    {
+      "ver": "1.19.0",
+      "date": "2026-06-05",
+      "items": [
+        "Wackler — the \"Wackler rechnet Frachtrate für <tier>kg ab\" note no longer appends the booked rate-card EUR amount (e.g. the previous \"… für 3000kg ab (NL: 482,60 €)\" now renders as plain \"… für 3000kg ab\"). Per auditor feedback the note should carry only the weight-tier bracket, so `wacklerRechnetNote` returns the plain wording and the zone/EUR enrichment added in 1.17.0–1.18.0 is dropped. The phrase still resolves to the `tpl_wacklerRechnet` template key, and any joined classifications (e.g. \"// Mautdifferenz\") are unaffected."
+      ]
+    },
+    {
+      "ver": "1.18.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — the official zone division (Zoneneinteilung) now ships inside the rate-card asset, generated from data/Zoneneinteilung_national_international_01.07.24.xlsx (sheet \"Gesamt\") as `WACKLER_RATECARD.zoneDivision`. It maps a destination country + postal prefix to a rate-card zone for 13 countries (AT, CH, DE, ES, FI, FR, GB, GR, IT, NO, PL, PT, SE) — the data needed to resolve multi-zone countries that a bare country code cannot disambiguate.",
+        "Wackler — new `WACKLER_RATECARD.resolveZoneByPostal(country, postal)` resolves a destination to its sub-zone via the zone division: numeric countries key on the first two postal digits (leading zeros preserved, e.g. IT \"00\"), GB keys on the alphabetic postcode area (longest-first, so \"EH\" wins over \"E\"), and ES carries the source's \"AD\"/\"GI\" tokens. Returns null for unknown countries, blank postals, or unmatched prefixes.",
+        "Wackler — `resolveZone` now takes an optional second argument, the destination postal code, and consults it only when the token alone is ambiguous. This lets multi-zone countries (CH/FR/ES/IT/NO/PL) resolve to the correct sub-zone — e.g. resolveZone(\"CH\", \"8001\") → \"CH1\" — while existing single-argument callers (explicit zone codes like FR2, single-zone countries like BE/NL) are unaffected.",
+        "Wackler — the same-tier \"Wackler rechnet Frachtrate für <tier>kg ab\" note now resolves the rate-card zone from the destination country (Empf.-Land etc.) combined with Empf.-PLZ when no explicit zone token is present, so the booked EUR amount is appended for multi-zone international destinations too (e.g. a Swiss row with PLZ 8001 → CH1). Domestic rows, rows without a destination, and bare unit-test contexts are unchanged, and the enriched phrase still resolves to the `tpl_wacklerRechnet` template key."
+      ]
+    },
+    {
+      "ver": "1.17.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — the international freight rate card (data/Wackler International Rate.xlsx, sheet \"Basis\") now ships as a standalone asset, assets/wackler-ratecard.js, loaded via its own <script> tag before the engine. The full rate matrix (45 weight tiers × 42 destination zones) lives OUTSIDE assets/anmerkung.js; the engine reads it through the global `WACKLER_RATECARD`. Keeping the data out of the engine keeps anmerkung.js diff-able and lets the rate card be regenerated from the workbook without touching engine logic.",
+        "Wackler — the tier breakpoint table (`WACKLER_BP`) is now sourced from the rate card asset so the tier classifier and the rate lookup share a single source of truth. An identical inline fallback is retained for contexts where the asset isn't loaded (e.g. the unit-test harness without it), so the engine stays self-sufficient and deterministic.",
+        "Wackler — the same-tier \"Wackler rechnet Frachtrate für <tier>kg ab\" note is enriched with the booked rate-card amount when the row carries a resolvable destination zone, e.g. \"… für 150kg ab (FR2: 87,49 €)\". The auditor now sees the exact rate-card cell Wackler billed against, not just the bracket. Zone resolution accepts an explicit zone code (FR2, normalised from \"fr-2\") or a single-zone country (BE, NL, CZ); ambiguous multi-zone countries (CH, FR, …) and unknown/blank tokens fall back to the plain tier wording. Domestic rows and rows without a zone column are unchanged, and the enriched phrase still resolves to the `tpl_wacklerRechnet` template key in Diff-Mode exports.",
+        "Wackler — `resolveWackler` now also locates a destination-zone column, trying the headers Tarifzone / Empf.-Land / Bestimmungsland / Ländercode / Country / Zone / Land. When none is present the rate-note enrichment simply does not fire."
+      ]
+    },
+    {
+      "ver": "1.16.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — fuel/energy surcharge wording changed from \"DifferenzTreibstof\" to \"DifferenzEnergiezuschlag\", now a first-class PHRASES entry (key `differenzEnergiezuschlag`). This is the auditor's dominant wording in the AI bundle (17 of 21 fuel rows). The legacy \"DifferenzTreibstof\" string is retained in PHRASE_LITERALS so older slot-A Diff-Mode exports still resolve to a stable key (`lit_differenzTreibstofWackler`).",
+        "Wackler — the fuel surcharge is no longer suppressed when a row carries BOTH a freight (FR) and a toll (MT) delta. The previous \"TZ is derived spillover of FR+MT\" assumption was disproved by the bundle: the auditor lists the energy surcharge as its own classification alongside FR and MT. The phrase is still absorbed on same-tier \"Wackler rechnet\" rows (systemic tier rounding).",
+        "Wackler — Mautdifferenz is now always additive when the toll delta clears the threshold, including on same-tier \"Wackler rechnet\" rows where it was previously suppressed. Mautdifferenz appears on roughly half of the bundle's ground-truth rows, including every \"Wackler rechnet …\" case that carries an MT delta.",
+        "Wackler — bundling now takes precedence over the same-tier rate-card wording. When both weights fall in one rate tier AND the row is a multi-reference bundle (comma-joined ReferenzNr) with an FR delta, the row classifies as \"hätte gebündelt werden müssen\" (consignments that should have shared one booking) instead of \"Wackler rechnet Frachtrate für <tier>kg ab\". Cross-tier multi-ref rows remain \"Differenz aufgrund abweichender Gewichte\".",
+        "Wackler — combined effect lifts the AI-bundle (2026-06-04, engine v1.13.0 export) Diff-Mode agreement from 19/46 to 28/46 correct with zero regressions on previously-correct rows. The residual mismatches are irreducible auditor variance: manual truck-capacity notes (\"Wackler berechnet 10to+7to\"), per-workbook fuel wording (one file still uses \"DifferenzTreibstof\"), hand-picked rate tiers that differ from the rate-card lookup, and a few Pauschalfracht edge cases."
+      ]
+    },
+    {
+      "ver": "1.15.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — the protected-phrase preservation mechanism was removed entirely. `processWackler` no longer reads the existing `Anmerkung` cell and no longer short-circuits to `null` when it already contains a \"protected\" phrase (Fremdnummer doppelt berechnet / hätte gebündelt werden müssen / hätte Avisgebühr telefonisch abrechnen dürfen / Return, ok? / Differenz aufgrund abweichender Gewichte / Wackler rechnet). The engine is now fully deterministic: every in-scope row is recomputed purely from its inputs, so the rules are the single source of truth for a row's output.",
+        "Weight cascade — cross-tier weights remain a genuine discrepancy: when `Volumen kg` and `Volumen kg DL` fall in different Wackler rate tiers (both carrying a real weight, with an FR delta) the row classifies as \"Differenz aufgrund abweichender Gewichte\"; same-tier (or identical) weights emit the terminal \"Wackler rechnet Frachtrate für <tier>kg ab\".",
+        "Diff Mode — the ENGINE NOW column no longer shows a false drift dot + \"(empty)\" on rows whose slot-A Anmerkung carried a protected phrase. With preservation gone, Engine-Now recomputes from the row inputs like every other cell, so genuine drift is the only thing the column flags.",
+        "Preview/stats — the \"preserved (protected)\" mini-stat and the per-row `preserved` status were retired (no protected case exists anymore). A `null` processor result now always means out-of-scope (Stat_Freigabe ≠ 10) and is counted as `skipped`. The Rule Tester's \"Protected existing\" preset was replaced with a \"Cross-tier weights\" preset."
+      ]
+    },
+    {
+      "ver": "1.14.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — new \"Lagergeld\" (storage-fee) classification. When the booked tariff is BLANK (no freight tariff backing) and the only cost signal on the row is an SNK charge (no FR/MT/TZ delta, no AVIS surcharge code), the row is now classified as \"Lagergeld\" instead of falling through to the generic \"SNK Differenz\" fallback. The empty-tariff-with-FR/MT/TZ-signal case stays with Fremdnummer; this is the SNK-only remainder. Resolves AI-bundle training rows 24–41 (TARIF blank, SNK 3.95–300, German destinations, VKG == VKG_DL) — the single largest cluster in the bundle (18 mislabelled \"SNK Differenz\" + 1 previously missed row).",
+        "Wackler — new \"hätte Hebebühne abrechnen dürfen\" (liftgate-credit) classification. A large negative SNK ≈ -150 (±2.0) that matches no recognised SNK surcharge code is the auditor's liftgate-credit signature; it now emits the specific wording instead of the generic \"SNK Differenz\" fallback. Added \"hätte Hebebühne abrechnen dürfen\" to the PHRASES catalog so it resolves to a stable key (`hebebuehne`) in Diff-Mode exports (previously the unmapped `?:hätte Hebebühne abrechnen dürfen`). Resolves AI-bundle training rows 1 & 42 (SNK ≈ -150). The window is deliberately narrow so it never poaches real SNK Differenz residuals."
+      ]
+    },
+    {
+      "ver": "1.13.0",
+      "date": "2026-06-04",
+      "items": [
+        "Diff Mode — new Bulk sub-panel: compare MANY (predicted, expected) workbook pairs in one pass for a far wider training corpus than a single A/B file. Drop a set of predicted workbooks into A and the matching expected workbooks into B; files are auto-paired by filename (role words like \"predicted\"/\"expected\"/\"truth\"/\"output\" and a trailing a/b marker are ignored, so \"Dachser_Jan_predicted.xlsx\" pairs with \"Dachser-Jan-expected.xlsx\"). A live pairing preview shows every matched pair, flags name-collisions paired by sorted order (\"by order\" badge), and lists any unmatched files so nothing is silently dropped.",
+        "Diff Mode — all bulk pairs merge into the SAME results bundle, so the existing training breakdown chips, forwarder/sheet/search filters, the per-row table, Send-to-Tester, and every export (Diff CSV, Training Set CSV/JSONL, Rule Spec, AI Bundle) now operate on the combined multi-file corpus. The single-pair Train & Compare flow is unchanged.",
+        "Diff Mode — every row now carries provenance. A new \"source_file\" column is added to Diff CSV and Training Set CSV, the \"source_file\" field is added to Training Set JSONL records (and documented in the AI Bundle README), the diff table's Sheet cell shows the source pair on bulk runs, the row detail drawer lists source_file, and free-text search now matches on it. Single-pair runs leave source_file blank.",
+        "Diff Mode — row_uid now optionally namespaces by source pair (FNV-1a seed gains an \"@<pair-key>\" segment in bulk mode), so two rows that share forwarder/sheet/row/inputs across DIFFERENT source files stay distinct instead of being deduped into one. Single-pair row_uids are byte-for-byte unchanged, so training CSVs from the old single-file flow still join cleanly across runs."
+      ]
+    },
+    {
+      "ver": "1.12.0",
+      "date": "2026-06-04",
+      "items": [
+        "Wackler — new SNK surcharge code: |SNK| ≈ 25 (±0.5) now classifies as \"Terminzustellung\" (a flat timed-delivery surcharge) instead of falling through to the generic \"SNK Differenz\" fallback. Added \"Terminzustellung\" to the PHRASES catalog so it resolves to a stable key in Diff-Mode exports (previously emitted as the unmapped `?:Terminzustellung`). Resolves AI-bundle training rows 5 & 39 (SNK=25, Glasgow G5 0UG).",
+        "Wackler — `processWackler` weight/bundling cascade reworked. The branch that routed cross-tier, multi-reference, far-apart weight gaps to \"hätte gebündelt werden müssen\" was removed: the auditor classifies these as \"Differenz aufgrund abweichender Gewichte\" (training rows 7 & 61). Any cross-tier weight gap (with both VKG and VKG_DL carrying a real weight and an FR delta) now emits \"abweichender Gewichte\"; \"hätte gebündelt werden müssen\" is reserved for the legacy no-weight-signal + multi-ref + FR case.",
+        "Wackler — \"Wackler rechnet Frachtrate für <tier>kg ab\" now also fires when VKG and VKG_DL are identical (not just when they differ but land in the same rate tier), provided both carry a real weight and there is an FR delta. This is a terminal same-tier rate-card finding: the accompanying MT and TZ deltas are treated as systemic rounding for that tier and are suppressed (no Mautdifferenz / DifferenzTreibstof appended). Resolves training row 41 (VKG=VKG_DL=365, FR/MT/TZ all positive).",
+        "Wackler — additive DifferenzTreibstof (rule 11, TZ ≥ 2.0) is now suppressed when the row carries BOTH a freight (FR) and a toll (MT) delta. On such rows the TZ gap is the fuel surcharge computed on (freight + toll) — derived spillover, not a separate classification (training rows 7/9/12/61 each show |TZ| ≈ 12% of |FR|+|MT|). The standalone pure-TZ fallback and the TZ-only additive trigger are unchanged, so the legacy pure-fuel rows (data/Wackler-training.csv rows 4–19) still classify as DifferenzTreibstof."
+      ]
+    },
+    {
+      "ver": "1.11.1",
+      "date": "2026-06-04",
+      "items": [
+        "Diff Mode — engine-drift detection is now phrase-SET aware, matching the v1.11.0 label logic. Previously the `engine drift` overlay (the drift chip, the amber engine cell, and the `engine_matches_a` column in Diff CSV / Training Set JSONL) compared the current engine's output to slot A with raw string equality, so a row where the engine emits the SAME phrases as the tool output but in a different order, casing, or with stray whitespace was wrongly flagged as drift. `runDiff` now compares the engine output and slot A as normalized phrase sets via `samePhraseSet(splitTriggers(...))` — the exact comparison `classifyDiff` and the engine's own `join()` dedup already use. Net effect: `engine drift` fires only when the rules have genuinely changed what phrases they emit since slot A was generated, so the drift chip count and the AI training exports stop surfacing cosmetic-only false positives."
+      ]
+    },
     {
       "ver": "1.11.0",
       "date": "2026-05-29",
@@ -246,7 +426,7 @@
         "Forwarder tiles are now a proper radiogroup — arrow keys and Home/End work.",
         "Offline PWA — install The Alchemist to your machine from Chrome/Edge.",
         "Phrase catalog (PHRASES) extracted — single source of truth for all rule output strings.",
-        "Version badge + \"What\u2019s new\" button in the header."
+        "Version badge + \"What’s new\" button in the header."
       ]
     },
     {

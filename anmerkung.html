@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-grim="alchemist" data-grim-cards=".upload-area,.adv-panel,.bonus-panel,.train-panel,.fw-grid > *,.stat">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#02020a">
-<title>Anmerkung Processor · The Grimoire</title>
+<title>Anmerkung Processor · The Alchemist</title>
 <meta name="description" content="Transmute forwarder invoices (Dachser, K+N, DHL Express, Wackler) with dynamic Anmerkung rules — entirely in your browser. No upload, no server.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="The Grimoire">
@@ -24,6 +24,8 @@
 <script src="assets/grimoire-core.js" defer></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+<link rel="stylesheet" href="assets/grimoire-theme.css">
+<script src="assets/grimoire-theme.js" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -132,7 +134,7 @@
 
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
   <button class="btn-preview" id="btnPreview" disabled onclick="runPreview()">Preview — dry-run without writing</button>
-  <button class="btn-run" id="btnRun" disabled onclick="openRunGate()">Invoke the Ritual</button>
+  <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Invoke the Ritual</button>
   <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Transmuted Scroll ↓</button>
 
   <div class="preview-wrap" id="previewWrap" role="region" aria-label="Preview of proposed annotations">
@@ -159,7 +161,6 @@
     </div>
     <div class="stats-grid-ext">
       <div class="stat mini"><div class="stat-n" id="sEmpty">0</div><div class="stat-l">no trigger (empty)</div></div>
-      <div class="stat mini"><div class="stat-n" id="sPreserved">0</div><div class="stat-l">preserved (protected)</div></div>
     </div>
     <div class="trig-wrap" id="trigWrap">
       <div class="trig-title">Trigger Breakdown</div>
@@ -171,7 +172,7 @@
   <!-- ═══════════ BULK PROCESSING ═══════════ -->
   <div class="bulk-wrap">
     <button type="button" class="bonus-toggle" id="bulkToggle" onclick="toggleBonus('bulk')" aria-expanded="false" aria-controls="bulkPanel">
-      <span>VI — Bulk Process</span>
+      <span>IV — Bulk Process</span>
       <span class="bonus-tag">Multi-file</span>
       <span class="chev">›</span>
     </button>
@@ -200,7 +201,7 @@
   <!-- ═══════════ BONUS: RULE TESTER (#18) ═══════════ -->
   <div class="bonus-wrap">
     <button type="button" class="bonus-toggle" id="testerToggle" onclick="toggleBonus('tester')" aria-expanded="false" aria-controls="testerPanel">
-      <span>IV — Rule Tester</span>
+      <span>V — Rule Tester</span>
       <span class="bonus-tag">Playground</span>
       <span class="chev">›</span>
     </button>
@@ -227,12 +228,12 @@
   <!-- ═══════════ BONUS: DIFF MODE (#19) ═══════════ -->
   <div class="bonus-wrap">
     <button type="button" class="bonus-toggle" id="diffToggle" onclick="toggleBonus('diff')" aria-expanded="false" aria-controls="diffPanel">
-      <span>V — Diff Mode</span>
+      <span>VI — Diff Mode</span>
       <span class="bonus-tag">Compare before/after</span>
       <span class="chev">›</span>
     </button>
     <div class="bonus-panel" id="diffPanel" role="region" aria-label="Diff between before and after files">
-      <div class="diff-intro">Drop two processed workbooks and Kiro will <strong>train the engine</strong> against them. Put your tool's output in <strong>A</strong>, the hand-corrected ground truth in <strong>B</strong>. Every disagreement becomes a labeled training case — <span class="lbl-pill lbl-wrong">wrong</span> <span class="lbl-pill lbl-missed">missed</span> <span class="lbl-pill lbl-overfired">overfired</span> — with the input cells the rules read and the trigger trace. Ship it as CSV/JSONL, or click <strong>✦</strong> on any row to open it in the Rule Tester and iterate on the rule against that exact case. <strong>For AI-driven rule updates:</strong> grab the <strong>✦ AI Bundle (ZIP)</strong> — it packages the training set with a self-describing rule spec and a prompt template so any AI assistant can propose patches to <code>assets/anmerkung.js</code> without reading the source.</div>
+      <div class="diff-intro">Drop two processed workbooks and Kiro will <strong>train the engine</strong> against them. Put your tool's output in <strong>A</strong>, the hand-corrected ground truth in <strong>B</strong>. Every disagreement becomes a labeled training case — <span class="lbl-pill lbl-wrong">wrong</span> <span class="lbl-pill lbl-missed">missed</span> <span class="lbl-pill lbl-overfired">overfired</span> — with the input cells the rules read and the trigger trace. Ship it as CSV/JSONL, or click <strong>✦</strong> on any row to open it in the Rule Tester and iterate on the rule against that exact case. <strong>For AI-driven rule updates:</strong> grab the <strong>✦ AI Bundle (ZIP)</strong> — it packages the training set with a self-describing rule spec and a prompt template so any AI assistant can propose patches to <code>assets/anmerkung.js</code> without reading the source. <strong>Need a wider corpus?</strong> Use <strong>Bulk</strong> below to compare many predicted/expected pairs in one pass.</div>
 
       <div class="diff-slots">
         <div class="diff-slot" id="diffSlotA" data-slot="a" role="button" tabindex="0"
@@ -262,8 +263,46 @@
         <button type="button" class="tester-btn" id="btnDiffTrainCsv" style="display:none" onclick="downloadTrainingSet('csv')" title="Export wrong/missed/overfired pairs with input cells + trigger trace, one row per case">↓ Training Set (CSV) <span class="btn-ct" id="ctTrainCsv"></span></button>
         <button type="button" class="tester-btn" id="btnDiffTrainJsonl" style="display:none" onclick="downloadTrainingSet('jsonl')" title="Same as CSV but JSONL — one JSON record per line, ML-friendly">↓ Training Set (JSONL) <span class="btn-ct" id="ctTrainJsonl"></span></button>
         <button type="button" class="tester-btn" id="btnDiffRuleSpec" style="display:none" onclick="downloadRuleSpec()" title="Self-describing schema: PHRASES catalog, thresholds, per-forwarder input glossary, gate, processor symbol, engine version. Pair with a Training Set export to give an AI everything it needs to update the rules.">↓ Rule Spec (JSON)</button>
-        <button type="button" class="tester-btn primary-soft" id="btnDiffAiBundle" style="display:none" onclick="downloadAiBundle()" title="One-click ZIP: training.jsonl + rule_spec.json + README.md (with prompt template). Drop into any AI assistant — it has everything to propose a rule patch without reading anmerkung.js.">✦ AI Bundle (ZIP) <span class="btn-ct" id="ctAiBundle"></span></button>
+        <button type="button" class="tester-btn primary-soft" id="btnDiffAiBundle" style="display:none" onclick="downloadAiBundle()" title="One-click ZIP: training.jsonl + summary.json (failure patterns, pre-grouped with shared gate-signal inputs) + rule_spec.json + prompt.md (ready to paste) + README.md. Drop into any AI assistant — it has everything to propose a rule patch without reading anmerkung.js.">✦ AI Bundle (ZIP) <span class="btn-ct" id="ctAiBundle"></span></button>
       </div>
+
+      <!-- Bulk diff — many pairs at once, for a wider training corpus -->
+      <div class="diff-bulk" id="diffBulk">
+        <div class="diff-bulk-head">
+          <span class="diff-bulk-title">Bulk — compare many pairs at once</span>
+          <span class="diff-bulk-tag">wider training corpus</span>
+        </div>
+        <div class="diff-bulk-intro">Drop a set of <strong>predicted</strong> workbooks (A) and the matching <strong>expected</strong> workbooks (B). Files are auto-paired by name — role words like <code>predicted</code> / <code>expected</code> are ignored — and every pair is compared in one pass. All rows feed the same training breakdown, filters, and exports below, so you get a far wider look than a single file pair. Each exported row carries a <code>source_file</code> so you know which pair it came from.</div>
+
+        <div class="diff-bulk-slots">
+          <div class="diff-bulk-slot" id="diffBulkSlotA" role="button" tabindex="0"
+            aria-label="Predicted set: activate to browse, or drop one or more .xlsx files"
+            onclick="document.getElementById('diffBulkInputA').click()"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('diffBulkInputA').click();}"
+            ondragover="onBulkDiffDrag(event,'a',true)" ondragleave="onBulkDiffDrag(event,'a',false)" ondrop="onBulkDiffDrop(event,'a')">
+            <div class="diff-slot-label">A — Predicted set (tool output)</div>
+            <div class="diff-slot-name" id="diffBulkNameA">Click or drop .xlsx files</div>
+          </div>
+          <div class="diff-bulk-slot" id="diffBulkSlotB" role="button" tabindex="0"
+            aria-label="Expected set: activate to browse, or drop one or more .xlsx files"
+            onclick="document.getElementById('diffBulkInputB').click()"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('diffBulkInputB').click();}"
+            ondragover="onBulkDiffDrag(event,'b',true)" ondragleave="onBulkDiffDrag(event,'b',false)" ondrop="onBulkDiffDrop(event,'b')">
+            <div class="diff-slot-label">B — Expected set (ground truth)</div>
+            <div class="diff-slot-name" id="diffBulkNameB">Click or drop .xlsx files</div>
+          </div>
+        </div>
+        <input type="file" id="diffBulkInputA" accept=".xlsx" multiple style="display:none" onchange="onBulkDiffFile(event,'a')">
+        <input type="file" id="diffBulkInputB" accept=".xlsx" multiple style="display:none" onchange="onBulkDiffFile(event,'b')">
+
+        <div class="diff-bulk-pairs" id="diffBulkPairs"></div>
+
+        <div class="tester-actions">
+          <button type="button" class="tester-btn primary" id="btnBulkDiffRun" disabled onclick="runBulkDiff()" title="Compare every matched A/B pair and merge all rows into one training corpus below">✦ Train &amp; Compare All <span class="btn-ct" id="ctBulkDiff"></span></button>
+          <button type="button" class="tester-btn" onclick="clearBulkDiff()">Clear bulk sets</button>
+        </div>
+      </div>
+
       <label class="opt-row" id="diffIncludeMatchWrap" style="display:none;margin-top:6px;font-size:10.5px;padding:8px 12px" for="diffIncludeMatch">
         <input type="checkbox" id="diffIncludeMatch" onchange="refreshDiffView()">
         <span class="opt-desc"><strong>Include matching rows in training set</strong><span class="hint">Adds rows where A and B agree, labeled <code>correct</code>. Useful as positive examples; increases file size.</span></span>
@@ -272,12 +311,12 @@
       <div id="diffResults" style="display:none">
         <div class="diff-meta" id="diffMeta"></div>
 
-        <!-- Classic diff summary -->
-        <div class="diff-summary">
-          <div class="diff-stat"><div class="diff-stat-n" id="dCount">0</div><div class="diff-stat-l">total rows</div></div>
-          <div class="diff-stat added"><div class="diff-stat-n" id="dAdded">0</div><div class="diff-stat-l">added</div></div>
-          <div class="diff-stat removed"><div class="diff-stat-n" id="dRemoved">0</div><div class="diff-stat-l">removed</div></div>
-          <div class="diff-stat changed"><div class="diff-stat-n" id="dChanged">0</div><div class="diff-stat-l">changed</div></div>
+        <!-- Classic diff summary — tiles double as filter shortcuts -->
+        <div class="diff-summary" role="group" aria-label="Diff summary — click a tile to filter the table">
+          <button type="button" class="diff-stat" data-label="all" aria-pressed="false" onclick="setDiffLabelFilter('all')" title="Show every differing row"><span class="diff-stat-n" id="dCount">0</span><span class="diff-stat-l">total rows</span></button>
+          <button type="button" class="diff-stat added" data-label="missed" aria-pressed="false" onclick="setDiffLabelFilter('missed')" title="Filter: rows where B added an Anmerkung that A lacks (missed)"><span class="diff-stat-n" id="dAdded">0</span><span class="diff-stat-l">added</span></button>
+          <button type="button" class="diff-stat removed" data-label="overfired" aria-pressed="false" onclick="setDiffLabelFilter('overfired')" title="Filter: rows where A has an Anmerkung that B removed (overfired)"><span class="diff-stat-n" id="dRemoved">0</span><span class="diff-stat-l">removed</span></button>
+          <button type="button" class="diff-stat changed" data-label="wrong" aria-pressed="false" onclick="setDiffLabelFilter('wrong')" title="Filter: rows where both sides disagree (wrong)"><span class="diff-stat-n" id="dChanged">0</span><span class="diff-stat-l">changed</span></button>
         </div>
 
         <!-- Training-set summary (label chips — click to filter) -->
@@ -354,38 +393,8 @@
   </div>
 </div>
 
-<!-- Subscription Modal -->
-<div id="sub-overlay" onclick="handleSubBgClick(event)">
-  <div class="sub-box" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="subTitle">
-    <div id="sub-default">
-      <div class="sub-sparkle" aria-hidden="true">💎</div>
-      <div class="sub-title" id="subTitle">You must buy a<br><span class="grad">Subscription</span></div>
-      <div class="sub-tagline">// unlock the full grimoire</div>
-      <div class="sub-perks">
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Run the transmutation ritual</div>
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Process unlimited scrolls</div>
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> All forwarder engines unlocked</div>
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Download transmuted files</div>
-        <div class="sub-perk"><span class="sub-perk-icon">✦</span> Dark arts support (24/7)</div>
-      </div>
-      <div class="sub-price">$9.99 <span>/ month</span></div>
-      <div class="sub-note">Cancel anytime · No dark rituals required</div>
-      <button class="sub-buy-btn" onclick="handleBuySubscription()">✦ Buy Subscription ✦</button>
-      <button class="sub-cancel-btn" onclick="closeSubModal()">Maybe later</button>
-    </div>
-    <div class="sub-thankyou" id="sub-thankyou">
-      <div class="sub-thankyou-icon" aria-hidden="true">🎉</div>
-      <div class="sub-thankyou-title">Thank you for your purchase!</div>
-      <div class="sub-thankyou-msg">
-        Welcome to the inner sanctum, Archmage.<br>
-        All spells are now unlocked. May your code<br>
-        compile on the first attempt. ✨
-      </div>
-      <button class="sub-continue-btn" onclick="proceedAfterPurchase()">✦ Begin the Ritual ✦</button>
-    </div>
-  </div>
-</div>
-
+<script src="assets/wackler-ratecard.js" defer></script>
+<script src="assets/wackler-national-ratecard.js" defer></script>
 <script src="assets/anmerkung.js" defer></script>
 </body>
 </html>

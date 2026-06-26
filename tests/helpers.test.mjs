@@ -140,6 +140,10 @@ test('phraseToKey: catalog / literal / template resolution', () => {
   assert.equal(e.phraseToKey('  standgeld  '), 'standgeld', 'trimmed + case-folded');
   // 2. direct literal (not yet promoted into PHRASES)
   assert.equal(e.phraseToKey('Differenz Hebebuehnen-Zuschlag'), 'lit_differenzHebebuehnen');
+  // 2b. Wackler fuel: canonical phrase resolves to its catalog key; the legacy wording still
+  //     resolves to its literal key so older slot-A exports stay mappable.
+  assert.equal(e.phraseToKey('DifferenzEnergiezuschlag'), 'differenzEnergiezuschlag');
+  assert.equal(e.phraseToKey('DifferenzTreibstof'), 'lit_differenzTreibstofWackler');
   // 3. template family (interpolated runtime values)
   assert.equal(
     e.phraseToKey('Differenz aufgrund abweichender Zwischenempfänger 12345 Berlin'),

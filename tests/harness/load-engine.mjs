@@ -20,6 +20,8 @@ import vm from 'node:vm';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC = join(__dirname, '..', '..', 'assets', 'anmerkung.js');
+const SRC_RATECARD = join(__dirname, '..', '..', 'assets', 'wackler-ratecard.js');
+const SRC_NAT_RATECARD = join(__dirname, '..', '..', 'assets', 'wackler-national-ratecard.js');
 
 /* XLSX cell address encoding, matching XLSX.utils.encode_cell({r,c})
    (0-based r/c -> e.g. {r:0,c:0} => "A1", {r:1,c:2} => "C2"). */
@@ -131,6 +133,27 @@ export function loadEngine() {
   const ctx = vm.createContext(sandbox);
   const code = readFileSync(SRC, 'utf8');
 
+  /* Load the standalone Wackler rate card FIRST, in the same context, mirroring the
+     <script> order in anmerkung.html. It publishes WACKLER_RATECARD on the context
+     global, which the engine reads for its tier table and the enriched "Wackler rechnet"
+     rate note. It's optional by design — the engine falls back to its inline tier table
+     if this is absent — but loading it keeps the tests faithful to the browser runtime. */
+  try {
+    vm.runInContext(readFileSync(SRC_RATECARD, 'utf8'), ctx, { filename: 'wackler-ratecard.js' });
+  } catch (err) {
+    /* Non-fatal: the engine degrades gracefully without the rate card. */
+  }
+
+  /* Then the national rate card, again mirroring the <script> order. It publishes
+     WACKLER_NATIONAL_RATECARD and (for postal→zone resolution) reads the international
+     WACKLER_RATECARD loaded just above. Optional by design — the "Wackler rechnet" note
+     simply falls back to the plain tier wording when it's absent. */
+  try {
+    vm.runInContext(readFileSync(SRC_NAT_RATECARD, 'utf8'), ctx, { filename: 'wackler-national-ratecard.js' });
+  } catch (err) {
+    /* Non-fatal: the engine degrades gracefully without the national rate card. */
+  }
+
   try {
     vm.runInContext(code, ctx, { filename: 'anmerkung.js' });
   } catch (err) {
@@ -147,6 +170,7 @@ export function loadEngine() {
     'processDachser', 'processKN', 'processDHL', 'processWackler',
     // tier helpers
     'dachserGetTier', 'knGetTier', 'wacklerGetTier', 'wacklerGetTierIdx', 'wacklerTierLabel',
+    'wacklerRechnetNote',
     // dachser surcharge helpers
     'daIsNonInteger', 'daDetectSurchargeFromDiff',
     // wackler code books
@@ -156,6 +180,9 @@ export function loadEngine() {
     'normPhrase', 'samePhraseSet', 'splitTriggers',
     'idxToCol', 'colToIdx',
     'phraseToKey', 'phraseKeysFor',
+    // diff-mode labeling / training-output primitives
+    'classifyDiff', 'computePhraseDiff', 'granularLabel', 'rowUid', 'phraseCellParts',
+    'buildTrainingSummary',
   ];
   const engine = {};
   const missing = [];
@@ -168,6 +195,18 @@ export function loadEngine() {
   }
 
   engine.encode_cell = encode_cell;
+  engine.WACKLER_RATECARD = sandbox.WACKLER_RATECARD || null;
+  engine.WACKLER_NATIONAL_RATECARD = sandbox.WACKLER_NATIONAL_RATECARD || null;
+  /* The phrase catalog itself, so tests can guard catalog-wide invariants
+     (e.g. no two entries may normPhrase-fold onto each other). PHRASES is a
+     top-level `const`, which — unlike function declarations — does NOT land
+     on the vm context's global object, so it has to be read back by
+     evaluating inside the context. */
+  try {
+    engine.PHRASES = vm.runInContext('typeof PHRASES === "undefined" ? null : PHRASES', ctx);
+  } catch (err) {
+    engine.PHRASES = null;
+  }
   _engine = engine;
   return engine;
 }

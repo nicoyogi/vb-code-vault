@@ -2,7 +2,7 @@
 
 > *"The Malignant Grimoire — a codex of VB/VBA spells, forwarder rituals and arcane workspace tools."*
 
-A small, static collection of tools and reference pages for day-to-day VB/VBA work, QA, forwarder invoice processing, and other workspace rituals. Each page is a self-contained HTML file; there is no build step, no bundler, and no backend — just open a file and go.
+A small, static collection of tools and reference pages for day-to-day VB/VBA work, QA, forwarder invoice processing, and other workspace rituals. The HTML files are static, loading scripts and styles from `assets/`; there is no build step, no bundler, and no backend — just open a file and go.
 
 **Live site:** [codingkuh.my.id](https://codingkuh.my.id/)
 
@@ -44,7 +44,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 | Understand the Alchemist's architecture (modules, state, PWA shell, extensibility) | [`docs/ANMERKUNG-ARCHITECTURE.md`](docs/ANMERKUNG-ARCHITECTURE.md) |
 | Look up a VB/VBA snippet | [The Vault](https://codingkuh.my.id/code.html) · [source](code.html) |
 | Check team absences / leave | [Holiday Tracker](https://codingkuh.my.id/holiday-tracker.html) · [source](holiday-tracker.html) |
-| Review a Siemens task | [Task Reviewer](https://codingkuh.my.id/task-reviewer-siemens.html) · [source](task-reviewer-siemens.html) |
+| Track daily project allocation, quantity & per-person performance | [Project Allocation](https://codingkuh.my.id/alokasi-project.html) · [source](alokasi-project.html) |
 | Install the Alchemist offline | [Offline / PWA](#offline--pwa) |
 | Fork and self-host | [Running locally](#running-locally) · [Firebase configuration](#firebase-configuration) |
 
@@ -59,7 +59,8 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 | [`qa.html`](qa.html) | **The Oracle** | General QA knowledge base. | [↗](https://codingkuh.my.id/qa.html) |
 | [`qa-siemens.html`](qa-siemens.html) | **Siemens GP Knowledge Base** | Project-specific QA reference (IBM Plex styling, light/dark). | [↗](https://codingkuh.my.id/qa-siemens.html) |
 | [`standard-wording.html`](standard-wording.html) | **Siemens GP Standard Wording** | Reusable phrasing and copy templates. | [↗](https://codingkuh.my.id/standard-wording.html) |
-| [`task-reviewer-siemens.html`](task-reviewer-siemens.html) | **Siemens GP Task Reviewer** | Review helper for incoming tasks. | [↗](https://codingkuh.my.id/task-reviewer-siemens.html) |
+| [`alokasi-project.html`](alokasi-project.html) | **Siemens GP Project Allocation** | Daily per-project records (staff, quantity, status). Auto Quantity/Personnel pivots, **per-person scorecards** (the former Task Reviewer, now derived from the records), backlog aging, analyzer, Excel/PDF export, and import from `ALOKASI PROJECT.xlsx`. Per-user sign-in, syncs via Firebase. | [↗](https://codingkuh.my.id/alokasi-project.html) |
+| [`task-reviewer-siemens.html`](task-reviewer-siemens.html) | **Task Reviewer (redirect)** | Merged into Project Allocation → People. Redirects to `alokasi-project.html#people`; kept for old links. | [↗](https://codingkuh.my.id/task-reviewer-siemens.html) |
 | [`anmerkung.html`](anmerkung.html) | **The Alchemist** | In-browser processor for forwarder invoice annotations (Dachser / K+N / DHL Express / Wackler). See [below](#the-alchemist--anmerkung-processor). | [↗](https://codingkuh.my.id/anmerkung.html) |
 | [`todo.html`](todo.html) | **The Ledger** | Task tracker with filters, groups, and a light/dark toggle. | [↗](https://codingkuh.my.id/todo.html) |
 | [`holiday-tracker.html`](holiday-tracker.html) | **Holiday Tracker** | Team vacation, sick, WFH, and half-day tracking with calendar + Gantt views, vacation balances, public holidays, department filters, and an activity log. Syncs via Firebase Firestore. | [↗](https://codingkuh.my.id/holiday-tracker.html) |
@@ -76,7 +77,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 - **Preview / dry-run** — see every proposed annotation before writing to the file, with color-coded per-row status and a trigger-breakdown bar chart.
 - **Bulk processing** — drop many `.xlsx` files at once; each gets an individual download, plus a "Download all as ZIP" option.
 - **Rule Tester** — play with hypothetical values without uploading a file; useful for pinning down exactly when a rule fires.
-- **Diff Mode / Rule Training** — compare a predicted vs. expected workbook, get rows labeled `wrong` / `missed` / `overfired` / `drift` / `correct`, filter by forwarder / sheet / free text, and export a CSV diff or a training set (CSV / JSONL) with predicted vs. expected plus the input cells the rules read. Every row has a one-click **Send to Tester** to open that exact scenario in the Rule Tester.
+- **Diff Mode / Rule Training** — compare a predicted vs. expected workbook, get rows labeled `wrong` / `missed` / `overfired` / `drift` / `correct`, filter by forwarder / sheet / free text, and export a CSV diff or a training set (CSV / JSONL) with predicted vs. expected plus the input cells the rules read. Every row has a one-click **Send to Tester** to open that exact scenario in the Rule Tester. A **Bulk** sub-panel compares many predicted/expected file pairs at once (auto-paired by filename) and merges every row into one wider training corpus, tagging each exported row with its `source_file`.
 - **Opt-in "Why?" reason column** — writes an extra `Anmerkung_Reason` column so the trigger trace is auditable.
 - **Configurable tolerance thresholds** per forwarder, persisted in `localStorage`.
 - **Light / dark theme**, keyboard-navigable forwarder tiles (ARIA radiogroup), timestamped streaming log.
@@ -86,15 +87,18 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 
 XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.20.3, loaded from the official `cdn.sheetjs.com` with an SRI hash) and [JSZip](https://stuk.github.io/jszip/); the XLSX is patched in-place — only the `Anmerkung` column (and optionally `Anmerkung_Reason`) is rewritten, leaving styles, merged cells, formulas, and drawings untouched.
 
-## Shared assets
+## Assets
 
 | File | Purpose |
 | --- | --- |
 | [`assets/grimoire-core.css`](assets/grimoire-core.css) | Shared tokens, base styles, skip-link, reduced-motion rules. |
 | [`assets/grimoire-core.js`](assets/grimoire-core.js) | Shared runtime: animated-canvas helpers (`densityScale`, `visibleRAF`, `shouldAnimate`) and the `Grimoire.Offline` module that registers the service worker, runs `PRECACHE` / `CACHE_STATUS` round-trips, and binds the "Download for offline" button. |
+| [`assets/grimoire-pages.css`](assets/grimoire-pages.css) | Shared styles for standard pages (cards, grids). |
 | [`assets/firebase-config.js`](assets/firebase-config.js) | Centralized Firebase config loaded by pages that need Firestore. |
 | [`assets/anmerkung.css`](assets/anmerkung.css) · [`assets/anmerkung.js`](assets/anmerkung.js) | Styling and rule engine for The Alchemist. |
 | [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) | Versioned release notes for the Anmerkung Processor. |
+| [`assets/holiday-tracker.css`](assets/holiday-tracker.css) · [`assets/holiday-tracker.js`](assets/holiday-tracker.js) | Styling and logic for the Holiday Tracker. |
+| [`assets/todo.css`](assets/todo.css) · [`assets/todo.js`](assets/todo.js) | Styling and logic for The Ledger. |
 | [`sw.js`](sw.js) | Service worker. Network-first for **same-origin** assets (always serve the latest deployed code when online), cache-first for cross-origin CDN libs. Cache acts purely as an offline fallback. |
 | [`manifest.webmanifest`](manifest.webmanifest) | PWA manifest for the Anmerkung Processor. |
 
@@ -166,7 +170,8 @@ vb-code-vault/
 ├── qa.html                          # general QA (The Oracle)
 ├── qa-siemens.html                  # Siemens-specific QA
 ├── standard-wording.html            # standard phrases / templates
-├── task-reviewer-siemens.html       # Siemens task reviewer
+├── task-reviewer-siemens.html       # redirect → alokasi-project.html#people (merged)
+├── alokasi-project.html             # Siemens project allocation + people + analyzer
 ├── anmerkung.html                   # forwarder invoice processor (The Alchemist)
 ├── anmerkung-presentation.html      # presentation deck for the Alchemist
 ├── todo.html                        # task ledger
@@ -176,8 +181,13 @@ vb-code-vault/
 ├── assets/
 │   ├── grimoire-core.css            # shared styling tokens
 │   ├── grimoire-core.js             # shared runtime (canvas + offline helpers)
+│   ├── grimoire-pages.css           # shared styles for standard pages
 │   ├── anmerkung.css                # Alchemist styles
 │   ├── anmerkung.js                 # Alchemist rule engine + UI glue
+│   ├── holiday-tracker.css          # Holiday Tracker styles
+│   ├── holiday-tracker.js           # Holiday Tracker logic
+│   ├── todo.css                     # The Ledger styles
+│   ├── todo.js                      # The Ledger logic
 │   ├── firebase-config.js           # centralized Firebase config
 │   └── anmerkung-changelog.json     # versioned release notes for The Alchemist
 ├── docs/
@@ -203,7 +213,7 @@ vb-code-vault/
 
 ## Contributing
 
-Each HTML file is **self-contained** (styles and scripts inline) apart from the handful of shared files in `assets/`. Conventions:
+The HTML files load their specific scripts and styles from the `assets/` folder. Conventions:
 
 - Keep shared visual tokens (colors, fonts, spacing, focus-ring rules) in [`assets/grimoire-core.css`](assets/grimoire-core.css) so the pages stay visually consistent.
 - Reuse [`Grimoire.Offline`](assets/grimoire-core.js) rather than wiring a service worker per page.

@@ -1,59 +1,111 @@
 rules_version = '2';
 
-// ════════════════════════════════════════════════════════════════════════
-//  Firestore security rules for the Grimoire (vb-code-vault)
-//  ──────────────────────────────────────────────────────────────────────
-//  These rules ALLOW-LIST only the collections the apps actually use, so
-//  every other path is denied by default. That is strictly safer than the
-//  legacy "allow read, write: if true" wildcard, because it bounds the blast
-//  radius: an attacker cannot create arbitrary collections/documents.
-//
-//  ⚠️  IMPORTANT — these collections are still effectively PUBLIC.
-//  The client apps currently ship no Firebase Authentication, so reads and
-//  writes here are open to anyone who knows the project ID. Before treating
-//  any of this data as protected you should add at least one of:
-//    • Firebase Authentication  -> change `if true` to `if request.auth != null`
-//    • Firebase App Check        -> blocks requests from outside your apps
-//    • API key referrer restrictions in the Google Cloud Console
-//  See: https://firebase.google.com/docs/firestore/security/get-started
-//
-//  Collections are grouped by the page that owns them. Keep this list in sync
-//  when a new collection() is introduced in the HTML pages.
-// ════════════════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
+   FIRESTORE SECURITY RULES — vb-code-vault
+   ──────────────────────────────────────────────────────────────
+   Source of truth for the Firestore rules. Editing this file does
+   NOT deploy anything — publish via Firebase Console → Firestore →
+   Rules, or `firebase deploy --only firestore:rules`.
 
+   ⚠️  SECURITY NOTE: every collection below is currently
+   `allow read, write: if true` — i.e. world-readable/writable by
+   anyone with the (public) Firebase config. Auth is enforced
+   client-side only. See README / open issue before relying on this
+   for anything sensitive. `wmf_user_profiles` exposes passwordHash.
+   ══════════════════════════════════════════════════════════════ */
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Holiday Tracker (holiday-tracker.html) ──────────────────────────
-    match /wmf_holiday_people/{doc}   { allow read, write: if true; }
-    match /wmf_holidays/{doc}         { allow read, write: if true; }
-    match /wmf_vac_resets/{doc}       { allow read, write: if true; }
-    match /wmf_activity_log/{doc}     { allow read, write: if true; }
-    match /wmf_public_holidays/{doc}  { allow read, write: if true; }
-    match /wmf_user_profiles/{doc}    { allow read, write: if true; }
-    match /wmf_settings/{doc}         { allow read, write: if true; }
+    // ── EXISTING UNCHANGED ──
+    match /snippets/{id} {
+      allow read, write: if true;
+    }
+    match /_config/auth {
+      allow read: if true;
+      allow write: if !exists(/databases/$(database)/documents/_config/auth);
+    }
+    match /_config/auth_wmf {
+      allow read: if true;
+      allow write: if !exists(/databases/$(database)/documents/_config/auth_wmf);
+    }
+    match /_config/auth_sgp {
+      allow read: if true;
+      allow write: if !exists(/databases/$(database)/documents/_config/auth_sgp);
+    }
+    match /qa_entries/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_entries/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_wording/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_entries/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_tasks/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_forwarders/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_scribes/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_task_reviews/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_task_reviews_daily/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_reviewer_profiles/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_alokasi_records/{id} {
+      allow read, write: if true;
+    }
+    match /sgp_alokasi_profiles/{id} {
+      allow read, write: if true;
+    }
 
-    // ── The Ledger (todo.html) ──────────────────────────────────────────
-    match /wmf_tasks/{doc}            { allow read, write: if true; }
-    match /wmf_forwarders/{doc}       { allow read, write: if true; }
-    match /wmf_scribes/{doc}          { allow read, write: if true; }
-    match /wmf_entries/{doc}          { allow read, write: if true; }
 
-    // ── The Vault (code.html) ───────────────────────────────────────────
-    match /snippets/{doc}             { allow read, write: if true; }
+    // ── HOLIDAY TRACKER (no Firebase Auth — access control handled in app) ──
+    match /wmf_user_profiles/{uid} {
+      allow read, write: if true;
+    }
+    match /wmf_holiday_people/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_holidays/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_vac_resets/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_activity_log/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_public_holidays/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_settings/{id} {
+      allow read, write: if true;
+    }
 
-    // ── The Oracle (qa.html) ────────────────────────────────────────────
-    match /qa_entries/{doc}           { allow read, write: if true; }
 
-    // ── Siemens GP pages (qa-siemens / standard-wording / task-reviewer) ─
-    match /sgp_entries/{doc}          { allow read, write: if true; }
-    match /sgp_wording/{doc}          { allow read, write: if true; }
-    match /sgp_task_reviews/{doc}     { allow read, write: if true; }
-    match /sgp_reviewer_profiles/{doc} { allow read, write: if true; }
-
-    // ── Shared config ───────────────────────────────────────────────────
-    match /_config/{doc}              { allow read, write: if true; }
-
-    // Everything else is denied by default (no matching rule == denied).
+    // ── OPERATION REPORT (login-gated via wmf_user_profiles; row-level access enforced in app) ──
+    match /wmf_op_people/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_op_entries/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_op_categories/{id} {
+      allow read, write: if true;
+    }
+    match /wmf_op_targets/{id} {
+      allow read, write: if true;
+    }
   }
 }
