@@ -58,11 +58,42 @@ test('processDachser: blank TARIF + FR, no SACH/SERV -> VORHOLUNG', () => {
   assert.equal(e.processDachser(ws, R, cols), 'VORHOLUNG');
 });
 
-test('processDachser: blank TARIF + FR with SERV/SACH -> Fremdnummer Doppelt berechnet', () => {
+test('processDachser: blank TARIF + FR with SERV/SACH -> Fremdnummer already-billed note', () => {
   const cols = { stat: 50, tarif: 51, fr: 52 };
-  // SERV_ART=16, SACHKONTO=35 populated => the Fremdnummer branch
+  // SERV_ART=16, SACHKONTO=35 populated => the "already billed in another Beleg" branch.
+  // The document numbers are a placeholder template (5034xxx / RE00123xxx): the real
+  // Fremdnummer + the Beleg it was already charged in are cross-document and not
+  // derivable from a single row's inputs (bundle 2026-06-29 rows 76aca1f8 / 33def378).
   const ws = makeRow(R, { 50: 10, 52: '47.2', 16: 'DA01', 35: '612100' });
-  assert.equal(e.processDachser(ws, R, cols), 'Fremdnummer Doppelt berechnet');
+  assert.equal(e.processDachser(ws, R, cols), 'Fremdnummer 5034xxx bereits berechnet in RE00123xxx, ok?');
+});
+
+test('processDachser: EXP_DL=95 -> Terminzuschlag (no hyphen, matches auditor truth)', () => {
+  // Bundle 2026-06-29 rows d3d916e9 / 021da4b8 / 43ef18f0: EXP=95, EXP_DL=95 → the
+  // auditor writes "Terminzuschlag" as one word, not the old hyphenated "Termin-zuschlag".
+  const cols = { stat: 50, tarif: 51, exp: 52, exp_dl: 53 };
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 95, 53: 95 });
+  assert.equal(e.processDachser(ws, R, cols), 'Terminzuschlag');
+});
+
+test('processDachser: ZW row with Anz.Sdg>1 -> bundling wins over the Zwischenempfänger note', () => {
+  // Bundle 2026-06-29 rows 289deb46 / 5998e21f: REFERENZ3=ZW but Anz.Sdg=2 → the
+  // auditor's finding is "hätte gebündelt werden können?", not the ZW note.
+  const cols = { stat: 50, tarif: 51, fr: 52 };
+  // REFERENZ3=15 'ZW', ANZ_SDG=3 = 2, EMPF_PLZ=13 / EMPF_ORT=14 set to prove the ZW
+  // note (which would interpolate them) is NOT emitted.
+  const ws = makeRow(R, { 50: 10, 51: '200', 52: '75.03', 15: 'ZW', 3: '2', 13: '75012', 14: 'Paris' });
+  assert.equal(e.processDachser(ws, R, cols), 'hätte gebündelt werden können?');
+});
+
+test('processDachser: single-shipment ZW row still emits the Zwischenempfänger note', () => {
+  // Guard the reorder: with Anz.Sdg=1 the ZW branch is preserved (bundle row f278b340).
+  const cols = { stat: 50, tarif: 51, fr: 52 };
+  const ws = makeRow(R, { 50: 10, 51: '200', 52: '102.4', 15: 'ZW', 3: '1', 13: '75737', 14: 'PARIS CEDEX 15' });
+  assert.equal(
+    e.processDachser(ws, R, cols),
+    'Differenz aufgrund abweichender Zwischenempfänger 75737 PARIS CEDEX 15',
+  );
 });
 
 test('processDachser: SNK_DL=190 -> AUSFALLFRACHT', () => {
