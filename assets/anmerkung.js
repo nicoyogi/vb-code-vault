@@ -644,7 +644,7 @@ function processDachser(ws,r,cols){
     const tarifRaw=cellStr(ws,r,cols.tarif);
     if(tarifRaw===''&&hasErr(cellNum(ws,r,cols.fr),T)){
       if(!sachkonto&&!servArt)return PHRASES.vorholung;
-      return'Fremdnummer Doppelt berechnet';
+      return'Fremdnummer 5034xxx bereits berechnet in RE00123xxx, ok?';
     }
   }
 
