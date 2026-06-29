@@ -318,7 +318,9 @@ test('phraseToKey: whitespace / case / unicode noise still resolves to the catal
   assert.equal(e.phraseToKey('  MAUTDIFFERENZ '), 'mautDiff', 'case + padding');
   const nfd = 'Differenz Telefonische Zustellankündigung - Laderaumzuschlag'.normalize('NFD');
   assert.equal(e.phraseToKey(nfd), 'snkTelAnk', 'NFD umlauts');
-  assert.equal(e.phraseToKey('Termin–zuschlag'), 'terminZuschlag', 'en dash');
+  // en-dash variant of a still-hyphenated catalog phrase folds back to its key
+  // (terminZuschlag dropped its hyphen in v1.29.0, so use snkTelAnk's " - " here).
+  assert.equal(e.phraseToKey('Differenz Telefonische Zustellankündigung – Laderaumzuschlag'), 'snkTelAnk', 'en dash');
 });
 
 test('phraseToKey: compound catalog phrases resolve per ' + "' // '" + ' half', () => {

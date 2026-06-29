@@ -172,7 +172,7 @@ const PHRASES={
   adminZeitfenster:           'Admin Zeitfensterbuchung Handel',
   adminZeitfensterDiff:       'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag',
   snkTelZustell:              'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag',
-  terminZuschlag:             'Termin-zuschlag',
+  terminZuschlag:             'Terminzuschlag',
   produktZuschlag:            'Produktzuschlag',
   einlagern:                  'Einlagern',
   auslagern:                  'Auslagern',
@@ -617,7 +617,7 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
   }
 }
 
-function daEvalEXP(ws,r,cols){if(cols.exp<0)return'';const expDiff=cellNum(ws,r,cols.exp);if(!hasErr(expDiff,T_DACHSER))return'';const expDl=cols.exp_dl>=0?cellNum(ws,r,cols.exp_dl):0;return(expDl===95)?'Termin-zuschlag':'Produktzuschlag';}
+function daEvalEXP(ws,r,cols){if(cols.exp<0)return'';const expDiff=cellNum(ws,r,cols.exp);if(!hasErr(expDiff,T_DACHSER))return'';const expDl=cols.exp_dl>=0?cellNum(ws,r,cols.exp_dl):0;return(expDl===95)?P.terminZuschlag:P.produktZuschlag;}
 function daZWNote(ws,r){const plz=cellStr(ws,r,DA_COL_EMPF_PLZ),ort=cellStr(ws,r,DA_COL_EMPF_ORT),loc=(plz&&ort)?plz+' '+ort:(plz||ort);return'Differenz aufgrund abweichender Zwischenempfänger'+(loc?' '+loc:'');}
 
 function processDachser(ws,r,cols){
@@ -665,10 +665,17 @@ function processDachser(ws,r,cols){
   if(cols.fr>=0&&hasErr(cellNum(ws,r,cols.fr),T)){
     hasFR=true;
     const frVal=cellNum(ws,r,cols.fr);
-    if(isZW)res=join(res,daZWNote(ws,r));
+    /* "could have been bundled" dominates: a freight line carrying more than one
+       consignment (Anz. Sdg > 1) is the auditor's primary FR finding even when the
+       row also flags a deviating intermediate consignee (REFERENZ3=ZW). Bundle
+       2026-06-29 rows 289deb46 / 5998e21f (ZW, Anz.Sdg=2, SERV=DA01) expect
+       "hätte gebündelt werden können?", NOT the ZW note — so the bundling check runs
+       first. Single-shipment ZW rows (Anz.Sdg=1, e.g. f278b340) still fall through
+       to the ZW note below. */
+    if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
+    else if(isZW)res=join(res,daZWNote(ws,r));
     else if(sachkonto.toUpperCase()==='X')res=join(res,'VORHOLUNG');
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
-    else if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
     else {
       /* No special flag (ZW / Vorholung / Sonderfahrt / bundling). Classify the
          FR delta against the audit (`Volumen kg`) vs DL (`Volumen kg DL`) weights.

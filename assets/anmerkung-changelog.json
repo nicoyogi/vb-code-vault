@@ -1,6 +1,17 @@
 {
-  "version": "1.28.0",
+  "version": "1.29.0",
   "entries": [
+    {
+      "ver": "1.29.0",
+      "date": "2026-06-29",
+      "items": [
+        "Dachser — the EXP_DL=95 product surcharge is now spelled \"Terminzuschlag\" (one word), matching the auditor's truth. The catalog (PHRASES.terminZuschlag) and daEvalEXP carried the hyphenated \"Termin-zuschlag\", which normPhrase folds dash VARIANTS of but never the hyphen itself, so every EXP_DL=95 row diffed as wrong. AI-bundle 2026-06-29 rows d3d916e9 / 021da4b8 / 43ef18f0 (EXP=95, EXP_DL=95, SERV=K1AV) all expect the un-hyphenated form. daEvalEXP now returns P.terminZuschlag / P.produktZuschlag from the catalog rather than inline string literals, so the wording is a one-line catalog edit going forward.",
+        "Dachser — \"hätte gebündelt werden können?\" now wins over the Zwischenempfänger (ZW) note in the FR branch: a freight line carrying more than one consignment (Anz. Sdg > 1) is the auditor's primary finding even when REFERENZ3=ZW. AI-bundle 2026-06-29 rows 289deb46 / 5998e21f (ZW, Anz.Sdg=2, SERV=DA01) expect the bundling note, not the ZW note. The anzSdg>1 check moved to the front of the if/else chain; single-shipment ZW rows (Anz.Sdg=1) still fall through to the ZW note unchanged.",
+        "Dachser — fixed a red test left by the prior commit (the Fremdnummer \"already billed in another Beleg\" return was changed to a 5034xxx/RE00123xxx placeholder template without updating its test). The test now pins the current placeholder and documents that the real Fremdnummer + cross-Beleg number are not derivable from a single row's inputs.",
+        "Dachser — six AI-bundle 2026-06-29 rows are documented as NOT fixable from the row inputs alone and were deliberately left unchanged: the ZW-note location (f278b340 / 63ffb7a0 expect a constant hub \"77600 BUSSY SAINT MARTIN\" that is NOT in the row's Empf.-PLZ/Ort — it needs a Zwischenempfänger address column the bundle does not export); the cross-document Fremdnummer / \"Fracht Differenz siehe <Beleg>\" free-text notes (33def378 / 76aca1f8 / 8464a67a reference OTHER documents' Beleg numbers); and a Sonderfahrt row (2417a579) with no K1AS service flag and equal weights. The Jun-29 source workbook is not in data/, so these cannot be validated locally; encoding guesses would feed false signals into the rule-fix loop.",
+        "Tests — 3 new Dachser cases pin the 2026-06-29 fixes (EXP_DL=95 → Terminzuschlag; ZW + Anz.Sdg>1 → bundling; single-shipment ZW note preserved) and the stale Fremdnummer test was repaired. The diff-mode en-dash key-resolution test switched its example from the now-hyphenless terminZuschlag to snkTelAnk's \" - \". Full suite: 124 passing."
+      ]
+    },
     {
       "ver": "1.28.0",
       "date": "2026-06-16",
