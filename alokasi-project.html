@@ -481,6 +481,37 @@ function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,
 function num(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
 function isoToday(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtDate(iso){ if(!iso) return '—'; const d=new Date(iso+'T00:00:00'); if(isNaN(d)) return iso; return d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}); }
+/* ── Schedule date + leave helpers (pure; unit-tested in tests/schedule.test.mjs) ── */
+function isoOf(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+/* Monday (ISO) of the week containing iso. Mon=0…Sun=6, so weekends roll back. */
+function mondayOf(iso){
+  const d = new Date(iso+'T00:00:00');
+  d.setDate(d.getDate() - ((d.getDay()+6)%7));
+  return isoOf(d);
+}
+/* The five weekday ISO dates Mon–Fri of iso's week. */
+function weekDates(iso){
+  const mon = new Date(mondayOf(iso)+'T00:00:00');
+  const out = [];
+  for (let i=0;i<5;i++){ const d=new Date(mon); d.setDate(mon.getDate()+i); out.push(isoOf(d)); }
+  return out;
+}
+/* Holiday covering (personId, iso), full-day preferred over half-day, else null. */
+function personLeaveOn(holidays, personId, iso){
+  let half = null;
+  for (const h of holidays){
+    if (h.personId !== personId) continue;
+    if (!(h.start <= iso && h.end >= iso)) continue;
+    if (h.halfDay){ if (!half) half = h; }
+    else return h;
+  }
+  return half;
+}
+/* Public-holiday name for an ISO date, or null. */
+function publicHolidayName(pubHols, iso){
+  const m = pubHols.find(p => p.date === iso);
+  return m ? m.name : null;
+}
 /* Staff is always a list of people. Split on , ; & + / and the word "dan"
    (Indonesian "and") so a joint entry like "Nico+Arya" becomes two people —
    never a combined name. (EKSPEDITUR like "S+S" is a different field, untouched.) */
