@@ -57,6 +57,19 @@ test('capacityFor: throughput, half-day halves, default when unknown', () => {
   assert.equal(a.capacityFor('Ghost', {}, false), 150); // DEFAULT_CAPACITY
 });
 
+test('throughputByPerson: window includes the cutoff date (today - windowDays)', () => {
+  const recs = [
+    {staff:['Edge'], done:60, total:60, date:'2026-05-31'}, // == cutoff (2026-06-30 minus 30d) -> included
+    {staff:['Edge'], done:99, total:99, date:'2026-05-30'}, // before cutoff -> excluded
+  ];
+  const tp = a.throughputByPerson(recs, '2026-06-30', 30);
+  assert.equal(tp.Edge, 60);
+});
+
+test('capacityFor: zero throughput falls back to DEFAULT_CAPACITY', () => {
+  assert.equal(a.capacityFor('Idle', {Idle:0}, false), 150);
+});
+
 test('personLoadByDay + loadTier', () => {
   const asg = {
     x:{personId:'p1', date:'2026-06-30', qty:200},
@@ -69,6 +82,7 @@ test('personLoadByDay + loadTier', () => {
   assert.equal(a.loadTier(250, 220), 'over');
   assert.equal(a.loadTier(0, 150), 'free');
   assert.equal(a.loadTier(100, 150), 'ontrack');
+  assert.equal(a.loadTier(150, 150), 'ontrack'); // exactly at capacity is not overloaded
 });
 
 test('riskTier: overdue / slip / tight / ontrack', () => {

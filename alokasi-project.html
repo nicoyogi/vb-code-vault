@@ -622,6 +622,7 @@ function throughputByPerson(records, today, windowDays){
   return out;
 }
 function capacityFor(name, throughputMap, halfDay){
+  /* a 0/absent throughput means "no signal" -> assume the default planning capacity */
   let cap = (throughputMap && throughputMap[name]) || DEFAULT_CAPACITY;
   if(!cap) cap = DEFAULT_CAPACITY;
   return halfDay ? Math.round(cap/2) : cap;
