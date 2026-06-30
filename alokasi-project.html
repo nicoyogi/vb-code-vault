@@ -150,6 +150,15 @@
     table.pivot td.zero { color: var(--text3); }
     table.pivot tfoot td, table.pivot tfoot th { position: sticky; bottom: 0; background: var(--surface2); font-weight: 700; color: var(--text); }
     table.pivot td.names { text-align: left; font-size: 10.5px; color: var(--text2); white-space: normal; min-width: 140px; max-width: 240px; }
+    .sched-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem; }
+    .sched-week { font-family:var(--grotesk); font-weight:700; font-size:14px; color:var(--text); min-width:190px; text-align:center; }
+    table.sched td.cell { vertical-align:top; min-width:130px; }
+    table.sched td.cell select, table.sched td.cell input { width:100%; border:1px solid var(--border); border-radius:4px; padding:4px 6px; font-family:var(--ibm-mono); font-size:11px; background:var(--surface2); color:var(--text); margin-bottom:3px; }
+    table.sched td.leave { background:var(--warn-light); color:var(--text2); text-align:center; font-family:var(--ibm-mono); font-size:11px; }
+    table.sched td.half { background:var(--warn-light); }
+    table.sched .half-flag { font-family:var(--ibm-mono); font-size:9px; color:var(--warn); display:block; margin-bottom:2px; }
+    table.sched th.pubhol, table.sched td.pubhol { background:var(--accent-light); }
+    table.sched th.pubhol .ph-name { display:block; font-size:9px; color:var(--accent); font-weight:400; }
 
     /* analytics cards (shared look) */
     .an-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.1rem 1.3rem; margin-bottom: 1.2rem; }
@@ -367,6 +376,7 @@
       <button class="seg-btn active" id="tab-records"   onclick="setView('records')">Records</button>
       <button class="seg-btn" id="tab-quantity"  onclick="setView('quantity')">Quantity</button>
       <button class="seg-btn" id="tab-personnel" onclick="setView('personnel')">Personnel</button>
+      <button class="seg-btn" id="tab-schedule" onclick="setView('schedule')">Schedule</button>
       <button class="seg-btn" id="tab-people"    onclick="setView('people')">People</button>
       <button class="seg-btn" id="tab-analytics" onclick="setView('analytics')">Analytics</button>
     </div>
@@ -390,6 +400,7 @@
   <div id="view-records"></div>
   <div id="view-quantity" style="display:none"></div>
   <div id="view-personnel" style="display:none"></div>
+  <div id="view-schedule" style="display:none"></div>
   <div id="view-people" style="display:none"></div>
   <div id="view-analytics" style="display:none"></div>
 
@@ -455,6 +466,10 @@
 if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
 const db = firebase.firestore();
 const col = db.collection('sgp_alokasi_records');
+const schedCol      = db.collection('sgp_alokasi_schedule');
+const htPeopleCol   = db.collection('wmf_holiday_people');
+const htHolidaysCol = db.collection('wmf_holidays');
+const htPubHolCol   = db.collection('wmf_public_holidays');
 
 let records = [];
 let loaded = false;                     /* first snapshot received */
@@ -465,6 +480,14 @@ let currentUser = null;
 let sortKey = 'date', sortDir = -1;     /* records table sort */
 let qtyMetric = 'total';                /* quantity pivot: total | done */
 let importRows = [];                    /* parsed rows pending import */
+let scheduleAssignments = {};                 /* `${personId}_${date}` -> {project,note,by} */
+let htPeople        = [];                      /* wmf_holiday_people [{id,name,dept}] */
+let htHolidays      = [];                      /* wmf_holidays */
+let htPublicHols    = [];                      /* wmf_public_holidays [{date,name}] */
+let htLoaded        = false;                   /* holiday data fetched this session */
+let schedUnsub      = null;
+let schedMonday     = mondayOf(isoToday());    /* visible week (Mon ISO) */
+let schedDept       = '';                      /* dept filter */
 
 const PROJECTS_SEED = ['TRUMPF','WMF','SBG','CLAAS','KRONES','OSRAM','NASH','EPT','CONTI','ATB','Siemens Freia','Siemens Tarif','Siemens Faktual','Valeo','Stamp','Sharepoint','SHELL','Währungskurse','Others'];
 const EKSP_SEED = ['S+S','DHL GF','DHL EXPRESS','Kuehne','ERKA','HONOLD','DACHSER','SBG GERICKE','SBG DACHSER','DATA ENTRY'];
@@ -481,6 +504,37 @@ function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,
 function num(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
 function isoToday(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function fmtDate(iso){ if(!iso) return '—'; const d=new Date(iso+'T00:00:00'); if(isNaN(d)) return iso; return d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}); }
+/* ── Schedule date + leave helpers (pure; unit-tested in tests/schedule.test.mjs) ── */
+function isoOf(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+/* Monday (ISO) of the week containing iso. Mon=0…Sun=6, so weekends roll back. */
+function mondayOf(iso){
+  const d = new Date(iso+'T00:00:00');
+  d.setDate(d.getDate() - ((d.getDay()+6)%7));
+  return isoOf(d);
+}
+/* The five weekday ISO dates Mon–Fri of iso's week. */
+function weekDates(iso){
+  const mon = new Date(mondayOf(iso)+'T00:00:00');
+  const out = [];
+  for (let i=0;i<5;i++){ const d=new Date(mon); d.setDate(mon.getDate()+i); out.push(isoOf(d)); }
+  return out;
+}
+/* Holiday covering (personId, iso), full-day preferred over half-day, else null. */
+function personLeaveOn(holidays, personId, iso){
+  let half = null;
+  for (const h of holidays){
+    if (h.personId !== personId) continue;
+    if (!(h.start <= iso && h.end >= iso)) continue;
+    if (h.halfDay){ if (!half) half = h; }
+    else return h;
+  }
+  return half;
+}
+/* Public-holiday name for an ISO date, or null. */
+function publicHolidayName(pubHols, iso){
+  const m = pubHols.find(p => p.date === iso);
+  return m ? m.name : null;
+}
 /* Staff is always a list of people. Split on , ; & + / and the word "dan"
    (Indonesian "and") so a joint entry like "Nico+Arya" becomes two people —
    never a combined name. (EKSPEDITUR like "S+S" is a different field, untouched.) */
@@ -524,6 +578,48 @@ function startListener(){
 function showLoading(){
   const v = document.getElementById('view-'+viewMode);
   if (v) v.innerHTML = `<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading records…</div></div></div>`;
+}
+
+/* ── Schedule data layer ── */
+function schedDocId(personId, date){ return `${personId}_${date}`; }
+
+/* One-time fetch of the Holiday Tracker roster + leave + public holidays.
+   ponytail: session snapshot, not a live listener — a page reload refreshes it.
+   Staff rarely add a holiday and immediately re-plan the same minute. */
+async function loadHolidayData(){
+  if (htLoaded) return;
+  const [pSnap, hSnap, phSnap] = await Promise.all([
+    htPeopleCol.get(), htHolidaysCol.get(), htPubHolCol.get()
+  ]);
+  htPeople     = pSnap.docs.map(d=>({id:d.id, ...d.data()}))
+                   .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  htHolidays   = hSnap.docs.map(d=>d.data());
+  htPublicHols = phSnap.docs.map(d=>d.data());
+  htLoaded = true;
+}
+
+/* Live assignments, like the records listener. */
+function startScheduleListener(){
+  if (schedUnsub) return;
+  schedUnsub = schedCol.onSnapshot(snap=>{
+    scheduleAssignments = {};
+    snap.docs.forEach(d=>{ scheduleAssignments[d.id] = d.data(); });
+    if (viewMode==='schedule') render();
+  }, err=>{ console.error(err); showToast('Schedule sync error: '+err.message, true); });
+}
+
+/* Upsert a cell; clearing both project and note deletes the doc. */
+async function setAssignment(personId, date, project, note){
+  const id = schedDocId(personId, date);
+  project = (project||'').trim(); note = (note||'').trim();
+  try {
+    if (!project && !note){ await schedCol.doc(id).delete(); return; }
+    await schedCol.doc(id).set({
+      personId, date, project, note,
+      by: currentUser ? currentUser.name : '',
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+  } catch(e){ showToast('Could not save assignment: '+e.message, true); }
 }
 
 /* ── Dropdowns / datalists ── */
@@ -571,10 +667,12 @@ function applyFilters(list){
 /* ── View switching ── */
 function setView(mode){
   viewMode = mode;
-  ['records','quantity','personnel','people','analytics'].forEach(m=>{
+  ['records','quantity','personnel','schedule','people','analytics'].forEach(m=>{
     document.getElementById('tab-'+m).classList.toggle('active', m===mode);
     document.getElementById('view-'+m).style.display = m===mode ? '' : 'none';
   });
+  document.getElementById('filter-bar').style.display = (mode==='schedule') ? 'none' : '';
+  if (mode==='schedule'){ startScheduleListener(); loadHolidayData().then(render).catch(e=>showToast('Could not load holiday data: '+e.message,true)); }
   render();
 }
 function render(){
@@ -585,6 +683,7 @@ function render(){
   if (viewMode==='personnel') renderPersonnel(list);
   if (viewMode==='people')    renderPeople(list);
   if (viewMode==='analytics') renderAnalytics(list);
+  if (viewMode==='schedule') renderSchedule();
 }
 
 /* ── Records table ── */
@@ -804,6 +903,89 @@ function peopleRollup(list){
     return { ...o, pct, grade:gradeFromComp(pct,o.total), avgDay: o.days.size?Math.round(o.done/o.days.size):0, trend };
   });
 }
+/* ── Schedule (forward roster) ── */
+function schedWeek(delta){ const d=new Date(schedMonday+'T00:00:00'); d.setDate(d.getDate()+delta*7); schedMonday=isoOf(d); render(); }
+function schedThisWeek(){ schedMonday=mondayOf(isoToday()); render(); }
+function setSchedDept(v){ schedDept=v; render(); }
+
+const SCHED_LEAVE_ICON = { vacation:'🌴', sick:'🤒', wfh:'🏠', training:'📚', parental:'👶', other:'📌' };
+
+/* One roster cell: public holiday (column) > full-day leave (blocked) > editable. */
+function schedCellHtml(p, iso){
+  if (publicHolidayName(htPublicHols, iso)) return `<td class="cell pubhol"></td>`;
+  const leave = personLeaveOn(htHolidays, p.id, iso);
+  if (leave && !leave.halfDay){
+    const ic = SCHED_LEAVE_ICON[leave.type] || '📌';
+    return `<td class="leave">${ic} ${esc(leave.type)}</td>`;
+  }
+  const a = scheduleAssignments[schedDocId(p.id, iso)] || {};
+  const halfFlag = leave && leave.halfDay
+    ? `<span class="half-flag">½ ${esc(leave.halfDayPart||'')} off</span>` : '';
+  const opts = ['<option value="">— project —</option>']
+    .concat(uniqueProjects().map(pr=>`<option value="${esc(pr)}"${pr===a.project?' selected':''}>${esc(pr)}</option>`)).join('');
+  return `<td class="cell ${leave&&leave.halfDay?'half':''}">
+    ${halfFlag}
+    <select onchange="onSchedProject('${esc(p.id)}','${iso}',this.value)">${opts}</select>
+    <input type="text" value="${esc(a.note||'')}" placeholder="note…" onchange="onSchedNote('${esc(p.id)}','${iso}',this.value)">
+  </td>`;
+}
+
+/* Project change → upsert immediately (carries the existing note). */
+function onSchedProject(personId, date, value){
+  const a = scheduleAssignments[schedDocId(personId, date)] || {};
+  setAssignment(personId, date, value, a.note || '');
+}
+/* Note commits on blur/Enter (change), not per keystroke.
+   ponytail: the live snapshot re-renders the grid; committing on change (not
+   input) keeps typing from being interrupted. */
+function onSchedNote(personId, date, value){
+  const a = scheduleAssignments[schedDocId(personId, date)] || {};
+  setAssignment(personId, date, a.project || '', value);
+}
+
+function renderSchedule(){
+  const host = document.getElementById('view-schedule');
+  if (!htLoaded){ host.innerHTML = `<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading roster…</div></div></div>`; return; }
+  const dates = weekDates(schedMonday);
+  const depts = [...new Set(htPeople.map(p=>p.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const ppl = htPeople.filter(p=>!schedDept || p.dept===schedDept);
+  const WEEKDAY = ['Mon','Tue','Wed','Thu','Fri'];
+
+  const toolbar = `<div class="sched-toolbar">
+    <div class="seg">
+      <button class="seg-btn" onclick="schedWeek(-1)">‹</button>
+      <button class="seg-btn" onclick="schedThisWeek()">This week</button>
+      <button class="seg-btn" onclick="schedWeek(1)">›</button>
+    </div>
+    <span class="sched-week">${esc(fmtDate(dates[0]))} – ${esc(fmtDate(dates[4]))}</span>
+    <div class="spacer"></div>
+    <select onchange="setSchedDept(this.value)">
+      <option value="">All depts</option>
+      ${depts.map(d=>`<option value="${esc(d)}"${d===schedDept?' selected':''}>${esc(d)}</option>`).join('')}
+    </select>
+  </div>`;
+
+  if (!ppl.length){ host.innerHTML = toolbar + `<div class="panel"><div class="empty"><div class="empty-icon">👥</div><div>No people in the Holiday Tracker roster${schedDept?' for this dept':''}.</div></div></div>`; return; }
+
+  const head = `<tr><th class="date">Person</th>${dates.map((iso,i)=>{
+    const ph = publicHolidayName(htPublicHols, iso);
+    return `<th class="${ph?'pubhol':''}">${WEEKDAY[i]} ${esc(fmtDate(iso))}${ph?`<span class="ph-name">${esc(ph)}</span>`:''}</th>`;
+  }).join('')}</tr>`;
+
+  const body = ppl.map(p=>`<tr>
+    <td class="date">${esc(p.name)}${p.dept?`<div style="font-size:9px;color:var(--text3)">${esc(p.dept)}</div>`:''}</td>
+    ${dates.map(iso=>schedCellHtml(p, iso)).join('')}
+  </tr>`).join('');
+
+  const legend = `<div class="legend" style="margin-top:10px">
+    <span><span class="sw" style="background:var(--warn-light)"></span>On leave</span>
+    <span><span class="sw" style="background:var(--accent-light)"></span>Public holiday</span>
+    <span><span class="sw" style="background:var(--surface2)"></span>Assignable</span>
+  </div>`;
+
+  host.innerHTML = toolbar + `<div class="panel"><div class="pivot-scroll"><table class="pivot sched"><thead>${head}</thead><tbody>${body}</tbody></table></div>${legend}</div>`;
+}
+
 function renderPeople(list){
   const host = document.getElementById('view-people');
   const people = peopleRollup(list);
