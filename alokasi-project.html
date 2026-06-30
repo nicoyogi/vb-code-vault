@@ -492,6 +492,12 @@ let schedDept       = '';                      /* dept filter */
 const PROJECTS_SEED = ['TRUMPF','WMF','SBG','CLAAS','KRONES','OSRAM','NASH','EPT','CONTI','ATB','Siemens Freia','Siemens Tarif','Siemens Faktual','Valeo','Stamp','Sharepoint','SHELL','Währungskurse','Others'];
 const EKSP_SEED = ['S+S','DHL GF','DHL EXPRESS','Kuehne','ERKA','HONOLD','DACHSER','SBG GERICKE','SBG DACHSER','DATA ENTRY'];
 
+/* ── Cockpit tuning knobs (calibration; tweak if estimates feel off) ── */
+const DEFAULT_CAPACITY  = 150;   /* assumed daily throughput when a person has no recent records */
+const OVERLOAD_RATIO    = 1.0;   /* load > capacity * this => overloaded */
+const TIGHT_RATIO       = 0.9;   /* neededPerDay > plannedToday * this => "tight" */
+const THROUGHPUT_WINDOW = 30;    /* days of history used to estimate throughput */
+
 /* ── Theme ── */
 function initTheme(){
   Grimoire.Theme.init({ defaultMode:'dark', mode:'dark', className:'dark', iconEl:'#theme-icon', labelEl:'#theme-label', icons:{light:'☀️', dark:'🌙'}, labels:{light:'Light', dark:'Dark'} });
@@ -561,6 +567,87 @@ function validCounts(total, done){
   if (total<0 || done<0) return 'Counts cannot be negative.';
   if (done>total) return 'Done cannot exceed total.';
   return null;
+}
+
+/* ── Cockpit decision logic (pure; unit-tested in tests/cockpit.test.mjs) ── */
+function projectSlug(project){
+  return String(project||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+}
+function ageDays(fromIso, toIso){
+  if(!fromIso || !toIso) return 0;
+  const x = (new Date(toIso+'T00:00:00') - new Date(fromIso+'T00:00:00'))/86400000;
+  return Math.max(0, Math.round(x));
+}
+/* Count Mon–Fri in [fromIso,toIso] inclusive, minus any public-holiday dates. */
+function workingDaysBetween(fromIso, toIso, pubHols){
+  if(!fromIso || !toIso || fromIso > toIso) return 0;
+  const skip = new Set((pubHols||[]).map(p=>p.date));
+  let n = 0;
+  const d = new Date(fromIso+'T00:00:00'), end = new Date(toIso+'T00:00:00');
+  while(d <= end){
+    const dow = d.getDay();                 /* 0 Sun … 6 Sat */
+    if(dow>=1 && dow<=5 && !skip.has(isoOf(d))) n++;
+    d.setDate(d.getDate()+1);
+  }
+  return n;
+}
+/* project -> { remaining, oldestAgeDays, openRecs } over OPEN (not Selesai) records. */
+function projectBacklog(records, today){
+  const m = {};
+  records.forEach(r=>{
+    if(effStatus(r)==='Selesai') return;
+    const p = r.project || '—';
+    const o = m[p] = m[p] || { remaining:0, oldestAgeDays:0, openRecs:0 };
+    o.remaining += Math.max(0, num(r.total)-num(r.done));
+    o.openRecs++;
+    const age = ageDays(r.date, today);
+    if(age > o.oldestAgeDays) o.oldestAgeDays = age;
+  });
+  return m;
+}
+/* personName -> avg done per active day over the trailing window. */
+function throughputByPerson(records, today, windowDays){
+  windowDays = windowDays || THROUGHPUT_WINDOW;
+  const cutoff = (()=>{ const d=new Date(today+'T00:00:00'); d.setDate(d.getDate()-windowDays); return isoOf(d); })();
+  const m = {};
+  records.forEach(r=>{
+    if(!r.date || r.date < cutoff || r.date > today) return;
+    [...new Set(staffArr(r).map(personName).filter(Boolean))].forEach(n=>{
+      const o = m[n] = m[n] || { done:0, days:new Set() };
+      o.done += num(r.done); o.days.add(r.date);
+    });
+  });
+  const out = {};
+  Object.entries(m).forEach(([n,o])=>{ out[n] = o.days.size ? Math.round(o.done/o.days.size) : 0; });
+  return out;
+}
+function capacityFor(name, throughputMap, halfDay){
+  let cap = (throughputMap && throughputMap[name]) || DEFAULT_CAPACITY;
+  if(!cap) cap = DEFAULT_CAPACITY;
+  return halfDay ? Math.round(cap/2) : cap;
+}
+/* personId -> summed qty of that person's assignments on a date. */
+function personLoadByDay(assignments, date){
+  const m = {};
+  Object.values(assignments||{}).forEach(asg=>{
+    if(asg.date !== date) return;
+    m[asg.personId] = (m[asg.personId]||0) + num(asg.qty);
+  });
+  return m;
+}
+function loadTier(load, capacity){
+  if(load <= 0) return 'free';
+  if(load > capacity * OVERLOAD_RATIO) return 'over';
+  return 'ontrack';
+}
+/* {tier, neededPerDay} for a project's deadline pressure on the selected day. */
+function riskTier(remaining, daysLeft, plannedToday){
+  if(remaining <= 0) return { tier:'ontrack', neededPerDay:0 };
+  if(daysLeft <= 0)  return { tier:'overdue', neededPerDay:remaining };
+  const neededPerDay = Math.ceil(remaining / daysLeft);
+  if(neededPerDay > plannedToday)              return { tier:'slip',   neededPerDay };
+  if(neededPerDay > plannedToday * TIGHT_RATIO) return { tier:'tight',  neededPerDay };
+  return { tier:'ontrack', neededPerDay };
 }
 
 /* ── Firestore listeners ── */
