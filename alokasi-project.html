@@ -922,7 +922,7 @@ function schedCellHtml(p, iso){
   const halfFlag = leave && leave.halfDay
     ? `<span class="half-flag">½ ${esc(leave.halfDayPart||'')} off</span>` : '';
   const opts = ['<option value="">— project —</option>']
-    .concat(uniqueProjects().map(pr=>`<option${pr===a.project?' selected':''}>${esc(pr)}</option>`)).join('');
+    .concat(uniqueProjects().map(pr=>`<option value="${esc(pr)}"${pr===a.project?' selected':''}>${esc(pr)}</option>`)).join('');
   return `<td class="cell ${leave&&leave.halfDay?'half':''}">
     ${halfFlag}
     <select onchange="onSchedProject('${esc(p.id)}','${iso}',this.value)">${opts}</select>
@@ -961,7 +961,7 @@ function renderSchedule(){
     <div class="spacer"></div>
     <select onchange="setSchedDept(this.value)">
       <option value="">All depts</option>
-      ${depts.map(d=>`<option${d===schedDept?' selected':''}>${esc(d)}</option>`).join('')}
+      ${depts.map(d=>`<option value="${esc(d)}"${d===schedDept?' selected':''}>${esc(d)}</option>`).join('')}
     </select>
   </div>`;
 
