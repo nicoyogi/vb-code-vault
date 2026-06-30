@@ -908,8 +908,40 @@ function schedWeek(delta){ const d=new Date(schedMonday+'T00:00:00'); d.setDate(
 function schedThisWeek(){ schedMonday=mondayOf(isoToday()); render(); }
 function setSchedDept(v){ schedDept=v; render(); }
 
-// ponytail: temporary stub — replaced in Task 5 with real cell logic
-function schedCellHtml(){ return '<td class="cell"></td>'; }
+const SCHED_LEAVE_ICON = { vacation:'🌴', sick:'🤒', wfh:'🏠', training:'📚', parental:'👶', other:'📌' };
+
+/* One roster cell: public holiday (column) > full-day leave (blocked) > editable. */
+function schedCellHtml(p, iso){
+  if (publicHolidayName(htPublicHols, iso)) return `<td class="cell pubhol"></td>`;
+  const leave = personLeaveOn(htHolidays, p.id, iso);
+  if (leave && !leave.halfDay){
+    const ic = SCHED_LEAVE_ICON[leave.type] || '📌';
+    return `<td class="leave">${ic} ${esc(leave.type)}</td>`;
+  }
+  const a = scheduleAssignments[schedDocId(p.id, iso)] || {};
+  const halfFlag = leave && leave.halfDay
+    ? `<span class="half-flag">½ ${esc(leave.halfDayPart||'')} off</span>` : '';
+  const opts = ['<option value="">— project —</option>']
+    .concat(uniqueProjects().map(pr=>`<option${pr===a.project?' selected':''}>${esc(pr)}</option>`)).join('');
+  return `<td class="cell ${leave&&leave.halfDay?'half':''}">
+    ${halfFlag}
+    <select onchange="onSchedProject('${esc(p.id)}','${iso}',this.value)">${opts}</select>
+    <input type="text" value="${esc(a.note||'')}" placeholder="note…" onchange="onSchedNote('${esc(p.id)}','${iso}',this.value)">
+  </td>`;
+}
+
+/* Project change → upsert immediately (carries the existing note). */
+function onSchedProject(personId, date, value){
+  const a = scheduleAssignments[schedDocId(personId, date)] || {};
+  setAssignment(personId, date, value, a.note || '');
+}
+/* Note commits on blur/Enter (change), not per keystroke.
+   ponytail: the live snapshot re-renders the grid; committing on change (not
+   input) keeps typing from being interrupted. */
+function onSchedNote(personId, date, value){
+  const a = scheduleAssignments[schedDocId(personId, date)] || {};
+  setAssignment(personId, date, a.project || '', value);
+}
 
 function renderSchedule(){
   const host = document.getElementById('view-schedule');
