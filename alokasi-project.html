@@ -455,6 +455,10 @@
 if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
 const db = firebase.firestore();
 const col = db.collection('sgp_alokasi_records');
+const schedCol      = db.collection('sgp_alokasi_schedule');
+const htPeopleCol   = db.collection('wmf_holiday_people');
+const htHolidaysCol = db.collection('wmf_holidays');
+const htPubHolCol   = db.collection('wmf_public_holidays');
 
 let records = [];
 let loaded = false;                     /* first snapshot received */
@@ -465,6 +469,14 @@ let currentUser = null;
 let sortKey = 'date', sortDir = -1;     /* records table sort */
 let qtyMetric = 'total';                /* quantity pivot: total | done */
 let importRows = [];                    /* parsed rows pending import */
+let scheduleAssignments = {};                 /* `${personId}_${date}` -> {project,note,by} */
+let htPeople        = [];                      /* wmf_holiday_people [{id,name,dept}] */
+let htHolidays      = [];                      /* wmf_holidays */
+let htPublicHols    = [];                      /* wmf_public_holidays [{date,name}] */
+let htLoaded        = false;                   /* holiday data fetched this session */
+let schedUnsub      = null;
+let schedMonday     = mondayOf(isoToday());    /* visible week (Mon ISO) */
+let schedDept       = '';                      /* dept filter */
 
 const PROJECTS_SEED = ['TRUMPF','WMF','SBG','CLAAS','KRONES','OSRAM','NASH','EPT','CONTI','ATB','Siemens Freia','Siemens Tarif','Siemens Faktual','Valeo','Stamp','Sharepoint','SHELL','Währungskurse','Others'];
 const EKSP_SEED = ['S+S','DHL GF','DHL EXPRESS','Kuehne','ERKA','HONOLD','DACHSER','SBG GERICKE','SBG DACHSER','DATA ENTRY'];
@@ -555,6 +567,48 @@ function startListener(){
 function showLoading(){
   const v = document.getElementById('view-'+viewMode);
   if (v) v.innerHTML = `<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading records…</div></div></div>`;
+}
+
+/* ── Schedule data layer ── */
+function schedDocId(personId, date){ return `${personId}_${date}`; }
+
+/* One-time fetch of the Holiday Tracker roster + leave + public holidays.
+   ponytail: session snapshot, not a live listener — a page reload refreshes it.
+   Staff rarely add a holiday and immediately re-plan the same minute. */
+async function loadHolidayData(){
+  if (htLoaded) return;
+  const [pSnap, hSnap, phSnap] = await Promise.all([
+    htPeopleCol.get(), htHolidaysCol.get(), htPubHolCol.get()
+  ]);
+  htPeople     = pSnap.docs.map(d=>({id:d.id, ...d.data()}))
+                   .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  htHolidays   = hSnap.docs.map(d=>d.data());
+  htPublicHols = phSnap.docs.map(d=>d.data());
+  htLoaded = true;
+}
+
+/* Live assignments, like the records listener. */
+function startScheduleListener(){
+  if (schedUnsub) return;
+  schedUnsub = schedCol.onSnapshot(snap=>{
+    scheduleAssignments = {};
+    snap.docs.forEach(d=>{ scheduleAssignments[d.id] = d.data(); });
+    if (viewMode==='schedule') render();
+  }, err=>{ console.error(err); showToast('Schedule sync error: '+err.message, true); });
+}
+
+/* Upsert a cell; clearing both project and note deletes the doc. */
+async function setAssignment(personId, date, project, note){
+  const id = schedDocId(personId, date);
+  project = (project||'').trim(); note = (note||'').trim();
+  try {
+    if (!project && !note){ await schedCol.doc(id).delete(); return; }
+    await schedCol.doc(id).set({
+      personId, date, project, note,
+      by: currentUser ? currentUser.name : '',
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+  } catch(e){ showToast('Could not save assignment: '+e.message, true); }
 }
 
 /* ── Dropdowns / datalists ── */
