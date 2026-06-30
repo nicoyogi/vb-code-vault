@@ -150,6 +150,15 @@
     table.pivot td.zero { color: var(--text3); }
     table.pivot tfoot td, table.pivot tfoot th { position: sticky; bottom: 0; background: var(--surface2); font-weight: 700; color: var(--text); }
     table.pivot td.names { text-align: left; font-size: 10.5px; color: var(--text2); white-space: normal; min-width: 140px; max-width: 240px; }
+    .sched-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem; }
+    .sched-week { font-family:var(--grotesk); font-weight:700; font-size:14px; color:var(--text); min-width:190px; text-align:center; }
+    table.sched td.cell { vertical-align:top; min-width:130px; }
+    table.sched td.cell select, table.sched td.cell input { width:100%; border:1px solid var(--border); border-radius:4px; padding:4px 6px; font-family:var(--ibm-mono); font-size:11px; background:var(--surface2); color:var(--text); margin-bottom:3px; }
+    table.sched td.leave { background:var(--warn-light); color:var(--text2); text-align:center; font-family:var(--ibm-mono); font-size:11px; }
+    table.sched td.half { background:var(--warn-light); }
+    table.sched .half-flag { font-family:var(--ibm-mono); font-size:9px; color:var(--warn); display:block; margin-bottom:2px; }
+    table.sched th.pubhol, table.sched td.pubhol { background:var(--accent-light); }
+    table.sched th.pubhol .ph-name { display:block; font-size:9px; color:var(--accent); font-weight:400; }
 
     /* analytics cards (shared look) */
     .an-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.1rem 1.3rem; margin-bottom: 1.2rem; }
@@ -367,6 +376,7 @@
       <button class="seg-btn active" id="tab-records"   onclick="setView('records')">Records</button>
       <button class="seg-btn" id="tab-quantity"  onclick="setView('quantity')">Quantity</button>
       <button class="seg-btn" id="tab-personnel" onclick="setView('personnel')">Personnel</button>
+      <button class="seg-btn" id="tab-schedule" onclick="setView('schedule')">Schedule</button>
       <button class="seg-btn" id="tab-people"    onclick="setView('people')">People</button>
       <button class="seg-btn" id="tab-analytics" onclick="setView('analytics')">Analytics</button>
     </div>
@@ -390,6 +400,7 @@
   <div id="view-records"></div>
   <div id="view-quantity" style="display:none"></div>
   <div id="view-personnel" style="display:none"></div>
+  <div id="view-schedule" style="display:none"></div>
   <div id="view-people" style="display:none"></div>
   <div id="view-analytics" style="display:none"></div>
 
@@ -656,10 +667,12 @@ function applyFilters(list){
 /* ── View switching ── */
 function setView(mode){
   viewMode = mode;
-  ['records','quantity','personnel','people','analytics'].forEach(m=>{
+  ['records','quantity','personnel','schedule','people','analytics'].forEach(m=>{
     document.getElementById('tab-'+m).classList.toggle('active', m===mode);
     document.getElementById('view-'+m).style.display = m===mode ? '' : 'none';
   });
+  document.getElementById('filter-bar').style.display = (mode==='schedule') ? 'none' : '';
+  if (mode==='schedule'){ startScheduleListener(); loadHolidayData().then(render).catch(e=>showToast('Could not load holiday data: '+e.message,true)); }
   render();
 }
 function render(){
@@ -670,6 +683,7 @@ function render(){
   if (viewMode==='personnel') renderPersonnel(list);
   if (viewMode==='people')    renderPeople(list);
   if (viewMode==='analytics') renderAnalytics(list);
+  if (viewMode==='schedule') renderSchedule();
 }
 
 /* ── Records table ── */
@@ -889,6 +903,57 @@ function peopleRollup(list){
     return { ...o, pct, grade:gradeFromComp(pct,o.total), avgDay: o.days.size?Math.round(o.done/o.days.size):0, trend };
   });
 }
+/* ── Schedule (forward roster) ── */
+function schedWeek(delta){ const d=new Date(schedMonday+'T00:00:00'); d.setDate(d.getDate()+delta*7); schedMonday=isoOf(d); render(); }
+function schedThisWeek(){ schedMonday=mondayOf(isoToday()); render(); }
+function setSchedDept(v){ schedDept=v; render(); }
+
+// ponytail: temporary stub — replaced in Task 5 with real cell logic
+function schedCellHtml(){ return '<td class="cell"></td>'; }
+
+function renderSchedule(){
+  const host = document.getElementById('view-schedule');
+  if (!htLoaded){ host.innerHTML = `<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading roster…</div></div></div>`; return; }
+  const dates = weekDates(schedMonday);
+  const depts = [...new Set(htPeople.map(p=>p.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const ppl = htPeople.filter(p=>!schedDept || p.dept===schedDept);
+  const WEEKDAY = ['Mon','Tue','Wed','Thu','Fri'];
+
+  const toolbar = `<div class="sched-toolbar">
+    <div class="seg">
+      <button class="seg-btn" onclick="schedWeek(-1)">‹</button>
+      <button class="seg-btn" onclick="schedThisWeek()">This week</button>
+      <button class="seg-btn" onclick="schedWeek(1)">›</button>
+    </div>
+    <span class="sched-week">${esc(fmtDate(dates[0]))} – ${esc(fmtDate(dates[4]))}</span>
+    <div class="spacer"></div>
+    <select onchange="setSchedDept(this.value)">
+      <option value="">All depts</option>
+      ${depts.map(d=>`<option${d===schedDept?' selected':''}>${esc(d)}</option>`).join('')}
+    </select>
+  </div>`;
+
+  if (!ppl.length){ host.innerHTML = toolbar + `<div class="panel"><div class="empty"><div class="empty-icon">👥</div><div>No people in the Holiday Tracker roster${schedDept?' for this dept':''}.</div></div></div>`; return; }
+
+  const head = `<tr><th class="date">Person</th>${dates.map((iso,i)=>{
+    const ph = publicHolidayName(htPublicHols, iso);
+    return `<th class="${ph?'pubhol':''}">${WEEKDAY[i]} ${esc(fmtDate(iso))}${ph?`<span class="ph-name">${esc(ph)}</span>`:''}</th>`;
+  }).join('')}</tr>`;
+
+  const body = ppl.map(p=>`<tr>
+    <td class="date">${esc(p.name)}${p.dept?`<div style="font-size:9px;color:var(--text3)">${esc(p.dept)}</div>`:''}</td>
+    ${dates.map(iso=>schedCellHtml(p, iso)).join('')}
+  </tr>`).join('');
+
+  const legend = `<div class="legend" style="margin-top:10px">
+    <span><span class="sw" style="background:var(--warn-light)"></span>On leave</span>
+    <span><span class="sw" style="background:var(--accent-light)"></span>Public holiday</span>
+    <span><span class="sw" style="background:var(--surface2)"></span>Assignable</span>
+  </div>`;
+
+  host.innerHTML = toolbar + `<div class="panel"><div class="pivot-scroll"><table class="pivot sched"><thead>${head}</thead><tbody>${body}</tbody></table></div>${legend}</div>`;
+}
+
 function renderPeople(list){
   const host = document.getElementById('view-people');
   const people = peopleRollup(list);
