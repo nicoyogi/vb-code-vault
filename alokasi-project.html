@@ -537,7 +537,7 @@ let currentUser = null;
 let sortKey = 'date', sortDir = -1;     /* records table sort */
 let qtyMetric = 'total';                /* quantity pivot: total | done */
 let importRows = [];                    /* parsed rows pending import */
-let scheduleAssignments = {};                 /* `${personId}_${date}` -> {project,note,by} */
+let scheduleAssignments = {};                 /* `${date}_${projectSlug}` -> {date,project,people,note,by,ts} */
 let htPeople        = [];                      /* wmf_holiday_people [{id,name,dept}] */
 let htHolidays      = [];                      /* wmf_holidays */
 let htPublicHols    = [];                      /* wmf_public_holidays [{date,name}] */
