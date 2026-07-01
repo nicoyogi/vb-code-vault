@@ -71,6 +71,9 @@ service cloud.firestore {
     match /sgp_alokasi_schedule/{id} {
       allow read, write: if true;
     }
+    match /sgp_alokasi_projects/{id} {
+      allow read, write: if true;
+    }
 
 
     // ── HOLIDAY TRACKER (no Firebase Auth — access control handled in app) ──

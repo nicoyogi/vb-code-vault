@@ -470,6 +470,7 @@ const schedCol      = db.collection('sgp_alokasi_schedule');
 const htPeopleCol   = db.collection('wmf_holiday_people');
 const htHolidaysCol = db.collection('wmf_holidays');
 const htPubHolCol   = db.collection('wmf_public_holidays');
+const projMetaCol   = db.collection('sgp_alokasi_projects');
 
 let records = [];
 let loaded = false;                     /* first snapshot received */
@@ -488,6 +489,10 @@ let htLoaded        = false;                   /* holiday data fetched this sess
 let schedUnsub      = null;
 let schedMonday     = mondayOf(isoToday());    /* visible week (Mon ISO) */
 let schedDept       = '';                      /* dept filter */
+let projMeta        = {};                       /* projectSlug -> {name, dueDate} */
+let projMetaUnsub   = null;
+let planMode        = 'day';                    /* 'day' | 'week' */
+let schedDay        = isoToday();               /* selected day in the cockpit */
 
 const PROJECTS_SEED = ['TRUMPF','WMF','SBG','CLAAS','KRONES','OSRAM','NASH','EPT','CONTI','ATB','Siemens Freia','Siemens Tarif','Siemens Faktual','Valeo','Stamp','Sharepoint','SHELL','Währungskurse','Others'];
 const EKSP_SEED = ['S+S','DHL GF','DHL EXPRESS','Kuehne','ERKA','HONOLD','DACHSER','SBG GERICKE','SBG DACHSER','DATA ENTRY'];
@@ -694,6 +699,24 @@ function startScheduleListener(){
     snap.docs.forEach(d=>{ scheduleAssignments[d.id] = d.data(); });
     if (viewMode==='schedule') render();
   }, err=>{ console.error(err); showToast('Schedule sync error: '+err.message, true); });
+}
+
+/* Live project meta (due dates). */
+function startProjMetaListener(){
+  if (projMetaUnsub) return;
+  projMetaUnsub = projMetaCol.onSnapshot(snap=>{
+    projMeta = {};
+    snap.docs.forEach(d=>{ projMeta[d.id] = d.data(); });
+    if (viewMode==='plan') render();
+  }, err=>{ console.error(err); showToast('Project meta sync error: '+err.message, true); });
+}
+/* Set/clear a project's due date. Empty date deletes the meta doc. */
+async function setProjectDue(project, dueIso){
+  const id = projectSlug(project);
+  try {
+    if (!dueIso){ await projMetaCol.doc(id).delete(); return; }
+    await projMetaCol.doc(id).set({ name:project, dueDate:dueIso }, {merge:true});
+  } catch(e){ showToast('Could not save due date: '+e.message+' (publish Firestore rules?)', true); }
 }
 
 /* Upsert a cell; clearing both project and note deletes the doc. */
