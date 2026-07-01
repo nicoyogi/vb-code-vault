@@ -608,6 +608,9 @@ function validCounts(total, done){
 function projectSlug(project){
   return String(project||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
 }
+/* ── Grid cell helpers (pure; unit-tested in tests/grid.test.mjs) ── */
+function cellDocId(date, project){ return `${date}_${projectSlug(project)}`; }
+function cellIsEmpty(people, note){ return (!people || people.length === 0) && !String(note || '').trim(); }
 function ageDays(fromIso, toIso){
   if(!fromIso || !toIso) return 0;
   const x = (new Date(toIso+'T00:00:00') - new Date(fromIso+'T00:00:00'))/86400000;
