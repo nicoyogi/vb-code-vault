@@ -103,6 +103,27 @@ builder, and the entire theme/CSS.
 - Blank `Vendor details` rows → dropped.
 - Same base filename twice → `_2` suffix.
 
+## Addendum — global Note filter
+
+Source rows carry up to four columns literally named `Note`; the meaningful note
+lands in a different one per system and sometimes several at once (609 distinct
+note strings across the four files; 54% of rows have no note). Rather than a
+per-note picker (unusable at that cardinality), a single global text filter:
+
+- **Card "03 — Note filter"** (optional): a textarea of phrases, one per line
+  (or `;`-separated). A row with a note is kept only if its merged note
+  **contains any** phrase (case-insensitive substring).
+- **Rows with no note are always kept.** Empty box = no note filtering.
+- Applies to **all systems** (global), and the note is **never written to the
+  output** — sheets stay the 3 columns.
+- A live counter (`updateNoteStat`) shows `Matches X of Y noted rows; Z blank-note
+  rows always kept.`
+
+Implementation: each extracted row carries a 4th element `mergedNote`
+(`extractRows` + `noteColumns`) used only for filtering; `parseNoteTerms` /
+`noteKeep` are the pure filter helpers (unit-tested); the split projects rows
+back to 3 columns via `r.slice(0, 3)` on output.
+
 ## Verification
 
 Run the four real files (OPP/PS1/KSP/FNP) through the tool, pick a couple of
