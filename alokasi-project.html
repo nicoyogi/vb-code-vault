@@ -611,6 +611,24 @@ function projectSlug(project){
 /* ── Grid cell helpers (pure; unit-tested in tests/grid.test.mjs) ── */
 function cellDocId(date, project){ return `${date}_${projectSlug(project)}`; }
 function cellIsEmpty(people, note){ return (!people || people.length === 0) && !String(note || '').trim(); }
+/* Ordered names of non-hidden registry columns. */
+function visibleColumns(meta){
+  return Object.values(meta || {})
+    .filter(m => m && m.name && !m.hidden)
+    .sort((x, y) => (num(x.order) - num(y.order)) || String(x.name).localeCompare(String(y.name)))
+    .map(m => m.name);
+}
+/* Order updates to move `slug` by dir (-1 up / +1 down) among visible columns; [] if out of bounds. */
+function swapOrder(meta, slug, dir){
+  const vis = Object.entries(meta || {})
+    .filter(([, m]) => m && m.name && !m.hidden)
+    .sort((a, b) => (num(a[1].order) - num(b[1].order)) || String(a[1].name).localeCompare(String(b[1].name)));
+  const i = vis.findIndex(([s]) => s === slug);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= vis.length) return [];
+  const [sa, ma] = vis[i], [sb, mb] = vis[j];
+  return [{ slug: sa, order: num(mb.order) }, { slug: sb, order: num(ma.order) }];
+}
 function ageDays(fromIso, toIso){
   if(!fromIso || !toIso) return 0;
   const x = (new Date(toIso+'T00:00:00') - new Date(fromIso+'T00:00:00'))/86400000;

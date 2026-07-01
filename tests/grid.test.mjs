@@ -1,6 +1,6 @@
 /* Unit tests for the pure grid helpers in alokasi-project.html. */
 import test from 'node:test';
-import assert from 'node:assert/strict';
+import assert from 'node:assert';
 import { loadAlokasi } from './harness/load-alokasi.mjs';
 
 const a = loadAlokasi();
@@ -16,4 +16,23 @@ test('cellIsEmpty: empty people AND blank note', () => {
   assert.equal(a.cellIsEmpty(undefined, '   '), true);
   assert.equal(a.cellIsEmpty(['p1'], ''), false);
   assert.equal(a.cellIsEmpty([], '161'), false);
+});
+
+test('visibleColumns: ordered by order then name, hidden excluded', () => {
+  const meta = {
+    wmf:    { name: 'WMF',    order: 1 },
+    krones: { name: 'KRONES', order: 0 },
+    dead:   { name: 'OLD',    order: 2, hidden: true },
+    noname: { order: 3 },
+  };
+  assert.deepEqual(a.visibleColumns(meta), ['KRONES', 'WMF']);
+  assert.deepEqual(a.visibleColumns({}), []);
+});
+
+test('swapOrder: swaps order with the neighbour in move direction', () => {
+  const meta = { krones: { name: 'KRONES', order: 0 }, wmf: { name: 'WMF', order: 1 } };
+  assert.deepEqual(a.swapOrder(meta, 'wmf', -1), [{ slug: 'wmf', order: 0 }, { slug: 'krones', order: 1 }]);
+  assert.deepEqual(a.swapOrder(meta, 'krones', 1), [{ slug: 'krones', order: 1 }, { slug: 'wmf', order: 0 }]);
+  assert.deepEqual(a.swapOrder(meta, 'krones', -1), []); // already first
+  assert.deepEqual(a.swapOrder(meta, 'wmf', 1), []);     // already last
 });
