@@ -725,7 +725,6 @@ function showLoading(){
 }
 
 /* ── Schedule data layer ── */
-function schedDocId(personId, date, project){ return `${personId}_${date}_${projectSlug(project)}`; }
 
 /* One-time fetch of the Holiday Tracker roster + leave + public holidays.
    ponytail: session snapshot, not a live listener — a page reload refreshes it.
@@ -770,18 +769,21 @@ async function setProjectDue(project, dueIso){
   } catch(e){ showToast('Could not save due date: '+e.message+' (publish Firestore rules?)', true); }
 }
 
-/* Upsert a person·day·project assignment; qty<=0 and no note deletes it. */
-async function setAssignment(personId, date, project, qty, note){
-  const id = schedDocId(personId, date, project);
-  project = (project||'').trim(); note = (note||'').trim(); qty = num(qty);
+/* Upsert a cell (date × project) = a set of people + a free-text note.
+   Empty people AND blank note deletes the cell doc. */
+async function setCell(date, project, personIds, note){
+  const id = cellDocId(date, project);
+  project = (project || '').trim();
+  note = (note || '').trim();
+  const people = (personIds || []).filter(Boolean);
   try {
-    if (qty<=0 && !note){ await schedCol.doc(id).delete(); return; }
+    if (cellIsEmpty(people, note)){ await schedCol.doc(id).delete(); return; }
     await schedCol.doc(id).set({
-      personId, date, project, qty, note,
+      date, project, people, note,
       by: currentUser ? currentUser.name : '',
       ts: firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true});
-  } catch(e){ showToast('Could not save assignment: '+e.message, true); }
+    }, { merge: true });
+  } catch (e){ showToast('Could not save cell: ' + e.message, true); }
 }
 
 /* ── Dropdowns / datalists ── */
@@ -1097,42 +1099,6 @@ function planToolbar(label){
       ${depts.map(d=>`<option value="${esc(d)}"${d===schedDept?' selected':''}>${esc(d)}</option>`).join('')}
     </select>
   </div>`;
-}
-
-/* Available (assignable) people for a day, as <option>s. */
-function assignControl(project, day, ppl){
-  const opts = ppl.filter(p=>{ const lv=personLeaveOn(htHolidays,p.id,day); return !(lv&&!lv.halfDay); })
-    .map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
-  const pid = 'asg_'+projectSlug(project)+'_'+day;
-  return `<details class="ck-assign"><summary class="btn-sm">+ assign</summary>
-    <span style="display:inline-flex;gap:6px;align-items:center;margin-left:6px;margin-top:6px">
-      <select id="${pid}_p" style="height:28px">${opts}</select>
-      <input id="${pid}_q" type="number" min="0" step="1" placeholder="qty" style="width:78px;height:28px">
-      <button class="btn-sm" onclick="addAssign('${esc(project)}','${day}','${pid}')">add</button>
-    </span></details>`;
-}
-function addAssign(project, day, pid){
-  const personId=document.getElementById(pid+'_p').value;
-  const qty=num(document.getElementById(pid+'_q').value);
-  if(!personId){ showToast('Pick a person.', true); return; }
-  if(qty<=0){ showToast('Enter a quantity.', true); return; }
-  setAssignment(personId, day, project, qty, '');
-}
-function removeAssign(personId, day, project){ setAssignment(personId, day, project, 0, ''); }
-function dayActual(records, day, project){
-  let done=0, total=0;
-  records.forEach(r=>{ if(r.date===day && (r.project||'—')===project){ done+=num(r.done); total+=num(r.total); } });
-  return { done, total };
-}
-function logFromPlan(project, day){
-  setView('records');
-  document.getElementById('f-date').value = day;
-  document.getElementById('f-project').value = project;
-  const names = Object.values(scheduleAssignments)
-    .filter(a=>a.date===day && a.project===project)
-    .map(a=>(htPeople.find(x=>x.id===a.personId)||{}).name).filter(Boolean);
-  document.getElementById('f-staff').value = names.join(', ');
-  scrollToForm();
 }
 
 function renderCockpit(){

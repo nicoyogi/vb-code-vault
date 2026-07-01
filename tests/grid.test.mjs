@@ -40,3 +40,9 @@ test('swapOrder: swaps order with the neighbour in move direction', () => {
   assert.deepEqual(a.swapOrder(meta, 'krones', -1), []); // already first
   assert.deepEqual(a.swapOrder(meta, 'wmf', 1), []);     // already last
 });
+
+test('setCell: defined and callable without throwing (stubbed Firestore)', async () => {
+  assert.equal(typeof a.setCell, 'function');
+  await a.setCell('2025-12-17', 'WMF', ['p1', 'p2'], '161'); // upsert path
+  await a.setCell('2025-12-17', 'WMF', [], '');              // delete path
+});
