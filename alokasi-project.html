@@ -545,6 +545,7 @@ let htLoaded        = false;                   /* holiday data fetched this sess
 let schedUnsub      = null;
 let schedMonday     = mondayOf(isoToday());    /* visible week (Mon ISO) */
 let schedDept       = '';                      /* dept filter */
+let cellEditing      = null;                   /* {date,project} while the cell editor overlay is open */
 let projMeta        = {};                       /* projectSlug -> {name, dueDate} */
 let projMetaUnsub   = null;
 let analyzeTab = 'overview';   /* overview | pivots | people */
@@ -1074,6 +1075,62 @@ function renderGrid(){
     return `<tr class="${ph ? 'pubhol' : ''}">${dayCell}${cells}</tr>`;
   }).join('');
   host.innerHTML = gridToolbar(rangeLabel) + `<div class="gc-wrap"><table class="gc-table">${head}${body}</table></div>`;
+}
+
+/* ── Cell editor popover: pick roster people + a note for one (date, project) cell ── */
+function cellEditorHtml(date, project, cell, ppl, holidays){
+  const chosen = new Set((cell && cell.people) || []);
+  const rows = ppl.map(p => {
+    const lv = personLeaveOn(holidays, p.id, date);
+    const off = !!(lv && !lv.halfDay);
+    return `<label class="gc-ed-person${off ? ' off' : ''}">
+      <input type="checkbox" value="${esc(p.id)}"${chosen.has(p.id) ? ' checked' : ''}${off ? ' disabled' : ''}>
+      ${esc(p.name)}${off ? ` <span class="gc-ph">(${esc(lv.type || 'leave')})</span>` : ''}
+    </label>`;
+  }).join('');
+  const emptyMsg = `<span class="gc-note">No roster people${schedDept ? ' in this dept' : ''}.</span>`;
+  return `<div class="gc-ed-head">${esc(project)} · ${esc(fmtDate(date))}</div>
+    <div class="gc-ed-people">${rows || emptyMsg}</div>
+    <label class="gc-ed-note-lbl" for="gc-ed-note">Note</label>
+    <input id="gc-ed-note" type="text" value="${esc((cell && cell.note) || '')}" placeholder="(checking) · 161 · anything">
+    <div class="gc-ed-actions">
+      <button class="btn-sm" onclick="saveCellEditor()">Save</button>
+      <button class="btn-sm" onclick="clearCellEditor()">Clear cell</button>
+      <button class="btn-sm" onclick="closeCellEditor()">Cancel</button>
+    </div>`;
+}
+function gridOverlay(){
+  let ov = document.getElementById('gc-ed-overlay');
+  if (!ov){
+    ov = document.createElement('div');
+    ov.id = 'gc-ed-overlay';
+    ov.className = 'gc-ed-overlay';
+    ov.onclick = e => { if (e.target === ov) closeCellEditor(); };
+    document.body.appendChild(ov);
+  }
+  return ov;
+}
+function openCellEditor(date, project){
+  cellEditing = { date, project };
+  const ppl = htPeople.filter(p => !schedDept || p.dept === schedDept);
+  const cell = scheduleAssignments[cellDocId(date, project)];
+  const ov = gridOverlay();
+  ov.innerHTML = `<div class="gc-ed-panel">${cellEditorHtml(date, project, cell, ppl, htHolidays)}</div>`;
+  ov.style.display = 'flex';
+}
+function closeCellEditor(){ cellEditing = null; const ov = document.getElementById('gc-ed-overlay'); if (ov) ov.style.display = 'none'; }
+function saveCellEditor(){
+  if (!cellEditing) return;
+  const ov = document.getElementById('gc-ed-overlay');
+  const ids = [...ov.querySelectorAll('.gc-ed-people input[type=checkbox]:checked')].map(c => c.value);
+  const note = document.getElementById('gc-ed-note').value;
+  setCell(cellEditing.date, cellEditing.project, ids, note);
+  closeCellEditor();
+}
+function clearCellEditor(){
+  if (!cellEditing) return;
+  setCell(cellEditing.date, cellEditing.project, [], '');
+  closeCellEditor();
 }
 
 function renderPeople(list, host){

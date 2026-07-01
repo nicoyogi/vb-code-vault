@@ -46,3 +46,14 @@ test('setCell: defined and callable without throwing (stubbed Firestore)', async
   await a.setCell('2025-12-17', 'WMF', ['p1', 'p2'], '161'); // upsert path
   await a.setCell('2025-12-17', 'WMF', [], '');              // delete path
 });
+
+test('cellEditorHtml: checks assigned people, disables full-day leave, prefills note', () => {
+  const ppl = [{ id: 'p1', name: 'Raka' }, { id: 'p2', name: 'Lia' }];
+  const cell = { people: ['p1'], note: '161' };
+  const holidays = [{ personId: 'p2', start: '2025-12-17', end: '2025-12-17', type: 'vacation' }];
+  const html = a.cellEditorHtml('2025-12-17', 'WMF', cell, ppl, holidays);
+  assert.match(html, /value="p1"[^>]*checked/);
+  assert.match(html, /value="p2"[^>]*disabled/);
+  assert.match(html, /value="161"/);
+  assert.ok(!/value="p1"[^>]*disabled/.test(html)); // p1 not on leave
+});
