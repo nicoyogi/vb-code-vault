@@ -273,6 +273,40 @@
       .header-right { order: 3; width: 100%; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
       main { padding: 1.5rem 1rem 5rem; }
     }
+
+    /* Plan cockpit */
+    .ck-people { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-bottom:1.2rem; }
+    .ck-pcard { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:8px 10px; }
+    .ck-pcard.leave { opacity:.55; }
+    .ck-pname { font-family:var(--grotesk); font-weight:700; font-size:12.5px; color:var(--text); }
+    .ck-load { font-family:var(--ibm-mono); font-size:10.5px; color:var(--text2); }
+    .ck-status { font-family:var(--ibm-mono); font-size:10px; margin-top:4px; }
+    .ck-bar { height:6px; border-radius:6px; background:var(--bg2); overflow:hidden; margin-top:6px; }
+    .ck-bar > span { display:block; height:100%; }
+    .ck-lane { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); padding:.9rem 1.1rem; margin-bottom:.8rem; }
+    .ck-lane-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:baseline; }
+    .ck-rank { font-family:var(--ibm-mono); font-size:10px; color:var(--text3); }
+    .ck-proj { font-family:var(--grotesk); font-size:15px; font-weight:700; color:var(--text); }
+    .ck-meta { font-family:var(--ibm-mono); font-size:11px; color:var(--text2); display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .ck-badge { font-size:10px; padding:2px 8px; border-radius:4px; font-weight:600; }
+    .ck-badge.slip, .ck-badge.overdue { background:var(--danger-light); color:var(--danger); }
+    .ck-badge.tight { background:var(--warn-light); color:var(--warn); }
+    .ck-badge.ontrack { background:var(--success-light); color:var(--success); }
+    .ck-badge.none { background:var(--accent-light); color:var(--text3); }
+    .ck-cov { margin-top:8px; }
+    .ck-cov-row { display:flex; justify-content:space-between; font-family:var(--ibm-mono); font-size:10.5px; color:var(--text2); margin-bottom:3px; }
+    .ck-chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; align-items:center; }
+    .ck-chip { display:inline-flex; align-items:center; gap:6px; background:var(--surface2); border:1px solid var(--border2); border-radius:20px; padding:3px 6px 3px 10px; font-family:var(--ibm-mono); font-size:11px; color:var(--text); }
+    .ck-chip .q { color:var(--text2); }
+    .ck-chip button { border:none; background:none; cursor:pointer; color:var(--text3); font-size:13px; line-height:1; padding:0 2px; }
+    .ck-chip button:hover { color:var(--danger); }
+    .ck-assign { display:inline-block; }
+    .ck-assign summary { list-style:none; cursor:pointer; }
+    .ck-foot { font-family:var(--ibm-mono); font-size:10.5px; color:var(--text3); margin-top:8px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .ck-week { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+    .ck-day { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:.8rem; cursor:pointer; }
+    .ck-day:hover { border-color:var(--accent); }
+    .ck-day.pubhol { background:var(--accent-light); }
   </style>
   <link rel="stylesheet" href="assets/grimoire-theme.css">
   <script src="assets/grimoire-theme.js" defer></script>
@@ -373,12 +407,9 @@
   <!-- Tabs + toolbar -->
   <div class="toolbar">
     <div class="seg" role="group" aria-label="View">
-      <button class="seg-btn active" id="tab-records"   onclick="setView('records')">Records</button>
-      <button class="seg-btn" id="tab-quantity"  onclick="setView('quantity')">Quantity</button>
-      <button class="seg-btn" id="tab-personnel" onclick="setView('personnel')">Personnel</button>
-      <button class="seg-btn" id="tab-schedule" onclick="setView('schedule')">Schedule</button>
-      <button class="seg-btn" id="tab-people"    onclick="setView('people')">People</button>
-      <button class="seg-btn" id="tab-analytics" onclick="setView('analytics')">Analytics</button>
+      <button class="seg-btn active" id="tab-plan"    onclick="setView('plan')">Plan</button>
+      <button class="seg-btn" id="tab-records" onclick="setView('records')">Records</button>
+      <button class="seg-btn" id="tab-analyze" onclick="setView('analyze')">Analyze</button>
     </div>
     <div class="spacer"></div>
     <button class="btn-sm" onclick="openImport()" title="Import from ALOKASI PROJECT.xlsx">⤒ Import</button>
@@ -397,12 +428,9 @@
     <button class="btn-sm" onclick="clearFilters()">Clear</button>
   </div>
 
-  <div id="view-records"></div>
-  <div id="view-quantity" style="display:none"></div>
-  <div id="view-personnel" style="display:none"></div>
-  <div id="view-schedule" style="display:none"></div>
-  <div id="view-people" style="display:none"></div>
-  <div id="view-analytics" style="display:none"></div>
+  <div id="view-plan"></div>
+  <div id="view-records" style="display:none"></div>
+  <div id="view-analyze" style="display:none"></div>
 
   <div class="page-footer">
     codingkuh.my.id<span class="fsep">·</span>Siemens GP · Project Allocation<br>
@@ -470,12 +498,13 @@ const schedCol      = db.collection('sgp_alokasi_schedule');
 const htPeopleCol   = db.collection('wmf_holiday_people');
 const htHolidaysCol = db.collection('wmf_holidays');
 const htPubHolCol   = db.collection('wmf_public_holidays');
+const projMetaCol   = db.collection('sgp_alokasi_projects');
 
 let records = [];
 let loaded = false;                     /* first snapshot received */
 let editId = null;
 let saving = false;
-let viewMode = 'records';
+let viewMode = 'plan';
 let currentUser = null;
 let sortKey = 'date', sortDir = -1;     /* records table sort */
 let qtyMetric = 'total';                /* quantity pivot: total | done */
@@ -488,9 +517,21 @@ let htLoaded        = false;                   /* holiday data fetched this sess
 let schedUnsub      = null;
 let schedMonday     = mondayOf(isoToday());    /* visible week (Mon ISO) */
 let schedDept       = '';                      /* dept filter */
+let projMeta        = {};                       /* projectSlug -> {name, dueDate} */
+let projMetaUnsub   = null;
+let planMode        = 'day';                    /* 'day' | 'week' */
+let schedDay        = isoToday();               /* selected day in the cockpit */
+let analyzeTab = 'overview';   /* overview | pivots | people */
+let pivotKind  = 'quantity';   /* quantity | personnel */
 
 const PROJECTS_SEED = ['TRUMPF','WMF','SBG','CLAAS','KRONES','OSRAM','NASH','EPT','CONTI','ATB','Siemens Freia','Siemens Tarif','Siemens Faktual','Valeo','Stamp','Sharepoint','SHELL','Währungskurse','Others'];
 const EKSP_SEED = ['S+S','DHL GF','DHL EXPRESS','Kuehne','ERKA','HONOLD','DACHSER','SBG GERICKE','SBG DACHSER','DATA ENTRY'];
+
+/* ── Cockpit tuning knobs (calibration; tweak if estimates feel off) ── */
+const DEFAULT_CAPACITY  = 150;   /* assumed daily throughput when a person has no recent records */
+const OVERLOAD_RATIO    = 1.0;   /* load > capacity * this => overloaded */
+const TIGHT_RATIO       = 0.9;   /* neededPerDay > plannedToday * this => "tight" */
+const THROUGHPUT_WINDOW = 30;    /* days of history used to estimate throughput */
 
 /* ── Theme ── */
 function initTheme(){
@@ -563,6 +604,88 @@ function validCounts(total, done){
   return null;
 }
 
+/* ── Cockpit decision logic (pure; unit-tested in tests/cockpit.test.mjs) ── */
+function projectSlug(project){
+  return String(project||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+}
+function ageDays(fromIso, toIso){
+  if(!fromIso || !toIso) return 0;
+  const x = (new Date(toIso+'T00:00:00') - new Date(fromIso+'T00:00:00'))/86400000;
+  return Math.max(0, Math.round(x));
+}
+/* Count Mon–Fri in [fromIso,toIso] inclusive, minus any public-holiday dates. */
+function workingDaysBetween(fromIso, toIso, pubHols){
+  if(!fromIso || !toIso || fromIso > toIso) return 0;
+  const skip = new Set((pubHols||[]).map(p=>p.date));
+  let n = 0;
+  const d = new Date(fromIso+'T00:00:00'), end = new Date(toIso+'T00:00:00');
+  while(d <= end){
+    const dow = d.getDay();                 /* 0 Sun … 6 Sat */
+    if(dow>=1 && dow<=5 && !skip.has(isoOf(d))) n++;
+    d.setDate(d.getDate()+1);
+  }
+  return n;
+}
+/* project -> { remaining, oldestAgeDays, openRecs } over OPEN (not Selesai) records. */
+function projectBacklog(records, today){
+  const m = {};
+  records.forEach(r=>{
+    if(effStatus(r)==='Selesai') return;
+    const p = r.project || '—';
+    const o = m[p] = m[p] || { remaining:0, oldestAgeDays:0, openRecs:0 };
+    o.remaining += Math.max(0, num(r.total)-num(r.done));
+    o.openRecs++;
+    const age = ageDays(r.date, today);
+    if(age > o.oldestAgeDays) o.oldestAgeDays = age;
+  });
+  return m;
+}
+/* personName -> avg done per active day over the trailing window. */
+function throughputByPerson(records, today, windowDays){
+  windowDays = windowDays || THROUGHPUT_WINDOW;
+  const cutoff = (()=>{ const d=new Date(today+'T00:00:00'); d.setDate(d.getDate()-windowDays); return isoOf(d); })();
+  const m = {};
+  records.forEach(r=>{
+    if(!r.date || r.date < cutoff || r.date > today) return;
+    [...new Set(staffArr(r).map(personName).filter(Boolean))].forEach(n=>{
+      const o = m[n] = m[n] || { done:0, days:new Set() };
+      o.done += num(r.done); o.days.add(r.date);
+    });
+  });
+  const out = {};
+  Object.entries(m).forEach(([n,o])=>{ out[n] = o.days.size ? Math.round(o.done/o.days.size) : 0; });
+  return out;
+}
+function capacityFor(name, throughputMap, halfDay){
+  /* a 0/absent throughput means "no signal" -> assume the default planning capacity */
+  let cap = (throughputMap && throughputMap[name]) || DEFAULT_CAPACITY;
+  if(!cap) cap = DEFAULT_CAPACITY;
+  return halfDay ? Math.round(cap/2) : cap;
+}
+/* personId -> summed qty of that person's assignments on a date. */
+function personLoadByDay(assignments, date){
+  const m = {};
+  Object.values(assignments||{}).forEach(asg=>{
+    if(asg.date !== date) return;
+    m[asg.personId] = (m[asg.personId]||0) + num(asg.qty);
+  });
+  return m;
+}
+function loadTier(load, capacity){
+  if(load <= 0) return 'free';
+  if(load > capacity * OVERLOAD_RATIO) return 'over';
+  return 'ontrack';
+}
+/* {tier, neededPerDay} for a project's deadline pressure on the selected day. */
+function riskTier(remaining, daysLeft, plannedToday){
+  if(remaining <= 0) return { tier:'ontrack', neededPerDay:0 };
+  if(daysLeft <= 0)  return { tier:'overdue', neededPerDay:remaining };
+  const neededPerDay = Math.ceil(remaining / daysLeft);
+  if(neededPerDay > plannedToday)              return { tier:'slip',   neededPerDay };
+  if(neededPerDay > plannedToday * TIGHT_RATIO) return { tier:'tight',  neededPerDay };
+  return { tier:'ontrack', neededPerDay };
+}
+
 /* ── Firestore listeners ── */
 function startListener(){
   setStatus('','Connecting...');
@@ -581,7 +704,7 @@ function showLoading(){
 }
 
 /* ── Schedule data layer ── */
-function schedDocId(personId, date){ return `${personId}_${date}`; }
+function schedDocId(personId, date, project){ return `${personId}_${date}_${projectSlug(project)}`; }
 
 /* One-time fetch of the Holiday Tracker roster + leave + public holidays.
    ponytail: session snapshot, not a live listener — a page reload refreshes it.
@@ -604,18 +727,36 @@ function startScheduleListener(){
   schedUnsub = schedCol.onSnapshot(snap=>{
     scheduleAssignments = {};
     snap.docs.forEach(d=>{ scheduleAssignments[d.id] = d.data(); });
-    if (viewMode==='schedule') render();
+    if (viewMode==='plan') render();
   }, err=>{ console.error(err); showToast('Schedule sync error: '+err.message, true); });
 }
 
-/* Upsert a cell; clearing both project and note deletes the doc. */
-async function setAssignment(personId, date, project, note){
-  const id = schedDocId(personId, date);
-  project = (project||'').trim(); note = (note||'').trim();
+/* Live project meta (due dates). */
+function startProjMetaListener(){
+  if (projMetaUnsub) return;
+  projMetaUnsub = projMetaCol.onSnapshot(snap=>{
+    projMeta = {};
+    snap.docs.forEach(d=>{ projMeta[d.id] = d.data(); });
+    if (viewMode==='plan') render();
+  }, err=>{ console.error(err); showToast('Project meta sync error: '+err.message, true); });
+}
+/* Set/clear a project's due date. Empty date deletes the meta doc. */
+async function setProjectDue(project, dueIso){
+  const id = projectSlug(project);
   try {
-    if (!project && !note){ await schedCol.doc(id).delete(); return; }
+    if (!dueIso){ await projMetaCol.doc(id).delete(); return; }
+    await projMetaCol.doc(id).set({ name:project, dueDate:dueIso }, {merge:true});
+  } catch(e){ showToast('Could not save due date: '+e.message+' (publish Firestore rules?)', true); }
+}
+
+/* Upsert a person·day·project assignment; qty<=0 and no note deletes it. */
+async function setAssignment(personId, date, project, qty, note){
+  const id = schedDocId(personId, date, project);
+  project = (project||'').trim(); note = (note||'').trim(); qty = num(qty);
+  try {
+    if (qty<=0 && !note){ await schedCol.doc(id).delete(); return; }
     await schedCol.doc(id).set({
-      personId, date, project, note,
+      personId, date, project, qty, note,
       by: currentUser ? currentUser.name : '',
       ts: firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
@@ -667,23 +808,24 @@ function applyFilters(list){
 /* ── View switching ── */
 function setView(mode){
   viewMode = mode;
-  ['records','quantity','personnel','schedule','people','analytics'].forEach(m=>{
+  ['plan','records','analyze'].forEach(m=>{
     document.getElementById('tab-'+m).classList.toggle('active', m===mode);
     document.getElementById('view-'+m).style.display = m===mode ? '' : 'none';
   });
-  document.getElementById('filter-bar').style.display = (mode==='schedule') ? 'none' : '';
-  if (mode==='schedule'){ startScheduleListener(); loadHolidayData().then(render).catch(e=>showToast('Could not load holiday data: '+e.message,true)); }
+  document.getElementById('filter-bar').style.display = (mode==='plan') ? 'none' : '';
+  document.getElementById('add-box').style.display    = (mode==='records') ? '' : 'none';
+  if (mode==='plan'){
+    startScheduleListener(); startProjMetaListener();
+    loadHolidayData().then(render).catch(e=>showToast('Could not load holiday data: '+e.message,true));
+  }
   render();
 }
 function render(){
   if (!loaded){ showLoading(); return; }
   const list = applyFilters(records);
-  if (viewMode==='records')   renderRecords(list);
-  if (viewMode==='quantity')  renderQuantity(list);
-  if (viewMode==='personnel') renderPersonnel(list);
-  if (viewMode==='people')    renderPeople(list);
-  if (viewMode==='analytics') renderAnalytics(list);
-  if (viewMode==='schedule') renderSchedule();
+  if (viewMode==='records') renderRecords(list);
+  if (viewMode==='analyze') renderAnalyze(list);
+  if (viewMode==='plan')    renderPlan();
 }
 
 /* ── Records table ── */
@@ -744,8 +886,8 @@ function pivotAxes(list){
   return { dates, projects };
 }
 
-function renderQuantity(list){
-  const host = document.getElementById('view-quantity');
+function renderQuantity(list, host){
+  host = host || document.getElementById('view-quantity');
   const { dates, projects } = pivotAxes(list);
   if (!dates.length){ host.innerHTML = emptyPanel('No data for the Quantity pivot.'); return; }
   const cell = {}; const colTot = {}; const rowTot = {}; let grand = 0;
@@ -768,8 +910,8 @@ function renderQuantity(list){
     </div>`;
 }
 
-function renderPersonnel(list){
-  const host = document.getElementById('view-personnel');
+function renderPersonnel(list, host){
+  host = host || document.getElementById('view-personnel');
   const { dates, projects } = pivotAxes(list);
   if (!dates.length){ host.innerHTML = emptyPanel('No data for the Personnel pivot.'); return; }
   const cell = {};
@@ -789,8 +931,8 @@ function emptyPanel(msg){ return `<div class="panel"><div class="empty"><div cla
 
 /* ── Analyzer ── */
 function compColor(pct){ if(pct==null) return 'var(--text3)'; if(pct>=85) return 'var(--success)'; if(pct>=70) return 'var(--accent)'; if(pct>=50) return 'var(--warn)'; return 'var(--danger)'; }
-function renderAnalytics(list){
-  const host = document.getElementById('view-analytics');
+function renderAnalytics(list, host){
+  host = host || document.getElementById('view-analytics');
   if (!list.length){ host.innerHTML = emptyPanel('No records to analyze.'); return; }
 
   const totalData = list.reduce((a,r)=>a+num(r.total),0);
@@ -910,84 +1052,205 @@ function setSchedDept(v){ schedDept=v; render(); }
 
 const SCHED_LEAVE_ICON = { vacation:'🌴', sick:'🤒', wfh:'🏠', training:'📚', parental:'👶', other:'📌' };
 
-/* One roster cell: public holiday (column) > full-day leave (blocked) > editable. */
-function schedCellHtml(p, iso){
-  if (publicHolidayName(htPublicHols, iso)) return `<td class="cell pubhol"></td>`;
-  const leave = personLeaveOn(htHolidays, p.id, iso);
-  if (leave && !leave.halfDay){
-    const ic = SCHED_LEAVE_ICON[leave.type] || '📌';
-    return `<td class="leave">${ic} ${esc(leave.type)}</td>`;
-  }
-  const a = scheduleAssignments[schedDocId(p.id, iso)] || {};
-  const halfFlag = leave && leave.halfDay
-    ? `<span class="half-flag">½ ${esc(leave.halfDayPart||'')} off</span>` : '';
-  const opts = ['<option value="">— project —</option>']
-    .concat(uniqueProjects().map(pr=>`<option value="${esc(pr)}"${pr===a.project?' selected':''}>${esc(pr)}</option>`)).join('');
-  return `<td class="cell ${leave&&leave.halfDay?'half':''}">
-    ${halfFlag}
-    <select onchange="onSchedProject('${esc(p.id)}','${iso}',this.value)">${opts}</select>
-    <input type="text" value="${esc(a.note||'')}" placeholder="note…" onchange="onSchedNote('${esc(p.id)}','${iso}',this.value)">
-  </td>`;
-}
+function renderPlan(){ if(planMode==='week') return renderWeekOverview(); return renderCockpit(); }
+function planNav(delta){ const d=new Date(schedDay+'T00:00:00'); d.setDate(d.getDate()+delta); schedDay=isoOf(d); schedMonday=mondayOf(schedDay); render(); }
+function planToday(){ schedDay=isoToday(); schedMonday=mondayOf(schedDay); render(); }
+function setPlanMode(m){ planMode=m; if(m==='day') schedMonday=mondayOf(schedDay); render(); }
 
-/* Project change → upsert immediately (carries the existing note). */
-function onSchedProject(personId, date, value){
-  const a = scheduleAssignments[schedDocId(personId, date)] || {};
-  setAssignment(personId, date, value, a.note || '');
-}
-/* Note commits on blur/Enter (change), not per keystroke.
-   ponytail: the live snapshot re-renders the grid; committing on change (not
-   input) keeps typing from being interrupted. */
-function onSchedNote(personId, date, value){
-  const a = scheduleAssignments[schedDocId(personId, date)] || {};
-  setAssignment(personId, date, a.project || '', value);
-}
-
-function renderSchedule(){
-  const host = document.getElementById('view-schedule');
-  if (!htLoaded){ host.innerHTML = `<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading roster…</div></div></div>`; return; }
-  const dates = weekDates(schedMonday);
-  const depts = [...new Set(htPeople.map(p=>p.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  const ppl = htPeople.filter(p=>!schedDept || p.dept===schedDept);
-  const WEEKDAY = ['Mon','Tue','Wed','Thu','Fri'];
-
-  const toolbar = `<div class="sched-toolbar">
+function planToolbar(label){
+  const depts=[...new Set(htPeople.map(p=>p.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  return `<div class="sched-toolbar">
     <div class="seg">
-      <button class="seg-btn" onclick="schedWeek(-1)">‹</button>
-      <button class="seg-btn" onclick="schedThisWeek()">This week</button>
-      <button class="seg-btn" onclick="schedWeek(1)">›</button>
+      <button class="seg-btn ${planMode==='day'?'active':''}" onclick="setPlanMode('day')">Day</button>
+      <button class="seg-btn ${planMode==='week'?'active':''}" onclick="setPlanMode('week')">Week</button>
     </div>
-    <span class="sched-week">${esc(fmtDate(dates[0]))} – ${esc(fmtDate(dates[4]))}</span>
+    <div class="seg">
+      <button class="seg-btn" onclick="${planMode==='day'?'planNav(-1)':'schedWeek(-1)'}">‹</button>
+      <button class="seg-btn" onclick="${planMode==='day'?'planToday()':'schedThisWeek()'}">${planMode==='day'?'Today':'This week'}</button>
+      <button class="seg-btn" onclick="${planMode==='day'?'planNav(1)':'schedWeek(1)'}">›</button>
+    </div>
+    <span class="sched-week">${esc(label)}</span>
     <div class="spacer"></div>
     <select onchange="setSchedDept(this.value)">
       <option value="">All depts</option>
       ${depts.map(d=>`<option value="${esc(d)}"${d===schedDept?' selected':''}>${esc(d)}</option>`).join('')}
     </select>
   </div>`;
-
-  if (!ppl.length){ host.innerHTML = toolbar + `<div class="panel"><div class="empty"><div class="empty-icon">👥</div><div>No people in the Holiday Tracker roster${schedDept?' for this dept':''}.</div></div></div>`; return; }
-
-  const head = `<tr><th class="date">Person</th>${dates.map((iso,i)=>{
-    const ph = publicHolidayName(htPublicHols, iso);
-    return `<th class="${ph?'pubhol':''}">${WEEKDAY[i]} ${esc(fmtDate(iso))}${ph?`<span class="ph-name">${esc(ph)}</span>`:''}</th>`;
-  }).join('')}</tr>`;
-
-  const body = ppl.map(p=>`<tr>
-    <td class="date">${esc(p.name)}${p.dept?`<div style="font-size:9px;color:var(--text3)">${esc(p.dept)}</div>`:''}</td>
-    ${dates.map(iso=>schedCellHtml(p, iso)).join('')}
-  </tr>`).join('');
-
-  const legend = `<div class="legend" style="margin-top:10px">
-    <span><span class="sw" style="background:var(--warn-light)"></span>On leave</span>
-    <span><span class="sw" style="background:var(--accent-light)"></span>Public holiday</span>
-    <span><span class="sw" style="background:var(--surface2)"></span>Assignable</span>
-  </div>`;
-
-  host.innerHTML = toolbar + `<div class="panel"><div class="pivot-scroll"><table class="pivot sched"><thead>${head}</thead><tbody>${body}</tbody></table></div>${legend}</div>`;
 }
 
-function renderPeople(list){
-  const host = document.getElementById('view-people');
+/* Available (assignable) people for a day, as <option>s. */
+function assignControl(project, day, ppl){
+  const opts = ppl.filter(p=>{ const lv=personLeaveOn(htHolidays,p.id,day); return !(lv&&!lv.halfDay); })
+    .map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  const pid = 'asg_'+projectSlug(project)+'_'+day;
+  return `<details class="ck-assign"><summary class="btn-sm">+ assign</summary>
+    <span style="display:inline-flex;gap:6px;align-items:center;margin-left:6px;margin-top:6px">
+      <select id="${pid}_p" style="height:28px">${opts}</select>
+      <input id="${pid}_q" type="number" min="0" step="1" placeholder="qty" style="width:78px;height:28px">
+      <button class="btn-sm" onclick="addAssign('${esc(project)}','${day}','${pid}')">add</button>
+    </span></details>`;
+}
+function addAssign(project, day, pid){
+  const personId=document.getElementById(pid+'_p').value;
+  const qty=num(document.getElementById(pid+'_q').value);
+  if(!personId){ showToast('Pick a person.', true); return; }
+  if(qty<=0){ showToast('Enter a quantity.', true); return; }
+  setAssignment(personId, day, project, qty, '');
+}
+function removeAssign(personId, day, project){ setAssignment(personId, day, project, 0, ''); }
+function dayActual(records, day, project){
+  let done=0, total=0;
+  records.forEach(r=>{ if(r.date===day && (r.project||'—')===project){ done+=num(r.done); total+=num(r.total); } });
+  return { done, total };
+}
+function logFromPlan(project, day){
+  setView('records');
+  document.getElementById('f-date').value = day;
+  document.getElementById('f-project').value = project;
+  const names = Object.values(scheduleAssignments)
+    .filter(a=>a.date===day && a.project===project)
+    .map(a=>(htPeople.find(x=>x.id===a.personId)||{}).name).filter(Boolean);
+  document.getElementById('f-staff').value = names.join(', ');
+  scrollToForm();
+}
+
+function renderCockpit(){
+  const host=document.getElementById('view-plan');
+  if(!htLoaded){ host.innerHTML=`<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading roster…</div></div></div>`; return; }
+  const day=schedDay, today=isoToday();
+  const ppl=htPeople.filter(p=>!schedDept||p.dept===schedDept);
+  const tp=throughputByPerson(records, today);
+  const loads=personLoadByDay(scheduleAssignments, day);
+  const backlog=projectBacklog(records, today);
+  const ph=publicHolidayName(htPublicHols, day);
+
+  /* people availability */
+  let onLeaveCount=0;
+  const peopleCards=ppl.map(p=>{
+    const leave=personLeaveOn(htHolidays, p.id, day);
+    if(leave && !leave.halfDay){
+      onLeaveCount++;
+      const ic=SCHED_LEAVE_ICON[leave.type]||'📌';
+      return `<div class="ck-pcard leave"><div class="ck-pname">${esc(p.name)}</div><div class="ck-status">${ic} ${esc(leave.type)} — can't assign</div></div>`;
+    }
+    const half=!!(leave&&leave.halfDay);
+    const cap=capacityFor(personName(p.name), tp, half);
+    const load=loads[p.id]||0;
+    const tier=loadTier(load, cap);
+    const color= tier==='over'?'var(--danger)' : tier==='free'?'var(--text3)' : 'var(--success)';
+    const pct= cap? Math.min(100, Math.round(load/cap*100)) : 0;
+    const statusTxt= tier==='over'?`overloaded · ${load-cap} over` : tier==='free'?'free' : 'on track';
+    const halfFlag= half? ` <span class="ck-badge tight">½ ${esc(leave.halfDayPart||'')} off</span>` : '';
+    return `<div class="ck-pcard">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="ck-pname">${esc(p.name)}</span><span class="ck-load">${load} / ${cap}</span></div>
+      <div class="ck-bar"><span style="width:${tier==='free'?4:pct}%;background:${color}"></span></div>
+      <div class="ck-status" style="color:${color}">${statusTxt}${halfFlag}</div>
+    </div>`;
+  }).join('');
+
+  /* lanes */
+  const dayAssigns=Object.values(scheduleAssignments).filter(a=>a.date===day);
+  const byProject={}; dayAssigns.forEach(a=>{ (byProject[a.project]=byProject[a.project]||[]).push(a); });
+  const projSet=[...new Set([...Object.keys(backlog).filter(p=>backlog[p].remaining>0), ...Object.keys(byProject)])];
+  const lanes=projSet.map(p=>{
+    const bl=backlog[p]||{remaining:0,oldestAgeDays:0,openRecs:0};
+    const assigns=byProject[p]||[];
+    const plannedToday=assigns.reduce((s,a)=>s+num(a.qty),0);
+    const meta=projMeta[projectSlug(p)]||{};
+    const due=meta.dueDate||'';
+    let risk={tier: due?'':'none', neededPerDay:0, daysLeft:0};
+    if(due){ const dl=workingDaysBetween(day, due, htPublicHols); risk={...riskTier(bl.remaining, dl, plannedToday), daysLeft:dl}; }
+    return {p, bl, assigns, plannedToday, due, risk};
+  });
+  const tierRank={overdue:0,slip:1,tight:2,ontrack:3,none:4,'':4};
+  lanes.sort((a,b)=> (tierRank[a.risk.tier]-tierRank[b.risk.tier]) || (b.bl.remaining-a.bl.remaining) || (b.bl.oldestAgeDays-a.bl.oldestAgeDays));
+
+  const laneHtml=lanes.map((L,i)=>{
+    const badgeTxt = !L.due ? 'no deadline'
+      : (L.risk.tier==='slip'||L.risk.tier==='overdue') ? 'will slip'
+      : L.risk.tier==='tight' ? 'tight' : 'on track';
+    const badge=`<span class="ck-badge ${L.due?L.risk.tier:'none'}">${badgeTxt}</span>`;
+    const dueCtl=`<input type="date" value="${esc(L.due)}" onchange="setProjectDue('${esc(L.p)}',this.value)" title="Set / clear due date" style="width:140px;height:28px">`;
+    const covRight= L.due ? `needs ${L.risk.neededPerDay}/day${L.risk.daysLeft<=0?' (overdue)':''}` : (L.assigns.length?'room for more':'unassigned');
+    const covPct= L.bl.remaining ? Math.min(100, Math.round(L.plannedToday/L.bl.remaining*100)) : (L.plannedToday?100:0);
+    const covColor= (L.risk.tier==='slip'||L.risk.tier==='overdue')?'var(--danger)' : L.risk.tier==='tight'?'var(--warn)' : L.plannedToday?'var(--success)':'var(--accent)';
+    const chips=L.assigns.map(a=>{
+      const nm=(htPeople.find(x=>x.id===a.personId)||{}).name||a.personId;
+      return `<span class="ck-chip">${esc(nm)} <span class="q">${num(a.qty)}</span><button onclick="removeAssign('${esc(a.personId)}','${day}','${esc(a.project)}')" aria-label="remove" title="remove">×</button></span>`;
+    }).join('');
+    const act=dayActual(records, day, L.p);
+    const actPct= act.total? ` (${Math.round(act.done/act.total*100)}% of ${act.total.toLocaleString()})` : '';
+    return `<div class="ck-lane">
+      <div class="ck-lane-head">
+        <div><span class="ck-rank">#${i+1}</span> <span class="ck-proj">${esc(L.p)}</span> ${badge}</div>
+        <div class="ck-meta">📥 ${L.bl.remaining.toLocaleString()} open · oldest ${L.bl.oldestAgeDays}d ${dueCtl}</div>
+      </div>
+      <div class="ck-cov">
+        <div class="ck-cov-row"><span>planned today ${L.plannedToday.toLocaleString()}</span><span>${covRight}</span></div>
+        <div class="ck-bar"><span style="width:${covPct}%;background:${covColor}"></span></div>
+      </div>
+      <div class="ck-chips">${chips}${assignControl(L.p, day, ppl)}</div>
+      <div class="ck-foot">↺ today: planned ${L.plannedToday.toLocaleString()} · done ${act.done.toLocaleString()}${actPct} <button class="btn-sm" onclick="logFromPlan('${esc(L.p)}','${day}')">Log a record</button></div>
+    </div>`;
+  }).join('');
+
+  /* metrics */
+  const availCount=ppl.length-onLeaveCount;
+  const totalBacklog=Object.values(backlog).reduce((s,o)=>s+o.remaining,0);
+  const plannedTotal=dayAssigns.reduce((s,a)=>s+num(a.qty),0);
+  const atRisk=lanes.filter(L=>L.risk.tier==='slip'||L.risk.tier==='overdue').length;
+  const metrics=`<div class="metrics">
+    <div class="metric m-data"><div class="metric-lbl">Available</div><div class="metric-val">${availCount}<span style="font-size:14px;color:var(--text3)"> / ${ppl.length}</span></div><div class="metric-sub">${onLeaveCount} on leave</div></div>
+    <div class="metric"><div class="metric-lbl">Open backlog</div><div class="metric-val">${totalBacklog.toLocaleString()}</div><div class="metric-sub">${lanes.length} projects</div></div>
+    <div class="metric m-prog"><div class="metric-lbl">Planned</div><div class="metric-val">${plannedTotal.toLocaleString()}</div><div class="metric-sub">${totalBacklog?Math.round(plannedTotal/totalBacklog*100):0}% of backlog</div></div>
+    <div class="metric"><div class="metric-lbl">At risk</div><div class="metric-val" style="${atRisk?'color:var(--danger)':''}">${atRisk}</div><div class="metric-sub">deadline slip</div></div>
+  </div>`;
+
+  const phBanner= ph?`<div class="panel" style="border-color:var(--accent)"><b>${esc(ph)}</b> — public holiday. Nobody is normally rostered today.</div>`:'';
+  const peopleSection=`<div class="panel-head" style="margin:.2rem 0 .5rem">People today <span class="sub">load vs typical throughput</span></div><div class="ck-people">${peopleCards||'<span class="ck-status">No people in roster'+(schedDept?' for this dept':'')+'.</span>'}</div>`;
+  const lanesSection= lanes.length
+    ? `<div class="panel-head" style="margin:.4rem 0 .5rem">Projects <span class="sub">ranked by backlog + deadline risk</span></div>${laneHtml}`
+    : `<div class="panel"><div class="empty"><div class="empty-icon">🎯</div><div>No backlog and no assignments for this day.</div><div class="empty-sub">Add records, or assign people once a project has open data.</div></div></div>`;
+
+  host.innerHTML = planToolbar(fmtDate(day)) + metrics + phBanner + peopleSection + lanesSection;
+}
+
+function planJump(iso){ schedDay=iso; planMode='day'; schedMonday=mondayOf(iso); render(); }
+function renderWeekOverview(){
+  const host=document.getElementById('view-plan');
+  if(!htLoaded){ host.innerHTML=`<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading roster…</div></div></div>`; return; }
+  const dates=weekDates(schedMonday), today=isoToday();
+  const WEEKDAY=['Mon','Tue','Wed','Thu','Fri'];
+  const ppl=htPeople.filter(p=>!schedDept||p.dept===schedDept);
+  const backlog=projectBacklog(records, today);
+  const cols=dates.map((iso,i)=>{
+    const ph=publicHolidayName(htPublicHols, iso);
+    const dayAssigns=Object.values(scheduleAssignments).filter(a=>a.date===iso);
+    const planned=dayAssigns.reduce((s,a)=>s+num(a.qty),0);
+    const avail=ppl.filter(p=>{ const lv=personLeaveOn(htHolidays,p.id,iso); return !(lv&&!lv.halfDay); }).length;
+    const byProject={}; dayAssigns.forEach(a=>{ byProject[a.project]=(byProject[a.project]||0)+num(a.qty); });
+    let atRisk=0;
+    Object.values(projMeta).forEach(m=>{
+      if(!m.dueDate || !m.name) return;
+      const bl=backlog[m.name]; if(!bl || bl.remaining<=0) return;
+      const dl=workingDaysBetween(iso, m.dueDate, htPublicHols);
+      const t=riskTier(bl.remaining, dl, byProject[m.name]||0).tier;
+      if(t==='slip'||t==='overdue') atRisk++;
+    });
+    return `<div class="ck-day ${ph?'pubhol':''}" onclick="planJump('${iso}')">
+      <div style="font-family:var(--ibm-mono);font-size:10px;color:var(--text3)">${WEEKDAY[i]} ${esc(fmtDate(iso))}</div>
+      ${ph
+        ? `<div class="ck-badge none" style="margin-top:8px;display:inline-block">${esc(ph)}</div>`
+        : `<div class="metric-val" style="font-size:1.4rem;margin-top:6px">${planned.toLocaleString()}</div>
+           <div class="ck-status">planned · ${avail} avail</div>
+           ${atRisk?`<div class="ck-badge slip" style="margin-top:6px;display:inline-block">${atRisk} at risk</div>`:''}`}
+    </div>`;
+  }).join('');
+  host.innerHTML = planToolbar(`${fmtDate(dates[0])} – ${fmtDate(dates[4])}`) + `<div class="ck-week">${cols}</div>`;
+}
+
+function renderPeople(list, host){
+  host = host || document.getElementById('view-people');
   const people = peopleRollup(list);
   if (!people.length){ host.innerHTML = emptyPanel('No people to score yet.'); return; }
   const totalDone = people.reduce((a,p)=>a+p.done,0);
@@ -1039,6 +1302,28 @@ function renderPeople(list){
   const balCard = `<div class="an-card"><div class="an-card-head">Workload balance <span class="sub">data done per person · avg ${Math.round(avgDonePerPerson).toLocaleString()}</span></div>${balRows}</div>`;
 
   host.innerHTML = metrics + scoreCard + balCard;
+}
+
+function setAnalyzeTab(t){ analyzeTab=t; render(); }
+function renderPivots(list, host){
+  host.innerHTML = `<div class="toolbar"><div class="seg">
+    <button class="seg-btn ${pivotKind==='quantity'?'active':''}" onclick="pivotKind='quantity';render()">Quantity</button>
+    <button class="seg-btn ${pivotKind==='personnel'?'active':''}" onclick="pivotKind='personnel';render()">Personnel</button>
+  </div></div><div id="pivot-body"></div>`;
+  const body=document.getElementById('pivot-body');
+  if(pivotKind==='quantity') renderQuantity(list, body); else renderPersonnel(list, body);
+}
+function renderAnalyze(list){
+  const host=document.getElementById('view-analyze');
+  host.innerHTML = `<div class="toolbar"><div class="seg">
+    <button class="seg-btn ${analyzeTab==='overview'?'active':''}" onclick="setAnalyzeTab('overview')">Overview</button>
+    <button class="seg-btn ${analyzeTab==='pivots'?'active':''}" onclick="setAnalyzeTab('pivots')">Pivots</button>
+    <button class="seg-btn ${analyzeTab==='people'?'active':''}" onclick="setAnalyzeTab('people')">People</button>
+  </div></div><div id="analyze-body"></div>`;
+  const body=document.getElementById('analyze-body');
+  if(analyzeTab==='overview') renderAnalytics(list, body);
+  else if(analyzeTab==='pivots') renderPivots(list, body);
+  else renderPeople(list, body);
 }
 
 /* ════ Excel export — rebuilds the ALOKASI workbook layout ════ */
@@ -1371,7 +1656,8 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeEdit(); clo
 initTheme();
 resetForm();
 /* Deep-link: task-reviewer redirect lands on the People view. */
-if (location.hash === '#people') setView('people');
+if (location.hash === '#people'){ analyzeTab='people'; setView('analyze'); }
+else setView('plan');
 checkAuth();
 if (window.Grimoire && window.Grimoire.Offline) window.Grimoire.Offline.register();
 </script>
