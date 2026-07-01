@@ -1,5 +1,9 @@
 /* Unit tests for the pure grid helpers in alokasi-project.html. */
 import test from 'node:test';
+/* non-strict assert (not node:assert/strict like the other test files): the harness runs
+   the app in a node:vm sandbox, so values these helpers return live in the sandbox realm;
+   assert/strict's deepStrictEqual fails on cross-realm prototype identity even when the
+   values match. Keep non-strict here — do not switch back to /strict. */
 import assert from 'node:assert';
 import { loadAlokasi } from './harness/load-alokasi.mjs';
 
