@@ -307,6 +307,34 @@
     .ck-day { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:.8rem; cursor:pointer; }
     .ck-day:hover { border-color:var(--accent); }
     .ck-day.pubhol { background:var(--accent-light); }
+
+    .gc-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius-lg); }
+    .gc-table { border-collapse:collapse; font-size:12px; min-width:100%; }
+    .gc-table th, .gc-table td { border-bottom:1px solid var(--border); border-right:1px solid var(--border); padding:6px 8px; text-align:left; vertical-align:top; }
+    .gc-table th { background:var(--surface2); font-family:var(--grotesk); font-weight:700; position:sticky; top:0; z-index:1; }
+    .gc-daycol { position:sticky; left:0; background:var(--surface); z-index:2; white-space:nowrap; min-width:88px; }
+    .gc-table th.gc-daycol { z-index:3; }
+    .gc-date { font-family:var(--ibm-mono); font-size:10px; color:var(--text3); }
+    .gc-ph { font-family:var(--ibm-mono); font-size:10px; color:var(--warn); }
+    .gc-cell { cursor:pointer; min-width:120px; }
+    .gc-cell:hover { background:var(--surface2); }
+    .gc-chip { display:inline-block; background:var(--accent-light); color:var(--accent); border-radius:6px; padding:1px 7px; margin:1px 3px 1px 0; }
+    .gc-note { color:var(--text3); font-family:var(--ibm-mono); font-size:10.5px; }
+    .gc-empty { color:var(--text3); }
+    .gc-table tr.pubhol .gc-cell, .gc-table tr.pubhol .gc-daycol { background:var(--accent-light); }
+    .gc-ed-overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .gc-ed-panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); padding:1rem 1.1rem; width:min(420px,92vw); max-height:86vh; overflow:auto; }
+    .gc-ed-head { font-family:var(--grotesk); font-weight:700; margin-bottom:.6rem; }
+    .gc-ed-people { display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:.7rem; }
+    .gc-ed-person { display:flex; gap:6px; align-items:center; font-size:12.5px; }
+    .gc-ed-person.off { color:var(--text3); }
+    .gc-ed-note-lbl { display:block; font-family:var(--ibm-mono); font-size:10.5px; color:var(--text2); margin-bottom:3px; }
+    #gc-ed-note { width:100%; margin-bottom:.7rem; }
+    .gc-ed-actions { display:flex; gap:8px; }
+    .gc-col-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:4px 0; border-bottom:1px solid var(--border); }
+    .gc-col-row.off .gc-col-name { color:var(--text3); text-decoration:line-through; }
+    .gc-col-add { display:flex; gap:8px; margin-top:.7rem; }
+    #gc-col-new { flex:1; }
   </style>
   <link rel="stylesheet" href="assets/grimoire-theme.css">
   <script src="assets/grimoire-theme.js" defer></script>
@@ -509,7 +537,7 @@ let currentUser = null;
 let sortKey = 'date', sortDir = -1;     /* records table sort */
 let qtyMetric = 'total';                /* quantity pivot: total | done */
 let importRows = [];                    /* parsed rows pending import */
-let scheduleAssignments = {};                 /* `${personId}_${date}` -> {project,note,by} */
+let scheduleAssignments = {};                 /* `${date}_${projectSlug}` -> {date,project,people,note,by,ts} */
 let htPeople        = [];                      /* wmf_holiday_people [{id,name,dept}] */
 let htHolidays      = [];                      /* wmf_holidays */
 let htPublicHols    = [];                      /* wmf_public_holidays [{date,name}] */
@@ -517,21 +545,14 @@ let htLoaded        = false;                   /* holiday data fetched this sess
 let schedUnsub      = null;
 let schedMonday     = mondayOf(isoToday());    /* visible week (Mon ISO) */
 let schedDept       = '';                      /* dept filter */
+let cellEditing      = null;                   /* {date,project} while the cell editor overlay is open */
 let projMeta        = {};                       /* projectSlug -> {name, dueDate} */
 let projMetaUnsub   = null;
-let planMode        = 'day';                    /* 'day' | 'week' */
-let schedDay        = isoToday();               /* selected day in the cockpit */
 let analyzeTab = 'overview';   /* overview | pivots | people */
 let pivotKind  = 'quantity';   /* quantity | personnel */
 
 const PROJECTS_SEED = ['TRUMPF','WMF','SBG','CLAAS','KRONES','OSRAM','NASH','EPT','CONTI','ATB','Siemens Freia','Siemens Tarif','Siemens Faktual','Valeo','Stamp','Sharepoint','SHELL','Währungskurse','Others'];
 const EKSP_SEED = ['S+S','DHL GF','DHL EXPRESS','Kuehne','ERKA','HONOLD','DACHSER','SBG GERICKE','SBG DACHSER','DATA ENTRY'];
-
-/* ── Cockpit tuning knobs (calibration; tweak if estimates feel off) ── */
-const DEFAULT_CAPACITY  = 150;   /* assumed daily throughput when a person has no recent records */
-const OVERLOAD_RATIO    = 1.0;   /* load > capacity * this => overloaded */
-const TIGHT_RATIO       = 0.9;   /* neededPerDay > plannedToday * this => "tight" */
-const THROUGHPUT_WINDOW = 30;    /* days of history used to estimate throughput */
 
 /* ── Theme ── */
 function initTheme(){
@@ -608,6 +629,27 @@ function validCounts(total, done){
 function projectSlug(project){
   return String(project||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
 }
+/* ── Grid cell helpers (pure; unit-tested in tests/grid.test.mjs) ── */
+function cellDocId(date, project){ return `${date}_${projectSlug(project)}`; }
+function cellIsEmpty(people, note){ return (!people || people.length === 0) && !String(note || '').trim(); }
+/* Ordered names of non-hidden registry columns. */
+function visibleColumns(meta){
+  return Object.values(meta || {})
+    .filter(m => m && m.name && !m.hidden)
+    .sort((x, y) => (num(x.order) - num(y.order)) || String(x.name).localeCompare(String(y.name)))
+    .map(m => m.name);
+}
+/* Order updates to move `slug` by dir (-1 up / +1 down) among visible columns; [] if out of bounds. */
+function swapOrder(meta, slug, dir){
+  const vis = Object.entries(meta || {})
+    .filter(([, m]) => m && m.name && !m.hidden)
+    .sort((a, b) => (num(a[1].order) - num(b[1].order)) || String(a[1].name).localeCompare(String(b[1].name)));
+  const i = vis.findIndex(([s]) => s === slug);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= vis.length) return [];
+  const [sa, ma] = vis[i], [sb, mb] = vis[j];
+  return [{ slug: sa, order: num(mb.order) }, { slug: sb, order: num(ma.order) }];
+}
 function ageDays(fromIso, toIso){
   if(!fromIso || !toIso) return 0;
   const x = (new Date(toIso+'T00:00:00') - new Date(fromIso+'T00:00:00'))/86400000;
@@ -625,65 +667,6 @@ function workingDaysBetween(fromIso, toIso, pubHols){
     d.setDate(d.getDate()+1);
   }
   return n;
-}
-/* project -> { remaining, oldestAgeDays, openRecs } over OPEN (not Selesai) records. */
-function projectBacklog(records, today){
-  const m = {};
-  records.forEach(r=>{
-    if(effStatus(r)==='Selesai') return;
-    const p = r.project || '—';
-    const o = m[p] = m[p] || { remaining:0, oldestAgeDays:0, openRecs:0 };
-    o.remaining += Math.max(0, num(r.total)-num(r.done));
-    o.openRecs++;
-    const age = ageDays(r.date, today);
-    if(age > o.oldestAgeDays) o.oldestAgeDays = age;
-  });
-  return m;
-}
-/* personName -> avg done per active day over the trailing window. */
-function throughputByPerson(records, today, windowDays){
-  windowDays = windowDays || THROUGHPUT_WINDOW;
-  const cutoff = (()=>{ const d=new Date(today+'T00:00:00'); d.setDate(d.getDate()-windowDays); return isoOf(d); })();
-  const m = {};
-  records.forEach(r=>{
-    if(!r.date || r.date < cutoff || r.date > today) return;
-    [...new Set(staffArr(r).map(personName).filter(Boolean))].forEach(n=>{
-      const o = m[n] = m[n] || { done:0, days:new Set() };
-      o.done += num(r.done); o.days.add(r.date);
-    });
-  });
-  const out = {};
-  Object.entries(m).forEach(([n,o])=>{ out[n] = o.days.size ? Math.round(o.done/o.days.size) : 0; });
-  return out;
-}
-function capacityFor(name, throughputMap, halfDay){
-  /* a 0/absent throughput means "no signal" -> assume the default planning capacity */
-  let cap = (throughputMap && throughputMap[name]) || DEFAULT_CAPACITY;
-  if(!cap) cap = DEFAULT_CAPACITY;
-  return halfDay ? Math.round(cap/2) : cap;
-}
-/* personId -> summed qty of that person's assignments on a date. */
-function personLoadByDay(assignments, date){
-  const m = {};
-  Object.values(assignments||{}).forEach(asg=>{
-    if(asg.date !== date) return;
-    m[asg.personId] = (m[asg.personId]||0) + num(asg.qty);
-  });
-  return m;
-}
-function loadTier(load, capacity){
-  if(load <= 0) return 'free';
-  if(load > capacity * OVERLOAD_RATIO) return 'over';
-  return 'ontrack';
-}
-/* {tier, neededPerDay} for a project's deadline pressure on the selected day. */
-function riskTier(remaining, daysLeft, plannedToday){
-  if(remaining <= 0) return { tier:'ontrack', neededPerDay:0 };
-  if(daysLeft <= 0)  return { tier:'overdue', neededPerDay:remaining };
-  const neededPerDay = Math.ceil(remaining / daysLeft);
-  if(neededPerDay > plannedToday)              return { tier:'slip',   neededPerDay };
-  if(neededPerDay > plannedToday * TIGHT_RATIO) return { tier:'tight',  neededPerDay };
-  return { tier:'ontrack', neededPerDay };
 }
 
 /* ── Firestore listeners ── */
@@ -704,7 +687,6 @@ function showLoading(){
 }
 
 /* ── Schedule data layer ── */
-function schedDocId(personId, date, project){ return `${personId}_${date}_${projectSlug(project)}`; }
 
 /* One-time fetch of the Holiday Tracker roster + leave + public holidays.
    ponytail: session snapshot, not a live listener — a page reload refreshes it.
@@ -740,27 +722,21 @@ function startProjMetaListener(){
     if (viewMode==='plan') render();
   }, err=>{ console.error(err); showToast('Project meta sync error: '+err.message, true); });
 }
-/* Set/clear a project's due date. Empty date deletes the meta doc. */
-async function setProjectDue(project, dueIso){
-  const id = projectSlug(project);
+/* Upsert a cell (date × project) = a set of people + a free-text note.
+   Empty people AND blank note deletes the cell doc. */
+async function setCell(date, project, personIds, note){
+  const id = cellDocId(date, project);
+  project = (project || '').trim();
+  note = (note || '').trim();
+  const people = (personIds || []).filter(Boolean);
   try {
-    if (!dueIso){ await projMetaCol.doc(id).delete(); return; }
-    await projMetaCol.doc(id).set({ name:project, dueDate:dueIso }, {merge:true});
-  } catch(e){ showToast('Could not save due date: '+e.message+' (publish Firestore rules?)', true); }
-}
-
-/* Upsert a person·day·project assignment; qty<=0 and no note deletes it. */
-async function setAssignment(personId, date, project, qty, note){
-  const id = schedDocId(personId, date, project);
-  project = (project||'').trim(); note = (note||'').trim(); qty = num(qty);
-  try {
-    if (qty<=0 && !note){ await schedCol.doc(id).delete(); return; }
+    if (cellIsEmpty(people, note)){ await schedCol.doc(id).delete(); return; }
     await schedCol.doc(id).set({
-      personId, date, project, qty, note,
+      date, project, people, note,
       by: currentUser ? currentUser.name : '',
       ts: firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true});
-  } catch(e){ showToast('Could not save assignment: '+e.message, true); }
+    }, { merge: true });
+  } catch (e){ showToast('Could not save cell: ' + e.message, true); }
 }
 
 /* ── Dropdowns / datalists ── */
@@ -1046,208 +1022,176 @@ function peopleRollup(list){
   });
 }
 /* ── Schedule (forward roster) ── */
-function schedWeek(delta){ const d=new Date(schedMonday+'T00:00:00'); d.setDate(d.getDate()+delta*7); schedMonday=isoOf(d); render(); }
-function schedThisWeek(){ schedMonday=mondayOf(isoToday()); render(); }
 function setSchedDept(v){ schedDept=v; render(); }
 
-const SCHED_LEAVE_ICON = { vacation:'🌴', sick:'🤒', wfh:'🏠', training:'📚', parental:'👶', other:'📌' };
+function renderPlan(){ renderGrid(); }
 
-function renderPlan(){ if(planMode==='week') return renderWeekOverview(); return renderCockpit(); }
-function planNav(delta){ const d=new Date(schedDay+'T00:00:00'); d.setDate(d.getDate()+delta); schedDay=isoOf(d); schedMonday=mondayOf(schedDay); render(); }
-function planToday(){ schedDay=isoToday(); schedMonday=mondayOf(schedDay); render(); }
-function setPlanMode(m){ planMode=m; if(m==='day') schedMonday=mondayOf(schedDay); render(); }
+function gridWeek(delta){ const d = new Date(schedMonday + 'T00:00:00'); d.setDate(d.getDate() + delta * 7); schedMonday = isoOf(d); render(); }
+function gridThisWeek(){ schedMonday = mondayOf(isoToday()); render(); }
 
-function planToolbar(label){
-  const depts=[...new Set(htPeople.map(p=>p.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+function gridToolbar(label){
+  const depts = [...new Set(htPeople.map(p => p.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   return `<div class="sched-toolbar">
     <div class="seg">
-      <button class="seg-btn ${planMode==='day'?'active':''}" onclick="setPlanMode('day')">Day</button>
-      <button class="seg-btn ${planMode==='week'?'active':''}" onclick="setPlanMode('week')">Week</button>
-    </div>
-    <div class="seg">
-      <button class="seg-btn" onclick="${planMode==='day'?'planNav(-1)':'schedWeek(-1)'}">‹</button>
-      <button class="seg-btn" onclick="${planMode==='day'?'planToday()':'schedThisWeek()'}">${planMode==='day'?'Today':'This week'}</button>
-      <button class="seg-btn" onclick="${planMode==='day'?'planNav(1)':'schedWeek(1)'}">›</button>
+      <button class="seg-btn" onclick="gridWeek(-1)">‹</button>
+      <button class="seg-btn" onclick="gridThisWeek()">This week</button>
+      <button class="seg-btn" onclick="gridWeek(1)">›</button>
     </div>
     <span class="sched-week">${esc(label)}</span>
     <div class="spacer"></div>
     <select onchange="setSchedDept(this.value)">
       <option value="">All depts</option>
-      ${depts.map(d=>`<option value="${esc(d)}"${d===schedDept?' selected':''}>${esc(d)}</option>`).join('')}
+      ${depts.map(d => `<option value="${esc(d)}"${d === schedDept ? ' selected' : ''}>${esc(d)}</option>`).join('')}
     </select>
+    <button class="seg-btn" onclick="openColManager()">Manage columns</button>
   </div>`;
 }
 
-/* Available (assignable) people for a day, as <option>s. */
-function assignControl(project, day, ppl){
-  const opts = ppl.filter(p=>{ const lv=personLeaveOn(htHolidays,p.id,day); return !(lv&&!lv.halfDay); })
-    .map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
-  const pid = 'asg_'+projectSlug(project)+'_'+day;
-  return `<details class="ck-assign"><summary class="btn-sm">+ assign</summary>
-    <span style="display:inline-flex;gap:6px;align-items:center;margin-left:6px;margin-top:6px">
-      <select id="${pid}_p" style="height:28px">${opts}</select>
-      <input id="${pid}_q" type="number" min="0" step="1" placeholder="qty" style="width:78px;height:28px">
-      <button class="btn-sm" onclick="addAssign('${esc(project)}','${day}','${pid}')">add</button>
-    </span></details>`;
-}
-function addAssign(project, day, pid){
-  const personId=document.getElementById(pid+'_p').value;
-  const qty=num(document.getElementById(pid+'_q').value);
-  if(!personId){ showToast('Pick a person.', true); return; }
-  if(qty<=0){ showToast('Enter a quantity.', true); return; }
-  setAssignment(personId, day, project, qty, '');
-}
-function removeAssign(personId, day, project){ setAssignment(personId, day, project, 0, ''); }
-function dayActual(records, day, project){
-  let done=0, total=0;
-  records.forEach(r=>{ if(r.date===day && (r.project||'—')===project){ done+=num(r.done); total+=num(r.total); } });
-  return { done, total };
-}
-function logFromPlan(project, day){
-  setView('records');
-  document.getElementById('f-date').value = day;
-  document.getElementById('f-project').value = project;
-  const names = Object.values(scheduleAssignments)
-    .filter(a=>a.date===day && a.project===project)
-    .map(a=>(htPeople.find(x=>x.id===a.personId)||{}).name).filter(Boolean);
-  document.getElementById('f-staff').value = names.join(', ');
-  scrollToForm();
-}
-
-function renderCockpit(){
-  const host=document.getElementById('view-plan');
-  if(!htLoaded){ host.innerHTML=`<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading roster…</div></div></div>`; return; }
-  const day=schedDay, today=isoToday();
-  const ppl=htPeople.filter(p=>!schedDept||p.dept===schedDept);
-  const tp=throughputByPerson(records, today);
-  const loads=personLoadByDay(scheduleAssignments, day);
-  const backlog=projectBacklog(records, today);
-  const ph=publicHolidayName(htPublicHols, day);
-
-  /* people availability */
-  let onLeaveCount=0;
-  const peopleCards=ppl.map(p=>{
-    const leave=personLeaveOn(htHolidays, p.id, day);
-    if(leave && !leave.halfDay){
-      onLeaveCount++;
-      const ic=SCHED_LEAVE_ICON[leave.type]||'📌';
-      return `<div class="ck-pcard leave"><div class="ck-pname">${esc(p.name)}</div><div class="ck-status">${ic} ${esc(leave.type)} — can't assign</div></div>`;
-    }
-    const half=!!(leave&&leave.halfDay);
-    const cap=capacityFor(personName(p.name), tp, half);
-    const load=loads[p.id]||0;
-    const tier=loadTier(load, cap);
-    const color= tier==='over'?'var(--danger)' : tier==='free'?'var(--text3)' : 'var(--success)';
-    const pct= cap? Math.min(100, Math.round(load/cap*100)) : 0;
-    const statusTxt= tier==='over'?`overloaded · ${load-cap} over` : tier==='free'?'free' : 'on track';
-    const halfFlag= half? ` <span class="ck-badge tight">½ ${esc(leave.halfDayPart||'')} off</span>` : '';
-    return `<div class="ck-pcard">
-      <div style="display:flex;justify-content:space-between;align-items:center"><span class="ck-pname">${esc(p.name)}</span><span class="ck-load">${load} / ${cap}</span></div>
-      <div class="ck-bar"><span style="width:${tier==='free'?4:pct}%;background:${color}"></span></div>
-      <div class="ck-status" style="color:${color}">${statusTxt}${halfFlag}</div>
-    </div>`;
-  }).join('');
-
-  /* lanes */
-  const dayAssigns=Object.values(scheduleAssignments).filter(a=>a.date===day);
-  const byProject={}; dayAssigns.forEach(a=>{ (byProject[a.project]=byProject[a.project]||[]).push(a); });
-  const projSet=[...new Set([...Object.keys(backlog).filter(p=>backlog[p].remaining>0), ...Object.keys(byProject)])];
-  const lanes=projSet.map(p=>{
-    const bl=backlog[p]||{remaining:0,oldestAgeDays:0,openRecs:0};
-    const assigns=byProject[p]||[];
-    const plannedToday=assigns.reduce((s,a)=>s+num(a.qty),0);
-    const meta=projMeta[projectSlug(p)]||{};
-    const due=meta.dueDate||'';
-    let risk={tier: due?'':'none', neededPerDay:0, daysLeft:0};
-    if(due){ const dl=workingDaysBetween(day, due, htPublicHols); risk={...riskTier(bl.remaining, dl, plannedToday), daysLeft:dl}; }
-    return {p, bl, assigns, plannedToday, due, risk};
-  });
-  const tierRank={overdue:0,slip:1,tight:2,ontrack:3,none:4,'':4};
-  lanes.sort((a,b)=> (tierRank[a.risk.tier]-tierRank[b.risk.tier]) || (b.bl.remaining-a.bl.remaining) || (b.bl.oldestAgeDays-a.bl.oldestAgeDays));
-
-  const laneHtml=lanes.map((L,i)=>{
-    const badgeTxt = !L.due ? 'no deadline'
-      : (L.risk.tier==='slip'||L.risk.tier==='overdue') ? 'will slip'
-      : L.risk.tier==='tight' ? 'tight' : 'on track';
-    const badge=`<span class="ck-badge ${L.due?L.risk.tier:'none'}">${badgeTxt}</span>`;
-    const dueCtl=`<input type="date" value="${esc(L.due)}" onchange="setProjectDue('${esc(L.p)}',this.value)" title="Set / clear due date" style="width:140px;height:28px">`;
-    const covRight= L.due ? `needs ${L.risk.neededPerDay}/day${L.risk.daysLeft<=0?' (overdue)':''}` : (L.assigns.length?'room for more':'unassigned');
-    const covPct= L.bl.remaining ? Math.min(100, Math.round(L.plannedToday/L.bl.remaining*100)) : (L.plannedToday?100:0);
-    const covColor= (L.risk.tier==='slip'||L.risk.tier==='overdue')?'var(--danger)' : L.risk.tier==='tight'?'var(--warn)' : L.plannedToday?'var(--success)':'var(--accent)';
-    const chips=L.assigns.map(a=>{
-      const nm=(htPeople.find(x=>x.id===a.personId)||{}).name||a.personId;
-      return `<span class="ck-chip">${esc(nm)} <span class="q">${num(a.qty)}</span><button onclick="removeAssign('${esc(a.personId)}','${day}','${esc(a.project)}')" aria-label="remove" title="remove">×</button></span>`;
+function renderGrid(){
+  const host = document.getElementById('view-plan');
+  if (!htLoaded){ host.innerHTML = `<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading roster…</div></div></div>`; return; }
+  const dates = weekDates(schedMonday);
+  const WEEKDAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const cols = visibleColumns(projMeta);
+  const rangeLabel = `${fmtDate(dates[0])} – ${fmtDate(dates[4])}`;
+  if (!cols.length){
+    const seed = records.length ? ` or <button class="btn-sm" onclick="seedColumnsFromRecords()">seed from records</button>` : '';
+    host.innerHTML = gridToolbar(rangeLabel) +
+      `<div class="panel"><div class="empty"><div class="empty-icon">🗂️</div><div>No project columns yet.</div><div class="empty-sub"><button class="btn-sm" onclick="openColManager()">Manage columns</button> to add projects${seed}.</div></div></div>`;
+    return;
+  }
+  const nameFor = id => (htPeople.find(x => x.id === id) || {}).name || id;
+  const head = `<tr><th class="gc-daycol">Day</th>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>`;
+  const body = dates.map((iso, i) => {
+    const ph = publicHolidayName(htPublicHols, iso);
+    const cells = cols.map(c => {
+      const cell = scheduleAssignments[cellDocId(iso, c)];
+      const chips = ((cell && cell.people) || []).map(pid => `<span class="gc-chip">${esc(nameFor(pid))}</span>`).join('');
+      const note = cell && cell.note ? `<span class="gc-note">${esc(cell.note)}</span>` : '';
+      const inner = (chips || note) ? `${chips} ${note}` : `<span class="gc-empty">+</span>`;
+      return `<td class="gc-cell" onclick="openCellEditor('${iso}','${esc(c)}')">${inner}</td>`;
     }).join('');
-    const act=dayActual(records, day, L.p);
-    const actPct= act.total? ` (${Math.round(act.done/act.total*100)}% of ${act.total.toLocaleString()})` : '';
-    return `<div class="ck-lane">
-      <div class="ck-lane-head">
-        <div><span class="ck-rank">#${i+1}</span> <span class="ck-proj">${esc(L.p)}</span> ${badge}</div>
-        <div class="ck-meta">📥 ${L.bl.remaining.toLocaleString()} open · oldest ${L.bl.oldestAgeDays}d ${dueCtl}</div>
-      </div>
-      <div class="ck-cov">
-        <div class="ck-cov-row"><span>planned today ${L.plannedToday.toLocaleString()}</span><span>${covRight}</span></div>
-        <div class="ck-bar"><span style="width:${covPct}%;background:${covColor}"></span></div>
-      </div>
-      <div class="ck-chips">${chips}${assignControl(L.p, day, ppl)}</div>
-      <div class="ck-foot">↺ today: planned ${L.plannedToday.toLocaleString()} · done ${act.done.toLocaleString()}${actPct} <button class="btn-sm" onclick="logFromPlan('${esc(L.p)}','${day}')">Log a record</button></div>
-    </div>`;
+    const dayCell = `<td class="gc-daycol"><b>${WEEKDAY[i]}</b><br><span class="gc-date">${esc(fmtDate(iso))}</span>${ph ? `<br><span class="gc-ph">${esc(ph)}</span>` : ''}</td>`;
+    return `<tr class="${ph ? 'pubhol' : ''}">${dayCell}${cells}</tr>`;
   }).join('');
-
-  /* metrics */
-  const availCount=ppl.length-onLeaveCount;
-  const totalBacklog=Object.values(backlog).reduce((s,o)=>s+o.remaining,0);
-  const plannedTotal=dayAssigns.reduce((s,a)=>s+num(a.qty),0);
-  const atRisk=lanes.filter(L=>L.risk.tier==='slip'||L.risk.tier==='overdue').length;
-  const metrics=`<div class="metrics">
-    <div class="metric m-data"><div class="metric-lbl">Available</div><div class="metric-val">${availCount}<span style="font-size:14px;color:var(--text3)"> / ${ppl.length}</span></div><div class="metric-sub">${onLeaveCount} on leave</div></div>
-    <div class="metric"><div class="metric-lbl">Open backlog</div><div class="metric-val">${totalBacklog.toLocaleString()}</div><div class="metric-sub">${lanes.length} projects</div></div>
-    <div class="metric m-prog"><div class="metric-lbl">Planned</div><div class="metric-val">${plannedTotal.toLocaleString()}</div><div class="metric-sub">${totalBacklog?Math.round(plannedTotal/totalBacklog*100):0}% of backlog</div></div>
-    <div class="metric"><div class="metric-lbl">At risk</div><div class="metric-val" style="${atRisk?'color:var(--danger)':''}">${atRisk}</div><div class="metric-sub">deadline slip</div></div>
-  </div>`;
-
-  const phBanner= ph?`<div class="panel" style="border-color:var(--accent)"><b>${esc(ph)}</b> — public holiday. Nobody is normally rostered today.</div>`:'';
-  const peopleSection=`<div class="panel-head" style="margin:.2rem 0 .5rem">People today <span class="sub">load vs typical throughput</span></div><div class="ck-people">${peopleCards||'<span class="ck-status">No people in roster'+(schedDept?' for this dept':'')+'.</span>'}</div>`;
-  const lanesSection= lanes.length
-    ? `<div class="panel-head" style="margin:.4rem 0 .5rem">Projects <span class="sub">ranked by backlog + deadline risk</span></div>${laneHtml}`
-    : `<div class="panel"><div class="empty"><div class="empty-icon">🎯</div><div>No backlog and no assignments for this day.</div><div class="empty-sub">Add records, or assign people once a project has open data.</div></div></div>`;
-
-  host.innerHTML = planToolbar(fmtDate(day)) + metrics + phBanner + peopleSection + lanesSection;
+  host.innerHTML = gridToolbar(rangeLabel) + `<div class="gc-wrap"><table class="gc-table">${head}${body}</table></div>`;
 }
 
-function planJump(iso){ schedDay=iso; planMode='day'; schedMonday=mondayOf(iso); render(); }
-function renderWeekOverview(){
-  const host=document.getElementById('view-plan');
-  if(!htLoaded){ host.innerHTML=`<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading roster…</div></div></div>`; return; }
-  const dates=weekDates(schedMonday), today=isoToday();
-  const WEEKDAY=['Mon','Tue','Wed','Thu','Fri'];
-  const ppl=htPeople.filter(p=>!schedDept||p.dept===schedDept);
-  const backlog=projectBacklog(records, today);
-  const cols=dates.map((iso,i)=>{
-    const ph=publicHolidayName(htPublicHols, iso);
-    const dayAssigns=Object.values(scheduleAssignments).filter(a=>a.date===iso);
-    const planned=dayAssigns.reduce((s,a)=>s+num(a.qty),0);
-    const avail=ppl.filter(p=>{ const lv=personLeaveOn(htHolidays,p.id,iso); return !(lv&&!lv.halfDay); }).length;
-    const byProject={}; dayAssigns.forEach(a=>{ byProject[a.project]=(byProject[a.project]||0)+num(a.qty); });
-    let atRisk=0;
-    Object.values(projMeta).forEach(m=>{
-      if(!m.dueDate || !m.name) return;
-      const bl=backlog[m.name]; if(!bl || bl.remaining<=0) return;
-      const dl=workingDaysBetween(iso, m.dueDate, htPublicHols);
-      const t=riskTier(bl.remaining, dl, byProject[m.name]||0).tier;
-      if(t==='slip'||t==='overdue') atRisk++;
-    });
-    return `<div class="ck-day ${ph?'pubhol':''}" onclick="planJump('${iso}')">
-      <div style="font-family:var(--ibm-mono);font-size:10px;color:var(--text3)">${WEEKDAY[i]} ${esc(fmtDate(iso))}</div>
-      ${ph
-        ? `<div class="ck-badge none" style="margin-top:8px;display:inline-block">${esc(ph)}</div>`
-        : `<div class="metric-val" style="font-size:1.4rem;margin-top:6px">${planned.toLocaleString()}</div>
-           <div class="ck-status">planned · ${avail} avail</div>
-           ${atRisk?`<div class="ck-badge slip" style="margin-top:6px;display:inline-block">${atRisk} at risk</div>`:''}`}
-    </div>`;
+/* ── Cell editor popover: pick roster people + a note for one (date, project) cell ── */
+function cellEditorHtml(date, project, cell, ppl, holidays){
+  const chosen = new Set((cell && cell.people) || []);
+  const rows = ppl.map(p => {
+    const lv = personLeaveOn(holidays, p.id, date);
+    const off = !!(lv && !lv.halfDay);
+    return `<label class="gc-ed-person${off ? ' off' : ''}">
+      <input type="checkbox" value="${esc(p.id)}"${chosen.has(p.id) ? ' checked' : ''}${off ? ' disabled' : ''}>
+      ${esc(p.name)}${off ? ` <span class="gc-ph">(${esc(lv.type || 'leave')})</span>` : ''}
+    </label>`;
   }).join('');
-  host.innerHTML = planToolbar(`${fmtDate(dates[0])} – ${fmtDate(dates[4])}`) + `<div class="ck-week">${cols}</div>`;
+  const emptyMsg = `<span class="gc-note">No roster people${schedDept ? ' in this dept' : ''}.</span>`;
+  return `<div class="gc-ed-head">${esc(project)} · ${esc(fmtDate(date))}</div>
+    <div class="gc-ed-people">${rows || emptyMsg}</div>
+    <label class="gc-ed-note-lbl" for="gc-ed-note">Note</label>
+    <input id="gc-ed-note" type="text" value="${esc((cell && cell.note) || '')}" placeholder="(checking) · 161 · anything">
+    <div class="gc-ed-actions">
+      <button class="btn-sm" onclick="saveCellEditor()">Save</button>
+      <button class="btn-sm" onclick="clearCellEditor()">Clear cell</button>
+      <button class="btn-sm" onclick="closeCellEditor()">Cancel</button>
+    </div>`;
 }
+function gridOverlay(){
+  let ov = document.getElementById('gc-ed-overlay');
+  if (!ov){
+    ov = document.createElement('div');
+    ov.id = 'gc-ed-overlay';
+    ov.className = 'gc-ed-overlay';
+    ov.onclick = e => { if (e.target === ov) closeCellEditor(); };
+    document.body.appendChild(ov);
+  }
+  return ov;
+}
+function openCellEditor(date, project){
+  cellEditing = { date, project };
+  const ppl = htPeople.filter(p => !schedDept || p.dept === schedDept);
+  const cell = scheduleAssignments[cellDocId(date, project)];
+  const ov = gridOverlay();
+  ov.innerHTML = `<div class="gc-ed-panel">${cellEditorHtml(date, project, cell, ppl, htHolidays)}</div>`;
+  ov.style.display = 'flex';
+}
+function closeCellEditor(){ cellEditing = null; const ov = document.getElementById('gc-ed-overlay'); if (ov) ov.style.display = 'none'; }
+function saveCellEditor(){
+  if (!cellEditing) return;
+  const ov = document.getElementById('gc-ed-overlay');
+  const ids = [...ov.querySelectorAll('.gc-ed-people input[type=checkbox]:checked')].map(c => c.value);
+  const note = document.getElementById('gc-ed-note').value;
+  setCell(cellEditing.date, cellEditing.project, ids, note);
+  closeCellEditor();
+}
+function clearCellEditor(){
+  if (!cellEditing) return;
+  setCell(cellEditing.date, cellEditing.project, [], '');
+  closeCellEditor();
+}
+
+/* ── Column manager: registry writers for sgp_alokasi_projects (add/rename/reorder/hide) ── */
+async function addColumn(name){
+  name = (name || '').trim(); if (!name) return;
+  const id = projectSlug(name);
+  const maxOrder = Object.values(projMeta).reduce((m, x) => Math.max(m, num(x.order)), -1);
+  try { await projMetaCol.doc(id).set({ name, order: maxOrder + 1, hidden: false }, { merge: true }); }
+  catch (e){ showToast('Could not add column: ' + e.message + ' (publish Firestore rules?)', true); }
+}
+async function renameColumn(slug, name){
+  name = (name || '').trim(); if (!name) return;
+  try { await projMetaCol.doc(slug).set({ name }, { merge: true }); }
+  catch (e){ showToast('Could not rename column: ' + e.message, true); }
+}
+async function hideColumn(slug){ try { await projMetaCol.doc(slug).set({ hidden: true }, { merge: true }); } catch (e){ showToast('Could not hide column: ' + e.message, true); } }
+async function showColumn(slug){ try { await projMetaCol.doc(slug).set({ hidden: false }, { merge: true }); } catch (e){ showToast('Could not show column: ' + e.message, true); } }
+async function moveColumn(slug, dir){
+  const ups = swapOrder(projMeta, slug, dir);
+  try { for (const u of ups) await projMetaCol.doc(u.slug).set({ order: u.order }, { merge: true }); }
+  catch (e){ showToast('Could not reorder column: ' + e.message, true); }
+}
+async function seedColumnsFromRecords(){
+  const names = uniqueProjects(records).filter(Boolean);
+  try {
+    for (let i = 0; i < names.length; i++) await projMetaCol.doc(projectSlug(names[i])).set({ name: names[i], order: i, hidden: false }, { merge: true });
+    showToast(names.length + ' columns added.');
+  } catch (e){ showToast('Could not seed columns: ' + e.message, true); }
+}
+
+/* Column manager overlay: reuses the cell-editor overlay node (gridOverlay/closeCellEditor). */
+function colManagerHtml(){
+  const all = Object.entries(projMeta)
+    .filter(([, m]) => m && m.name)
+    .sort((a, b) => (num(a[1].order) - num(b[1].order)) || String(a[1].name).localeCompare(String(b[1].name)));
+  const rows = all.map(([slug, m]) => `<div class="gc-col-row${m.hidden ? ' off' : ''}">
+    <span class="gc-col-name">${esc(m.name)}</span>
+    <span>
+      <button class="btn-sm" onclick="moveColumn('${esc(slug)}',-1).then(openColManager)" title="up">↑</button>
+      <button class="btn-sm" onclick="moveColumn('${esc(slug)}',1).then(openColManager)" title="down">↓</button>
+      <button class="btn-sm" onclick="renameColPrompt('${esc(slug)}')" title="rename">✎</button>
+      <button class="btn-sm" onclick="${m.hidden ? `showColumn('${esc(slug)}')` : `hideColumn('${esc(slug)}')`}.then(openColManager)">${m.hidden ? 'show' : 'hide'}</button>
+    </span>
+  </div>`).join('');
+  const seed = records.length ? `<div style="margin-top:.6rem"><button class="btn-sm" onclick="seedColumnsFromRecords().then(openColManager)">Seed from records</button></div>` : '';
+  return `<div class="gc-ed-head">Manage columns</div>
+    <div>${rows || '<span class="gc-note">No columns yet.</span>'}</div>
+    <div class="gc-col-add">
+      <input id="gc-col-new" type="text" placeholder="New project name">
+      <button class="btn-sm" onclick="addColFromInput()">Add</button>
+    </div>${seed}
+    <div class="gc-ed-actions" style="margin-top:.8rem"><button class="btn-sm" onclick="closeCellEditor()">Done</button></div>`;
+}
+function openColManager(){
+  const ov = gridOverlay();
+  ov.innerHTML = `<div class="gc-ed-panel">${colManagerHtml()}</div>`;
+  ov.style.display = 'flex';
+}
+// ponytail: the manager overlay is a plain DOM node outside render(); each action re-opens it (.then(openColManager)) to refresh — no reactive binding needed for a rarely-used admin panel.
+function addColFromInput(){ const el = document.getElementById('gc-col-new'); addColumn(el.value).then(openColManager); }
+function renameColPrompt(slug){ const cur = (projMeta[slug] || {}).name || ''; const v = prompt('Rename column', cur); if (v != null) renameColumn(slug, v).then(openColManager); }
 
 function renderPeople(list, host){
   host = host || document.getElementById('view-people');
