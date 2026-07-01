@@ -33,18 +33,29 @@
   .dz-label { font-size: 14px; color: var(--text2); }
   .dz-label strong { color: var(--text); font-weight: 500; }
   .dz-hint { font-size: 11px; color: var(--text3); margin-top: 6px; font-family: var(--mono); }
-  .file-info { display: none; align-items: center; gap: 12px; background: var(--accent-dim); border: 1px solid rgba(200,241,53,0.3); border-radius: 8px; padding: 12px 16px; margin-top: 12px; }
-  .file-info.show { display: flex; }
-  .file-badge { font-family: var(--mono); font-size: 11px; color: var(--accent); background: var(--accent-mid); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
-  .file-name { font-size: 13px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .file-size { font-size: 11px; color: var(--text2); font-family: var(--mono); }
-  .remove-file { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 2px 4px; line-height: 1; border-radius: 4px; }
+  .remove-file { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 2px 4px; line-height: 1; border-radius: 4px; flex-shrink: 0; }
   .remove-file:hover { color: var(--danger); background: rgba(255,92,92,0.1); }
-  .sheet-list { display: none; flex-direction: column; gap: 6px; margin-top: 12px; }
-  .sheet-list.show { display: flex; }
-  .sheet-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border-radius: 6px; padding: 8px 12px; font-size: 12px; }
-  .sheet-name { font-family: var(--mono); color: var(--accent); }
-  .sheet-count { color: var(--text2); }
+  /* per-system list + forwarder picker */
+  .systems-list { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+  .system { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; animation: slideIn 0.18s ease; }
+  .system.bad { border-color: rgba(255,92,92,0.4); }
+  .system-head { display: flex; align-items: center; gap: 10px; }
+  .system-badge { font-family: var(--mono); font-size: 11px; color: var(--accent); background: var(--accent-mid); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  .system-name { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .system-meta { font-family: var(--mono); font-size: 11px; color: var(--text2); flex: 1; text-align: right; white-space: nowrap; }
+  .system-err { font-size: 12px; color: var(--danger); margin-top: 8px; }
+  .fwd-tools { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .fwd-search { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-family: var(--sans); font-size: 12px; color: var(--text); outline: none; transition: border-color 0.15s; }
+  .fwd-search:focus { border-color: var(--accent); }
+  .fwd-mini { background: none; border: 1px solid var(--border2); border-radius: 6px; color: var(--text2); cursor: pointer; padding: 5px 9px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; transition: all 0.15s; white-space: nowrap; }
+  .fwd-mini:hover { border-color: var(--accent); color: var(--accent); }
+  .fwd-list { display: flex; flex-direction: column; gap: 1px; margin-top: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px; }
+  .fwd-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+  .fwd-row:hover { background: var(--accent-dim); }
+  .fwd-row input { accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .fwd-nm { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fwd-ct { font-family: var(--mono); font-size: 10px; color: var(--text2); flex-shrink: 0; }
+  .fwd-row.hide { display: none; }
   .people-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
   .person-row { display: flex; align-items: center; gap: 8px; animation: slideIn 0.18s ease; }
   @keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
@@ -114,25 +125,19 @@
 
 <header>
   <div class="logo">— Split Tool</div>
-  <h1>Split your file<br>by <em>input</em></h1>
-  <p class="sub">Upload an Excel file, add names, get equal portions per person. Blank rows are skipped automatically.</p>
+  <h1>Extract &amp; split<br>by <em>system</em></h1>
+  <p class="sub">Drop one Excel per system, pick the forwarders you want, and get the Vendor / Supplier / Document extract split evenly per person.</p>
 </header>
 
 <div class="card">
-  <div class="card-title">01 — Upload file</div>
+  <div class="card-title">01 — Upload files (one per system)</div>
   <div class="dropzone" id="dropzone">
-    <input type="file" id="fileInput" accept=".xlsx,.xls" />
+    <input type="file" id="fileInput" accept=".xlsx,.xls" multiple />
     <div class="dz-icon">📂</div>
-    <div class="dz-label"><strong>Drop your Excel file here</strong> or click to browse</div>
-    <div class="dz-hint">.xlsx · .xls</div>
+    <div class="dz-label"><strong>Drop your Excel files here</strong> or click to browse</div>
+    <div class="dz-hint">one file per system · .xlsx · .xls</div>
   </div>
-  <div class="file-info" id="fileInfo">
-    <span class="file-badge">XLSX</span>
-    <span class="file-name" id="fileName">—</span>
-    <span class="file-size" id="fileSize">—</span>
-    <button class="remove-file" onclick="clearFile()">×</button>
-  </div>
-  <div class="sheet-list" id="sheetList"></div>
+  <div class="systems-list" id="systemsList"></div>
 </div>
 
 <div class="card">
@@ -174,10 +179,11 @@
 <button class="dl-all hide" id="dlAllBtn" onclick="downloadAll()">⬇ Download all as ZIP</button>
 
 <script>
-  let workbook = null;
-  let sheetData = {};
+  let systems = [];        // { id, name, fileName, rows:[[v,s,d]], forwarders:[{name,count,checked}], error }
+  let sysSeq = 0;
   let generatedFiles = [];
   const NAMES_KEY = 'fileSplitter.names';
+  const TARGET_COLS = ['Vendor details', 'Supplier', 'Document number'];
 
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
@@ -186,9 +192,9 @@
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
   dropzone.addEventListener('drop', e => {
     e.preventDefault(); dropzone.classList.remove('drag');
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    [...e.dataTransfer.files].forEach(handleFile);
   });
-  fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+  fileInput.addEventListener('change', e => { [...e.target.files].forEach(handleFile); fileInput.value = ''; });
 
   // People list: Enter adds a new person, typing persists names.
   const peopleListEl = document.getElementById('peopleList');
@@ -220,59 +226,133 @@
     return row.every(cell => cell === null || cell === undefined || cell === '');
   }
 
+  // ---- pure helpers (also unit-tested via tests/harness/load-splitter.mjs) ----
+  function findHeaderIdx(rows) {
+    for (let i = 0; i < rows.length; i++) if (!isBlankRow(rows[i])) return i;
+    return 0;
+  }
+  // Locate the 3 target columns by exact header name (positions differ per system).
+  // Returns [vendorIdx, supplierIdx, docIdx] or null if any is missing.
+  function pickColumns(header) {
+    const idx = TARGET_COLS.map(name => header.findIndex(h => String(h).trim() === name));
+    return idx.every(i => i >= 0) ? idx : null;
+  }
+  // Project data rows to [Vendor details, Supplier, Document number]; drop blank-vendor rows.
+  function extractRows(dataRows, cols) {
+    const [vi, si, di] = cols;
+    const out = [];
+    for (const r of dataRows) {
+      const v = r[vi];
+      if (v === null || v === undefined || String(v).trim() === '') continue;
+      out.push([r[vi], r[si], r[di]]);
+    }
+    return out;
+  }
+  // Count rows per distinct vendor (column 0 of projected rows), sorted desc.
+  function tallyForwarders(rows) {
+    const m = new Map();
+    for (const r of rows) m.set(r[0], (m.get(r[0]) || 0) + 1);
+    return [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  }
+  // System / output-sheet name from filename: strip extension.
+  function systemName(fileName) {
+    return fileName.replace(/\.[^.]+$/, '').trim() || 'Sheet';
+  }
+
   function handleFile(file) {
-    if (!file.name.match(/\.(xlsx|xls)$/i)) { showError('Please upload an Excel file (.xlsx or .xls)'); return; }
+    if (!file.name.match(/\.(xlsx|xls)$/i)) { showError('Please upload Excel files (.xlsx or .xls).'); return; }
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        workbook = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-        sheetData = {};
-        const sheetList = document.getElementById('sheetList');
-        sheetList.innerHTML = '';
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+        const hIdx = findHeaderIdx(rows);
+        const header = rows[hIdx] || [];
+        const cols = pickColumns(header);
 
-        workbook.SheetNames.forEach(name => {
-          const ws = workbook.Sheets[name];
-          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-          // Find header row (first non-blank row)
-          let headerIdx = 0;
-          for (let i = 0; i < rows.length; i++) {
-            if (!isBlankRow(rows[i])) { headerIdx = i; break; }
-          }
-          const header = rows[headerIdx] || [];
-          // All rows after header, filter blanks
-          const allData = rows.slice(headerIdx + 1);
-          sheetData[name] = { header, allData, headerIdx };
+        // de-dupe system name against already-loaded files
+        let name = systemName(file.name); const base = name; let n = 2;
+        while (systems.some(s => s.name === name)) name = `${base}_${n++}`;
 
-          const nonBlank = allData.filter(r => !isBlankRow(r)).length;
-          const blanks = allData.length - nonBlank;
-
-          const row = document.createElement('div');
-          row.className = 'sheet-row';
-          row.innerHTML = `<span class="sheet-name">${name}</span><span class="sheet-count">${nonBlank} rows${blanks > 0 ? ` <span style="color:var(--warn)">(+${blanks} blank)</span>` : ''}</span>`;
-          sheetList.appendChild(row);
-        });
-
-        sheetList.classList.add('show');
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileSize').textContent = formatSize(file.size);
-        document.getElementById('fileInfo').classList.add('show');
+        const sys = { id: 'sys' + (sysSeq++), name, fileName: file.name, rows: [], forwarders: [] };
+        if (!cols) {
+          const missing = TARGET_COLS.filter(c => header.findIndex(h => String(h).trim() === c) < 0);
+          sys.error = 'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ');
+        } else {
+          sys.rows = extractRows(rows.slice(hIdx + 1), cols);
+          sys.forwarders = tallyForwarders(sys.rows).map(f => ({ ...f, checked: true }));
+        }
+        systems.push(sys);
+        renderSystems();
         hideError();
-      } catch(err) { showError('Could not read file: ' + err.message); }
+      } catch (err) { showError('Could not read ' + file.name + ': ' + err.message); }
     };
     reader.readAsArrayBuffer(file);
   }
 
-  function clearFile() {
-    workbook = null; sheetData = {};
-    fileInput.value = '';
-    document.getElementById('fileInfo').classList.remove('show');
-    document.getElementById('sheetList').classList.remove('show');
-    document.getElementById('sheetList').innerHTML = '';
-    generatedFiles.forEach(f => URL.revokeObjectURL(f.url));
-    generatedFiles = [];
-    document.getElementById('results').classList.remove('show');
-    document.getElementById('results').innerHTML = '';
-    document.getElementById('dlAllBtn').classList.add('hide');
+  function removeSystem(id) {
+    systems = systems.filter(s => s.id !== id);
+    renderSystems();
+  }
+
+  function renderSystems() {
+    const el = document.getElementById('systemsList');
+    el.innerHTML = '';
+    systems.forEach(sys => {
+      const card = document.createElement('div');
+      card.className = 'system' + (sys.error ? ' bad' : '');
+      const meta = sys.error ? '' : `<span class="system-meta">${sys.rows.length} rows · ${sys.forwarders.length} forwarders</span>`;
+      card.innerHTML = `
+        <div class="system-head">
+          <span class="system-badge">${escapeHtml(sys.name)}</span>
+          <span class="system-name">${escapeHtml(sys.fileName)}</span>
+          ${meta}
+          <button class="remove-file" title="Remove">×</button>
+        </div>`;
+      card.querySelector('.remove-file').onclick = () => removeSystem(sys.id);
+
+      if (sys.error) {
+        const err = document.createElement('div');
+        err.className = 'system-err';
+        err.textContent = '⚠ ' + sys.error + ' — this file will be skipped.';
+        card.appendChild(err);
+        el.appendChild(card);
+        return;
+      }
+
+      const tools = document.createElement('div');
+      tools.className = 'fwd-tools';
+      tools.innerHTML = `
+        <input class="fwd-search" type="text" placeholder="Filter forwarders…" />
+        <button class="fwd-mini" data-act="all">Select all</button>
+        <button class="fwd-mini" data-act="none">Clear</button>`;
+      card.appendChild(tools);
+
+      const list = document.createElement('div');
+      list.className = 'fwd-list';
+      sys.forwarders.forEach(f => {
+        const row = document.createElement('label');
+        row.className = 'fwd-row';
+        row.innerHTML = `<input type="checkbox" ${f.checked ? 'checked' : ''} /><span class="fwd-nm">${escapeHtml(f.name)}</span><span class="fwd-ct">${f.count}</span>`;
+        row.querySelector('input').addEventListener('change', e => { f.checked = e.target.checked; });
+        list.appendChild(row);
+      });
+      card.appendChild(list);
+
+      tools.querySelector('.fwd-search').addEventListener('input', e => {
+        const q = e.target.value.toLowerCase();
+        list.querySelectorAll('.fwd-row').forEach((r, i) => {
+          r.classList.toggle('hide', q && !sys.forwarders[i].name.toLowerCase().includes(q));
+        });
+      });
+      tools.querySelectorAll('.fwd-mini').forEach(btn => btn.addEventListener('click', () => {
+        const val = btn.dataset.act === 'all';
+        sys.forwarders.forEach(f => f.checked = val);
+        list.querySelectorAll('.fwd-row input').forEach(cb => cb.checked = val);
+      }));
+
+      el.appendChild(card);
+    });
   }
 
   function saveNames() {
@@ -339,7 +419,8 @@
   async function splitFile() {
     hideError();
     const names = getNames();
-    if (!workbook) { showError('Please upload a file first.'); return; }
+    const valid = systems.filter(s => !s.error);
+    if (valid.length === 0) { showError('Please upload at least one system file with the required columns.'); return; }
     if (names.length === 0) { showError('Please enter at least one person name.'); return; }
 
     const skipBlanks = document.getElementById('skipBlanks').checked;
@@ -355,25 +436,26 @@
     setProgress(0, 'Starting…');
     document.getElementById('progressWrap').classList.add('show');
 
-    const total = names.length * workbook.SheetNames.length;
+    const total = names.length * valid.length;
     let done = 0;
 
-    // Pre-shuffle each sheet's rows once, so all people get from the same shuffled pool.
-    // Also precompute balanced slice boundaries per person so the remainder is
-    // spread fairly instead of dumping leftovers on (or starving) the last person.
-    const shuffledSheets = {};
-    const sheetBounds = {};
-    for (const shName of workbook.SheetNames) {
-      const { allData } = sheetData[shName];
-      const dataRows = skipBlanks ? allData.filter(r => !isBlankRow(r)) : allData;
+    // Filter each system to its checked forwarders, then pre-shuffle once so all
+    // people draw from the same pool. Balanced slice boundaries spread the
+    // remainder fairly instead of starving the last person.
+    const pool = {};
+    const bounds = {};
+    for (const sys of valid) {
+      const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
+      let dataRows = sys.rows.filter(r => checked.has(r[0]));
+      if (skipBlanks) dataRows = dataRows.filter(r => !isBlankRow(r));
       const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
-      shuffledSheets[shName] = rows;
+      pool[sys.name] = rows;
 
       const sizes = balancedSizes(rows.length, names.length);
-      const bounds = [];
+      const b = [];
       let off = 0;
-      for (const s of sizes) { bounds.push([off, off + s]); off += s; }
-      sheetBounds[shName] = bounds;
+      for (const s of sizes) { b.push([off, off + s]); off += s; }
+      bounds[sys.name] = b;
     }
 
     const usedNames = {};
@@ -382,20 +464,18 @@
       const wb = XLSX.utils.book_new();
       const sheetSummary = {};
 
-      for (const shName of workbook.SheetNames) {
-        const { header } = sheetData[shName];
-        const dataRows = shuffledSheets[shName];
+      for (const sys of valid) {
+        const rows = pool[sys.name];
+        const [start, end] = bounds[sys.name][i];
+        const chunk = rows.slice(start, end);
 
-        const [start, end] = sheetBounds[shName][i];
-        const chunk = dataRows.slice(start, end);
+        sheetSummary[sys.name] = chunk.length;
 
-        sheetSummary[shName] = chunk.length;
-
-        const ws = XLSX.utils.aoa_to_sheet([header, ...chunk]);
-        XLSX.utils.book_append_sheet(wb, ws, shName);
+        const ws = XLSX.utils.aoa_to_sheet([TARGET_COLS, ...chunk]);
+        XLSX.utils.book_append_sheet(wb, ws, sys.name);
 
         done++;
-        setProgress(Math.round((done / total) * 100), `Building ${name} — ${shName}…`);
+        setProgress(Math.round((done / total) * 100), `Building ${name} — ${sys.name}…`);
         await sleep(10);
       }
 
@@ -488,11 +568,6 @@
 
   function showError(msg) { const el = document.getElementById('errorMsg'); el.textContent = msg; el.classList.add('show'); }
   function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
-  function formatSize(b) {
-    if (b < 1024) return b + ' B';
-    if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
-    return (b/(1024*1024)).toFixed(1) + ' MB';
-  }
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 </script>
 </body>
