@@ -407,12 +407,9 @@
   <!-- Tabs + toolbar -->
   <div class="toolbar">
     <div class="seg" role="group" aria-label="View">
-      <button class="seg-btn active" id="tab-records"   onclick="setView('records')">Records</button>
-      <button class="seg-btn" id="tab-quantity"  onclick="setView('quantity')">Quantity</button>
-      <button class="seg-btn" id="tab-personnel" onclick="setView('personnel')">Personnel</button>
-      <button class="seg-btn" id="tab-plan" onclick="setView('plan')">Plan</button>
-      <button class="seg-btn" id="tab-people"    onclick="setView('people')">People</button>
-      <button class="seg-btn" id="tab-analytics" onclick="setView('analytics')">Analytics</button>
+      <button class="seg-btn active" id="tab-plan"    onclick="setView('plan')">Plan</button>
+      <button class="seg-btn" id="tab-records" onclick="setView('records')">Records</button>
+      <button class="seg-btn" id="tab-analyze" onclick="setView('analyze')">Analyze</button>
     </div>
     <div class="spacer"></div>
     <button class="btn-sm" onclick="openImport()" title="Import from ALOKASI PROJECT.xlsx">⤒ Import</button>
@@ -431,12 +428,9 @@
     <button class="btn-sm" onclick="clearFilters()">Clear</button>
   </div>
 
-  <div id="view-records"></div>
-  <div id="view-quantity" style="display:none"></div>
-  <div id="view-personnel" style="display:none"></div>
-  <div id="view-plan" style="display:none"></div>
-  <div id="view-people" style="display:none"></div>
-  <div id="view-analytics" style="display:none"></div>
+  <div id="view-plan"></div>
+  <div id="view-records" style="display:none"></div>
+  <div id="view-analyze" style="display:none"></div>
 
   <div class="page-footer">
     codingkuh.my.id<span class="fsep">·</span>Siemens GP · Project Allocation<br>
@@ -510,7 +504,7 @@ let records = [];
 let loaded = false;                     /* first snapshot received */
 let editId = null;
 let saving = false;
-let viewMode = 'records';
+let viewMode = 'plan';
 let currentUser = null;
 let sortKey = 'date', sortDir = -1;     /* records table sort */
 let qtyMetric = 'total';                /* quantity pivot: total | done */
@@ -527,6 +521,8 @@ let projMeta        = {};                       /* projectSlug -> {name, dueDate
 let projMetaUnsub   = null;
 let planMode        = 'day';                    /* 'day' | 'week' */
 let schedDay        = isoToday();               /* selected day in the cockpit */
+let analyzeTab = 'overview';   /* overview | pivots | people */
+let pivotKind  = 'quantity';   /* quantity | personnel */
 
 const PROJECTS_SEED = ['TRUMPF','WMF','SBG','CLAAS','KRONES','OSRAM','NASH','EPT','CONTI','ATB','Siemens Freia','Siemens Tarif','Siemens Faktual','Valeo','Stamp','Sharepoint','SHELL','Währungskurse','Others'];
 const EKSP_SEED = ['S+S','DHL GF','DHL EXPRESS','Kuehne','ERKA','HONOLD','DACHSER','SBG GERICKE','SBG DACHSER','DATA ENTRY'];
@@ -812,13 +808,12 @@ function applyFilters(list){
 /* ── View switching ── */
 function setView(mode){
   viewMode = mode;
-  ['records','quantity','personnel','plan','people','analytics'].forEach(m=>{
-    const tab = document.getElementById('tab-'+m);
-    const view = document.getElementById('view-'+m);
-    if (tab) tab.classList.toggle('active', m===mode);
-    if (view) view.style.display = m===mode ? '' : 'none';
+  ['plan','records','analyze'].forEach(m=>{
+    document.getElementById('tab-'+m).classList.toggle('active', m===mode);
+    document.getElementById('view-'+m).style.display = m===mode ? '' : 'none';
   });
   document.getElementById('filter-bar').style.display = (mode==='plan') ? 'none' : '';
+  document.getElementById('add-box').style.display    = (mode==='records') ? '' : 'none';
   if (mode==='plan'){
     startScheduleListener(); startProjMetaListener();
     loadHolidayData().then(render).catch(e=>showToast('Could not load holiday data: '+e.message,true));
@@ -828,12 +823,9 @@ function setView(mode){
 function render(){
   if (!loaded){ showLoading(); return; }
   const list = applyFilters(records);
-  if (viewMode==='records')   renderRecords(list);
-  if (viewMode==='quantity')  renderQuantity(list);
-  if (viewMode==='personnel') renderPersonnel(list);
-  if (viewMode==='people')    renderPeople(list);
-  if (viewMode==='analytics') renderAnalytics(list);
-  if (viewMode==='plan')      renderPlan();
+  if (viewMode==='records') renderRecords(list);
+  if (viewMode==='analyze') renderAnalyze(list);
+  if (viewMode==='plan')    renderPlan();
 }
 
 /* ── Records table ── */
@@ -894,8 +886,8 @@ function pivotAxes(list){
   return { dates, projects };
 }
 
-function renderQuantity(list){
-  const host = document.getElementById('view-quantity');
+function renderQuantity(list, host){
+  host = host || document.getElementById('view-quantity');
   const { dates, projects } = pivotAxes(list);
   if (!dates.length){ host.innerHTML = emptyPanel('No data for the Quantity pivot.'); return; }
   const cell = {}; const colTot = {}; const rowTot = {}; let grand = 0;
@@ -918,8 +910,8 @@ function renderQuantity(list){
     </div>`;
 }
 
-function renderPersonnel(list){
-  const host = document.getElementById('view-personnel');
+function renderPersonnel(list, host){
+  host = host || document.getElementById('view-personnel');
   const { dates, projects } = pivotAxes(list);
   if (!dates.length){ host.innerHTML = emptyPanel('No data for the Personnel pivot.'); return; }
   const cell = {};
@@ -939,8 +931,8 @@ function emptyPanel(msg){ return `<div class="panel"><div class="empty"><div cla
 
 /* ── Analyzer ── */
 function compColor(pct){ if(pct==null) return 'var(--text3)'; if(pct>=85) return 'var(--success)'; if(pct>=70) return 'var(--accent)'; if(pct>=50) return 'var(--warn)'; return 'var(--danger)'; }
-function renderAnalytics(list){
-  const host = document.getElementById('view-analytics');
+function renderAnalytics(list, host){
+  host = host || document.getElementById('view-analytics');
   if (!list.length){ host.innerHTML = emptyPanel('No records to analyze.'); return; }
 
   const totalData = list.reduce((a,r)=>a+num(r.total),0);
@@ -1257,8 +1249,8 @@ function renderWeekOverview(){
   host.innerHTML = planToolbar(`${fmtDate(dates[0])} – ${fmtDate(dates[4])}`) + `<div class="ck-week">${cols}</div>`;
 }
 
-function renderPeople(list){
-  const host = document.getElementById('view-people');
+function renderPeople(list, host){
+  host = host || document.getElementById('view-people');
   const people = peopleRollup(list);
   if (!people.length){ host.innerHTML = emptyPanel('No people to score yet.'); return; }
   const totalDone = people.reduce((a,p)=>a+p.done,0);
@@ -1310,6 +1302,28 @@ function renderPeople(list){
   const balCard = `<div class="an-card"><div class="an-card-head">Workload balance <span class="sub">data done per person · avg ${Math.round(avgDonePerPerson).toLocaleString()}</span></div>${balRows}</div>`;
 
   host.innerHTML = metrics + scoreCard + balCard;
+}
+
+function setAnalyzeTab(t){ analyzeTab=t; render(); }
+function renderPivots(list, host){
+  host.innerHTML = `<div class="toolbar"><div class="seg">
+    <button class="seg-btn ${pivotKind==='quantity'?'active':''}" onclick="pivotKind='quantity';render()">Quantity</button>
+    <button class="seg-btn ${pivotKind==='personnel'?'active':''}" onclick="pivotKind='personnel';render()">Personnel</button>
+  </div></div><div id="pivot-body"></div>`;
+  const body=document.getElementById('pivot-body');
+  if(pivotKind==='quantity') renderQuantity(list, body); else renderPersonnel(list, body);
+}
+function renderAnalyze(list){
+  const host=document.getElementById('view-analyze');
+  host.innerHTML = `<div class="toolbar"><div class="seg">
+    <button class="seg-btn ${analyzeTab==='overview'?'active':''}" onclick="setAnalyzeTab('overview')">Overview</button>
+    <button class="seg-btn ${analyzeTab==='pivots'?'active':''}" onclick="setAnalyzeTab('pivots')">Pivots</button>
+    <button class="seg-btn ${analyzeTab==='people'?'active':''}" onclick="setAnalyzeTab('people')">People</button>
+  </div></div><div id="analyze-body"></div>`;
+  const body=document.getElementById('analyze-body');
+  if(analyzeTab==='overview') renderAnalytics(list, body);
+  else if(analyzeTab==='pivots') renderPivots(list, body);
+  else renderPeople(list, body);
 }
 
 /* ════ Excel export — rebuilds the ALOKASI workbook layout ════ */
@@ -1642,7 +1656,8 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeEdit(); clo
 initTheme();
 resetForm();
 /* Deep-link: task-reviewer redirect lands on the People view. */
-if (location.hash === '#people') setView('people');
+if (location.hash === '#people'){ analyzeTab='people'; setView('analyze'); }
+else setView('plan');
 checkAuth();
 if (window.Grimoire && window.Grimoire.Offline) window.Grimoire.Offline.register();
 </script>
