@@ -1223,6 +1223,40 @@ function renderCockpit(){
   host.innerHTML = planToolbar(fmtDate(day)) + metrics + phBanner + peopleSection + lanesSection;
 }
 
+function planJump(iso){ schedDay=iso; planMode='day'; schedMonday=mondayOf(iso); render(); }
+function renderWeekOverview(){
+  const host=document.getElementById('view-plan');
+  if(!htLoaded){ host.innerHTML=`<div class="panel"><div class="empty"><div class="empty-icon">⏳</div><div>Loading roster…</div></div></div>`; return; }
+  const dates=weekDates(schedMonday), today=isoToday();
+  const WEEKDAY=['Mon','Tue','Wed','Thu','Fri'];
+  const ppl=htPeople.filter(p=>!schedDept||p.dept===schedDept);
+  const backlog=projectBacklog(records, today);
+  const cols=dates.map((iso,i)=>{
+    const ph=publicHolidayName(htPublicHols, iso);
+    const dayAssigns=Object.values(scheduleAssignments).filter(a=>a.date===iso);
+    const planned=dayAssigns.reduce((s,a)=>s+num(a.qty),0);
+    const avail=ppl.filter(p=>{ const lv=personLeaveOn(htHolidays,p.id,iso); return !(lv&&!lv.halfDay); }).length;
+    const byProject={}; dayAssigns.forEach(a=>{ byProject[a.project]=(byProject[a.project]||0)+num(a.qty); });
+    let atRisk=0;
+    Object.values(projMeta).forEach(m=>{
+      if(!m.dueDate || !m.name) return;
+      const bl=backlog[m.name]; if(!bl || bl.remaining<=0) return;
+      const dl=workingDaysBetween(iso, m.dueDate, htPublicHols);
+      const t=riskTier(bl.remaining, dl, byProject[m.name]||0).tier;
+      if(t==='slip'||t==='overdue') atRisk++;
+    });
+    return `<div class="ck-day ${ph?'pubhol':''}" onclick="planJump('${iso}')">
+      <div style="font-family:var(--ibm-mono);font-size:10px;color:var(--text3)">${WEEKDAY[i]} ${esc(fmtDate(iso))}</div>
+      ${ph
+        ? `<div class="ck-badge none" style="margin-top:8px;display:inline-block">${esc(ph)}</div>`
+        : `<div class="metric-val" style="font-size:1.4rem;margin-top:6px">${planned.toLocaleString()}</div>
+           <div class="ck-status">planned · ${avail} avail</div>
+           ${atRisk?`<div class="ck-badge slip" style="margin-top:6px;display:inline-block">${atRisk} at risk</div>`:''}`}
+    </div>`;
+  }).join('');
+  host.innerHTML = planToolbar(`${fmtDate(dates[0])} – ${fmtDate(dates[4])}`) + `<div class="ck-week">${cols}</div>`;
+}
+
 function renderPeople(list){
   const host = document.getElementById('view-people');
   const people = peopleRollup(list);
