@@ -79,6 +79,15 @@
   .toggle input:checked + .toggle-slider { background: var(--accent-dim); border-color: var(--accent); }
   .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--accent); }
 
+  /* note filter */
+  .opt-tag { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; color: var(--text3); border: 1px solid var(--border2); border-radius: 4px; padding: 1px 5px; margin-left: 6px; text-transform: uppercase; }
+  .note-hint { font-size: 13px; color: var(--text2); font-weight: 300; margin-bottom: 12px; line-height: 1.5; }
+  .note-hint strong { color: var(--text); font-weight: 500; }
+  .note-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-family: var(--mono); font-size: 13px; color: var(--text); outline: none; resize: vertical; transition: border-color 0.15s; }
+  .note-input:focus { border-color: var(--accent); }
+  .note-input::placeholder { color: var(--text3); }
+  .note-stat { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-top: 10px; min-height: 14px; }
+
   .split-btn { width: 100%; max-width: 620px; padding: 16px; background: var(--accent); color: #0d0d0d; border: none; border-radius: var(--radius); font-family: var(--sans); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: opacity 0.15s, transform 0.1s; letter-spacing: -0.01em; }
   .split-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
   .split-btn:active:not(:disabled) { transform: translateY(0); }
@@ -167,6 +176,13 @@
   </div>
 </div>
 
+<div class="card">
+  <div class="card-title">03 — Note filter <span class="opt-tag">optional</span></div>
+  <p class="note-hint">Keep rows whose <strong>Note</strong> contains any of these phrases — one per line. Rows with no note are always kept. Leave empty to keep every row. Applies to all systems.</p>
+  <textarea class="note-input" id="noteQuery" rows="2" placeholder="fehlende Kreditorenangabe"></textarea>
+  <div class="note-stat" id="noteStat"></div>
+</div>
+
 <button class="split-btn" id="splitBtn" onclick="splitFile()">⚡ Split file</button>
 <div class="error-msg" id="errorMsg"></div>
 
@@ -195,6 +211,7 @@
     [...e.dataTransfer.files].forEach(handleFile);
   });
   fileInput.addEventListener('change', e => { [...e.target.files].forEach(handleFile); fileInput.value = ''; });
+  document.getElementById('noteQuery').addEventListener('input', updateNoteStat);
 
   // People list: Enter adds a new person, typing persists names.
   const peopleListEl = document.getElementById('peopleList');
@@ -237,14 +254,21 @@
     const idx = TARGET_COLS.map(name => header.findIndex(h => String(h).trim() === name));
     return idx.every(i => i >= 0) ? idx : null;
   }
-  // Project data rows to [Vendor details, Supplier, Document number]; drop blank-vendor rows.
-  function extractRows(dataRows, cols) {
+  // Every column literally named "Note" (there are several, at varying positions).
+  function noteColumns(header) {
+    return header.map((h, i) => (String(h).trim() === 'Note' ? i : -1)).filter(i => i >= 0);
+  }
+  // Project rows to [Vendor details, Supplier, Document number, mergedNote]; drop
+  // blank-vendor rows. mergedNote joins the non-blank Note cells — used only for
+  // the note filter, never written to the output.
+  function extractRows(dataRows, cols, noteIdx = []) {
     const [vi, si, di] = cols;
     const out = [];
     for (const r of dataRows) {
       const v = r[vi];
       if (v === null || v === undefined || String(v).trim() === '') continue;
-      out.push([r[vi], r[si], r[di]]);
+      const note = noteIdx.map(i => String(r[i] ?? '').trim()).filter(Boolean).join(' | ');
+      out.push([r[vi], r[si], r[di], note]);
     }
     return out;
   }
@@ -258,6 +282,18 @@
   function systemName(fileName) {
     return fileName.replace(/\.[^.]+$/, '').trim() || 'Sheet';
   }
+  // Split the note-filter box into lowercased terms (one per line or ';'-separated).
+  function parseNoteTerms(str) {
+    return String(str || '').split(/[\n;]+/).map(t => t.trim().toLowerCase()).filter(Boolean);
+  }
+  // Keep a row by its merged note: blank notes always pass; with no terms, all pass;
+  // otherwise the note must contain at least one term (case-insensitive).
+  function noteKeep(note, terms) {
+    if (!note) return true;
+    if (terms.length === 0) return true;
+    const n = String(note).toLowerCase();
+    return terms.some(t => n.includes(t));
+  }
 
   function handleFile(file) {
     if (!file.name.match(/\.(xlsx|xls)$/i)) { showError('Please upload Excel files (.xlsx or .xls).'); return; }
@@ -269,6 +305,7 @@
         const hIdx = findHeaderIdx(rows);
         const header = rows[hIdx] || [];
         const cols = pickColumns(header);
+        const noteIdx = noteColumns(header);
 
         // de-dupe system name against already-loaded files
         let name = systemName(file.name); const base = name; let n = 2;
@@ -279,11 +316,12 @@
           const missing = TARGET_COLS.filter(c => header.findIndex(h => String(h).trim() === c) < 0);
           sys.error = 'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ');
         } else {
-          sys.rows = extractRows(rows.slice(hIdx + 1), cols);
+          sys.rows = extractRows(rows.slice(hIdx + 1), cols, noteIdx);
           sys.forwarders = tallyForwarders(sys.rows).map(f => ({ ...f, checked: true }));
         }
         systems.push(sys);
         renderSystems();
+        updateNoteStat();
         hideError();
       } catch (err) { showError('Could not read ' + file.name + ': ' + err.message); }
     };
@@ -293,6 +331,25 @@
   function removeSystem(id) {
     systems = systems.filter(s => s.id !== id);
     renderSystems();
+    updateNoteStat();
+  }
+
+  // Live count for the note filter, across all valid systems.
+  function updateNoteStat() {
+    const el = document.getElementById('noteStat');
+    if (!el) return;
+    const valid = systems.filter(s => !s.error);
+    if (valid.length === 0) { el.textContent = ''; return; }
+    const terms = parseNoteTerms(document.getElementById('noteQuery').value);
+    let noted = 0, matched = 0, blank = 0;
+    for (const sys of valid) for (const r of sys.rows) {
+      if (!r[3]) { blank++; continue; }
+      noted++;
+      if (noteKeep(r[3], terms)) matched++;
+    }
+    el.textContent = terms.length === 0
+      ? `No note filter — keeping all ${noted + blank} rows (${blank} without a note).`
+      : `Matches ${matched} of ${noted} noted rows; ${blank} blank-note rows always kept.`;
   }
 
   function renderSystems() {
@@ -442,11 +499,12 @@
     // Filter each system to its checked forwarders, then pre-shuffle once so all
     // people draw from the same pool. Balanced slice boundaries spread the
     // remainder fairly instead of starving the last person.
+    const noteTerms = parseNoteTerms(document.getElementById('noteQuery').value);
     const pool = {};
     const bounds = {};
     for (const sys of valid) {
       const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
-      let dataRows = sys.rows.filter(r => checked.has(r[0]));
+      let dataRows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[3], noteTerms));
       if (skipBlanks) dataRows = dataRows.filter(r => !isBlankRow(r));
       const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
       pool[sys.name] = rows;
@@ -471,7 +529,7 @@
 
         sheetSummary[sys.name] = chunk.length;
 
-        const ws = XLSX.utils.aoa_to_sheet([TARGET_COLS, ...chunk]);
+        const ws = XLSX.utils.aoa_to_sheet([TARGET_COLS, ...chunk.map(r => r.slice(0, 3))]);
         XLSX.utils.book_append_sheet(wb, ws, sys.name);
 
         done++;

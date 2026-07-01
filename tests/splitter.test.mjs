@@ -15,14 +15,39 @@ test('pickColumns: finds the 3 targets by name regardless of order', () => {
   assert.equal(s.pickColumns(['Vendor details', 'Supplier']), null); // missing Document number
 });
 
-test('extractRows: projects to [vendor,supplier,doc] and drops blank-vendor rows', () => {
+test('extractRows: projects to [vendor,supplier,doc,note], merges Note cells, drops blank-vendor rows', () => {
   const rows = [
-    ['DHL', '111', 'D1', 'junk'],
-    ['', '222', 'D2'],            // blank vendor -> dropped
-    ['   ', '333', 'D3'],         // whitespace vendor -> dropped
-    ['Schenker', '444', 'D4'],
+    // vendor,    supplier, doc,  note@3,   note@4
+    ['DHL',      '111', 'D1', '',      'kreditor fehlt'],
+    ['',         '222', 'D2', 'x',     ''],              // blank vendor -> dropped
+    ['Schenker', '444', 'D4', 'noteA', 'noteB'],         // two note cells -> merged
+    ['Kuehne',   '555', 'D5', '',      ''],              // no note -> ''
   ];
-  assert.deepEqual(plain(s.extractRows(rows, [0, 1, 2])), [['DHL', '111', 'D1'], ['Schenker', '444', 'D4']]);
+  assert.deepEqual(plain(s.extractRows(rows, [0, 1, 2], [3, 4])), [
+    ['DHL', '111', 'D1', 'kreditor fehlt'],
+    ['Schenker', '444', 'D4', 'noteA | noteB'],
+    ['Kuehne', '555', 'D5', ''],
+  ]);
+});
+
+test('noteColumns: every column literally named "Note"', () => {
+  assert.deepEqual(plain(s.noteColumns(['A', 'Note', 'B', 'Note', 'Note'])), [1, 3, 4]);
+  assert.deepEqual(plain(s.noteColumns(['A', 'B'])), []);
+});
+
+test('parseNoteTerms: lowercased, split on newline/semicolon, trimmed', () => {
+  assert.deepEqual(plain(s.parseNoteTerms('Fehlende Kreditorenangabe\n Kreditor fehlt ;;')),
+    ['fehlende kreditorenangabe', 'kreditor fehlt']);
+  assert.deepEqual(plain(s.parseNoteTerms('   ')), []);
+  assert.deepEqual(plain(s.parseNoteTerms('')), []);
+});
+
+test('noteKeep: blank always kept; no terms keeps all; else substring match (any term)', () => {
+  assert.equal(s.noteKeep('', ['x']), true);                 // blank note -> always kept
+  assert.equal(s.noteKeep('anything', []), true);            // no terms -> keep all
+  assert.equal(s.noteKeep('fehlende Kreditorenangabe Bitte…', ['fehlende kreditorenangabe']), true);
+  assert.equal(s.noteKeep('Falschabrechnung Diesel', ['fehlende kreditorenangabe']), false);
+  assert.equal(s.noteKeep('Kreditor fehlt', ['fehlende kreditorenangabe', 'kreditor fehlt']), true);
 });
 
 test('tallyForwarders: counts per vendor, sorted desc', () => {
