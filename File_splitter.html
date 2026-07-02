@@ -19,12 +19,13 @@
     --radius: 10px;
   }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 60px 20px 80px; }
-  header { width: 100%; max-width: 620px; margin-bottom: 48px; }
+  header { width: 100%; margin-bottom: 36px; }
   .logo { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; color: var(--accent); text-transform: uppercase; margin-bottom: 20px; }
   h1 { font-size: clamp(28px, 5vw, 42px); font-weight: 500; line-height: 1.15; letter-spacing: -0.02em; }
   h1 em { font-style: normal; color: var(--accent); }
   .sub { margin-top: 10px; font-size: 14px; color: var(--text2); font-weight: 300; }
-  .card { width: 100%; max-width: 620px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 16px; }
+  .card { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+  main.cards { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 16px; align-items: start; margin-bottom: 16px; }
   .card-title { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--text3); text-transform: uppercase; margin-bottom: 16px; }
   .dropzone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 36px 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
   .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-dim); }
@@ -85,18 +86,18 @@
   .note-hint strong { color: var(--text); font-weight: 500; }
   .note-stat { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-top: 10px; min-height: 14px; }
 
-  .split-btn { width: 100%; max-width: 620px; padding: 16px; background: var(--accent); color: #0d0d0d; border: none; border-radius: var(--radius); font-family: var(--sans); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: opacity 0.15s, transform 0.1s; letter-spacing: -0.01em; }
+  .split-btn { width: 100%; padding: 16px; background: var(--accent); color: #0d0d0d; border: none; border-radius: var(--radius); font-family: var(--sans); font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: opacity 0.15s, transform 0.1s; letter-spacing: -0.01em; }
   .split-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
   .split-btn:active:not(:disabled) { transform: translateY(0); }
   .split-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-  .progress-wrap { display: none; width: 100%; max-width: 620px; margin-top: 20px; }
+  .progress-wrap { display: none; width: 100%; margin-top: 20px; }
   .progress-wrap.show { display: block; }
   .progress-bar-bg { background: var(--surface); border: 1px solid var(--border); border-radius: 99px; height: 6px; overflow: hidden; margin-bottom: 10px; }
   .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 99px; width: 0%; transition: width 0.3s ease; }
   .progress-label { font-size: 12px; color: var(--text2); font-family: var(--mono); }
-  .results { display: none; width: 100%; max-width: 620px; flex-direction: column; gap: 10px; margin-top: 8px; }
-  .results.show { display: flex; }
-  .result-summary { display: flex; flex-wrap: wrap; gap: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 20px; font-size: 12px; color: var(--text2); font-family: var(--mono); letter-spacing: 0.02em; }
+  .results { display: none; width: 100%; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 10px; margin-top: 8px; }
+  .results.show { display: grid; }
+  .result-summary { display: flex; flex-wrap: wrap; gap: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 20px; font-size: 12px; color: var(--text2); font-family: var(--mono); letter-spacing: 0.02em; grid-column: 1 / -1; }
   .result-summary strong { color: var(--accent); font-weight: 500; }
   .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; animation: slideIn 0.2s ease; }
   .result-info { flex: 1; min-width: 0; }
@@ -110,12 +111,12 @@
   .warn-badge { display: inline-block; font-size: 10px; background: rgba(245,166,35,0.15); border: 1px solid rgba(245,166,35,0.3); color: var(--warn); border-radius: 4px; padding: 1px 6px; margin-left: 4px; vertical-align: middle; }
   .dl-btn { background: var(--accent-dim); border: 1px solid rgba(200,241,53,0.25); border-radius: 7px; color: var(--accent); cursor: pointer; padding: 8px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; transition: all 0.15s; white-space: nowrap; text-decoration: none; display: inline-block; flex-shrink: 0; }
   .dl-btn:hover { background: var(--accent-mid); border-color: var(--accent); }
-  .dl-all { width: 100%; max-width: 620px; margin-top: 4px; background: none; border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; color: var(--text2); font-family: var(--sans); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s; }
+  .dl-all { width: 100%; margin-top: 4px; background: none; border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px; color: var(--text2); font-family: var(--sans); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s; }
   .dl-all:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
   .dl-all.hide { display: none; }
-  .error-msg { display: none; width: 100%; max-width: 620px; background: rgba(255,92,92,0.08); border: 1px solid rgba(255,92,92,0.3); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--danger); margin-top: 12px; }
+  .error-msg { display: none; width: 100%; background: rgba(255,92,92,0.08); border: 1px solid rgba(255,92,92,0.3); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--danger); margin-top: 12px; }
   .error-msg.show { display: block; }
-  .nav-back { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text2); text-decoration: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; transition: color 0.15s, border-color 0.15s, background 0.15s; margin-bottom: 36px; }
+  .nav-back { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text2); text-decoration: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; transition: color 0.15s, border-color 0.15s, background 0.15s; margin-bottom: 36px; align-self: flex-start; }
   .nav-back:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
   .nav-back svg { flex-shrink: 0; }
 </style>
@@ -135,6 +136,7 @@
   <p class="sub">Drop one Excel per system, pick the forwarders you want, and get the Vendor / Supplier / Document extract split evenly per person.</p>
 </header>
 
+<main class="cards">
 <div class="card">
   <div class="card-title">01 — Upload files (one per system)</div>
   <div class="dropzone" id="dropzone">
@@ -179,6 +181,7 @@
   <div id="noteFilterBody"><p class="note-hint" style="margin-bottom:0; opacity:.6;">Upload files to list their notes.</p></div>
   <div class="note-stat" id="noteStat"></div>
 </div>
+</main>
 
 <button class="split-btn" id="splitBtn" onclick="splitFile()">⚡ Split file</button>
 <div class="error-msg" id="errorMsg"></div>
