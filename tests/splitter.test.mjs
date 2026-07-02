@@ -15,18 +15,18 @@ test('pickColumns: finds the 3 targets by name regardless of order', () => {
   assert.equal(s.pickColumns(['Vendor details', 'Supplier']), null); // missing Document number
 });
 
-test('extractRows: projects to [vendor,supplier,doc,note], merges Note cells, drops blank-vendor rows', () => {
+test('extractRows: projects to [vendor,supplier,doc,notes[]], collects Note cells, drops blank-vendor rows', () => {
   const rows = [
     // vendor,    supplier, doc,  note@3,   note@4
     ['DHL',      '111', 'D1', '',      'kreditor fehlt'],
     ['',         '222', 'D2', 'x',     ''],              // blank vendor -> dropped
-    ['Schenker', '444', 'D4', 'noteA', 'noteB'],         // two note cells -> merged
-    ['Kuehne',   '555', 'D5', '',      ''],              // no note -> ''
+    ['Schenker', '444', 'D4', 'noteA', 'noteB'],         // two note cells -> both kept, separate
+    ['Kuehne',   '555', 'D5', '',      ''],              // no note -> []
   ];
   assert.deepEqual(plain(s.extractRows(rows, [0, 1, 2], [3, 4])), [
-    ['DHL', '111', 'D1', 'kreditor fehlt'],
-    ['Schenker', '444', 'D4', 'noteA | noteB'],
-    ['Kuehne', '555', 'D5', ''],
+    ['DHL', '111', 'D1', ['kreditor fehlt']],
+    ['Schenker', '444', 'D4', ['noteA', 'noteB']],
+    ['Kuehne', '555', 'D5', []],
   ]);
 });
 
@@ -35,24 +35,27 @@ test('noteColumns: every column literally named "Note"', () => {
   assert.deepEqual(plain(s.noteColumns(['A', 'B'])), []);
 });
 
-test('parseNoteTerms: lowercased, split on newline/semicolon, trimmed', () => {
-  assert.deepEqual(plain(s.parseNoteTerms('Fehlende Kreditorenangabe\n Kreditor fehlt ;;')),
-    ['fehlende kreditorenangabe', 'kreditor fehlt']);
-  assert.deepEqual(plain(s.parseNoteTerms('   ')), []);
-  assert.deepEqual(plain(s.parseNoteTerms('')), []);
-});
-
-test('noteKeep: blank always kept; no terms keeps all; else substring match (any term)', () => {
-  assert.equal(s.noteKeep('', ['x']), true);                 // blank note -> always kept
-  assert.equal(s.noteKeep('anything', []), true);            // no terms -> keep all
-  assert.equal(s.noteKeep('fehlende Kreditorenangabe Bitte…', ['fehlende kreditorenangabe']), true);
-  assert.equal(s.noteKeep('Falschabrechnung Diesel', ['fehlende kreditorenangabe']), false);
-  assert.equal(s.noteKeep('Kreditor fehlt', ['fehlende kreditorenangabe', 'kreditor fehlt']), true);
+test('noteKeep: no notes always kept; else any note value in the checked set', () => {
+  const checked = new Set(['fehlende Kreditorenangabe', 'Kreditor fehlt']);
+  assert.equal(s.noteKeep([], checked), true);                              // blank -> always kept
+  assert.equal(s.noteKeep(['fehlende Kreditorenangabe'], checked), true);
+  assert.equal(s.noteKeep(['Falschabrechnung Diesel'], checked), false);    // exact value, no substring
+  assert.equal(s.noteKeep(['Falschabrechnung Diesel', 'Kreditor fehlt'], checked), true); // any-match
+  assert.equal(s.noteKeep(['anything'], new Set()), false);                 // nothing checked -> noted rows drop
 });
 
 test('tallyForwarders: counts per vendor, sorted desc', () => {
   const rows = [['DHL', '', '1'], ['Schenker', '', '2'], ['DHL', '', '3']];
   assert.deepEqual(plain(s.tallyForwarders(rows)), [{ name: 'DHL', count: 2 }, { name: 'Schenker', count: 1 }]);
+});
+
+test('tallyNotes: counts each note value across all rows, sorted desc', () => {
+  const rows = [
+    ['DHL', '', '1', ['A', 'B']],
+    ['DHL', '', '2', ['A']],
+    ['SCH', '', '3', []],
+  ];
+  assert.deepEqual(plain(s.tallyNotes(rows)), [{ name: 'A', count: 2 }, { name: 'B', count: 1 }]);
 });
 
 test('balancedSizes: spreads remainder to the front, sums to n', () => {
