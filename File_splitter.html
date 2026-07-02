@@ -276,11 +276,11 @@
     }
     return out;
   }
-  // Count rows per distinct vendor (column 0 of projected rows), sorted desc.
+  // Count rows per distinct vendor (column 0 of projected rows), sorted A-Z by name.
   function tallyForwarders(rows) {
     const m = new Map();
     for (const r of rows) m.set(r[0], (m.get(r[0]) || 0) + 1);
-    return [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+    return [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name));
   }
   // System / output-sheet name from filename: strip extension.
   function systemName(fileName) {
