@@ -20,7 +20,7 @@
 - Reuse the existing `fwd-search` / `fwd-mini` / `fwd-list` / `fwd-row` / `fwd-nm` / `fwd-ct` CSS classes for the note checklist — do not duplicate them.
 - Default = **all notes checked** (equivalent to the old "empty box keeps everything").
 - The note filter is **global** across all valid systems (as today).
-- Tests run with: `node --test tests/` from the repo root. All existing non-note tests must keep passing untouched.
+- Tests run with: `node --test "tests/*.test.mjs"` from the repo root. All existing non-note tests must keep passing untouched.
 
 ---
 
@@ -94,7 +94,7 @@ test('tallyNotes: counts each note value across all rows, sorted desc', () => {
 
 - [ ] **Step 2: Run tests to verify the new ones fail**
 
-Run: `node --test tests/`
+Run: `node --test "tests/*.test.mjs"`
 Expected: FAIL — `extractRows` (still merges into a string), `noteKeep` (contains-semantics signature), `tallyNotes` (`s.tallyNotes is not a function`). `pickColumns`, `noteColumns`, `tallyForwarders`, `balancedSizes`, `systemName` still pass.
 
 - [ ] **Step 3: Change the pure helpers in `File_splitter.html`**
@@ -139,7 +139,7 @@ Replace the `parseNoteTerms` + `noteKeep` block (~lines 285–296) with:
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `node --test tests/`
+Run: `node --test "tests/*.test.mjs"`
 Expected: PASS, all tests green (the UI wiring isn't loaded by the harness beyond top-level declarations, so the page's temporarily-stale callers don't affect tests).
 
 - [ ] **Step 5: Rewire the UI — state, card 03, render, stat, split**
@@ -324,7 +324,7 @@ to:
 
 - [ ] **Step 6: Run tests + grep for stragglers**
 
-Run: `node --test tests/`
+Run: `node --test "tests/*.test.mjs"`
 Expected: PASS (all tests).
 
 Run: `grep -n "parseNoteTerms\|noteQuery\|note-input" File_splitter.html tests/splitter.test.mjs`
@@ -445,7 +445,7 @@ After `</header>` (~line 139) insert `<main class="cards">`; after the closing `
 
 - [ ] **Step 3: Run tests (guard against accidental script damage)**
 
-Run: `node --test tests/`
+Run: `node --test "tests/*.test.mjs"`
 Expected: PASS.
 
 Run: `grep -c "max-width: 620px" File_splitter.html`
