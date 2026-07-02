@@ -44,9 +44,9 @@ test('noteKeep: no notes always kept; else any note value in the checked set', (
   assert.equal(s.noteKeep(['anything'], new Set()), false);                 // nothing checked -> noted rows drop
 });
 
-test('tallyForwarders: counts per vendor, sorted desc', () => {
-  const rows = [['DHL', '', '1'], ['Schenker', '', '2'], ['DHL', '', '3']];
-  assert.deepEqual(plain(s.tallyForwarders(rows)), [{ name: 'DHL', count: 2 }, { name: 'Schenker', count: 1 }]);
+test('tallyForwarders: counts per vendor, sorted A-Z by name', () => {
+  const rows = [['Zebra Sped', '', '1'], ['Zebra Sped', '', '2'], ['Alpha Log', '', '3']];
+  assert.deepEqual(plain(s.tallyForwarders(rows)), [{ name: 'Alpha Log', count: 1 }, { name: 'Zebra Sped', count: 2 }]);
 });
 
 test('tallyNotes: counts each note value across all rows, sorted desc', () => {
