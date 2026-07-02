@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>File Splitter</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;500;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -167,7 +167,7 @@
     </label>
   </div>
   <div class="toggle-row">
-    <div class="toggle-label"><span>Shuffle rows</span> — randomly mix data so everyone gets a spread, not just top/middle/bottom</div>
+    <div class="toggle-label"><span>Shuffle rows</span> — randomly mix who gets which rows; every sheet is re-sorted by Document number (Z→A) after splitting</div>
     <label class="toggle">
       <input type="checkbox" id="shuffleRows" checked />
       <span class="toggle-slider"></span>
@@ -201,6 +201,10 @@
   let noteChecked = new Map(); // note string -> boolean (global checklist state)
   const NAMES_KEY = 'fileSplitter.names';
   const TARGET_COLS = ['Vendor details', 'Supplier', 'Document number'];
+  const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
+  const CELL_BORDERS = { top: BORDER_THIN, bottom: BORDER_THIN, left: BORDER_THIN, right: BORDER_THIN };
+  const HEADER_STYLE = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '262626' } }, border: CELL_BORDERS };
+  const DATA_STYLE = { border: CELL_BORDERS };
 
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
@@ -281,6 +285,19 @@
   // System / output-sheet name from filename: strip extension.
   function systemName(fileName) {
     return fileName.replace(/\.[^.]+$/, '').trim() || 'Sheet';
+  }
+  // Sort projected rows by Document number (index 2), Z→A, numeric-aware
+  // ("10" above "9"); blank/missing document numbers sink to the bottom.
+  function docNumDesc(a, b) {
+    return String(b[2] ?? '').localeCompare(String(a[2] ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  }
+  // Column widths for the output sheet: content-fitted, clamped to [12, 44].
+  function colWidths(header, rows) {
+    return header.map((h, c) => {
+      let max = String(h).length;
+      for (const r of rows) max = Math.max(max, String(r[c] ?? '').length);
+      return { wch: Math.min(Math.max(max + 2, 12), 44) };
+    });
   }
   // Count rows per distinct note value across projected rows, sorted desc.
   // Per-cell values (not the merged string): combinations of standard phrases
@@ -587,10 +604,17 @@
         const rows = pool[sys.name];
         const [start, end] = bounds[sys.name][i];
         const chunk = rows.slice(start, end);
+        chunk.sort(docNumDesc); // Z→A per sheet; the shared pool stays untouched
 
         sheetSummary[sys.name] = chunk.length;
 
         const ws = XLSX.utils.aoa_to_sheet([TARGET_COLS, ...chunk.map(r => r.slice(0, 3))]);
+        for (let R = 0; R <= chunk.length; R++) for (let C = 0; C < TARGET_COLS.length; C++) {
+          const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+          if (cell) cell.s = R === 0 ? HEADER_STYLE : DATA_STYLE;
+        }
+        ws['!cols'] = colWidths(TARGET_COLS, chunk);
+        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: chunk.length, c: TARGET_COLS.length - 1 } }) };
         XLSX.utils.book_append_sheet(wb, ws, sys.name);
 
         done++;

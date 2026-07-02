@@ -71,3 +71,25 @@ test('systemName: strips the extension', () => {
   assert.equal(s.systemName('KSP.xlsx'), 'KSP');
   assert.equal(s.systemName('weird'), 'weird');
 });
+
+test('docNumDesc: sorts rows by Document number Z→A, numeric-aware, blanks last', () => {
+  const r = d => ['V', 'S', d, []];
+  const rows = [r('9'), r('D-2'), r(''), r('10'), r(100), r('D-10')];
+  const sorted = [...rows].sort(s.docNumDesc).map(x => String(x[2]));
+  assert.deepEqual(plain(sorted), ['D-10', 'D-2', '100', '10', '9', '']);
+});
+
+test('colWidths: per-column max content length +2, clamped to [12, 44]', () => {
+  const header = ['Vendor details', 'Supplier', 'Document number'];
+  const rows = [
+    ['Schenker Deutschland AG, Nuernberg', '12345', 'D1'],
+    ['DHL', 'x'.repeat(60), 4711],
+  ];
+  assert.deepEqual(plain(s.colWidths(header, rows)), [
+    { wch: 36 }, // 34 + 2
+    { wch: 44 }, // 62 capped
+    { wch: 17 }, // header 'Document number' (15) + 2
+  ]);
+  assert.deepEqual(plain(s.colWidths(['A', 'B', 'C'], [])),
+    [{ wch: 12 }, { wch: 12 }, { wch: 12 }]); // floor
+});
