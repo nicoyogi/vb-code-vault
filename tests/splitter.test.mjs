@@ -79,6 +79,36 @@ test('docNumDesc: sorts rows by Document number Z→A, numeric-aware, blanks las
   assert.deepEqual(plain(sorted), ['D-10', 'D-2', '100', '10', '9', '']);
 });
 
+test('systemRank: fixed FNP→KSP→OPP→PS1 order, unknown names after, case/substring tolerant', () => {
+  const names = ['PS1', 'zzz extra', 'Export FNP 02.07', 'opp', 'KSP'];
+  const sorted = [...names].sort((a, b) => s.systemRank(a) - s.systemRank(b));
+  assert.deepEqual(plain(sorted), ['Export FNP 02.07', 'KSP', 'opp', 'PS1', 'zzz extra']);
+});
+
+test('normDoc: stringifies and trims, null/undefined -> empty', () => {
+  assert.equal(s.normDoc(' 5093162 '), '5093162');
+  assert.equal(s.normDoc(5116690), '5116690');
+  assert.equal(s.normDoc(null), '');
+});
+
+test('prioDocsFromSheet: walks actual cells (not !ref), per-header column, skips blanks and repeated headers', () => {
+  const sheet = {
+    '!ref': 'A1:U1048576',            // stretched range must not matter
+    A1: { v: 'SAP' }, G1: { v: 'Dokumentnummer' }, H1: { v: 'Document number' },
+    A2: { v: 'FNP' }, G2: { v: '5093162' }, H2: { v: 'D-1' },
+    G3: { v: 5116690 },               // numeric cell -> collected as string
+    G4: { v: '  ' },                  // blank -> skipped
+    G5: { v: 'Dokumentnummer' },      // stacked export header -> not a value
+    G6: { v: '5126962' },
+    F3: { v: '9999' },                // non-doc column -> ignored
+    B9: { v: 'Dokumentnummer' },      // header mid-sheet: only rows below it count
+    B2: { v: 'above-header' }, B10: { v: '7777' },
+  };
+  assert.deepEqual(plain(s.prioDocsFromSheet(sheet)).sort(),
+    ['5093162', '5116690', '5126962', '7777', 'D-1'].sort());
+  assert.deepEqual(plain(s.prioDocsFromSheet({ '!ref': 'A1:B2', A1: { v: 'no headers here' } })), []);
+});
+
 test('colWidths: per-column max content length +2, clamped to [12, 44]', () => {
   const header = ['Vendor details', 'Supplier', 'Document number'];
   const rows = [

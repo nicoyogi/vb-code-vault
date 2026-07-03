@@ -35,7 +35,13 @@ export function loadSplitter() {
 
   const store = new Map();
   const sandbox = {
-    XLSX: {}, JSZip: function () {},
+    // decode_cell is the one XLSX util the pure helpers call ('BC12' -> {c:54, r:11}).
+    XLSX: { utils: { decode_cell(a) {
+      let c = 0, i = 0;
+      while (i < a.length && a[i] >= 'A' && a[i] <= 'Z') c = c * 26 + a.charCodeAt(i++) - 64;
+      return { c: c - 1, r: parseInt(a.slice(i), 10) - 1 };
+    } } },
+    JSZip: function () {},
     document: {
       getElementById: () => makeEl(), querySelector: () => makeEl(),
       querySelectorAll: () => [], createElement: () => makeEl(),
