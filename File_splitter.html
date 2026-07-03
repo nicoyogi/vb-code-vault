@@ -454,6 +454,19 @@
     }
     return docs;
   }
+  // Classify a file as tariff or factual work from its 'Step description'
+  // column: the first cell containing a keyword decides. Missing column or
+  // no matching cell -> 'tariff' (the pre-branching behavior).
+  function detectGroup(header, dataRows) {
+    const si = header.findIndex(h => String(h).trim() === 'Step description');
+    if (si < 0) return 'tariff';
+    for (const r of dataRows) {
+      const v = String(r[si] ?? '').toLowerCase();
+      if (v.includes('tarif')) return 'tariff';
+      if (v.includes('factual') || v.includes('faktual')) return 'factual';
+    }
+    return 'tariff';
+  }
 
   // ---- wizard ----
   function stepUnlocked(i) {

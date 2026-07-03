@@ -116,6 +116,17 @@ test('prioDocsFromSheet: walks actual cells (not !ref), per-header column, skips
   assert.deepEqual(plain(s.prioDocsFromSheet({ '!ref': 'A1:B2', A1: { v: 'no headers here' } })), []);
 });
 
+test('detectGroup: first matching Step description cell decides; default tariff', () => {
+  const H = ['Vendor details', 'Step description', 'Document number'];
+  assert.equal(s.detectGroup(H, [['DHL', 'Tariff check', 'D1']]), 'tariff');
+  assert.equal(s.detectGroup(H, [['DHL', 'Factual check', 'D1']]), 'factual');
+  assert.equal(s.detectGroup(H, [['DHL', 'Faktuale Prüfung', 'D1']]), 'factual');   // German spelling
+  assert.equal(s.detectGroup(H, [['DHL', 'TARIFPRÜFUNG', 'D1']]), 'tariff');        // case + single f
+  assert.equal(s.detectGroup(H, [['DHL', '', 'D1'], ['X', 'step Factual', 'D2']]), 'factual'); // skips non-matching cells
+  assert.equal(s.detectGroup(H, [['DHL', 'other step', 'D1']]), 'tariff');          // no match -> tariff
+  assert.equal(s.detectGroup(['Vendor details'], [['DHL']]), 'tariff');             // column missing -> tariff
+});
+
 test('colWidths: per-column max content length +2, clamped to [12, 44]', () => {
   const header = ['Vendor details', 'Supplier', 'Document number'];
   const rows = [
