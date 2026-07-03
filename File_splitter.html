@@ -86,6 +86,11 @@
   .fwd-nm { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .fwd-ct { font-family: var(--mono); font-size: 10.5px; color: var(--text2); flex-shrink: 0; }
   .fwd-row.hide { display: none; }
+  .prio-zone { display: flex; align-items: center; gap: 10px; margin-top: 14px; border: 1px dashed var(--border2); border-radius: 10px; padding: 10px 14px; }
+  .prio-zone.loaded { border-style: solid; border-color: rgba(245,166,35,0.45); background: rgba(245,166,35,0.06); }
+  .prio-tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--warn); border: 1px solid rgba(245,166,35,0.4); border-radius: 4px; padding: 2px 6px; flex-shrink: 0; }
+  .prio-label { flex: 1; font-size: 12.5px; color: var(--text2); line-height: 1.45; }
+  .prio-label strong { color: var(--text); font-weight: 500; }
 
   /* step 2 — people */
   .people-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
@@ -183,7 +188,7 @@
 
 <div class="card step-card">
   <div class="card-head"><h2>Upload your files</h2><span class="step-tag">step 1 of 4</span></div>
-  <p class="card-desc">One Excel file per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong> and <strong>Document number</strong> columns.</p>
+  <p class="card-desc">One Excel file per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong>, <strong>Reference</strong> and <strong>Document number</strong> columns.</p>
   <div class="dropzone" id="dropzone">
     <input type="file" id="fileInput" accept=".xlsx,.xls" multiple />
     <span class="dz-orb">↑</span>
@@ -191,6 +196,13 @@
     <div class="dz-hint">one file per system · .xlsx · .xls</div>
   </div>
   <div class="systems-list" id="systemsList"></div>
+  <div class="prio-zone" id="prioZone">
+    <input type="file" id="prioInput" accept=".xlsx,.xls" hidden />
+    <span class="prio-tag">PRIO</span>
+    <span class="prio-label" id="prioLabel"></span>
+    <button class="fwd-mini" id="prioBtn">Add PRIO list</button>
+    <button class="remove-file" id="prioClear" hidden title="Remove PRIO list">×</button>
+  </div>
 </div>
 
 <div class="card step-card" hidden>
@@ -258,15 +270,19 @@
   let sysSeq = 0;
   let generatedFiles = [];
   let noteChecked = new Map(); // note string -> boolean (global checklist state)
+  let prio = null;             // { fileName, docs:Set<string> } from the optional PRIO workbook
   let step = 0;            // wizard step: 0 files, 1 people, 2 notes, 3 split
   let splitting = false;
   const STEP_LABELS = ['Files', 'People', 'Notes', 'Split'];
   const NAMES_KEY = 'fileSplitter.names';
-  const TARGET_COLS = ['Vendor details', 'Supplier', 'Document number'];
+  const TARGET_COLS = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
   const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
   const CELL_BORDERS = { top: BORDER_THIN, bottom: BORDER_THIN, left: BORDER_THIN, right: BORDER_THIN };
   const HEADER_STYLE = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '262626' } }, border: CELL_BORDERS };
   const DATA_STYLE = { border: CELL_BORDERS };
+  const PRIO_STYLE = { border: CELL_BORDERS, fill: { fgColor: { rgb: 'FFFF00' } } };
+  const SYSTEM_ORDER = ['FNP', 'KSP', 'OPP', 'PS1']; // fixed card + output-sheet order
+  const PRIO_HEADERS = ['Dokumentnummer', 'Document number'];
 
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
@@ -278,6 +294,38 @@
     [...e.dataTransfer.files].forEach(handleFile);
   });
   fileInput.addEventListener('change', e => { [...e.target.files].forEach(handleFile); fileInput.value = ''; });
+
+  // Optional PRIO list: doc numbers on it get marked in the split output.
+  const prioInput = document.getElementById('prioInput');
+  document.getElementById('prioBtn').addEventListener('click', () => prioInput.click());
+  prioInput.addEventListener('change', e => { if (e.target.files[0]) handlePrioFile(e.target.files[0]); prioInput.value = ''; });
+  document.getElementById('prioClear').addEventListener('click', () => { prio = null; renderPrio(); renderWizard(); });
+
+  function handlePrioFile(file) {
+    if (!file.name.match(/\.(xlsx|xls)$/i)) { showError('Please upload an Excel file (.xlsx or .xls).'); return; }
+    if (!window.XLSX) { showError('Excel engine is still loading — try again in a second.'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const docs = new Set();
+        for (const sn of wb.SheetNames) for (const d of prioDocsFromSheet(wb.Sheets[sn])) docs.add(d);
+        if (docs.size === 0) { showError('No "Dokumentnummer" column found in ' + file.name + '.'); return; }
+        prio = { fileName: file.name, docs };
+        hideError(); renderPrio(); renderWizard();
+      } catch (err) { showError('Could not read ' + file.name + ': ' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function renderPrio() {
+    document.getElementById('prioZone').classList.toggle('loaded', !!prio);
+    document.getElementById('prioClear').hidden = !prio;
+    document.getElementById('prioBtn').hidden = !!prio;
+    const label = document.getElementById('prioLabel');
+    if (prio) label.innerHTML = `<strong>${escapeHtml(prio.fileName)}</strong> — ${prio.docs.size} document numbers. Matches get a yellow “PRIO” mark.`;
+    else label.textContent = 'Optional — matching document numbers get a yellow “PRIO” mark in the split files.';
+  }
 
   // People list: Enter adds a new person, typing persists names.
   const peopleListEl = document.getElementById('peopleList');
@@ -324,17 +372,17 @@
   function noteColumns(header) {
     return header.map((h, i) => (String(h).trim() === 'Note' ? i : -1)).filter(i => i >= 0);
   }
-  // Project rows to [Vendor details, Supplier, Document number, notes[]]; drop
-  // blank-vendor rows. notes collects the non-blank Note cells individually —
-  // used only for the note filter, never written to the output.
+  // Project rows to [Vendor details, Supplier, Reference, Document number,
+  // notes[]]; drop blank-vendor rows. notes collects the non-blank Note cells
+  // individually — used only for the note filter, never written to the output.
   function extractRows(dataRows, cols, noteIdx = []) {
-    const [vi, si, di] = cols;
+    const [vi, si, ri, di] = cols;
     const out = [];
     for (const r of dataRows) {
       const v = r[vi];
       if (v === null || v === undefined || String(v).trim() === '') continue;
       const notes = noteIdx.map(i => String(r[i] ?? '').trim()).filter(Boolean);
-      out.push([r[vi], r[si], r[di], notes]);
+      out.push([r[vi], r[si], r[ri], r[di], notes]);
     }
     return out;
   }
@@ -348,10 +396,10 @@
   function systemName(fileName) {
     return fileName.replace(/\.[^.]+$/, '').trim() || 'Sheet';
   }
-  // Sort projected rows by Document number (index 2), Z→A, numeric-aware
+  // Sort projected rows by Document number (index 3), Z→A, numeric-aware
   // ("10" above "9"); blank/missing document numbers sink to the bottom.
   function docNumDesc(a, b) {
-    return String(b[2] ?? '').localeCompare(String(a[2] ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+    return String(b[3] ?? '').localeCompare(String(a[3] ?? ''), undefined, { numeric: true, sensitivity: 'base' });
   }
   // Column widths for the output sheet: content-fitted, clamped to [12, 44].
   function colWidths(header, rows) {
@@ -366,7 +414,7 @@
   // across the up-to-4 Note columns would otherwise explode the distinct count.
   function tallyNotes(rows) {
     const m = new Map();
-    for (const r of rows) for (const n of r[3]) m.set(n, (m.get(n) || 0) + 1);
+    for (const r of rows) for (const n of r[4]) m.set(n, (m.get(n) || 0) + 1);
     return [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
   }
   // Keep a row by its notes: rows without a note always pass; otherwise at
@@ -374,6 +422,33 @@
   function noteKeep(notes, checked) {
     if (!notes || notes.length === 0) return true;
     return notes.some(n => checked.has(n));
+  }
+  function normDoc(v) { return String(v ?? '').trim(); }
+  // Rank a system name in the fixed FNP→KSP→OPP→PS1 order; names matching no
+  // known system sort after them (sort is stable, so they keep upload order).
+  function systemRank(name) {
+    const u = String(name).toUpperCase();
+    const i = SYSTEM_ORDER.findIndex(k => u.includes(k));
+    return i < 0 ? SYSTEM_ORDER.length : i;
+  }
+  // Harvest document numbers from one PRIO-workbook sheet. Walks the sheet's
+  // actual cells, never its declared range — real PRIO files carry a !ref
+  // stretched to ~1M blank rows. A 'Dokumentnummer' / 'Document number' cell
+  // marks a column; every non-blank cell below it counts. Repeated header
+  // cells (stacked exports) are skipped as values.
+  function prioDocsFromSheet(sheet) {
+    const addrs = Object.keys(sheet).filter(k => k.charCodeAt(0) !== 33); // skip '!'-meta keys
+    const heads = [];
+    for (const a of addrs) if (PRIO_HEADERS.includes(normDoc(sheet[a].v))) heads.push(XLSX.utils.decode_cell(a));
+    const docs = [];
+    if (heads.length === 0) return docs;
+    for (const a of addrs) {
+      const { c, r } = XLSX.utils.decode_cell(a);
+      if (!heads.some(h => h.c === c && r > h.r)) continue;
+      const v = normDoc(sheet[a].v);
+      if (v && !PRIO_HEADERS.includes(v)) docs.push(v);
+    }
+    return docs;
   }
 
   // ---- wizard ----
@@ -422,12 +497,13 @@
     const keep = checkedNoteSet();
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const shuffle = document.getElementById('shuffleRows').checked;
-    let planned = 0;
+    let planned = 0, prioHits = 0;
     for (const sys of valid) {
       const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
-      let rows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[3], keep));
+      let rows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keep));
       if (skipBlanks) rows = rows.filter(r => !isBlankRow(r));
       planned += rows.length;
+      if (prio) for (const r of rows) if (prio.docs.has(normDoc(r[3]))) prioHits++;
     }
     const noteFilterOn = noteChecked.size > 0 && keep.size < noteChecked.size;
     const chips = [
@@ -435,6 +511,7 @@
       `${names.length} ${names.length === 1 ? 'person' : 'people'} · ${names.length} file${names.length === 1 ? '' : 's'}`,
       `${skipBlanks ? 'blanks skipped' : 'blanks kept'} · ${shuffle ? 'shuffled' : 'in order'}${noteFilterOn ? ' · notes filtered' : ''}`
     ];
+    if (prio) chips.push(`PRIO list · ${prioHits} match${prioHits === 1 ? '' : 'es'}`);
     document.getElementById('recapChips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
   }
 
@@ -464,6 +541,7 @@
           sys.forwarders = tallyForwarders(sys.rows).map(f => ({ ...f, checked: true }));
         }
         systems.push(sys);
+        systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
         renderSystems();
         rebuildNoteFilter();
         updateNoteStat();
@@ -491,9 +569,9 @@
     const keep = checkedNoteSet();
     let noted = 0, matched = 0, blank = 0;
     for (const sys of valid) for (const r of sys.rows) {
-      if (r[3].length === 0) { blank++; continue; }
+      if (r[4].length === 0) { blank++; continue; }
       noted++;
-      if (noteKeep(r[3], keep)) matched++;
+      if (noteKeep(r[4], keep)) matched++;
     }
     el.textContent = keep.size === noteChecked.size
       ? `All notes kept — ${noted + blank} rows (${blank} without a note).`
@@ -712,7 +790,7 @@
       const bounds = {};
       for (const sys of valid) {
         const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
-        let dataRows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[3], keepNotes));
+        let dataRows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keepNotes));
         if (skipBlanks) dataRows = dataRows.filter(r => !isBlankRow(r));
         const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
         pool[sys.name] = rows;
@@ -738,13 +816,20 @@
 
           sheetSummary[sys.name] = chunk.length;
 
-          const ws = XLSX.utils.aoa_to_sheet([TARGET_COLS, ...chunk.map(r => r.slice(0, 3))]);
-          for (let R = 0; R <= chunk.length; R++) for (let C = 0; C < TARGET_COLS.length; C++) {
+          // With a PRIO list loaded the sheet gains a trailing column: 'PRIO'
+          // on matching doc numbers, yellow fill on the doc + PRIO cells.
+          const header = prio ? [...TARGET_COLS, 'PRIO'] : TARGET_COLS;
+          const cells = chunk.map(r => prio
+            ? [...r.slice(0, 4), prio.docs.has(normDoc(r[3])) ? 'PRIO' : '']
+            : r.slice(0, 4));
+          const ws = XLSX.utils.aoa_to_sheet([header, ...cells]);
+          for (let R = 0; R <= cells.length; R++) for (let C = 0; C < header.length; C++) {
             const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
-            if (cell) cell.s = R === 0 ? HEADER_STYLE : DATA_STYLE;
+            if (cell) cell.s = R === 0 ? HEADER_STYLE
+              : C >= 3 && cells[R - 1][4] === 'PRIO' ? PRIO_STYLE : DATA_STYLE;
           }
-          ws['!cols'] = colWidths(TARGET_COLS, chunk);
-          ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: chunk.length, c: TARGET_COLS.length - 1 } }) };
+          ws['!cols'] = colWidths(header, cells);
+          ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cells.length, c: header.length - 1 } }) };
           XLSX.utils.book_append_sheet(wb, ws, sys.name);
 
           done++;
@@ -846,6 +931,7 @@
   function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+  renderPrio();
   renderWizard();
 </script>
 </body>
