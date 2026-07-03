@@ -225,7 +225,7 @@
     </label>
   </div>
   <div class="toggle-row">
-    <div class="toggle-label"><span>Shuffle rows</span> — randomly mix who gets which rows; every sheet is re-sorted by Document number (Z→A) after splitting</div>
+    <div class="toggle-label"><span>Shuffle rows</span> — randomly mix who gets which rows; every sheet is re-sorted by forwarder (A→Z), then Document number (Z→A) after splitting</div>
     <label class="toggle">
       <input type="checkbox" id="shuffleRows" checked />
       <span class="toggle-slider"></span>
@@ -400,6 +400,10 @@
   // ("10" above "9"); blank/missing document numbers sink to the bottom.
   function docNumDesc(a, b) {
     return String(b[3] ?? '').localeCompare(String(a[3] ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+  }
+  // Output sheet order: forwarder A→Z, then Document number Z→A within each forwarder.
+  function outputRowOrder(a, b) {
+    return String(a[0] ?? '').localeCompare(String(b[0] ?? '')) || docNumDesc(a, b);
   }
   // Column widths for the output sheet: content-fitted, clamped to [12, 44].
   function colWidths(header, rows) {
@@ -812,7 +816,7 @@
           const rows = pool[sys.name];
           const [start, end] = bounds[sys.name][i];
           const chunk = rows.slice(start, end);
-          chunk.sort(docNumDesc); // Z→A per sheet; the shared pool stays untouched
+          chunk.sort(outputRowOrder); // forwarder A→Z, doc Z→A within; the shared pool stays untouched
 
           sheetSummary[sys.name] = chunk.length;
 
