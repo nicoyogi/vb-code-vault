@@ -94,6 +94,10 @@
   .type-badge { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; padding: 3px 7px; border-radius: 5px; white-space: nowrap; flex-shrink: 0; }
   .type-badge.tariff { color: var(--accent); background: var(--accent-dim); border: 1px solid var(--accent-mid); }
   .type-badge.factual { color: var(--warn); background: rgba(245,166,35,0.12); border: 1px solid rgba(245,166,35,0.4); }
+  .people-group { margin-bottom: 18px; }
+  .people-group[hidden] { display: none; }
+  .group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .group-note { font-size: 12px; color: var(--text3); }
 
   /* step 2 — people */
   .people-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
@@ -208,17 +212,31 @@
   </div>
 </div>
 
-<div class="card step-card" hidden>
+<div class="card step-card" id="peopleCard" hidden>
   <div class="card-head"><h2>Who gets a share?</h2><span class="step-tag">step 2 of 4</span></div>
-  <p class="card-desc">Rows are shared out as evenly as possible — one Excel file per person.</p>
-  <div class="people-list" id="peopleList">
-    <div class="person-row">
-      <span class="person-num">1</span>
-      <input class="person-input" type="text" placeholder="Enter name…" />
-      <button class="rm-btn" onclick="removePerson(this)">×</button>
+  <p class="card-desc">Rows are shared out as evenly as possible — one Excel file per person, per work type.</p>
+  <div class="people-group" id="groupTariff">
+    <div class="group-head"><span class="type-badge tariff">TARIFF</span><span class="group-note">forwarder + note filters apply</span></div>
+    <div class="people-list" data-group="tariff">
+      <div class="person-row">
+        <span class="person-num">1</span>
+        <input class="person-input" type="text" placeholder="Enter name…" />
+        <button class="rm-btn" onclick="removePerson(this)">×</button>
+      </div>
     </div>
+    <button class="add-btn" onclick="addPerson('tariff')">+ Add person</button>
   </div>
-  <button class="add-btn" onclick="addPerson()">+ Add person</button>
+  <div class="people-group" id="groupFactual" hidden>
+    <div class="group-head"><span class="type-badge factual">FACTUAL</span><span class="group-note">no filters — all rows are split</span></div>
+    <div class="people-list" data-group="factual">
+      <div class="person-row">
+        <span class="person-num">1</span>
+        <input class="person-input" type="text" placeholder="Enter name…" />
+        <button class="rm-btn" onclick="removePerson(this)">×</button>
+      </div>
+    </div>
+    <button class="add-btn" onclick="addPerson('factual')">+ Add person</button>
+  </div>
 
   <div class="toggle-row">
     <div class="toggle-label"><span>Skip blank rows</span> — empty rows in the source won't count toward anyone's share</div>
@@ -277,7 +295,8 @@
   let step = 0;            // wizard step: 0 files, 1 people, 2 notes, 3 split
   let splitting = false;
   const STEP_LABELS = ['Files', 'People', 'Notes', 'Split'];
-  const NAMES_KEY = 'fileSplitter.names';
+  const NAMES_KEYS = { tariff: 'fileSplitter.names', factual: 'fileSplitter.namesFactual' };
+  const GROUPS = [['tariff', 'Tariff'], ['factual', 'Factual']];
   const TARGET_COLS = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
   const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
   const CELL_BORDERS = { top: BORDER_THIN, bottom: BORDER_THIN, left: BORDER_THIN, right: BORDER_THIN };
@@ -330,29 +349,33 @@
     else label.textContent = 'Optional — matching document numbers get a yellow “PRIO” mark in the split files.';
   }
 
-  // People list: Enter adds a new person, typing persists names.
-  const peopleListEl = document.getElementById('peopleList');
-  peopleListEl.addEventListener('keydown', e => {
+  // People lists (one per work type): Enter adds/advances within the same
+  // list, typing persists names.
+  const peopleCard = document.getElementById('peopleCard');
+  peopleCard.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.classList.contains('person-input')) {
       e.preventDefault();
-      const inputs = Array.from(document.querySelectorAll('.person-input'));
-      const idx = inputs.indexOf(e.target);
-      const next = inputs[idx + 1];
-      if (next) next.focus(); else addPerson();
+      const list = e.target.closest('.people-list');
+      const inputs = Array.from(list.querySelectorAll('.person-input'));
+      const next = inputs[inputs.indexOf(e.target) + 1];
+      if (next) next.focus(); else addPerson(list.dataset.group);
     }
   });
-  peopleListEl.addEventListener('input', e => {
+  peopleCard.addEventListener('input', e => {
     if (e.target.classList.contains('person-input')) { saveNames(); renderWizard(); }
   });
 
-  // Restore previously entered names.
+  // Restore previously entered names, per work type.
   (function restoreNames() {
-    let saved = [];
-    try { saved = JSON.parse(localStorage.getItem(NAMES_KEY) || '[]'); } catch (e) {}
-    if (Array.isArray(saved) && saved.some(v => v && v.trim())) {
-      peopleListEl.innerHTML = '';
-      saved.forEach(v => addPerson(v));
-      if (peopleListEl.children.length === 0) addPerson();
+    for (const [group, key] of Object.entries(NAMES_KEYS)) {
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
+      if (Array.isArray(saved) && saved.some(v => v && v.trim())) {
+        const list = document.querySelector(`.people-list[data-group="${group}"]`);
+        list.innerHTML = '';
+        saved.forEach(v => addPerson(group, v));
+        if (list.children.length === 0) addPerson(group);
+      }
     }
   })();
 
@@ -483,8 +506,10 @@
 
   // ---- wizard ----
   function stepUnlocked(i) {
-    const hasFiles = systems.some(s => !s.error);
-    const hasNames = getNames().length > 0;
+    const valid = systems.filter(s => !s.error);
+    const hasFiles = valid.length > 0;
+    const groups = [...new Set(valid.map(s => s.group))];
+    const hasNames = hasFiles && groups.every(g => getNames(g).length > 0);
     return i <= 0 ? true : i === 1 ? hasFiles : hasFiles && hasNames;
   }
 
@@ -506,6 +531,9 @@
     });
 
     document.querySelectorAll('.step-card').forEach((el, i) => { el.hidden = i !== step; });
+    const inUse = new Set(systems.filter(s => !s.error).map(s => s.group));
+    document.getElementById('groupTariff').hidden = inUse.size > 0 && !inUse.has('tariff');
+    document.getElementById('groupFactual').hidden = !inUse.has('factual');
     if (step === 3) renderRecap();
 
     document.getElementById('backBtn').style.visibility = (step > 0 && !splitting) ? 'visible' : 'hidden';
@@ -517,13 +545,13 @@
     nextBtn.textContent = step === 2 ? 'Review & split →' : 'Continue →';
     hint.textContent = (step === 3 || nextOk) ? ''
       : step === 0 ? 'Upload at least one valid file to continue'
-      : 'Add at least one name to continue';
+      : 'Add at least one name to each list to continue';
   }
 
   // Recap chips for the split step: rows surviving all filters, people, options.
   function renderRecap() {
     const valid = systems.filter(s => !s.error);
-    const names = getNames();
+    const names = getNames('tariff');
     const keep = checkedNoteSet();
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const shuffle = document.getElementById('shuffleRows').checked;
@@ -728,13 +756,15 @@
 
   function saveNames() {
     try {
-      const vals = Array.from(document.querySelectorAll('.person-input')).map(i => i.value);
-      localStorage.setItem(NAMES_KEY, JSON.stringify(vals));
+      for (const [group, key] of Object.entries(NAMES_KEYS)) {
+        const vals = Array.from(document.querySelectorAll(`.people-list[data-group="${group}"] .person-input`)).map(i => i.value);
+        localStorage.setItem(key, JSON.stringify(vals));
+      }
     } catch (e) { /* storage unavailable */ }
   }
 
-  function addPerson(value = '') {
-    const list = document.getElementById('peopleList');
+  function addPerson(group, value = '') {
+    const list = document.querySelector(`.people-list[data-group="${group}"]`);
     const num = list.children.length + 1;
     const row = document.createElement('div');
     row.className = 'person-row';
@@ -747,21 +777,17 @@
   }
 
   function removePerson(btn) {
-    const list = document.getElementById('peopleList');
+    const list = btn.closest('.people-list');
     if (list.children.length > 1) {
       btn.closest('.person-row').remove();
-      reNumberPeople();
+      list.querySelectorAll('.person-num').forEach((el, i) => el.textContent = i + 1);
       saveNames();
       renderWizard();
     }
   }
 
-  function reNumberPeople() {
-    document.querySelectorAll('.person-num').forEach((el, i) => el.textContent = i + 1);
-  }
-
-  function getNames() {
-    return Array.from(document.querySelectorAll('.person-input')).map(i => i.value.trim()).filter(Boolean);
+  function getNames(group) {
+    return Array.from(document.querySelectorAll(`.people-list[data-group="${group}"] .person-input`)).map(i => i.value.trim()).filter(Boolean);
   }
 
   function shuffleArray(arr) {
@@ -790,7 +816,7 @@
 
   async function splitFile() {
     hideError();
-    const names = getNames();
+    const names = getNames('tariff');
     const valid = systems.filter(s => !s.error);
     if (valid.length === 0) { showError('Please upload at least one system file with the required columns.'); return; }
     if (names.length === 0) { showError('Please enter at least one person name.'); return; }
