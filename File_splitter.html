@@ -836,10 +836,18 @@
 
   async function splitFile() {
     hideError();
-    const names = getNames('tariff');
     const valid = systems.filter(s => !s.error);
     if (valid.length === 0) { showError('Please upload at least one system file with the required columns.'); return; }
-    if (names.length === 0) { showError('Please enter at least one person name.'); return; }
+
+    // One job per work type in use: its own systems and its own people list.
+    const jobs = [];
+    for (const [group, label] of GROUPS) {
+      const groupSys = valid.filter(s => s.group === group);
+      if (groupSys.length === 0) continue;
+      const names = getNames(group);
+      if (names.length === 0) { showError(`Please enter at least one ${label} person name.`); return; }
+      jobs.push({ group, label, names, systems: groupSys });
+    }
 
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const doShuffle = document.getElementById('shuffleRows').checked;
@@ -857,73 +865,75 @@
     document.getElementById('progressWrap').classList.add('show');
 
     try {
-      const total = names.length * valid.length;
+      const total = jobs.reduce((n, j) => n + j.names.length * j.systems.length, 0);
       let done = 0;
-
-      // Filter each system to its checked forwarders, then pre-shuffle once so all
-      // people draw from the same pool. Balanced slice boundaries spread the
-      // remainder fairly instead of starving the last person.
       const keepNotes = checkedNoteSet();
-      const pool = {};
-      const bounds = {};
-      for (const sys of valid) {
-        const dataRows = splitRows(sys, keepNotes, skipBlanks);
-        const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
-        pool[sys.name] = rows;
+      const today = new Date();
+      const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
 
-        const sizes = balancedSizes(rows.length, names.length);
-        const b = [];
-        let off = 0;
-        for (const s of sizes) { b.push([off, off + s]); off += s; }
-        bounds[sys.name] = b;
-      }
+      for (const job of jobs) {
+        // Filter each system per its group policy, then pre-shuffle once so all
+        // people draw from the same pool. Balanced slice boundaries spread the
+        // remainder fairly instead of starving the last person.
+        const pool = {};
+        const bounds = {};
+        for (const sys of job.systems) {
+          const dataRows = splitRows(sys, keepNotes, skipBlanks);
+          const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
+          pool[sys.name] = rows;
 
-      const usedNames = {};
-      for (let i = 0; i < names.length; i++) {
-        const name = names[i];
-        const wb = XLSX.utils.book_new();
-        const sheetSummary = {};
-
-        for (const sys of valid) {
-          const rows = pool[sys.name];
-          const [start, end] = bounds[sys.name][i];
-          const chunk = rows.slice(start, end);
-          chunk.sort(outputRowOrder); // forwarder A→Z, doc Z→A within; the shared pool stays untouched
-
-          sheetSummary[sys.name] = chunk.length;
-
-          // With a PRIO list loaded the sheet gains a trailing column: 'PRIO'
-          // on matching doc numbers, yellow fill on the doc + PRIO cells.
-          const header = prio ? [...TARGET_COLS, 'PRIO'] : TARGET_COLS;
-          const cells = chunk.map(r => prio
-            ? [...r.slice(0, 4), prio.docs.has(normDoc(r[3])) ? 'PRIO' : '']
-            : r.slice(0, 4));
-          const ws = XLSX.utils.aoa_to_sheet([header, ...cells]);
-          for (let R = 0; R <= cells.length; R++) for (let C = 0; C < header.length; C++) {
-            const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
-            if (cell) cell.s = R === 0 ? HEADER_STYLE
-              : C >= 3 && cells[R - 1][4] === 'PRIO' ? PRIO_STYLE : DATA_STYLE;
-          }
-          ws['!cols'] = colWidths(header, cells);
-          ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cells.length, c: header.length - 1 } }) };
-          XLSX.utils.book_append_sheet(wb, ws, sys.name);
-
-          done++;
-          setProgress(Math.round((done / total) * 100), `Building ${name} — ${sys.name}…`);
-          await sleep(10);
+          const sizes = balancedSizes(rows.length, job.names.length);
+          const b = [];
+          let off = 0;
+          for (const s of sizes) { b.push([off, off + s]); off += s; }
+          bounds[sys.name] = b;
         }
 
-        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const today = new Date();
-        const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
-        // Build a safe, unique filename (handles duplicate / blank names).
-        let base = name.replace(/[^\w.\- ]+/g, '').replace(/\s+/g, '_') || `person_${i + 1}`;
-        usedNames[base] = (usedNames[base] || 0) + 1;
-        if (usedNames[base] > 1) base += `_${usedNames[base]}`;
-        const fileName = `${base}_data_${dateStr}.xlsx`;
-        generatedFiles.push({ name, fileName, url, blob, sheetSummary });
+        const usedNames = {}; // per job — the Tariff/Factual filename token separates jobs
+        for (let i = 0; i < job.names.length; i++) {
+          const name = job.names[i];
+          const wb = XLSX.utils.book_new();
+          const sheetSummary = {};
+
+          for (const sys of job.systems) {
+            const rows = pool[sys.name];
+            const [start, end] = bounds[sys.name][i];
+            const chunk = rows.slice(start, end);
+            chunk.sort(outputRowOrder); // forwarder A→Z, doc Z→A within; the shared pool stays untouched
+
+            sheetSummary[sys.name] = chunk.length;
+
+            // With a PRIO list loaded the sheet gains a trailing column: 'PRIO'
+            // on matching doc numbers, yellow fill on the doc + PRIO cells.
+            const header = prio ? [...TARGET_COLS, 'PRIO'] : TARGET_COLS;
+            const cells = chunk.map(r => prio
+              ? [...r.slice(0, 4), prio.docs.has(normDoc(r[3])) ? 'PRIO' : '']
+              : r.slice(0, 4));
+            const ws = XLSX.utils.aoa_to_sheet([header, ...cells]);
+            for (let R = 0; R <= cells.length; R++) for (let C = 0; C < header.length; C++) {
+              const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+              if (cell) cell.s = R === 0 ? HEADER_STYLE
+                : C >= 3 && cells[R - 1][4] === 'PRIO' ? PRIO_STYLE : DATA_STYLE;
+            }
+            ws['!cols'] = colWidths(header, cells);
+            ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cells.length, c: header.length - 1 } }) };
+            XLSX.utils.book_append_sheet(wb, ws, sys.name);
+
+            done++;
+            setProgress(Math.round((done / total) * 100), `Building ${name} — ${sys.name}…`);
+            await sleep(10);
+          }
+
+          const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+          const blob = new Blob([wbout], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+          // Build a safe, unique filename (handles duplicate / blank names).
+          let base = name.replace(/[^\w.\- ]+/g, '').replace(/\s+/g, '_') || `person_${i + 1}`;
+          usedNames[base] = (usedNames[base] || 0) + 1;
+          if (usedNames[base] > 1) base += `_${usedNames[base]}`;
+          const fileName = `${base}_${job.label}_${dateStr}.xlsx`;
+          generatedFiles.push({ name, group: job.group, label: job.label, fileName, url, blob, sheetSummary });
+        }
       }
 
       setProgress(100, 'Done!');
@@ -973,7 +983,7 @@
       card.className = 'result-card';
       card.innerHTML = `
         <div class="result-info">
-          <div class="result-name">${escapeHtml(f.name)} ${hasEmpty ? '<span class="warn-badge">some sheets empty</span>' : ''}</div>
+          <div class="result-name">${escapeHtml(f.name)} <span class="type-badge ${f.group}">${f.label.toUpperCase()}</span> ${hasEmpty ? '<span class="warn-badge">some sheets empty</span>' : ''}</div>
           <div class="result-pills">${sheetPills}</div>
         </div>
         <div class="result-count" title="${totalRows} data rows total">
