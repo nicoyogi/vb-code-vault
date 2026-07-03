@@ -10,17 +10,24 @@ note filter). Factual files skip both filters — their rows go straight to the
 per-person split. Each type has its **own people list**, and each person gets a
 separate output file per type.
 
-## Detection (per file, at upload)
+## Detection (per row, at upload) — revised 2026-07-03
+
+Real exports are **mixed**: the observed `FNP.XLSX` carries 709 × "Tariff Check" and
+76 × "Factual Check" rows in one sheet. So classification is per row, and one
+uploaded file yields **up to two system entries** (same system name, one `tariff`,
+one `factual`) — each with its own step-1 card. Everything downstream operates on
+those entries unchanged.
 
 - Find the `Step description` column by exact trimmed header match (same style as
   `pickColumns`).
-- Scan its data cells top-down; the first cell matching either keyword decides:
-  - contains `tarif` (case-insensitive) → **tariff** (covers "Tariff" and German
-    "Tarif…"),
-  - contains `factual` or `faktual` (case-insensitive) → **factual**.
-- Column missing, or no cell matches either keyword ⇒ **tariff** — identical to
-  today's behavior, so current files keep working unchanged.
-- One file is one type (per-file classification; mixed files are out of scope).
+- A row whose step value contains `factual` or `faktual` (case-insensitive) is
+  **factual**; every other row — tariff steps, unknown steps, blank cells, or no
+  `Step description` column at all — is **tariff**, identical to today's behavior.
+- Empty partitions produce no card; a file whose partitions all extract to zero
+  rows still shows one 0-row tariff card so the upload stays visible.
+- System-name de-duplication applies per group, so the tariff and factual halves
+  of `FNP.XLSX` are both named `FNP`; they never share a workbook, only cards.
+- Removing a card removes that partition only (the other half of the file stays).
 
 ## Behavior
 
@@ -49,6 +56,6 @@ separate output file per type.
 
 ## Non-goals
 
-- No per-row routing inside one file, no manual type override on a card, no merging of
-  a both-lists person into a single workbook, no factual-specific columns (the four
-  required headers stay the same for both types).
+- No manual type override on a card, no merging of a both-lists person into a
+  single workbook, no factual-specific columns (the four required headers stay the
+  same for both types).

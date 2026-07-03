@@ -10,6 +10,16 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-03-splitter-tariff-factual-design.md`
 
+> **Revision (2026-07-03, after Tasks 1–4 shipped):** a real export (`FNP.XLSX`) proved
+> files are MIXED — 709 "Tariff Check" + 76 "Factual Check" rows in one sheet — so
+> classification moved from per-file to per-row. `detectGroup` is replaced by
+> `partitionByStep(header, dataRows) => { tariff: rows[], factual: rows[] }` (rows
+> containing `factual`/`faktual` go factual, everything else tariff), and `handleFile`
+> now creates up to two system entries per upload (same name, one per non-empty
+> partition; name de-dupe scoped per group; if all partitions extract empty, one 0-row
+> tariff card is kept). Tasks 5–6 and all other task content are unchanged — the rest
+> of the pipeline was already keyed on `sys.group`.
+
 ## Global Constraints
 
 - All app changes go in `File_splitter.html`; tests in `tests/splitter.test.mjs`. No new dependencies.

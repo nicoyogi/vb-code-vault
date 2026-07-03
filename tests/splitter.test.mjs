@@ -116,15 +116,22 @@ test('prioDocsFromSheet: walks actual cells (not !ref), per-header column, skips
   assert.deepEqual(plain(s.prioDocsFromSheet({ '!ref': 'A1:B2', A1: { v: 'no headers here' } })), []);
 });
 
-test('detectGroup: first matching Step description cell decides; default tariff', () => {
+test('partitionByStep: factual rows split out per Step description; everything else stays tariff', () => {
   const H = ['Vendor details', 'Step description', 'Document number'];
-  assert.equal(s.detectGroup(H, [['DHL', 'Tariff check', 'D1']]), 'tariff');
-  assert.equal(s.detectGroup(H, [['DHL', 'Factual check', 'D1']]), 'factual');
-  assert.equal(s.detectGroup(H, [['DHL', 'Faktuale Prüfung', 'D1']]), 'factual');   // German spelling
-  assert.equal(s.detectGroup(H, [['DHL', 'TARIFPRÜFUNG', 'D1']]), 'tariff');        // case + single f
-  assert.equal(s.detectGroup(H, [['DHL', '', 'D1'], ['X', 'step Factual', 'D2']]), 'factual'); // skips non-matching cells
-  assert.equal(s.detectGroup(H, [['DHL', 'other step', 'D1']]), 'tariff');          // no match -> tariff
-  assert.equal(s.detectGroup(['Vendor details'], [['DHL']]), 'tariff');             // column missing -> tariff
+  const rows = [
+    ['DHL', 'Tariff Check', 'D1'],        // real-world tariff value
+    ['Kuehne', 'Factual Check', 'D2'],    // real-world factual value
+    ['Schenker', 'faktuale Prüfung', 'D3'], // German spelling, case-insensitive
+    ['Dachser', 'other step', 'D4'],      // unknown step -> tariff
+    ['Gebr. Weiss', '', 'D5'],            // blank step -> tariff
+  ];
+  const p = s.partitionByStep(H, rows);
+  assert.deepEqual(plain(p.tariff).map(r => r[0]), ['DHL', 'Dachser', 'Gebr. Weiss']);
+  assert.deepEqual(plain(p.factual).map(r => r[0]), ['Kuehne', 'Schenker']);
+  // no Step description column -> everything tariff (pre-branching behavior)
+  const q = s.partitionByStep(['Vendor details'], [['DHL'], ['Kuehne']]);
+  assert.equal(q.tariff.length, 2);
+  assert.equal(q.factual.length, 0);
 });
 
 test('splitRows: tariff rows pass forwarder+note filters; factual rows bypass both', () => {

@@ -480,18 +480,19 @@
     }
     return docs;
   }
-  // Classify a file as tariff or factual work from its 'Step description'
-  // column: the first cell containing a keyword decides. Missing column or
-  // no matching cell -> 'tariff' (the pre-branching behavior).
-  function detectGroup(header, dataRows) {
+  // Partition raw data rows by the 'Step description' column — real exports mix
+  // both work types in one sheet ("Tariff Check" / "Factual Check" rows). Rows
+  // whose step contains 'factual'/'faktual' (any case) are factual; everything
+  // else — tariff steps, unknown steps, blanks, or no column — stays tariff
+  // (the pre-branching pipeline).
+  function partitionByStep(header, dataRows) {
     const si = header.findIndex(h => String(h).trim() === 'Step description');
-    if (si < 0) return 'tariff';
+    const out = { tariff: [], factual: [] };
     for (const r of dataRows) {
-      const v = String(r[si] ?? '').toLowerCase();
-      if (v.includes('tarif')) return 'tariff';
-      if (v.includes('factual') || v.includes('faktual')) return 'factual';
+      const v = si < 0 ? '' : String(r[si] ?? '').toLowerCase();
+      (v.includes('factual') || v.includes('faktual') ? out.factual : out.tariff).push(r);
     }
-    return 'tariff';
+    return out;
   }
   // Rows a system contributes to the split: tariff rows pass the forwarder
   // checklist + note filter; factual rows skip both. Blank-skip applies to all.
@@ -502,6 +503,15 @@
       rows = rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keepNotes));
     }
     return skipBlanks ? rows.filter(r => !isBlankRow(r)) : rows;
+  }
+
+  // De-dupe a system name against already-loaded entries of the same group —
+  // the tariff and factual halves of one file may share a name (they never
+  // share a workbook), but two uploads of the same system may not.
+  function dedupeName(base, group) {
+    let name = base; let n = 2;
+    while (systems.some(s => s.name === name && s.group === group)) name = `${base}_${n++}`;
+    return name;
   }
 
   // ---- wizard ----
@@ -548,25 +558,29 @@
       : 'Add at least one name to each list to continue';
   }
 
-  // Recap chips for the split step: rows surviving all filters, people, options.
+  // Recap chips for the split step: one chip per work type in use (systems,
+  // surviving rows, people), then the global options + PRIO chips.
   function renderRecap() {
     const valid = systems.filter(s => !s.error);
-    const names = getNames('tariff');
     const keep = checkedNoteSet();
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const shuffle = document.getElementById('shuffleRows').checked;
-    let planned = 0, prioHits = 0;
-    for (const sys of valid) {
-      const rows = splitRows(sys, keep, skipBlanks);
-      planned += rows.length;
-      if (prio) for (const r of rows) if (prio.docs.has(normDoc(r[3]))) prioHits++;
+    const chips = [];
+    let prioHits = 0;
+    for (const [group, label] of GROUPS) {
+      const groupSys = valid.filter(s => s.group === group);
+      if (groupSys.length === 0) continue;
+      let planned = 0;
+      for (const sys of groupSys) {
+        const rows = splitRows(sys, keep, skipBlanks);
+        planned += rows.length;
+        if (prio) for (const r of rows) if (prio.docs.has(normDoc(r[3]))) prioHits++;
+      }
+      const names = getNames(group);
+      chips.push(`${label} · ${groupSys.length} system${groupSys.length === 1 ? '' : 's'} · ${planned} rows → ${names.length} ${names.length === 1 ? 'person' : 'people'}`);
     }
     const noteFilterOn = noteChecked.size > 0 && keep.size < noteChecked.size;
-    const chips = [
-      `${valid.length} system${valid.length === 1 ? '' : 's'} · ${planned} rows`,
-      `${names.length} ${names.length === 1 ? 'person' : 'people'} · ${names.length} file${names.length === 1 ? '' : 's'}`,
-      `${skipBlanks ? 'blanks skipped' : 'blanks kept'} · ${shuffle ? 'shuffled' : 'in order'}${noteFilterOn ? ' · notes filtered' : ''}`
-    ];
+    chips.push(`${skipBlanks ? 'blanks skipped' : 'blanks kept'} · ${shuffle ? 'shuffled' : 'in order'}${noteFilterOn ? ' · notes filtered' : ''}`);
     if (prio) chips.push(`PRIO list · ${prioHits} match${prioHits === 1 ? '' : 'es'}`);
     document.getElementById('recapChips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
   }
@@ -584,19 +598,25 @@
         const cols = pickColumns(header);
         const noteIdx = noteColumns(header);
 
-        // de-dupe system name against already-loaded files
-        let name = systemName(file.name); const base = name; let n = 2;
-        while (systems.some(s => s.name === name)) name = `${base}_${n++}`;
-
-        const sys = { id: 'sys' + (sysSeq++), name, fileName: file.name, rows: [], forwarders: [], group: detectGroup(header, rows.slice(hIdx + 1)) };
         if (!cols) {
           const missing = TARGET_COLS.filter(c => header.findIndex(h => String(h).trim() === c) < 0);
-          sys.error = 'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ');
+          systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), 'tariff'), fileName: file.name, rows: [], forwarders: [], group: 'tariff',
+            error: 'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ') });
         } else {
-          sys.rows = extractRows(rows.slice(hIdx + 1), cols, noteIdx);
-          sys.forwarders = tallyForwarders(sys.rows).map(f => ({ ...f, checked: true }));
+          // A mixed file yields one entry per work type; if every partition
+          // extracts empty, keep one 0-row tariff card so the upload is visible.
+          const parts = partitionByStep(header, rows.slice(hIdx + 1));
+          const entries = [];
+          for (const [group] of GROUPS) {
+            const extracted = extractRows(parts[group], cols, noteIdx);
+            if (extracted.length > 0) entries.push([group, extracted]);
+          }
+          if (entries.length === 0) entries.push(['tariff', []]);
+          for (const [group, extracted] of entries) {
+            systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), group), fileName: file.name, rows: extracted,
+              forwarders: tallyForwarders(extracted).map(f => ({ ...f, checked: true })), group });
+          }
         }
-        systems.push(sys);
         systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
         renderSystems();
         rebuildNoteFilter();
@@ -644,7 +664,7 @@
       card.innerHTML = `
         <div class="system-head">
           <span class="system-badge">${escapeHtml(sys.name)}</span>
-          <span class="type-badge ${sys.group === 'factual' ? 'factual' : 'tariff'}">${sys.group === 'factual' ? 'FACTUAL' : 'TARIFF'}</span>
+          ${sys.error ? '' : `<span class="type-badge ${sys.group === 'factual' ? 'factual' : 'tariff'}">${sys.group === 'factual' ? 'FACTUAL' : 'TARIFF'}</span>`}
           <span class="system-name">${escapeHtml(sys.fileName)}</span>
           ${meta}
           <button class="remove-file" title="Remove">×</button>
