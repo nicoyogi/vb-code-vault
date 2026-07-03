@@ -91,6 +91,13 @@
   .prio-tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--warn); border: 1px solid rgba(245,166,35,0.4); border-radius: 4px; padding: 2px 6px; flex-shrink: 0; }
   .prio-label { flex: 1; font-size: 12.5px; color: var(--text2); line-height: 1.45; }
   .prio-label strong { color: var(--text); font-weight: 500; }
+  .type-badge { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; padding: 3px 7px; border-radius: 5px; white-space: nowrap; flex-shrink: 0; }
+  .type-badge.tariff { color: var(--accent); background: var(--accent-dim); border: 1px solid var(--accent-mid); }
+  .type-badge.factual { color: var(--warn); background: rgba(245,166,35,0.12); border: 1px solid rgba(245,166,35,0.4); }
+  .people-group { margin-bottom: 18px; }
+  .people-group[hidden] { display: none; }
+  .group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .group-note { font-size: 12px; color: var(--text3); }
 
   /* step 2 — people */
   .people-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
@@ -188,7 +195,7 @@
 
 <div class="card step-card">
   <div class="card-head"><h2>Upload your files</h2><span class="step-tag">step 1 of 4</span></div>
-  <p class="card-desc">One Excel file per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong>, <strong>Reference</strong> and <strong>Document number</strong> columns.</p>
+  <p class="card-desc">One Excel file per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong>, <strong>Reference</strong> and <strong>Document number</strong> columns. The <strong>Step description</strong> column decides Tariff vs Factual work.</p>
   <div class="dropzone" id="dropzone">
     <input type="file" id="fileInput" accept=".xlsx,.xls" multiple />
     <span class="dz-orb">↑</span>
@@ -205,17 +212,31 @@
   </div>
 </div>
 
-<div class="card step-card" hidden>
+<div class="card step-card" id="peopleCard" hidden>
   <div class="card-head"><h2>Who gets a share?</h2><span class="step-tag">step 2 of 4</span></div>
-  <p class="card-desc">Rows are shared out as evenly as possible — one Excel file per person.</p>
-  <div class="people-list" id="peopleList">
-    <div class="person-row">
-      <span class="person-num">1</span>
-      <input class="person-input" type="text" placeholder="Enter name…" />
-      <button class="rm-btn" onclick="removePerson(this)">×</button>
+  <p class="card-desc">Rows are shared out as evenly as possible — one Excel file per person, per work type.</p>
+  <div class="people-group" id="groupTariff">
+    <div class="group-head"><span class="type-badge tariff">TARIFF</span><span class="group-note">forwarder + note filters apply</span></div>
+    <div class="people-list" data-group="tariff">
+      <div class="person-row">
+        <span class="person-num">1</span>
+        <input class="person-input" type="text" placeholder="Enter name…" />
+        <button class="rm-btn" onclick="removePerson(this)">×</button>
+      </div>
     </div>
+    <button class="add-btn" onclick="addPerson('tariff')">+ Add person</button>
   </div>
-  <button class="add-btn" onclick="addPerson()">+ Add person</button>
+  <div class="people-group" id="groupFactual" hidden>
+    <div class="group-head"><span class="type-badge factual">FACTUAL</span><span class="group-note">no filters — all rows are split</span></div>
+    <div class="people-list" data-group="factual">
+      <div class="person-row">
+        <span class="person-num">1</span>
+        <input class="person-input" type="text" placeholder="Enter name…" />
+        <button class="rm-btn" onclick="removePerson(this)">×</button>
+      </div>
+    </div>
+    <button class="add-btn" onclick="addPerson('factual')">+ Add person</button>
+  </div>
 
   <div class="toggle-row">
     <div class="toggle-label"><span>Skip blank rows</span> — empty rows in the source won't count toward anyone's share</div>
@@ -235,7 +256,7 @@
 
 <div class="card step-card" hidden>
   <div class="card-head"><h2>Filter by note <span class="opt-tag">optional</span></h2><span class="step-tag">step 3 of 4</span></div>
-  <p class="card-desc">Tick the <strong>Note</strong> values to keep. Rows with no note are always kept. Applies to all systems.</p>
+  <p class="card-desc">Tick the <strong>Note</strong> values to keep. Rows with no note are always kept. Applies to <strong>Tariff</strong> systems only — Factual rows are never filtered.</p>
   <div id="noteFilterBody"><div class="note-empty">No Note values found in your files — nothing to filter here. Continue to the next step.</div></div>
   <div class="note-stat" id="noteStat"></div>
 </div>
@@ -274,7 +295,8 @@
   let step = 0;            // wizard step: 0 files, 1 people, 2 notes, 3 split
   let splitting = false;
   const STEP_LABELS = ['Files', 'People', 'Notes', 'Split'];
-  const NAMES_KEY = 'fileSplitter.names';
+  const NAMES_KEYS = { tariff: 'fileSplitter.names', factual: 'fileSplitter.namesFactual' };
+  const GROUPS = [['tariff', 'Tariff'], ['factual', 'Factual']];
   const TARGET_COLS = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
   const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
   const CELL_BORDERS = { top: BORDER_THIN, bottom: BORDER_THIN, left: BORDER_THIN, right: BORDER_THIN };
@@ -327,29 +349,33 @@
     else label.textContent = 'Optional — matching document numbers get a yellow “PRIO” mark in the split files.';
   }
 
-  // People list: Enter adds a new person, typing persists names.
-  const peopleListEl = document.getElementById('peopleList');
-  peopleListEl.addEventListener('keydown', e => {
+  // People lists (one per work type): Enter adds/advances within the same
+  // list, typing persists names.
+  const peopleCard = document.getElementById('peopleCard');
+  peopleCard.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.classList.contains('person-input')) {
       e.preventDefault();
-      const inputs = Array.from(document.querySelectorAll('.person-input'));
-      const idx = inputs.indexOf(e.target);
-      const next = inputs[idx + 1];
-      if (next) next.focus(); else addPerson();
+      const list = e.target.closest('.people-list');
+      const inputs = Array.from(list.querySelectorAll('.person-input'));
+      const next = inputs[inputs.indexOf(e.target) + 1];
+      if (next) next.focus(); else addPerson(list.dataset.group);
     }
   });
-  peopleListEl.addEventListener('input', e => {
+  peopleCard.addEventListener('input', e => {
     if (e.target.classList.contains('person-input')) { saveNames(); renderWizard(); }
   });
 
-  // Restore previously entered names.
+  // Restore previously entered names, per work type.
   (function restoreNames() {
-    let saved = [];
-    try { saved = JSON.parse(localStorage.getItem(NAMES_KEY) || '[]'); } catch (e) {}
-    if (Array.isArray(saved) && saved.some(v => v && v.trim())) {
-      peopleListEl.innerHTML = '';
-      saved.forEach(v => addPerson(v));
-      if (peopleListEl.children.length === 0) addPerson();
+    for (const [group, key] of Object.entries(NAMES_KEYS)) {
+      let saved = [];
+      try { saved = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
+      if (Array.isArray(saved) && saved.some(v => v && v.trim())) {
+        const list = document.querySelector(`.people-list[data-group="${group}"]`);
+        list.innerHTML = '';
+        saved.forEach(v => addPerson(group, v));
+        if (list.children.length === 0) addPerson(group);
+      }
     }
   })();
 
@@ -454,11 +480,46 @@
     }
     return docs;
   }
+  // Partition raw data rows by the 'Step description' column — real exports mix
+  // both work types in one sheet ("Tariff Check" / "Factual Check" rows). Rows
+  // whose step contains 'factual'/'faktual' (any case) are factual; everything
+  // else — tariff steps, unknown steps, blanks, or no column — stays tariff
+  // (the pre-branching pipeline).
+  function partitionByStep(header, dataRows) {
+    const si = header.findIndex(h => String(h).trim() === 'Step description');
+    const out = { tariff: [], factual: [] };
+    for (const r of dataRows) {
+      const v = si < 0 ? '' : String(r[si] ?? '').toLowerCase();
+      (v.includes('factual') || v.includes('faktual') ? out.factual : out.tariff).push(r);
+    }
+    return out;
+  }
+  // Rows a system contributes to the split: tariff rows pass the forwarder
+  // checklist + note filter; factual rows skip both. Blank-skip applies to all.
+  function splitRows(sys, keepNotes, skipBlanks) {
+    let rows = sys.rows;
+    if (sys.group !== 'factual') {
+      const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
+      rows = rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keepNotes));
+    }
+    return skipBlanks ? rows.filter(r => !isBlankRow(r)) : rows;
+  }
+
+  // De-dupe a system name against already-loaded entries of the same group —
+  // the tariff and factual halves of one file may share a name (they never
+  // share a workbook), but two uploads of the same system may not.
+  function dedupeName(base, group) {
+    let name = base; let n = 2;
+    while (systems.some(s => s.name === name && s.group === group)) name = `${base}_${n++}`;
+    return name;
+  }
 
   // ---- wizard ----
   function stepUnlocked(i) {
-    const hasFiles = systems.some(s => !s.error);
-    const hasNames = getNames().length > 0;
+    const valid = systems.filter(s => !s.error);
+    const hasFiles = valid.length > 0;
+    const groups = [...new Set(valid.map(s => s.group))];
+    const hasNames = hasFiles && groups.every(g => getNames(g).length > 0);
     return i <= 0 ? true : i === 1 ? hasFiles : hasFiles && hasNames;
   }
 
@@ -480,6 +541,9 @@
     });
 
     document.querySelectorAll('.step-card').forEach((el, i) => { el.hidden = i !== step; });
+    const inUse = new Set(systems.filter(s => !s.error).map(s => s.group));
+    document.getElementById('groupTariff').hidden = inUse.size > 0 && !inUse.has('tariff');
+    document.getElementById('groupFactual').hidden = !inUse.has('factual');
     if (step === 3) renderRecap();
 
     document.getElementById('backBtn').style.visibility = (step > 0 && !splitting) ? 'visible' : 'hidden';
@@ -491,30 +555,32 @@
     nextBtn.textContent = step === 2 ? 'Review & split →' : 'Continue →';
     hint.textContent = (step === 3 || nextOk) ? ''
       : step === 0 ? 'Upload at least one valid file to continue'
-      : 'Add at least one name to continue';
+      : 'Add at least one name to each list to continue';
   }
 
-  // Recap chips for the split step: rows surviving all filters, people, options.
+  // Recap chips for the split step: one chip per work type in use (systems,
+  // surviving rows, people), then the global options + PRIO chips.
   function renderRecap() {
     const valid = systems.filter(s => !s.error);
-    const names = getNames();
     const keep = checkedNoteSet();
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const shuffle = document.getElementById('shuffleRows').checked;
-    let planned = 0, prioHits = 0;
-    for (const sys of valid) {
-      const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
-      let rows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keep));
-      if (skipBlanks) rows = rows.filter(r => !isBlankRow(r));
-      planned += rows.length;
-      if (prio) for (const r of rows) if (prio.docs.has(normDoc(r[3]))) prioHits++;
+    const chips = [];
+    let prioHits = 0;
+    for (const [group, label] of GROUPS) {
+      const groupSys = valid.filter(s => s.group === group);
+      if (groupSys.length === 0) continue;
+      let planned = 0;
+      for (const sys of groupSys) {
+        const rows = splitRows(sys, keep, skipBlanks);
+        planned += rows.length;
+        if (prio) for (const r of rows) if (prio.docs.has(normDoc(r[3]))) prioHits++;
+      }
+      const names = getNames(group);
+      chips.push(`${label} · ${groupSys.length} system${groupSys.length === 1 ? '' : 's'} · ${planned} rows → ${names.length} ${names.length === 1 ? 'person' : 'people'}`);
     }
     const noteFilterOn = noteChecked.size > 0 && keep.size < noteChecked.size;
-    const chips = [
-      `${valid.length} system${valid.length === 1 ? '' : 's'} · ${planned} rows`,
-      `${names.length} ${names.length === 1 ? 'person' : 'people'} · ${names.length} file${names.length === 1 ? '' : 's'}`,
-      `${skipBlanks ? 'blanks skipped' : 'blanks kept'} · ${shuffle ? 'shuffled' : 'in order'}${noteFilterOn ? ' · notes filtered' : ''}`
-    ];
+    chips.push(`${skipBlanks ? 'blanks skipped' : 'blanks kept'} · ${shuffle ? 'shuffled' : 'in order'}${noteFilterOn ? ' · notes filtered' : ''}`);
     if (prio) chips.push(`PRIO list · ${prioHits} match${prioHits === 1 ? '' : 'es'}`);
     document.getElementById('recapChips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
   }
@@ -532,19 +598,25 @@
         const cols = pickColumns(header);
         const noteIdx = noteColumns(header);
 
-        // de-dupe system name against already-loaded files
-        let name = systemName(file.name); const base = name; let n = 2;
-        while (systems.some(s => s.name === name)) name = `${base}_${n++}`;
-
-        const sys = { id: 'sys' + (sysSeq++), name, fileName: file.name, rows: [], forwarders: [] };
         if (!cols) {
           const missing = TARGET_COLS.filter(c => header.findIndex(h => String(h).trim() === c) < 0);
-          sys.error = 'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ');
+          systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), 'tariff'), fileName: file.name, rows: [], forwarders: [], group: 'tariff',
+            error: 'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ') });
         } else {
-          sys.rows = extractRows(rows.slice(hIdx + 1), cols, noteIdx);
-          sys.forwarders = tallyForwarders(sys.rows).map(f => ({ ...f, checked: true }));
+          // A mixed file yields one entry per work type; if every partition
+          // extracts empty, keep one 0-row tariff card so the upload is visible.
+          const parts = partitionByStep(header, rows.slice(hIdx + 1));
+          const entries = [];
+          for (const [group] of GROUPS) {
+            const extracted = extractRows(parts[group], cols, noteIdx);
+            if (extracted.length > 0) entries.push([group, extracted]);
+          }
+          if (entries.length === 0) entries.push(['tariff', []]);
+          for (const [group, extracted] of entries) {
+            systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), group), fileName: file.name, rows: extracted,
+              forwarders: tallyForwarders(extracted).map(f => ({ ...f, checked: true })), group });
+          }
         }
-        systems.push(sys);
         systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
         renderSystems();
         rebuildNoteFilter();
@@ -568,7 +640,7 @@
   function updateNoteStat() {
     const el = document.getElementById('noteStat');
     if (!el) return;
-    const valid = systems.filter(s => !s.error);
+    const valid = systems.filter(s => !s.error && s.group !== 'factual');
     if (valid.length === 0 || noteChecked.size === 0) { el.textContent = ''; return; }
     const keep = checkedNoteSet();
     let noted = 0, matched = 0, blank = 0;
@@ -588,10 +660,11 @@
     systems.forEach(sys => {
       const card = document.createElement('div');
       card.className = 'system' + (sys.error ? ' bad' : '');
-      const meta = sys.error ? '' : `<span class="system-meta">${sys.rows.length} rows · ${sys.forwarders.length} forwarders</span>`;
+      const meta = sys.error ? '' : `<span class="system-meta">${sys.rows.length} rows${sys.group === 'factual' ? '' : ` · ${sys.forwarders.length} forwarders`}</span>`;
       card.innerHTML = `
         <div class="system-head">
           <span class="system-badge">${escapeHtml(sys.name)}</span>
+          ${sys.error ? '' : `<span class="type-badge ${sys.group === 'factual' ? 'factual' : 'tariff'}">${sys.group === 'factual' ? 'FACTUAL' : 'TARIFF'}</span>`}
           <span class="system-name">${escapeHtml(sys.fileName)}</span>
           ${meta}
           <button class="remove-file" title="Remove">×</button>
@@ -607,36 +680,39 @@
         return;
       }
 
-      const tools = document.createElement('div');
-      tools.className = 'fwd-tools';
-      tools.innerHTML = `
-        <input class="fwd-search" type="text" placeholder="Filter forwarders…" />
-        <button class="fwd-mini" data-act="all">Select all</button>
-        <button class="fwd-mini" data-act="none">Clear</button>`;
-      card.appendChild(tools);
+      // Factual work is never forwarder-filtered — no checklist on those cards.
+      if (sys.group !== 'factual') {
+        const tools = document.createElement('div');
+        tools.className = 'fwd-tools';
+        tools.innerHTML = `
+          <input class="fwd-search" type="text" placeholder="Filter forwarders…" />
+          <button class="fwd-mini" data-act="all">Select all</button>
+          <button class="fwd-mini" data-act="none">Clear</button>`;
+        card.appendChild(tools);
 
-      const list = document.createElement('div');
-      list.className = 'fwd-list';
-      sys.forwarders.forEach(f => {
-        const row = document.createElement('label');
-        row.className = 'fwd-row';
-        row.innerHTML = `<input type="checkbox" ${f.checked ? 'checked' : ''} /><span class="fwd-nm">${escapeHtml(f.name)}</span><span class="fwd-ct">${f.count}</span>`;
-        row.querySelector('input').addEventListener('change', e => { f.checked = e.target.checked; });
-        list.appendChild(row);
-      });
-      card.appendChild(list);
-
-      tools.querySelector('.fwd-search').addEventListener('input', e => {
-        const q = e.target.value.toLowerCase();
-        list.querySelectorAll('.fwd-row').forEach((r, i) => {
-          r.classList.toggle('hide', q && !sys.forwarders[i].name.toLowerCase().includes(q));
+        const list = document.createElement('div');
+        list.className = 'fwd-list';
+        sys.forwarders.forEach(f => {
+          const row = document.createElement('label');
+          row.className = 'fwd-row';
+          row.innerHTML = `<input type="checkbox" ${f.checked ? 'checked' : ''} /><span class="fwd-nm">${escapeHtml(f.name)}</span><span class="fwd-ct">${f.count}</span>`;
+          row.querySelector('input').addEventListener('change', e => { f.checked = e.target.checked; });
+          list.appendChild(row);
         });
-      });
-      tools.querySelectorAll('.fwd-mini').forEach(btn => btn.addEventListener('click', () => {
-        const val = btn.dataset.act === 'all';
-        sys.forwarders.forEach(f => f.checked = val);
-        list.querySelectorAll('.fwd-row input').forEach(cb => cb.checked = val);
-      }));
+        card.appendChild(list);
+
+        tools.querySelector('.fwd-search').addEventListener('input', e => {
+          const q = e.target.value.toLowerCase();
+          list.querySelectorAll('.fwd-row').forEach((r, i) => {
+            r.classList.toggle('hide', q && !sys.forwarders[i].name.toLowerCase().includes(q));
+          });
+        });
+        tools.querySelectorAll('.fwd-mini').forEach(btn => btn.addEventListener('click', () => {
+          const val = btn.dataset.act === 'all';
+          sys.forwarders.forEach(f => f.checked = val);
+          list.querySelectorAll('.fwd-row input').forEach(cb => cb.checked = val);
+        }));
+      }
 
       el.appendChild(card);
     });
@@ -646,7 +722,7 @@
   // keyed by the note string so it survives adding/removing files; notes first
   // seen default to checked. Stale entries drop out.
   function rebuildNoteFilter() {
-    const valid = systems.filter(s => !s.error);
+    const valid = systems.filter(s => !s.error && s.group !== 'factual');
     const tally = tallyNotes(valid.flatMap(s => s.rows));
     const next = new Map();
     for (const t of tally) next.set(t.name, noteChecked.has(t.name) ? noteChecked.get(t.name) : true);
@@ -700,13 +776,15 @@
 
   function saveNames() {
     try {
-      const vals = Array.from(document.querySelectorAll('.person-input')).map(i => i.value);
-      localStorage.setItem(NAMES_KEY, JSON.stringify(vals));
+      for (const [group, key] of Object.entries(NAMES_KEYS)) {
+        const vals = Array.from(document.querySelectorAll(`.people-list[data-group="${group}"] .person-input`)).map(i => i.value);
+        localStorage.setItem(key, JSON.stringify(vals));
+      }
     } catch (e) { /* storage unavailable */ }
   }
 
-  function addPerson(value = '') {
-    const list = document.getElementById('peopleList');
+  function addPerson(group, value = '') {
+    const list = document.querySelector(`.people-list[data-group="${group}"]`);
     const num = list.children.length + 1;
     const row = document.createElement('div');
     row.className = 'person-row';
@@ -719,21 +797,17 @@
   }
 
   function removePerson(btn) {
-    const list = document.getElementById('peopleList');
+    const list = btn.closest('.people-list');
     if (list.children.length > 1) {
       btn.closest('.person-row').remove();
-      reNumberPeople();
+      list.querySelectorAll('.person-num').forEach((el, i) => el.textContent = i + 1);
       saveNames();
       renderWizard();
     }
   }
 
-  function reNumberPeople() {
-    document.querySelectorAll('.person-num').forEach((el, i) => el.textContent = i + 1);
-  }
-
-  function getNames() {
-    return Array.from(document.querySelectorAll('.person-input')).map(i => i.value.trim()).filter(Boolean);
+  function getNames(group) {
+    return Array.from(document.querySelectorAll(`.people-list[data-group="${group}"] .person-input`)).map(i => i.value.trim()).filter(Boolean);
   }
 
   function shuffleArray(arr) {
@@ -762,10 +836,18 @@
 
   async function splitFile() {
     hideError();
-    const names = getNames();
     const valid = systems.filter(s => !s.error);
     if (valid.length === 0) { showError('Please upload at least one system file with the required columns.'); return; }
-    if (names.length === 0) { showError('Please enter at least one person name.'); return; }
+
+    // One job per work type in use: its own systems and its own people list.
+    const jobs = [];
+    for (const [group, label] of GROUPS) {
+      const groupSys = valid.filter(s => s.group === group);
+      if (groupSys.length === 0) continue;
+      const names = getNames(group);
+      if (names.length === 0) { showError(`Please enter at least one ${label} person name.`); return; }
+      jobs.push({ group, label, names, systems: groupSys });
+    }
 
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const doShuffle = document.getElementById('shuffleRows').checked;
@@ -783,75 +865,75 @@
     document.getElementById('progressWrap').classList.add('show');
 
     try {
-      const total = names.length * valid.length;
+      const total = jobs.reduce((n, j) => n + j.names.length * j.systems.length, 0);
       let done = 0;
-
-      // Filter each system to its checked forwarders, then pre-shuffle once so all
-      // people draw from the same pool. Balanced slice boundaries spread the
-      // remainder fairly instead of starving the last person.
       const keepNotes = checkedNoteSet();
-      const pool = {};
-      const bounds = {};
-      for (const sys of valid) {
-        const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
-        let dataRows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keepNotes));
-        if (skipBlanks) dataRows = dataRows.filter(r => !isBlankRow(r));
-        const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
-        pool[sys.name] = rows;
+      const today = new Date();
+      const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
 
-        const sizes = balancedSizes(rows.length, names.length);
-        const b = [];
-        let off = 0;
-        for (const s of sizes) { b.push([off, off + s]); off += s; }
-        bounds[sys.name] = b;
-      }
+      for (const job of jobs) {
+        // Filter each system per its group policy, then pre-shuffle once so all
+        // people draw from the same pool. Balanced slice boundaries spread the
+        // remainder fairly instead of starving the last person.
+        const pool = {};
+        const bounds = {};
+        for (const sys of job.systems) {
+          const dataRows = splitRows(sys, keepNotes, skipBlanks);
+          const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
+          pool[sys.name] = rows;
 
-      const usedNames = {};
-      for (let i = 0; i < names.length; i++) {
-        const name = names[i];
-        const wb = XLSX.utils.book_new();
-        const sheetSummary = {};
-
-        for (const sys of valid) {
-          const rows = pool[sys.name];
-          const [start, end] = bounds[sys.name][i];
-          const chunk = rows.slice(start, end);
-          chunk.sort(outputRowOrder); // forwarder A→Z, doc Z→A within; the shared pool stays untouched
-
-          sheetSummary[sys.name] = chunk.length;
-
-          // With a PRIO list loaded the sheet gains a trailing column: 'PRIO'
-          // on matching doc numbers, yellow fill on the doc + PRIO cells.
-          const header = prio ? [...TARGET_COLS, 'PRIO'] : TARGET_COLS;
-          const cells = chunk.map(r => prio
-            ? [...r.slice(0, 4), prio.docs.has(normDoc(r[3])) ? 'PRIO' : '']
-            : r.slice(0, 4));
-          const ws = XLSX.utils.aoa_to_sheet([header, ...cells]);
-          for (let R = 0; R <= cells.length; R++) for (let C = 0; C < header.length; C++) {
-            const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
-            if (cell) cell.s = R === 0 ? HEADER_STYLE
-              : C >= 3 && cells[R - 1][4] === 'PRIO' ? PRIO_STYLE : DATA_STYLE;
-          }
-          ws['!cols'] = colWidths(header, cells);
-          ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cells.length, c: header.length - 1 } }) };
-          XLSX.utils.book_append_sheet(wb, ws, sys.name);
-
-          done++;
-          setProgress(Math.round((done / total) * 100), `Building ${name} — ${sys.name}…`);
-          await sleep(10);
+          const sizes = balancedSizes(rows.length, job.names.length);
+          const b = [];
+          let off = 0;
+          for (const s of sizes) { b.push([off, off + s]); off += s; }
+          bounds[sys.name] = b;
         }
 
-        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const today = new Date();
-        const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
-        // Build a safe, unique filename (handles duplicate / blank names).
-        let base = name.replace(/[^\w.\- ]+/g, '').replace(/\s+/g, '_') || `person_${i + 1}`;
-        usedNames[base] = (usedNames[base] || 0) + 1;
-        if (usedNames[base] > 1) base += `_${usedNames[base]}`;
-        const fileName = `${base}_data_${dateStr}.xlsx`;
-        generatedFiles.push({ name, fileName, url, blob, sheetSummary });
+        const usedNames = {}; // per job — the Tariff/Factual filename token separates jobs
+        for (let i = 0; i < job.names.length; i++) {
+          const name = job.names[i];
+          const wb = XLSX.utils.book_new();
+          const sheetSummary = {};
+
+          for (const sys of job.systems) {
+            const rows = pool[sys.name];
+            const [start, end] = bounds[sys.name][i];
+            const chunk = rows.slice(start, end);
+            chunk.sort(outputRowOrder); // forwarder A→Z, doc Z→A within; the shared pool stays untouched
+
+            sheetSummary[sys.name] = chunk.length;
+
+            // With a PRIO list loaded the sheet gains a trailing column: 'PRIO'
+            // on matching doc numbers, yellow fill on the doc + PRIO cells.
+            const header = prio ? [...TARGET_COLS, 'PRIO'] : TARGET_COLS;
+            const cells = chunk.map(r => prio
+              ? [...r.slice(0, 4), prio.docs.has(normDoc(r[3])) ? 'PRIO' : '']
+              : r.slice(0, 4));
+            const ws = XLSX.utils.aoa_to_sheet([header, ...cells]);
+            for (let R = 0; R <= cells.length; R++) for (let C = 0; C < header.length; C++) {
+              const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+              if (cell) cell.s = R === 0 ? HEADER_STYLE
+                : C >= 3 && cells[R - 1][4] === 'PRIO' ? PRIO_STYLE : DATA_STYLE;
+            }
+            ws['!cols'] = colWidths(header, cells);
+            ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cells.length, c: header.length - 1 } }) };
+            XLSX.utils.book_append_sheet(wb, ws, sys.name);
+
+            done++;
+            setProgress(Math.round((done / total) * 100), `Building ${name} — ${sys.name}…`);
+            await sleep(10);
+          }
+
+          const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+          const blob = new Blob([wbout], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+          // Build a safe, unique filename (handles duplicate / blank names).
+          let base = name.replace(/[^\w.\- ]+/g, '').replace(/\s+/g, '_') || `person_${i + 1}`;
+          usedNames[base] = (usedNames[base] || 0) + 1;
+          if (usedNames[base] > 1) base += `_${usedNames[base]}`;
+          const fileName = `${base}_${job.label}_${dateStr}.xlsx`;
+          generatedFiles.push({ name, group: job.group, label: job.label, fileName, url, blob, sheetSummary });
+        }
       }
 
       setProgress(100, 'Done!');
@@ -901,7 +983,7 @@
       card.className = 'result-card';
       card.innerHTML = `
         <div class="result-info">
-          <div class="result-name">${escapeHtml(f.name)} ${hasEmpty ? '<span class="warn-badge">some sheets empty</span>' : ''}</div>
+          <div class="result-name">${escapeHtml(f.name)} <span class="type-badge ${f.group}">${f.label.toUpperCase()}</span> ${hasEmpty ? '<span class="warn-badge">some sheets empty</span>' : ''}</div>
           <div class="result-pills">${sheetPills}</div>
         </div>
         <div class="result-count" title="${totalRows} data rows total">

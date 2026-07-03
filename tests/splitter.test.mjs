@@ -116,6 +116,39 @@ test('prioDocsFromSheet: walks actual cells (not !ref), per-header column, skips
   assert.deepEqual(plain(s.prioDocsFromSheet({ '!ref': 'A1:B2', A1: { v: 'no headers here' } })), []);
 });
 
+test('partitionByStep: factual rows split out per Step description; everything else stays tariff', () => {
+  const H = ['Vendor details', 'Step description', 'Document number'];
+  const rows = [
+    ['DHL', 'Tariff Check', 'D1'],        // real-world tariff value
+    ['Kuehne', 'Factual Check', 'D2'],    // real-world factual value
+    ['Schenker', 'faktuale Prüfung', 'D3'], // German spelling, case-insensitive
+    ['Dachser', 'other step', 'D4'],      // unknown step -> tariff
+    ['Gebr. Weiss', '', 'D5'],            // blank step -> tariff
+  ];
+  const p = s.partitionByStep(H, rows);
+  assert.deepEqual(plain(p.tariff).map(r => r[0]), ['DHL', 'Dachser', 'Gebr. Weiss']);
+  assert.deepEqual(plain(p.factual).map(r => r[0]), ['Kuehne', 'Schenker']);
+  // no Step description column -> everything tariff (pre-branching behavior)
+  const q = s.partitionByStep(['Vendor details'], [['DHL'], ['Kuehne']]);
+  assert.equal(q.tariff.length, 2);
+  assert.equal(q.factual.length, 0);
+});
+
+test('splitRows: tariff rows pass forwarder+note filters; factual rows bypass both', () => {
+  const rows = [
+    ['DHL', 'S', 'R', 'D1', []],
+    ['Kuehne', 'S', 'R', 'D2', ['bad note']],
+  ];
+  const fwd = [{ name: 'DHL', checked: true }, { name: 'Kuehne', checked: false }];
+  const keep = new Set(); // no notes checked
+  assert.deepEqual(plain(s.splitRows({ group: 'tariff', rows, forwarders: fwd }, keep, true)),
+    [['DHL', 'S', 'R', 'D1', []]]);            // Kuehne: unchecked forwarder AND unchecked note
+  assert.deepEqual(plain(s.splitRows({ rows, forwarders: fwd }, keep, true)),
+    [['DHL', 'S', 'R', 'D1', []]]);            // no group -> tariff behavior
+  assert.deepEqual(plain(s.splitRows({ group: 'factual', rows, forwarders: fwd }, keep, true)),
+    plain(rows));                              // factual ignores forwarders and notes
+});
+
 test('colWidths: per-column max content length +2, clamped to [12, 44]', () => {
   const header = ['Vendor details', 'Supplier', 'Document number'];
   const rows = [
