@@ -31,19 +31,29 @@ those entries unchanged.
 
 ## Behavior
 
+Wizard order (revised 2026-07-03): **Files → Notes → Totals → People → Split** —
+totals come before people so the user can size the team from the surviving row
+counts. Notes, Totals, and People unlock once one valid file is loaded; Split
+additionally requires a name in every work-type list in use.
+
 - **Step 1 (Files):** each valid system card shows a TARIFF or FACTUAL badge next to
   the system name. Factual cards hide the forwarder search + checklist (no forwarder
   filtering); tariff cards are unchanged.
-- **Step 2 (People):** two sections — **Tariff people** and **Factual people** — each
+- **Step 2 (Notes):** the note checklist tallies tariff systems only; factual rows are
+  never note-filtered. Only-factual uploads show the existing "nothing to filter"
+  empty state.
+- **Step 3 (Totals, read-only):** one block per work type in use — total rows
+  surviving the current forwarder ticks + note filter (same `splitRows` policy the
+  split uses) in large type, with a per-system breakdown underneath. Recomputed every
+  time the step is entered, so going back to adjust filters and returning refreshes
+  the counts.
+- **Step 4 (People):** two sections — **Tariff people** and **Factual people** — each
   with its own add/remove/Enter-to-add behavior. A section is only shown when at least
   one valid file of that type is loaded. Persistence: the existing
   `fileSplitter.names` key becomes the tariff list (previously saved names carry
   over); factual names save under `fileSplitter.namesFactual`. The skip-blanks and
   shuffle toggles stay global.
-- **Step 3 (Notes):** the note checklist tallies tariff systems only; factual rows are
-  never note-filtered. Only-factual uploads show the existing "nothing to filter"
-  empty state.
-- **Step 4 (Split):** two independent balanced splits —
+- **Step 5 (Split):** two independent balanced splits —
   - tariff rows (after forwarder + note + blank filters) across tariff people →
     `Name_Tariff_dd.mm.yyyy.xlsx`, one sheet per tariff system;
   - factual rows (blank filter only) across factual people →

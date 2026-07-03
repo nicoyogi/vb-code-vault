@@ -754,3 +754,100 @@ Verify (snapshot/inspect, not screenshots):
 - [ ] **Step 3: Verify factual-only path** — reload page, inject only the KSP factual system (same eval minus sysA): tariff people section hidden, notes step shows the "No Note values found" empty state, split produces only `_Factual_` files.
 
 - [ ] **Step 4: Commit any fixes found, then hand off** — merge/PR per `superpowers:finishing-a-development-branch`.
+
+---
+
+### Task 7: Five-step wizard — Files → Notes → Totals → People → Split (added 2026-07-03)
+
+User-requested reorder: totals must precede people entry so the team can be sized
+from the surviving row counts. Notes/Totals/People unlock with one valid file;
+Split gates on names.
+
+**Files:**
+- Modify: `File_splitter.html` — card order in HTML, step tags, header sub copy,
+  `STEP_LABELS`, `stepUnlocked`, `goNext`, `renderWizard`, new `renderTotals` + CSS
+
+**Interfaces:**
+- Consumes: `GROUPS`, `splitRows`, `checkedNoteSet`, `getNames` (existing).
+- Produces: `renderTotals()` — called by `renderWizard` when `step === 2`.
+
+- [ ] **Step 1: Reorder cards + new Totals card.** Move the Notes card block directly
+  after the Files card; insert the Totals card between Notes and People:
+
+```html
+<div class="card step-card" hidden>
+  <div class="card-head"><h2>How much work is there?</h2><span class="step-tag">step 3 of 5</span></div>
+  <p class="card-desc">Rows that survive your forwarder and note filters, per work type — use this to decide how many people you need.</p>
+  <div id="totalsBody"></div>
+</div>
+```
+
+  Update step tags: Files "step 1 of 5", Notes "step 2 of 5", People "step 4 of 5",
+  Split "step 5 of 5". Header sub becomes "Five quick steps: upload your files,
+  filter notes, check totals, add people, and download the split."
+
+- [ ] **Step 2: CSS** — after the `.group-note` rule:
+
+```css
+  .total-block { display: flex; align-items: center; gap: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px 18px; }
+  .total-block + .total-block { margin-top: 10px; }
+  .total-info { flex: 1; min-width: 0; }
+  .total-num { font-family: var(--mono); font-size: 26px; color: var(--accent); line-height: 1.1; }
+  .total-rows { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+  .total-sys { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-top: 5px; }
+```
+
+- [ ] **Step 3: Wizard JS.**
+
+```js
+  const STEP_LABELS = ['Files', 'Notes', 'Totals', 'People', 'Split'];
+  // step comment: 0 files, 1 notes, 2 totals, 3 people, 4 split
+  function goNext() { if (stepUnlocked(step + 1)) setStep(Math.min(4, step + 1)); }
+  function stepUnlocked(i) {
+    const valid = systems.filter(s => !s.error);
+    const hasFiles = valid.length > 0;
+    if (i <= 0) return true;
+    if (i <= 3) return hasFiles; // notes, totals, people
+    const groups = [...new Set(valid.map(s => s.group))];
+    return hasFiles && groups.every(g => getNames(g).length > 0); // split
+  }
+```
+
+  In `renderWizard`: `if (step === 2) renderTotals();` and `renderRecap` moves to
+  `step === 4`; `nextBtn.hidden = step === 4`; button text `step === 3 ?
+  'Review & split →' : 'Continue →'`; hint condition `(step === 4 || nextOk)`.
+
+- [ ] **Step 4: renderTotals** — after `renderRecap`:
+
+```js
+  // Totals step: per work type, rows surviving the current forwarder + note
+  // filters (the exact rows the split would distribute), with per-system detail.
+  function renderTotals() {
+    const valid = systems.filter(s => !s.error);
+    const keep = checkedNoteSet();
+    const skipBlanks = document.getElementById('skipBlanks').checked;
+    const body = document.getElementById('totalsBody');
+    body.innerHTML = '';
+    for (const [group, label] of GROUPS) {
+      const groupSys = valid.filter(s => s.group === group);
+      if (groupSys.length === 0) continue;
+      const per = groupSys.map(sys => ({ name: sys.name, rows: splitRows(sys, keep, skipBlanks).length }));
+      const total = per.reduce((a, p) => a + p.rows, 0);
+      const block = document.createElement('div');
+      block.className = 'total-block';
+      block.innerHTML = `
+        <span class="type-badge ${group}">${label.toUpperCase()}</span>
+        <div class="total-info">
+          <div><span class="total-num">${total}</span> <span class="total-rows">rows</span></div>
+          <div class="total-sys">${per.map(p => `${escapeHtml(p.name)} ${p.rows}`).join(' · ')}</div>
+        </div>`;
+      body.appendChild(block);
+    }
+  }
+```
+
+- [ ] **Step 5: Run tests** — `node --test "tests/*.test.mjs"`, expect all PASS.
+- [ ] **Step 6: Browser walkthrough** — five pills; notes reachable without names;
+  totals shows per-type counts and reacts to unticking a forwarder; people gates
+  split; split still produces `_Tariff_`/`_Factual_` files.
+- [ ] **Step 7: Commit** — `feat(splitter): five-step wizard — totals before people`.
