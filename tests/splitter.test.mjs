@@ -8,25 +8,25 @@ const s = loadSplitter();
 // them so deepStrictEqual compares by value.
 const plain = x => JSON.parse(JSON.stringify(x));
 
-test('pickColumns: finds the 3 targets by name regardless of order', () => {
-  // [Vendor details, Supplier, Document number] -> their indices
-  assert.deepEqual(plain(s.pickColumns(['Document number', 'Vendor details', 'x', 'Supplier'])), [1, 3, 0]);
-  assert.deepEqual(plain(s.pickColumns([' Vendor details ', 'Supplier', 'Document number'])), [0, 1, 2]); // trims
-  assert.equal(s.pickColumns(['Vendor details', 'Supplier']), null); // missing Document number
+test('pickColumns: finds the 4 targets by name regardless of order', () => {
+  // [Vendor details, Supplier, Reference, Document number] -> their indices
+  assert.deepEqual(plain(s.pickColumns(['Document number', 'Vendor details', 'Reference', 'x', 'Supplier'])), [1, 4, 2, 0]);
+  assert.deepEqual(plain(s.pickColumns([' Vendor details ', 'Supplier', 'Reference', 'Document number'])), [0, 1, 2, 3]); // trims
+  assert.equal(s.pickColumns(['Vendor details', 'Supplier', 'Document number']), null); // missing Reference
 });
 
-test('extractRows: projects to [vendor,supplier,doc,notes[]], collects Note cells, drops blank-vendor rows', () => {
+test('extractRows: projects to [vendor,supplier,ref,doc,notes[]], collects Note cells, drops blank-vendor rows', () => {
   const rows = [
-    // vendor,    supplier, doc,  note@3,   note@4
-    ['DHL',      '111', 'D1', '',      'kreditor fehlt'],
-    ['',         '222', 'D2', 'x',     ''],              // blank vendor -> dropped
-    ['Schenker', '444', 'D4', 'noteA', 'noteB'],         // two note cells -> both kept, separate
-    ['Kuehne',   '555', 'D5', '',      ''],              // no note -> []
+    // vendor,    supplier, ref, doc,  note@4,   note@5
+    ['DHL',      '111', 'R1', 'D1', '',      'kreditor fehlt'],
+    ['',         '222', 'R2', 'D2', 'x',     ''],              // blank vendor -> dropped
+    ['Schenker', '444', 'R4', 'D4', 'noteA', 'noteB'],         // two note cells -> both kept, separate
+    ['Kuehne',   '555', 'R5', 'D5', '',      ''],              // no note -> []
   ];
-  assert.deepEqual(plain(s.extractRows(rows, [0, 1, 2], [3, 4])), [
-    ['DHL', '111', 'D1', ['kreditor fehlt']],
-    ['Schenker', '444', 'D4', ['noteA', 'noteB']],
-    ['Kuehne', '555', 'D5', []],
+  assert.deepEqual(plain(s.extractRows(rows, [0, 1, 2, 3], [4, 5])), [
+    ['DHL', '111', 'R1', 'D1', ['kreditor fehlt']],
+    ['Schenker', '444', 'R4', 'D4', ['noteA', 'noteB']],
+    ['Kuehne', '555', 'R5', 'D5', []],
   ]);
 });
 
@@ -51,9 +51,9 @@ test('tallyForwarders: counts per vendor, sorted A-Z by name', () => {
 
 test('tallyNotes: counts each note value across all rows, sorted desc', () => {
   const rows = [
-    ['DHL', '', '1', ['A', 'B']],
-    ['DHL', '', '2', ['A']],
-    ['SCH', '', '3', []],
+    ['DHL', '', 'r', '1', ['A', 'B']],
+    ['DHL', '', 'r', '2', ['A']],
+    ['SCH', '', 'r', '3', []],
   ];
   assert.deepEqual(plain(s.tallyNotes(rows)), [{ name: 'A', count: 2 }, { name: 'B', count: 1 }]);
 });
@@ -73,9 +73,9 @@ test('systemName: strips the extension', () => {
 });
 
 test('docNumDesc: sorts rows by Document number Z→A, numeric-aware, blanks last', () => {
-  const r = d => ['V', 'S', d, []];
+  const r = d => ['V', 'S', 'R', d, []];
   const rows = [r('9'), r('D-2'), r(''), r('10'), r(100), r('D-10')];
-  const sorted = [...rows].sort(s.docNumDesc).map(x => String(x[2]));
+  const sorted = [...rows].sort(s.docNumDesc).map(x => String(x[3]));
   assert.deepEqual(plain(sorted), ['D-10', 'D-2', '100', '10', '9', '']);
 });
 

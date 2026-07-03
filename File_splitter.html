@@ -188,7 +188,7 @@
 
 <div class="card step-card">
   <div class="card-head"><h2>Upload your files</h2><span class="step-tag">step 1 of 4</span></div>
-  <p class="card-desc">One Excel file per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong> and <strong>Document number</strong> columns.</p>
+  <p class="card-desc">One Excel file per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong>, <strong>Reference</strong> and <strong>Document number</strong> columns.</p>
   <div class="dropzone" id="dropzone">
     <input type="file" id="fileInput" accept=".xlsx,.xls" multiple />
     <span class="dz-orb">↑</span>
@@ -275,7 +275,7 @@
   let splitting = false;
   const STEP_LABELS = ['Files', 'People', 'Notes', 'Split'];
   const NAMES_KEY = 'fileSplitter.names';
-  const TARGET_COLS = ['Vendor details', 'Supplier', 'Document number'];
+  const TARGET_COLS = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
   const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
   const CELL_BORDERS = { top: BORDER_THIN, bottom: BORDER_THIN, left: BORDER_THIN, right: BORDER_THIN };
   const HEADER_STYLE = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '262626' } }, border: CELL_BORDERS };
@@ -372,17 +372,17 @@
   function noteColumns(header) {
     return header.map((h, i) => (String(h).trim() === 'Note' ? i : -1)).filter(i => i >= 0);
   }
-  // Project rows to [Vendor details, Supplier, Document number, notes[]]; drop
-  // blank-vendor rows. notes collects the non-blank Note cells individually —
-  // used only for the note filter, never written to the output.
+  // Project rows to [Vendor details, Supplier, Reference, Document number,
+  // notes[]]; drop blank-vendor rows. notes collects the non-blank Note cells
+  // individually — used only for the note filter, never written to the output.
   function extractRows(dataRows, cols, noteIdx = []) {
-    const [vi, si, di] = cols;
+    const [vi, si, ri, di] = cols;
     const out = [];
     for (const r of dataRows) {
       const v = r[vi];
       if (v === null || v === undefined || String(v).trim() === '') continue;
       const notes = noteIdx.map(i => String(r[i] ?? '').trim()).filter(Boolean);
-      out.push([r[vi], r[si], r[di], notes]);
+      out.push([r[vi], r[si], r[ri], r[di], notes]);
     }
     return out;
   }
@@ -396,10 +396,10 @@
   function systemName(fileName) {
     return fileName.replace(/\.[^.]+$/, '').trim() || 'Sheet';
   }
-  // Sort projected rows by Document number (index 2), Z→A, numeric-aware
+  // Sort projected rows by Document number (index 3), Z→A, numeric-aware
   // ("10" above "9"); blank/missing document numbers sink to the bottom.
   function docNumDesc(a, b) {
-    return String(b[2] ?? '').localeCompare(String(a[2] ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+    return String(b[3] ?? '').localeCompare(String(a[3] ?? ''), undefined, { numeric: true, sensitivity: 'base' });
   }
   // Column widths for the output sheet: content-fitted, clamped to [12, 44].
   function colWidths(header, rows) {
@@ -414,7 +414,7 @@
   // across the up-to-4 Note columns would otherwise explode the distinct count.
   function tallyNotes(rows) {
     const m = new Map();
-    for (const r of rows) for (const n of r[3]) m.set(n, (m.get(n) || 0) + 1);
+    for (const r of rows) for (const n of r[4]) m.set(n, (m.get(n) || 0) + 1);
     return [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
   }
   // Keep a row by its notes: rows without a note always pass; otherwise at
@@ -500,10 +500,10 @@
     let planned = 0, prioHits = 0;
     for (const sys of valid) {
       const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
-      let rows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[3], keep));
+      let rows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keep));
       if (skipBlanks) rows = rows.filter(r => !isBlankRow(r));
       planned += rows.length;
-      if (prio) for (const r of rows) if (prio.docs.has(normDoc(r[2]))) prioHits++;
+      if (prio) for (const r of rows) if (prio.docs.has(normDoc(r[3]))) prioHits++;
     }
     const noteFilterOn = noteChecked.size > 0 && keep.size < noteChecked.size;
     const chips = [
@@ -569,9 +569,9 @@
     const keep = checkedNoteSet();
     let noted = 0, matched = 0, blank = 0;
     for (const sys of valid) for (const r of sys.rows) {
-      if (r[3].length === 0) { blank++; continue; }
+      if (r[4].length === 0) { blank++; continue; }
       noted++;
-      if (noteKeep(r[3], keep)) matched++;
+      if (noteKeep(r[4], keep)) matched++;
     }
     el.textContent = keep.size === noteChecked.size
       ? `All notes kept — ${noted + blank} rows (${blank} without a note).`
@@ -790,7 +790,7 @@
       const bounds = {};
       for (const sys of valid) {
         const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
-        let dataRows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[3], keepNotes));
+        let dataRows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keepNotes));
         if (skipBlanks) dataRows = dataRows.filter(r => !isBlankRow(r));
         const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
         pool[sys.name] = rows;
@@ -816,17 +816,17 @@
 
           sheetSummary[sys.name] = chunk.length;
 
-          // With a PRIO list loaded the sheet gains a 4th column: 'PRIO' on
-          // matching doc numbers, yellow fill on the doc + PRIO cells.
+          // With a PRIO list loaded the sheet gains a trailing column: 'PRIO'
+          // on matching doc numbers, yellow fill on the doc + PRIO cells.
           const header = prio ? [...TARGET_COLS, 'PRIO'] : TARGET_COLS;
           const cells = chunk.map(r => prio
-            ? [...r.slice(0, 3), prio.docs.has(normDoc(r[2])) ? 'PRIO' : '']
-            : r.slice(0, 3));
+            ? [...r.slice(0, 4), prio.docs.has(normDoc(r[3])) ? 'PRIO' : '']
+            : r.slice(0, 4));
           const ws = XLSX.utils.aoa_to_sheet([header, ...cells]);
           for (let R = 0; R <= cells.length; R++) for (let C = 0; C < header.length; C++) {
             const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
             if (cell) cell.s = R === 0 ? HEADER_STYLE
-              : C >= 2 && cells[R - 1][3] === 'PRIO' ? PRIO_STYLE : DATA_STYLE;
+              : C >= 3 && cells[R - 1][4] === 'PRIO' ? PRIO_STYLE : DATA_STYLE;
           }
           ws['!cols'] = colWidths(header, cells);
           ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cells.length, c: header.length - 1 } }) };

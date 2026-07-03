@@ -10,6 +10,9 @@
 2. Order the step-1 system cards (each carries its forwarder filter) and the output
    sheets in the fixed operational order **FNP → KSP → OPP → PS1** instead of upload
    order. Unknown system names follow after, in upload order.
+3. Also extract the **Reference** column, so the output columns are
+   **Vendor details, Supplier, Reference, Document number** (all four are required
+   headers in each system file, like the existing three were).
 
 ## PRIO workbook format (observed)
 
@@ -27,9 +30,10 @@
   ⇒ output is byte-for-byte the same as today.
 - **Matching:** `String(docNumber).trim()` equality, one global set (doc-number ranges
   don't collide across systems in practice).
-- **Output marking** (only when a PRIO list is loaded): a 4th column `PRIO` holds
+- **Output marking** (only when a PRIO list is loaded): a trailing `PRIO` column holds
   `PRIO` on matching rows; the Document number and PRIO cells of those rows get a
-  yellow fill (`FFFF00`). Column D is autofilterable, so "filter → PRIO" finds them.
+  yellow fill (`FFFF00`). The PRIO column is autofilterable, so "filter → PRIO" finds
+  them.
 - **Recap step** shows a `PRIO list · n matches` chip (counted after forwarder/note/
   blank filters) so a uselessly-unmatched PRIO file is visible before splitting.
 - Repeated `Dokumentnummer` header cells inside one column (stacked exports) are
