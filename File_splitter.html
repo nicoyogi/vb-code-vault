@@ -467,6 +467,16 @@
     }
     return 'tariff';
   }
+  // Rows a system contributes to the split: tariff rows pass the forwarder
+  // checklist + note filter; factual rows skip both. Blank-skip applies to all.
+  function splitRows(sys, keepNotes, skipBlanks) {
+    let rows = sys.rows;
+    if (sys.group !== 'factual') {
+      const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
+      rows = rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keepNotes));
+    }
+    return skipBlanks ? rows.filter(r => !isBlankRow(r)) : rows;
+  }
 
   // ---- wizard ----
   function stepUnlocked(i) {
@@ -516,9 +526,7 @@
     const shuffle = document.getElementById('shuffleRows').checked;
     let planned = 0, prioHits = 0;
     for (const sys of valid) {
-      const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
-      let rows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keep));
-      if (skipBlanks) rows = rows.filter(r => !isBlankRow(r));
+      const rows = splitRows(sys, keep, skipBlanks);
       planned += rows.length;
       if (prio) for (const r of rows) if (prio.docs.has(normDoc(r[3]))) prioHits++;
     }
@@ -806,9 +814,7 @@
       const pool = {};
       const bounds = {};
       for (const sys of valid) {
-        const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
-        let dataRows = sys.rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keepNotes));
-        if (skipBlanks) dataRows = dataRows.filter(r => !isBlankRow(r));
+        const dataRows = splitRows(sys, keepNotes, skipBlanks);
         const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
         pool[sys.name] = rows;
 

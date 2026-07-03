@@ -127,6 +127,21 @@ test('detectGroup: first matching Step description cell decides; default tariff'
   assert.equal(s.detectGroup(['Vendor details'], [['DHL']]), 'tariff');             // column missing -> tariff
 });
 
+test('splitRows: tariff rows pass forwarder+note filters; factual rows bypass both', () => {
+  const rows = [
+    ['DHL', 'S', 'R', 'D1', []],
+    ['Kuehne', 'S', 'R', 'D2', ['bad note']],
+  ];
+  const fwd = [{ name: 'DHL', checked: true }, { name: 'Kuehne', checked: false }];
+  const keep = new Set(); // no notes checked
+  assert.deepEqual(plain(s.splitRows({ group: 'tariff', rows, forwarders: fwd }, keep, true)),
+    [['DHL', 'S', 'R', 'D1', []]]);            // Kuehne: unchecked forwarder AND unchecked note
+  assert.deepEqual(plain(s.splitRows({ rows, forwarders: fwd }, keep, true)),
+    [['DHL', 'S', 'R', 'D1', []]]);            // no group -> tariff behavior
+  assert.deepEqual(plain(s.splitRows({ group: 'factual', rows, forwarders: fwd }, keep, true)),
+    plain(rows));                              // factual ignores forwarders and notes
+});
+
 test('colWidths: per-column max content length +2, clamped to [12, 44]', () => {
   const header = ['Vendor details', 'Supplier', 'Document number'];
   const rows = [
