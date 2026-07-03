@@ -91,6 +91,9 @@
   .prio-tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--warn); border: 1px solid rgba(245,166,35,0.4); border-radius: 4px; padding: 2px 6px; flex-shrink: 0; }
   .prio-label { flex: 1; font-size: 12.5px; color: var(--text2); line-height: 1.45; }
   .prio-label strong { color: var(--text); font-weight: 500; }
+  .type-badge { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; padding: 3px 7px; border-radius: 5px; white-space: nowrap; flex-shrink: 0; }
+  .type-badge.tariff { color: var(--accent); background: var(--accent-dim); border: 1px solid var(--accent-mid); }
+  .type-badge.factual { color: var(--warn); background: rgba(245,166,35,0.12); border: 1px solid rgba(245,166,35,0.4); }
 
   /* step 2 — people */
   .people-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
@@ -188,7 +191,7 @@
 
 <div class="card step-card">
   <div class="card-head"><h2>Upload your files</h2><span class="step-tag">step 1 of 4</span></div>
-  <p class="card-desc">One Excel file per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong>, <strong>Reference</strong> and <strong>Document number</strong> columns.</p>
+  <p class="card-desc">One Excel file per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong>, <strong>Reference</strong> and <strong>Document number</strong> columns. The <strong>Step description</strong> column decides Tariff vs Factual work.</p>
   <div class="dropzone" id="dropzone">
     <input type="file" id="fileInput" accept=".xlsx,.xls" multiple />
     <span class="dz-orb">↑</span>
@@ -235,7 +238,7 @@
 
 <div class="card step-card" hidden>
   <div class="card-head"><h2>Filter by note <span class="opt-tag">optional</span></h2><span class="step-tag">step 3 of 4</span></div>
-  <p class="card-desc">Tick the <strong>Note</strong> values to keep. Rows with no note are always kept. Applies to all systems.</p>
+  <p class="card-desc">Tick the <strong>Note</strong> values to keep. Rows with no note are always kept. Applies to <strong>Tariff</strong> systems only — Factual rows are never filtered.</p>
   <div id="noteFilterBody"><div class="note-empty">No Note values found in your files — nothing to filter here. Continue to the next step.</div></div>
   <div class="note-stat" id="noteStat"></div>
 </div>
@@ -557,7 +560,7 @@
         let name = systemName(file.name); const base = name; let n = 2;
         while (systems.some(s => s.name === name)) name = `${base}_${n++}`;
 
-        const sys = { id: 'sys' + (sysSeq++), name, fileName: file.name, rows: [], forwarders: [] };
+        const sys = { id: 'sys' + (sysSeq++), name, fileName: file.name, rows: [], forwarders: [], group: detectGroup(header, rows.slice(hIdx + 1)) };
         if (!cols) {
           const missing = TARGET_COLS.filter(c => header.findIndex(h => String(h).trim() === c) < 0);
           sys.error = 'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ');
@@ -589,7 +592,7 @@
   function updateNoteStat() {
     const el = document.getElementById('noteStat');
     if (!el) return;
-    const valid = systems.filter(s => !s.error);
+    const valid = systems.filter(s => !s.error && s.group !== 'factual');
     if (valid.length === 0 || noteChecked.size === 0) { el.textContent = ''; return; }
     const keep = checkedNoteSet();
     let noted = 0, matched = 0, blank = 0;
@@ -609,10 +612,11 @@
     systems.forEach(sys => {
       const card = document.createElement('div');
       card.className = 'system' + (sys.error ? ' bad' : '');
-      const meta = sys.error ? '' : `<span class="system-meta">${sys.rows.length} rows · ${sys.forwarders.length} forwarders</span>`;
+      const meta = sys.error ? '' : `<span class="system-meta">${sys.rows.length} rows${sys.group === 'factual' ? '' : ` · ${sys.forwarders.length} forwarders`}</span>`;
       card.innerHTML = `
         <div class="system-head">
           <span class="system-badge">${escapeHtml(sys.name)}</span>
+          <span class="type-badge ${sys.group === 'factual' ? 'factual' : 'tariff'}">${sys.group === 'factual' ? 'FACTUAL' : 'TARIFF'}</span>
           <span class="system-name">${escapeHtml(sys.fileName)}</span>
           ${meta}
           <button class="remove-file" title="Remove">×</button>
@@ -628,36 +632,39 @@
         return;
       }
 
-      const tools = document.createElement('div');
-      tools.className = 'fwd-tools';
-      tools.innerHTML = `
-        <input class="fwd-search" type="text" placeholder="Filter forwarders…" />
-        <button class="fwd-mini" data-act="all">Select all</button>
-        <button class="fwd-mini" data-act="none">Clear</button>`;
-      card.appendChild(tools);
+      // Factual work is never forwarder-filtered — no checklist on those cards.
+      if (sys.group !== 'factual') {
+        const tools = document.createElement('div');
+        tools.className = 'fwd-tools';
+        tools.innerHTML = `
+          <input class="fwd-search" type="text" placeholder="Filter forwarders…" />
+          <button class="fwd-mini" data-act="all">Select all</button>
+          <button class="fwd-mini" data-act="none">Clear</button>`;
+        card.appendChild(tools);
 
-      const list = document.createElement('div');
-      list.className = 'fwd-list';
-      sys.forwarders.forEach(f => {
-        const row = document.createElement('label');
-        row.className = 'fwd-row';
-        row.innerHTML = `<input type="checkbox" ${f.checked ? 'checked' : ''} /><span class="fwd-nm">${escapeHtml(f.name)}</span><span class="fwd-ct">${f.count}</span>`;
-        row.querySelector('input').addEventListener('change', e => { f.checked = e.target.checked; });
-        list.appendChild(row);
-      });
-      card.appendChild(list);
-
-      tools.querySelector('.fwd-search').addEventListener('input', e => {
-        const q = e.target.value.toLowerCase();
-        list.querySelectorAll('.fwd-row').forEach((r, i) => {
-          r.classList.toggle('hide', q && !sys.forwarders[i].name.toLowerCase().includes(q));
+        const list = document.createElement('div');
+        list.className = 'fwd-list';
+        sys.forwarders.forEach(f => {
+          const row = document.createElement('label');
+          row.className = 'fwd-row';
+          row.innerHTML = `<input type="checkbox" ${f.checked ? 'checked' : ''} /><span class="fwd-nm">${escapeHtml(f.name)}</span><span class="fwd-ct">${f.count}</span>`;
+          row.querySelector('input').addEventListener('change', e => { f.checked = e.target.checked; });
+          list.appendChild(row);
         });
-      });
-      tools.querySelectorAll('.fwd-mini').forEach(btn => btn.addEventListener('click', () => {
-        const val = btn.dataset.act === 'all';
-        sys.forwarders.forEach(f => f.checked = val);
-        list.querySelectorAll('.fwd-row input').forEach(cb => cb.checked = val);
-      }));
+        card.appendChild(list);
+
+        tools.querySelector('.fwd-search').addEventListener('input', e => {
+          const q = e.target.value.toLowerCase();
+          list.querySelectorAll('.fwd-row').forEach((r, i) => {
+            r.classList.toggle('hide', q && !sys.forwarders[i].name.toLowerCase().includes(q));
+          });
+        });
+        tools.querySelectorAll('.fwd-mini').forEach(btn => btn.addEventListener('click', () => {
+          const val = btn.dataset.act === 'all';
+          sys.forwarders.forEach(f => f.checked = val);
+          list.querySelectorAll('.fwd-row input').forEach(cb => cb.checked = val);
+        }));
+      }
 
       el.appendChild(card);
     });
@@ -667,7 +674,7 @@
   // keyed by the note string so it survives adding/removing files; notes first
   // seen default to checked. Stale entries drop out.
   function rebuildNoteFilter() {
-    const valid = systems.filter(s => !s.error);
+    const valid = systems.filter(s => !s.error && s.group !== 'factual');
     const tally = tallyNotes(valid.flatMap(s => s.rows));
     const next = new Map();
     for (const t of tally) next.set(t.name, noteChecked.has(t.name) ? noteChecked.get(t.name) : true);
