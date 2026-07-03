@@ -79,6 +79,13 @@ test('docNumDesc: sorts rows by Document number Z→A, numeric-aware, blanks las
   assert.deepEqual(plain(sorted), ['D-10', 'D-2', '100', '10', '9', '']);
 });
 
+test('outputRowOrder: forwarder A→Z, then Document number Z→A within each forwarder', () => {
+  const r = (v, d) => [v, 'S', 'R', d, []];
+  const rows = [r('Beta', '9'), r('Alpha', '10'), r('Beta', '100'), r('Alpha', '9')];
+  const sorted = [...rows].sort(s.outputRowOrder).map(x => `${x[0]}:${x[3]}`);
+  assert.deepEqual(plain(sorted), ['Alpha:10', 'Alpha:9', 'Beta:100', 'Beta:9']);
+});
+
 test('systemRank: fixed FNP→KSP→OPP→PS1 order, unknown names after, case/substring tolerant', () => {
   const names = ['PS1', 'zzz extra', 'Export FNP 02.07', 'opp', 'KSP'];
   const sorted = [...names].sort((a, b) => s.systemRank(a) - s.systemRank(b));
