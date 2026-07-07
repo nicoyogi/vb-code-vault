@@ -18,7 +18,13 @@ Shuffle on, per system:
    `docNumDesc` — numeric-aware, blanks last).
 2. The pool is cut into **contiguous [start, end) bands** with balanced sizes
    (new pure helper `sliceBounds`, built on `balancedSizes`).
-3. The **band→person assignment is shuffled**, not the rows. Randomness now
+3. Each interior band cut is **nudged off runs of equal document numbers**
+   (new pure helper `snapBoundsToDocRuns`): the pool is doc-sorted, so a
+   document's rows are adjacent, and the cut moves to the nearer run edge —
+   rows of the same document always stay with one person. Blank document
+   numbers are unrelated rows and may still split. A run longer than a band
+   empties that band rather than splitting the document.
+4. The **band→person assignment is shuffled**, not the rows. Randomness now
    also decides who gets the +1 remainder rows (previously always the
    first-listed people).
 
@@ -30,6 +36,4 @@ The toggle label is reworded to describe the band behavior.
 
 ## Non-goals
 
-- No boundary nudging: a run of equal document numbers can still be cut at a
-  band edge (marked as a known ceiling in code).
 - No new UI — same single Shuffle toggle.
