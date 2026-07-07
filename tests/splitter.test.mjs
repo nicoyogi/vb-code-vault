@@ -149,6 +149,37 @@ test('splitRows: tariff rows pass forwarder+note filters; factual rows bypass bo
     plain(rows));                              // factual ignores forwarders and notes
 });
 
+test('workbookEntries: multi-sheet workbook — one system per qualifying sheet, named by sheet name', () => {
+  const H = ['Vendor details', 'Supplier', 'Reference', 'Document number', 'Step description'];
+  const sheets = [
+    { name: ' FNP ', rows: [H, ['DHL', 'S', 'R', 'D1', 'Tariff Check'], ['Kuehne', 'S', 'R', 'D2', 'Factual Check']] },
+    { name: 'KSP', rows: [H, ['Schenker', 'S', 'R', 'D3', 'Tariff Check']] },
+    { name: 'Pivot', rows: [['some', 'junk']] }, // no target columns -> skipped
+  ];
+  const res = s.workbookEntries(sheets, 'export_2026-07-07.xlsx');
+  assert.deepEqual(plain(res.entries.map(e => [e.base, e.group, e.rows.length])), [
+    ['FNP', 'tariff', 1], ['FNP', 'factual', 1], // mixed sheet -> two entries, sheet name trimmed
+    ['KSP', 'tariff', 1],
+  ]);
+});
+
+test('workbookEntries: single qualifying sheet keeps filename naming (one-file-per-system upload)', () => {
+  const H = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
+  const res = s.workbookEntries([{ name: 'Sheet1', rows: [[], H, ['DHL', 'S', 'R', 'D1']] }], 'FNP.XLSX');
+  assert.deepEqual(plain(res.entries.map(e => [e.base, e.group, e.rows.length])), [['FNP', 'tariff', 1]]);
+});
+
+test('workbookEntries: no qualifying sheet -> error; empty qualifying sheet -> 0-row tariff card', () => {
+  assert.match(s.workbookEntries([{ name: 'S1', rows: [['Vendor details', 'Supplier', 'Reference']] }], 'x.xlsx').error,
+    /Missing column: Document number/);
+  assert.match(s.workbookEntries([{ name: 'A', rows: [['a']] }, { name: 'B', rows: [['b']] }], 'x.xlsx').error,
+    /No sheet/);
+  const H = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
+  const res = s.workbookEntries([{ name: 'FNP', rows: [H] }, { name: 'KSP', rows: [H, ['DHL', 'S', 'R', 'D']] }], 'x.xlsx');
+  assert.deepEqual(plain(res.entries.map(e => [e.base, e.group, e.rows.length])),
+    [['FNP', 'tariff', 0], ['KSP', 'tariff', 1]]);
+});
+
 test('colWidths: per-column max content length +2, clamped to [12, 44]', () => {
   const header = ['Vendor details', 'Supplier', 'Document number'];
   const rows = [
