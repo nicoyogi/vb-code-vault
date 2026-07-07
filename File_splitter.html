@@ -201,12 +201,12 @@
 
 <div class="card step-card">
   <div class="card-head"><h2>Upload your files</h2><span class="step-tag">step 1 of 5</span></div>
-  <p class="card-desc">One Excel file per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong>, <strong>Reference</strong> and <strong>Document number</strong> columns. The <strong>Step description</strong> column decides Tariff vs Factual work.</p>
+  <p class="card-desc">One Excel file per system — or a single workbook with one sheet per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong>, <strong>Reference</strong> and <strong>Document number</strong> columns. The <strong>Step description</strong> column decides Tariff vs Factual work.</p>
   <div class="dropzone" id="dropzone">
     <input type="file" id="fileInput" accept=".xlsx,.xls" multiple />
     <span class="dz-orb">↑</span>
     <div class="dz-label"><strong>Drop your Excel files here</strong> or click to browse</div>
-    <div class="dz-hint">one file per system · .xlsx · .xls</div>
+    <div class="dz-hint">one file per system · or one workbook, one sheet per system · .xlsx · .xls</div>
   </div>
   <div class="systems-list" id="systemsList"></div>
   <div class="prio-zone" id="prioZone">
@@ -506,6 +506,43 @@
     }
     return out;
   }
+  // One uploaded workbook -> pending system entries ({ base, group, rows }).
+  // Every sheet carrying the 4 target columns qualifies. Multiple qualifying
+  // sheets mean a combined export ("one workbook, one sheet per system"):
+  // system names come from the sheet names. A single qualifying sheet keeps
+  // the classic filename naming, which also tolerates stray pivot/summary
+  // sheets. Per sheet, rows partition into tariff/factual exactly like a
+  // standalone file; a qualifying sheet whose partitions all extract empty
+  // keeps one 0-row tariff entry so the upload stays visible.
+  function workbookEntries(sheets, fileName) {
+    const matched = [];
+    for (const sh of sheets) {
+      const hIdx = findHeaderIdx(sh.rows);
+      const header = sh.rows[hIdx] || [];
+      const cols = pickColumns(header);
+      if (cols) matched.push({ base: String(sh.name).trim(), header, cols, noteIdx: noteColumns(header), dataRows: sh.rows.slice(hIdx + 1) });
+    }
+    if (matched.length === 0) {
+      if (sheets.length > 1) return { error: 'No sheet has all required columns: ' + TARGET_COLS.join(', ') };
+      const header = sheets.length ? (sheets[0].rows[findHeaderIdx(sheets[0].rows)] || []) : [];
+      const missing = TARGET_COLS.filter(c => header.findIndex(h => String(h).trim() === c) < 0);
+      return { error: 'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ') };
+    }
+    const entries = [];
+    for (const m of matched) {
+      const base = matched.length > 1 ? m.base : systemName(fileName);
+      const parts = partitionByStep(m.header, m.dataRows);
+      const perSheet = [];
+      for (const [group] of GROUPS) {
+        const extracted = extractRows(parts[group], m.cols, m.noteIdx);
+        if (extracted.length > 0) perSheet.push({ base, group, rows: extracted });
+      }
+      if (perSheet.length === 0) perSheet.push({ base, group: 'tariff', rows: [] });
+      entries.push(...perSheet);
+    }
+    return { entries };
+  }
+
   // Rows a system contributes to the split: tariff rows pass the forwarder
   // checklist + note filter; factual rows skip both. Blank-skip applies to all.
   function splitRows(sys, keepNotes, skipBlanks) {
@@ -631,29 +668,14 @@
     reader.onload = e => {
       try {
         const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
-        const hIdx = findHeaderIdx(rows);
-        const header = rows[hIdx] || [];
-        const cols = pickColumns(header);
-        const noteIdx = noteColumns(header);
-
-        if (!cols) {
-          const missing = TARGET_COLS.filter(c => header.findIndex(h => String(h).trim() === c) < 0);
-          systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), 'tariff'), fileName: file.name, rows: [], forwarders: [], group: 'tariff',
-            error: 'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ') });
+        const sheets = wb.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '' }) }));
+        const res = workbookEntries(sheets, file.name);
+        if (res.error) {
+          systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), 'tariff'), fileName: file.name, rows: [], forwarders: [], group: 'tariff', error: res.error });
         } else {
-          // A mixed file yields one entry per work type; if every partition
-          // extracts empty, keep one 0-row tariff card so the upload is visible.
-          const parts = partitionByStep(header, rows.slice(hIdx + 1));
-          const entries = [];
-          for (const [group] of GROUPS) {
-            const extracted = extractRows(parts[group], cols, noteIdx);
-            if (extracted.length > 0) entries.push([group, extracted]);
-          }
-          if (entries.length === 0) entries.push(['tariff', []]);
-          for (const [group, extracted] of entries) {
-            systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), group), fileName: file.name, rows: extracted,
-              forwarders: tallyForwarders(extracted).map(f => ({ ...f, checked: true })), group });
+          for (const en of res.entries) {
+            systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(en.base, en.group), fileName: file.name, rows: en.rows,
+              forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: true })), group: en.group });
           }
         }
         systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
