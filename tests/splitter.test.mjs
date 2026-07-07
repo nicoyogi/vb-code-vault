@@ -194,3 +194,26 @@ test('colWidths: per-column max content length +2, clamped to [12, 44]', () => {
   assert.deepEqual(plain(s.colWidths(['A', 'B', 'C'], [])),
     [{ wch: 12 }, { wch: 12 }, { wch: 12 }]); // floor
 });
+
+test('sliceBounds: contiguous balanced [start,end) bands covering all n rows', () => {
+  assert.deepEqual(plain(s.sliceBounds(5, 4)), [[0, 2], [2, 3], [3, 4], [4, 5]]);
+  assert.deepEqual(plain(s.sliceBounds(0, 2)), [[0, 0], [0, 0]]);
+  const b = s.sliceBounds(79, 3);
+  assert.equal(b[0][0], 0);
+  assert.equal(b[b.length - 1][1], 79);                                  // covers everything
+  for (let i = 1; i < b.length; i++) assert.equal(b[i][0], b[i - 1][1]); // no gaps, no overlap
+});
+
+test('snapBoundsToDocRuns: interior cuts move off equal-doc runs to the nearer edge', () => {
+  const r = d => ['V', 'S', 'R', d, []];
+  const rows = [r('9'), r('9'), r('9'), r('8'), r('7')];         // doc-sorted Z→A
+  assert.deepEqual(plain(s.snapBoundsToDocRuns([[0, 2], [2, 4], [4, 5]], rows)),
+    [[0, 3], [3, 4], [4, 5]]);                                   // cut 2 inside the 9-run -> nudged to 3
+  const oneDoc = [r('5'), r('5'), r('5'), r('5'), r('1')];
+  assert.deepEqual(plain(s.snapBoundsToDocRuns([[0, 2], [2, 4], [4, 5]], oneDoc)),
+    [[0, 4], [4, 4], [4, 5]]);                                   // run swallows a band -> band empty, run intact
+  const blanks = [r('9'), r(''), r(''), r('')];
+  assert.deepEqual(plain(s.snapBoundsToDocRuns([[0, 2], [2, 4]], blanks)),
+    [[0, 2], [2, 4]]);                                           // blank docs are unrelated -> may still split
+  assert.deepEqual(plain(s.snapBoundsToDocRuns([[0, 3]], rows)), [[0, 3]]); // single band untouched
+});
