@@ -259,3 +259,47 @@ test('snapBoundsToDocRuns: interior cuts move off equal-doc runs to the nearer e
     [[0, 2], [2, 4]]);                                           // blank docs are unrelated -> may still split
   assert.deepEqual(plain(s.snapBoundsToDocRuns([[0, 3]], rows)), [[0, 3]]); // single band untouched
 });
+
+test('systemShares: PRIO rows split evenly (±1) across shares, all rows covered once', () => {
+  // 5 PRIO + 7 rest rows -> 3 shares
+  const row = (doc, isP) => ['V', 'S', 'R', doc, [], isP ? new Date(2026, 6, 6) : ''];
+  const rows = [];
+  for (let i = 0; i < 5; i++) rows.push(row('P' + i, true));
+  for (let i = 0; i < 7; i++) rows.push(row('R' + i, false));
+  const isPrioRow = r => !!r[5];
+  for (const doShuffle of [false, true]) {
+    const shares = s.systemShares(rows, 3, doShuffle, isPrioRow);
+    assert.equal(shares.length, 3);
+    const prioCounts = shares.map(sh => sh.filter(isPrioRow).length);
+    assert.equal(Math.max(...prioCounts) - Math.min(...prioCounts) <= 1, true,
+      `prio counts ±1, got ${prioCounts} (shuffle=${doShuffle})`);
+    assert.equal(prioCounts.reduce((a, b) => a + b, 0), 5);
+    // every input row appears exactly once across all shares
+    const docs = shares.flat().map(r => r[3]).sort();
+    assert.deepEqual(plain(docs), plain(rows.map(r => r[3]).sort()));
+  }
+});
+
+test('systemShares: zero PRIO rows + shuffle off -> plain in-order single-pool split', () => {
+  const row = d => ['V', 'S', 'R', d, [], ''];
+  const rows = [row('5'), row('4'), row('3'), row('2'), row('1')];
+  const shares = s.systemShares(rows, 2, false, () => false);
+  // remainder to the front, original order preserved — today's no-shuffle behavior
+  assert.deepEqual(plain(shares.map(sh => sh.map(r => r[3]))), [['5', '4', '3'], ['2', '1']]);
+});
+
+test('systemShares: doc runs stay intact within a pool when shuffled', () => {
+  const row = d => ['V', 'S', 'R', d, [], ''];
+  // doc-sorted pool ['9','9','9','8']: naive cut at 2 lands inside the 9-run
+  const rows = [row('9'), row('9'), row('9'), row('8')];
+  const shares = s.systemShares(rows, 2, true, () => false);
+  const withNine = shares.filter(sh => sh.some(r => r[3] === '9'));
+  assert.equal(withNine.length, 1);                              // all '9' rows in one share
+  assert.equal(withNine[0].filter(r => r[3] === '9').length, 3); // none lost
+});
+
+test('systemShares: more shares than rows -> empty shares, nothing lost', () => {
+  const row = d => ['V', 'S', 'R', d, [], ''];
+  const shares = s.systemShares([row('1')], 3, false, () => false);
+  assert.deepEqual(plain(shares.map(sh => sh.length)), [1, 0, 0]);
+});
