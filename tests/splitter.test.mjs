@@ -223,3 +223,15 @@ test('prioByDate: PRIO when today − overdue ≥ −5 days, nearest-day roundin
   // parseable string dates work
   assert.equal(s.prioByDate('2026-07-06T12:00:00', today), true); // diff +3
 });
+
+test('isPrio: PRIO-list doc match OR overdue date within window', () => {
+  const today = new Date(2026, 6, 9);
+  const row = (doc, overdue) => ['V', 'S', 'R', doc, [], overdue];
+  const docs = new Set(['D1']);
+  assert.equal(s.isPrio(row('D1', ''), docs, today), true);                        // list match alone
+  assert.equal(s.isPrio(row('D2', ''), docs, today), false);                       // neither trigger
+  assert.equal(s.isPrio(row('D2', new Date(2026, 6, 6)), docs, today), true);      // date rule alone (+3 overdue)
+  assert.equal(s.isPrio(row('D2', new Date(2026, 6, 13)), null, today), true);     // no list, diff −4 -> PRIO
+  assert.equal(s.isPrio(row('D2', new Date(2026, 6, 20)), null, today), false);    // no list, diff −11 -> no
+  assert.equal(s.isPrio(row(' D1 ', ''), docs, today), true);                      // doc normalized via normDoc
+});

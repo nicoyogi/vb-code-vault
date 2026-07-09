@@ -488,6 +488,16 @@
     const diff = dayNum(today) - dayNum(d);
     return diff >= -5;
   }
+  // A row gets the PRIO mark if it's on the PRIO list (docs, may be null) or
+  // its overdue date is within the window.
+  function isPrio(row, docs, today) {
+    return !!(docs && docs.has(normDoc(row[3]))) || prioByDate(row[5], today);
+  }
+  // The PRIO output column exists when a PRIO list is loaded or any valid
+  // system carries at least one overdue value.
+  function prioColumnOn(valid) {
+    return !!prio || valid.some(s => s.rows.some(r => r[5]));
+  }
   // Rank a system name in the fixed FNP→KSP→OPP→PS1 order; names matching no
   // known system sort after them (sort is stable, so they keep upload order).
   function systemRank(name) {
@@ -639,6 +649,8 @@
     const keep = checkedNoteSet();
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const shuffle = document.getElementById('shuffleRows').checked;
+    const prioOn = prioColumnOn(valid);
+    const today = new Date();
     const chips = [];
     let prioHits = 0;
     for (const [group, label] of GROUPS) {
@@ -648,14 +660,14 @@
       for (const sys of groupSys) {
         const rows = splitRows(sys, keep, skipBlanks);
         planned += rows.length;
-        if (prio) for (const r of rows) if (prio.docs.has(normDoc(r[3]))) prioHits++;
+        if (prioOn) for (const r of rows) if (isPrio(r, prio && prio.docs, today)) prioHits++;
       }
       const names = getNames(group);
       chips.push(`${label} · ${groupSys.length} system${groupSys.length === 1 ? '' : 's'} · ${planned} rows → ${names.length} ${names.length === 1 ? 'person' : 'people'}`);
     }
     const noteFilterOn = noteChecked.size > 0 && keep.size < noteChecked.size;
     chips.push(`${skipBlanks ? 'blanks skipped' : 'blanks kept'} · ${shuffle ? 'shuffled' : 'in order'}${noteFilterOn ? ' · notes filtered' : ''}`);
-    if (prio) chips.push(`PRIO list · ${prioHits} match${prioHits === 1 ? '' : 'es'}`);
+    if (prioOn) chips.push(`PRIO · ${prioHits} match${prioHits === 1 ? '' : 'es'}`);
     document.getElementById('recapChips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
   }
 
@@ -954,6 +966,7 @@
       const keepNotes = checkedNoteSet();
       const today = new Date();
       const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
+      const prioOn = prioColumnOn(valid);
 
       for (const job of jobs) {
         // Filter each system per its group policy, then pre-shuffle once so all
@@ -987,11 +1000,12 @@
 
             sheetSummary[sys.name] = chunk.length;
 
-            // With a PRIO list loaded the sheet gains a trailing column: 'PRIO'
-            // on matching doc numbers, yellow fill on the doc + PRIO cells.
-            const header = prio ? [...TARGET_COLS, 'PRIO'] : TARGET_COLS;
-            const cells = chunk.map(r => prio
-              ? [...r.slice(0, 4), prio.docs.has(normDoc(r[3])) ? 'PRIO' : '']
+            // With a PRIO list loaded or overdue dates present, the sheet
+            // gains a trailing column: 'PRIO' on matching rows, yellow fill
+            // on the doc + PRIO cells.
+            const header = prioOn ? [...TARGET_COLS, 'PRIO'] : TARGET_COLS;
+            const cells = chunk.map(r => prioOn
+              ? [...r.slice(0, 4), isPrio(r, prio && prio.docs, today) ? 'PRIO' : '']
               : r.slice(0, 4));
             const ws = XLSX.utils.aoa_to_sheet([header, ...cells]);
             for (let R = 0; R <= cells.length; R++) for (let C = 0; C < header.length; C++) {
