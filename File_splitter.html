@@ -959,6 +959,26 @@
     return cuts.map((e, k) => [k === 0 ? 0 : cuts[k - 1], e]);
   }
 
+  // Split one system's filtered rows into `parts` shares. PRIO rows and the
+  // rest split as two independent pools so urgent work lands evenly (±1 per
+  // share); each pool runs through the doc-band machinery — doc-sorted,
+  // balanced contiguous bands, cuts nudged off equal-doc runs, band→person
+  // assignment shuffled per pool (shuffle ON) or in-order slices (OFF).
+  // With no PRIO rows this is exactly the single-pool split.
+  function systemShares(rows, parts, doShuffle, isPrioRow) {
+    const pools = [[], []];
+    for (const r of rows) pools[isPrioRow(r) ? 0 : 1].push(r);
+    const shares = Array.from({ length: parts }, () => []);
+    for (const p of pools) {
+      if (p.length === 0) continue;
+      const pool = doShuffle ? [...p].sort(docNumDesc) : p;
+      const b = sliceBounds(pool.length, parts);
+      const bounds = doShuffle ? shuffleArray(snapBoundsToDocRuns(b, pool)) : b;
+      for (let i = 0; i < parts; i++) shares[i].push(...pool.slice(bounds[i][0], bounds[i][1]));
+    }
+    return shares;
+  }
+
   async function splitFile() {
     hideError();
     const valid = systems.filter(s => !s.error);
@@ -998,20 +1018,14 @@
       const prioOn = prioColumnOn(valid);
 
       for (const job of jobs) {
-        // Filter each system per its group policy. Shuffle keeps document
-        // numbers together: the pool is doc-sorted and cut into contiguous
-        // balanced bands, and only the band→person assignment is random —
-        // each share covers a compact doc-number range instead of a scatter,
-        // and the +1 remainder rows land on random people instead of the
-        // first-listed ones. Band edges are nudged off runs of equal doc
-        // numbers, so one document never lands in two shares.
-        const pool = {};
-        const bounds = {};
+        // Filter each system per its group policy, then deal shares via
+        // systemShares: PRIO rows and the rest split as two independent
+        // pools, so urgent work lands evenly instead of clustering in one
+        // person's doc band.
+        const isPrioRow = prioOn ? (r => isPrio(r, prio && prio.docs, today)) : (() => false);
+        const shares = {};
         for (const sys of job.systems) {
-          const dataRows = splitRows(sys, keepNotes, skipBlanks);
-          pool[sys.name] = doShuffle ? [...dataRows].sort(docNumDesc) : dataRows;
-          const b = sliceBounds(dataRows.length, job.names.length);
-          bounds[sys.name] = doShuffle ? shuffleArray(snapBoundsToDocRuns(b, pool[sys.name])) : b;
+          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks), job.names.length, doShuffle, isPrioRow);
         }
 
         const usedNames = {}; // per job — the Tariff/Factual filename token separates jobs
@@ -1021,10 +1035,8 @@
           const sheetSummary = {};
 
           for (const sys of job.systems) {
-            const rows = pool[sys.name];
-            const [start, end] = bounds[sys.name][i];
-            const chunk = rows.slice(start, end);
-            chunk.sort(outputRowOrder); // forwarder A→Z, doc Z→A within; the shared pool stays untouched
+            const chunk = shares[sys.name][i];
+            chunk.sort(outputRowOrder); // forwarder A→Z, doc Z→A within; each share is its own array
 
             sheetSummary[sys.name] = chunk.length;
 
