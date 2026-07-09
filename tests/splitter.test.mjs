@@ -15,19 +15,30 @@ test('pickColumns: finds the 4 targets by name regardless of order', () => {
   assert.equal(s.pickColumns(['Vendor details', 'Supplier', 'Document number']), null); // missing Reference
 });
 
-test('extractRows: projects to [vendor,supplier,ref,doc,notes[]], collects Note cells, drops blank-vendor rows', () => {
+test('extractRows: projects to [vendor,supplier,ref,doc,notes[],overdue], collects Note cells, drops blank-vendor rows', () => {
+  const due = new Date(2026, 6, 13);
   const rows = [
-    // vendor,    supplier, ref, doc,  note@4,   note@5
-    ['DHL',      '111', 'R1', 'D1', '',      'kreditor fehlt'],
-    ['',         '222', 'R2', 'D2', 'x',     ''],              // blank vendor -> dropped
-    ['Schenker', '444', 'R4', 'D4', 'noteA', 'noteB'],         // two note cells -> both kept, separate
-    ['Kuehne',   '555', 'R5', 'D5', '',      ''],              // no note -> []
+    // vendor,    supplier, ref, doc,  note@4,   note@5,           overdue@6
+    ['DHL',      '111', 'R1', 'D1', '',      'kreditor fehlt', due],
+    ['',         '222', 'R2', 'D2', 'x',     '',               ''], // blank vendor -> dropped
+    ['Schenker', '444', 'R4', 'D4', 'noteA', 'noteB',          ''], // two note cells -> both kept, separate
+    ['Kuehne',   '555', 'R5', 'D5', '',      '',               ''], // no note -> []
   ];
-  assert.deepEqual(plain(s.extractRows(rows, [0, 1, 2, 3], [4, 5])), [
-    ['DHL', '111', 'R1', 'D1', ['kreditor fehlt']],
-    ['Schenker', '444', 'R4', 'D4', ['noteA', 'noteB']],
-    ['Kuehne', '555', 'R5', 'D5', []],
-  ]);
+  assert.deepEqual(plain(s.extractRows(rows, [0, 1, 2, 3], [4, 5], 6)), plain([
+    ['DHL', '111', 'R1', 'D1', ['kreditor fehlt'], due],
+    ['Schenker', '444', 'R4', 'D4', ['noteA', 'noteB'], ''],
+    ['Kuehne', '555', 'R5', 'D5', [], ''],
+  ]));
+  // no overdue column (default arg) -> index 5 is ''
+  assert.deepEqual(plain(s.extractRows([['V', 'S', 'R', 'D', 'n']], [0, 1, 2, 3], [4])),
+    [['V', 'S', 'R', 'D', ['n'], '']]);
+});
+
+test('workbookEntries: picks up the optional Overdue in workflow from column', () => {
+  const H = ['Vendor details', 'Supplier', 'Reference', 'Document number', 'Overdue in workflow from'];
+  const due = new Date(2026, 6, 13);
+  const res = s.workbookEntries([{ name: 'S1', rows: [H, ['DHL', 'S', 'R', 'D1', due]] }], 'FNP.xlsx');
+  assert.deepEqual(plain(res.entries[0].rows), plain([['DHL', 'S', 'R', 'D1', [], due]]));
 });
 
 test('noteColumns: every column literally named "Note"', () => {

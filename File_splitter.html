@@ -412,16 +412,18 @@
     return header.map((h, i) => (String(h).trim() === 'Note' ? i : -1)).filter(i => i >= 0);
   }
   // Project rows to [Vendor details, Supplier, Reference, Document number,
-  // notes[]]; drop blank-vendor rows. notes collects the non-blank Note cells
-  // individually — used only for the note filter, never written to the output.
-  function extractRows(dataRows, cols, noteIdx = []) {
+  // notes[], overdue]; drop blank-vendor rows. notes collects the non-blank
+  // Note cells individually — used only for the note filter, never written to
+  // the output. overdue is the raw 'Overdue in workflow from' cell ('' when
+  // the column is absent) — drives the date-based PRIO mark.
+  function extractRows(dataRows, cols, noteIdx = [], overdueIdx = -1) {
     const [vi, si, ri, di] = cols;
     const out = [];
     for (const r of dataRows) {
       const v = r[vi];
       if (v === null || v === undefined || String(v).trim() === '') continue;
       const notes = noteIdx.map(i => String(r[i] ?? '').trim()).filter(Boolean);
-      out.push([r[vi], r[si], r[ri], r[di], notes]);
+      out.push([r[vi], r[si], r[ri], r[di], notes, overdueIdx < 0 ? '' : (r[overdueIdx] ?? '')]);
     }
     return out;
   }
@@ -540,7 +542,8 @@
       const hIdx = findHeaderIdx(sh.rows);
       const header = sh.rows[hIdx] || [];
       const cols = pickColumns(header);
-      if (cols) matched.push({ base: String(sh.name).trim(), header, cols, noteIdx: noteColumns(header), dataRows: sh.rows.slice(hIdx + 1) });
+      if (cols) matched.push({ base: String(sh.name).trim(), header, cols, noteIdx: noteColumns(header),
+        overdueIdx: header.findIndex(h => String(h).trim() === OVERDUE_HEADER), dataRows: sh.rows.slice(hIdx + 1) });
     }
     if (matched.length === 0) {
       if (sheets.length > 1) return { error: 'No sheet has all required columns: ' + TARGET_COLS.join(', ') };
@@ -554,7 +557,7 @@
       const parts = partitionByStep(m.header, m.dataRows);
       const perSheet = [];
       for (const [group] of GROUPS) {
-        const extracted = extractRows(parts[group], m.cols, m.noteIdx);
+        const extracted = extractRows(parts[group], m.cols, m.noteIdx, m.overdueIdx);
         if (extracted.length > 0) perSheet.push({ base, group, rows: extracted });
       }
       if (perSheet.length === 0) perSheet.push({ base, group: 'tariff', rows: [] });
