@@ -265,7 +265,7 @@
     </label>
   </div>
   <div class="toggle-row">
-    <div class="toggle-label"><span>Shuffle rows</span> — randomly mix who gets which rows; every sheet is re-sorted by forwarder (A→Z), then Document number (Z→A) after splitting</div>
+    <div class="toggle-label"><span>Shuffle rows</span> — each person gets a random but contiguous Document-number band per system (rows of the same document stay with one person); every sheet is re-sorted by forwarder (A→Z), then Document number (Z→A) after splitting</div>
     <label class="toggle">
       <input type="checkbox" id="shuffleRows" checked />
       <span class="toggle-slider"></span>
@@ -930,6 +930,35 @@
     return sizes;
   }
 
+  // Cut n rows into `parts` contiguous [start, end) slices with balanced sizes.
+  function sliceBounds(n, parts) {
+    const b = [];
+    let off = 0;
+    for (const size of balancedSizes(n, parts)) { b.push([off, off + size]); off += size; }
+    return b;
+  }
+
+  // Nudge each interior band cut off a run of equal (non-blank) document
+  // numbers: the pool is doc-sorted, so a document's rows are adjacent, and
+  // moving a cut to the nearer run edge keeps one document in one share.
+  // Blank doc numbers are unrelated rows and may still split. Cuts stay
+  // monotonic (a run longer than a band empties that band rather than
+  // splitting the document); bands stay contiguous and cover every row.
+  function snapBoundsToDocRuns(bounds, rows) {
+    const doc = i => normDoc(rows[i][3]);
+    const cuts = bounds.map(([, e]) => e);
+    for (let k = 0; k < cuts.length - 1; k++) {
+      const cut = cuts[k];
+      if (cut <= 0 || cut >= rows.length) continue;
+      const d = doc(cut);
+      if (!d || doc(cut - 1) !== d) continue; // blank doc or already at a run edge
+      let lo = cut; while (lo > 0 && doc(lo - 1) === d) lo--;
+      let hi = cut; while (hi < rows.length && doc(hi) === d) hi++;
+      cuts[k] = (hi - cut <= cut - lo) ? hi : lo;
+    }
+    return cuts.map((e, k) => [k === 0 ? 0 : cuts[k - 1], e]);
+  }
+
   async function splitFile() {
     hideError();
     const valid = systems.filter(s => !s.error);
@@ -969,21 +998,20 @@
       const prioOn = prioColumnOn(valid);
 
       for (const job of jobs) {
-        // Filter each system per its group policy, then pre-shuffle once so all
-        // people draw from the same pool. Balanced slice boundaries spread the
-        // remainder fairly instead of starving the last person.
+        // Filter each system per its group policy. Shuffle keeps document
+        // numbers together: the pool is doc-sorted and cut into contiguous
+        // balanced bands, and only the band→person assignment is random —
+        // each share covers a compact doc-number range instead of a scatter,
+        // and the +1 remainder rows land on random people instead of the
+        // first-listed ones. Band edges are nudged off runs of equal doc
+        // numbers, so one document never lands in two shares.
         const pool = {};
         const bounds = {};
         for (const sys of job.systems) {
           const dataRows = splitRows(sys, keepNotes, skipBlanks);
-          const rows = doShuffle ? shuffleArray(dataRows) : dataRows;
-          pool[sys.name] = rows;
-
-          const sizes = balancedSizes(rows.length, job.names.length);
-          const b = [];
-          let off = 0;
-          for (const s of sizes) { b.push([off, off + s]); off += s; }
-          bounds[sys.name] = b;
+          pool[sys.name] = doShuffle ? [...dataRows].sort(docNumDesc) : dataRows;
+          const b = sliceBounds(dataRows.length, job.names.length);
+          bounds[sys.name] = doShuffle ? shuffleArray(snapBoundsToDocRuns(b, pool[sys.name])) : b;
         }
 
         const usedNames = {}; // per job — the Tariff/Factual filename token separates jobs
