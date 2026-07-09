@@ -194,3 +194,21 @@ test('colWidths: per-column max content length +2, clamped to [12, 44]', () => {
   assert.deepEqual(plain(s.colWidths(['A', 'B', 'C'], [])),
     [{ wch: 12 }, { wch: 12 }, { wch: 12 }]); // floor
 });
+
+test('prioByDate: PRIO when today − overdue ≥ −5 days, nearest-day rounding', () => {
+  const today = new Date(2026, 6, 9, 10, 30); // 2026-07-09 local, mid-morning
+  const d = (day, hh = 0, mm = 0, ss = 0) => new Date(2026, 6, day, hh, mm, ss);
+  assert.equal(s.prioByDate(d(15), today), false); // diff −6 -> not yet
+  assert.equal(s.prioByDate(d(14), today), true);  // diff −5 boundary -> PRIO
+  assert.equal(s.prioByDate(d(9), today), true);   // diff 0, due today -> PRIO
+  assert.equal(s.prioByDate(d(6), today), true);   // diff +3, already overdue -> PRIO
+  // SheetJS quirk: serial date lands 23:59:48 the day before -> must count as next day
+  assert.equal(s.prioByDate(d(12, 23, 59, 48), today), true);  // is really 7/13, diff −4
+  assert.equal(s.prioByDate(d(14, 23, 59, 48), today), false); // is really 7/15, diff −6
+  // non-dates never mark
+  assert.equal(s.prioByDate('', today), false);
+  assert.equal(s.prioByDate('garbage', today), false);
+  assert.equal(s.prioByDate(undefined, today), false);
+  // parseable string dates work
+  assert.equal(s.prioByDate('2026-07-06T12:00:00', today), true); // diff +3
+});

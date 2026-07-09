@@ -317,6 +317,7 @@
   const PRIO_STYLE = { border: CELL_BORDERS, fill: { fgColor: { rgb: 'FFFF00' } } };
   const SYSTEM_ORDER = ['FNP', 'KSP', 'OPP', 'PS1']; // fixed card + output-sheet order
   const PRIO_HEADERS = ['Dokumentnummer', 'Document number'];
+  const OVERDUE_HEADER = 'Overdue in workflow from';
 
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
@@ -466,6 +467,25 @@
     return notes.some(n => checked.has(n));
   }
   function normDoc(v) { return String(v ?? '').trim(); }
+  // Date-based PRIO: a row is PRIO when today − overdue ≥ −5 whole days —
+  // already overdue, or going overdue within the next 5 days. Both sides
+  // round to the NEAREST local calendar day: SheetJS parses Excel serial
+  // dates seconds before midnight (7/13 reads back as 7/12 23:59:48), so
+  // truncating time-of-day would lose a day.
+  function dayNum(d) {
+    return Math.round((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
+  }
+  function prioByDate(overdue, today) {
+    let d = null;
+    if (overdue && typeof overdue.getTime === 'function') {
+      d = overdue;
+    } else if (typeof overdue === 'string' && overdue.trim()) {
+      d = new Date(overdue);
+    }
+    if (!d || isNaN(d)) return false;
+    const diff = dayNum(today) - dayNum(d);
+    return diff >= -5;
+  }
   // Rank a system name in the fixed FNP→KSP→OPP→PS1 order; names matching no
   // known system sort after them (sort is stable, so they keep upload order).
   function systemRank(name) {
