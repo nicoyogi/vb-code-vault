@@ -15,19 +15,31 @@ test('pickColumns: finds the 4 targets by name regardless of order', () => {
   assert.equal(s.pickColumns(['Vendor details', 'Supplier', 'Document number']), null); // missing Reference
 });
 
-test('extractRows: projects to [vendor,supplier,ref,doc,notes[]], collects Note cells, drops blank-vendor rows', () => {
+test('extractRows: projects to [vendor,supplier,ref,doc,notes[],overdue], collects Note cells, drops blank-vendor rows', () => {
+  const due = new Date(2026, 6, 13);
   const rows = [
-    // vendor,    supplier, ref, doc,  note@4,   note@5
-    ['DHL',      '111', 'R1', 'D1', '',      'kreditor fehlt'],
-    ['',         '222', 'R2', 'D2', 'x',     ''],              // blank vendor -> dropped
-    ['Schenker', '444', 'R4', 'D4', 'noteA', 'noteB'],         // two note cells -> both kept, separate
-    ['Kuehne',   '555', 'R5', 'D5', '',      ''],              // no note -> []
+    // vendor,    supplier, ref, doc,  note@4,   note@5,           overdue@6
+    ['DHL',      '111', 'R1', 'D1', '',      'kreditor fehlt', due],
+    ['',         '222', 'R2', 'D2', 'x',     '',               ''], // blank vendor -> dropped
+    ['Schenker', '444', 'R4', 'D4', 'noteA', 'noteB',          ''], // two note cells -> both kept, separate
+    ['Kuehne',   '555', 'R5', 'D5', '',      '',               ''], // no note -> []
   ];
-  assert.deepEqual(plain(s.extractRows(rows, [0, 1, 2, 3], [4, 5])), [
-    ['DHL', '111', 'R1', 'D1', ['kreditor fehlt']],
-    ['Schenker', '444', 'R4', 'D4', ['noteA', 'noteB']],
-    ['Kuehne', '555', 'R5', 'D5', []],
-  ]);
+  assert.deepEqual(plain(s.extractRows(rows, [0, 1, 2, 3], [4, 5], 6)), plain([
+    ['DHL', '111', 'R1', 'D1', ['kreditor fehlt'], due],
+    ['Schenker', '444', 'R4', 'D4', ['noteA', 'noteB'], ''],
+    ['Kuehne', '555', 'R5', 'D5', [], ''],
+  ]));
+  // no overdue column (default arg) -> index 5 is ''
+  assert.deepEqual(plain(s.extractRows([['V', 'S', 'R', 'D', 'n']], [0, 1, 2, 3], [4])),
+    [['V', 'S', 'R', 'D', ['n'], '']]);
+});
+
+test('workbookEntries: picks up the optional Overdue in workflow from column', () => {
+  // overdue header mid-row, not last — pickup is position-independent
+  const H = ['Vendor details', 'Supplier', 'Overdue in workflow from', 'Reference', 'Document number'];
+  const due = new Date(2026, 6, 13);
+  const res = s.workbookEntries([{ name: 'S1', rows: [H, ['DHL', 'S', due, 'R', 'D1']] }], 'FNP.xlsx');
+  assert.deepEqual(plain(res.entries[0].rows), plain([['DHL', 'S', 'R', 'D1', [], due]]));
 });
 
 test('noteColumns: every column literally named "Note"', () => {
@@ -193,6 +205,36 @@ test('colWidths: per-column max content length +2, clamped to [12, 44]', () => {
   ]);
   assert.deepEqual(plain(s.colWidths(['A', 'B', 'C'], [])),
     [{ wch: 12 }, { wch: 12 }, { wch: 12 }]); // floor
+});
+
+test('prioByDate: PRIO when today − overdue ≥ −5 days, nearest-day rounding', () => {
+  const today = new Date(2026, 6, 9, 10, 30); // 2026-07-09 local, mid-morning
+  const d = (day, hh = 0, mm = 0, ss = 0) => new Date(2026, 6, day, hh, mm, ss);
+  assert.equal(s.prioByDate(d(15), today), false); // diff −6 -> not yet
+  assert.equal(s.prioByDate(d(14), today), true);  // diff −5 boundary -> PRIO
+  assert.equal(s.prioByDate(d(9), today), true);   // diff 0, due today -> PRIO
+  assert.equal(s.prioByDate(d(6), today), true);   // diff +3, already overdue -> PRIO
+  // SheetJS quirk: serial date lands 23:59:48 the day before -> must count as next day
+  assert.equal(s.prioByDate(d(12, 23, 59, 48), today), true);  // is really 7/13, diff −4
+  assert.equal(s.prioByDate(d(14, 23, 59, 48), today), false); // is really 7/15, diff −6
+  // non-dates never mark
+  assert.equal(s.prioByDate('', today), false);
+  assert.equal(s.prioByDate('garbage', today), false);
+  assert.equal(s.prioByDate(undefined, today), false);
+  // parseable string dates work
+  assert.equal(s.prioByDate('2026-07-06T12:00:00', today), true); // diff +3
+});
+
+test('isPrio: PRIO-list doc match OR overdue date within window', () => {
+  const today = new Date(2026, 6, 9);
+  const row = (doc, overdue) => ['V', 'S', 'R', doc, [], overdue];
+  const docs = new Set(['D1']);
+  assert.equal(s.isPrio(row('D1', ''), docs, today), true);                        // list match alone
+  assert.equal(s.isPrio(row('D2', ''), docs, today), false);                       // neither trigger
+  assert.equal(s.isPrio(row('D2', new Date(2026, 6, 6)), docs, today), true);      // date rule alone (+3 overdue)
+  assert.equal(s.isPrio(row('D2', new Date(2026, 6, 13)), null, today), true);     // no list, diff −4 -> PRIO
+  assert.equal(s.isPrio(row('D2', new Date(2026, 6, 20)), null, today), false);    // no list, diff −11 -> no
+  assert.equal(s.isPrio(row(' D1 ', ''), docs, today), true);                      // doc normalized via normDoc
 });
 
 test('sliceBounds: contiguous balanced [start,end) bands covering all n rows', () => {
