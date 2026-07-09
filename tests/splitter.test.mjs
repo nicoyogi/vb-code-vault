@@ -35,9 +35,10 @@ test('extractRows: projects to [vendor,supplier,ref,doc,notes[],overdue], collec
 });
 
 test('workbookEntries: picks up the optional Overdue in workflow from column', () => {
-  const H = ['Vendor details', 'Supplier', 'Reference', 'Document number', 'Overdue in workflow from'];
+  // overdue header mid-row, not last — pickup is position-independent
+  const H = ['Vendor details', 'Supplier', 'Overdue in workflow from', 'Reference', 'Document number'];
   const due = new Date(2026, 6, 13);
-  const res = s.workbookEntries([{ name: 'S1', rows: [H, ['DHL', 'S', 'R', 'D1', due]] }], 'FNP.xlsx');
+  const res = s.workbookEntries([{ name: 'S1', rows: [H, ['DHL', 'S', due, 'R', 'D1']] }], 'FNP.xlsx');
   assert.deepEqual(plain(res.entries[0].rows), plain([['DHL', 'S', 'R', 'D1', [], due]]));
 });
 
