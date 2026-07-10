@@ -225,6 +225,19 @@ test('prioByDate: PRIO when today − overdue ≥ −5 days, nearest-day roundin
   assert.equal(s.prioByDate('2026-07-06T12:00:00', today), true); // diff +3
 });
 
+test('fmtOverdue: dd.mm.yyyy on the nearest local day; non-dates pass through', () => {
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 13)), '13.07.2026'); // Monday stays
+  // weekend rolls back to the previous Friday
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 11)), '10.07.2026'); // Saturday
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 12)), '10.07.2026'); // Sunday
+  // SheetJS quirk: serial lands 23:59:48 the day before -> rounds to next day
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 12, 23, 59, 48)), '13.07.2026');
+  assert.equal(s.fmtOverdue('2026-07-06T09:00:00'), '06.07.2026'); // parseable string
+  assert.equal(s.fmtOverdue(''), '');
+  assert.equal(s.fmtOverdue(undefined), '');
+  assert.equal(s.fmtOverdue('garbage'), 'garbage');
+});
+
 test('isPrio: PRIO-list doc match OR overdue date within window', () => {
   const today = new Date(2026, 6, 9);
   const row = (doc, overdue) => ['V', 'S', 'R', doc, [], overdue];

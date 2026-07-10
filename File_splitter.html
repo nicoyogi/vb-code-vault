@@ -477,16 +477,27 @@
   function dayNum(d) {
     return Math.round((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
   }
-  function prioByDate(overdue, today) {
+  function parseOverdue(v) {
     let d = null;
-    if (overdue && typeof overdue.getTime === 'function') {
-      d = overdue;
-    } else if (typeof overdue === 'string' && overdue.trim()) {
-      d = new Date(overdue);
-    }
-    if (!d || isNaN(d)) return false;
-    const diff = dayNum(today) - dayNum(d);
-    return diff >= -5;
+    if (v && typeof v.getTime === 'function') d = v;
+    else if (typeof v === 'string' && v.trim()) d = new Date(v);
+    return d && !isNaN(d) ? d : null;
+  }
+  function prioByDate(overdue, today) {
+    const d = parseOverdue(overdue);
+    if (!d) return false;
+    return dayNum(today) - dayNum(d) >= -5;
+  }
+  // Overdue cell for the output sheet: dates render dd.mm.yyyy on the nearest
+  // local calendar day (same rounding as prioByDate); weekend dates roll back
+  // to the previous Friday; non-dates pass through.
+  function fmtOverdue(v) {
+    const d = parseOverdue(v);
+    if (!d) return String(v ?? '');
+    let u = new Date(dayNum(d) * 86400000); // UTC midnight of that day
+    // ponytail: weekends only; add a holiday list if non-working holidays matter
+    while (u.getUTCDay() === 0 || u.getUTCDay() === 6) u = new Date(u.getTime() - 86400000);
+    return `${String(u.getUTCDate()).padStart(2, '0')}.${String(u.getUTCMonth() + 1).padStart(2, '0')}.${u.getUTCFullYear()}`;
   }
   // A row gets the PRIO mark if it's on the PRIO list (docs, may be null) or
   // its overdue date is within the window.
@@ -495,8 +506,11 @@
   }
   // The PRIO output column exists when a PRIO list is loaded or any valid
   // system carries at least one overdue value.
+  function hasOverdue(valid) {
+    return valid.some(s => s.rows.some(r => r[5]));
+  }
   function prioColumnOn(valid) {
-    return !!prio || valid.some(s => s.rows.some(r => r[5]));
+    return !!prio || hasOverdue(valid);
   }
   // Rank a system name in the fixed FNP→KSP→OPP→PS1 order; names matching no
   // known system sort after them (sort is stable, so they keep upload order).
@@ -1016,6 +1030,7 @@
       const today = new Date();
       const dateStr = `${String(today.getDate()).padStart(2,'0')}.${String(today.getMonth()+1).padStart(2,'0')}.${today.getFullYear()}`;
       const prioOn = prioColumnOn(valid);
+      const overdueOn = hasOverdue(valid);
 
       for (const job of jobs) {
         // Filter each system per its group policy, then deal shares via
@@ -1041,12 +1056,15 @@
             sheetSummary[sys.name] = chunk.length;
 
             // With a PRIO list loaded or overdue dates present, the sheet
-            // gains a trailing column: 'PRIO' on matching rows, yellow fill
-            // on the doc + PRIO cells.
-            const header = prioOn ? [...TARGET_COLS, 'PRIO'] : TARGET_COLS;
-            const cells = chunk.map(r => prioOn
-              ? [...r.slice(0, 4), isPrio(r, prio && prio.docs, today) ? 'PRIO' : '']
-              : r.slice(0, 4));
+            // gains a trailing 'PRIO' column ('PRIO' on matching rows, yellow
+            // fill from the doc cell rightward); overdue dates additionally
+            // add an 'Overdue in workflow from' column after it.
+            const header = [...TARGET_COLS, ...(prioOn ? ['PRIO'] : []), ...(overdueOn ? [OVERDUE_HEADER] : [])];
+            const cells = chunk.map(r => [
+              ...r.slice(0, 4),
+              ...(prioOn ? [isPrio(r, prio && prio.docs, today) ? 'PRIO' : ''] : []),
+              ...(overdueOn ? [fmtOverdue(r[5])] : []),
+            ]);
             const ws = XLSX.utils.aoa_to_sheet([header, ...cells]);
             for (let R = 0; R <= cells.length; R++) for (let C = 0; C < header.length; C++) {
               const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
