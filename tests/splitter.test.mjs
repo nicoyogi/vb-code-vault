@@ -243,6 +243,10 @@ test('fmtOverdue: signed day diff vs today (+ = overdue), weekend rolls to Frida
   assert.equal(s.fmtOverdue('13.07.2026', today), '-4');
   assert.equal(s.fmtOverdue(' 06.07.2026 ', today), '+3');
   assert.equal(s.fmtOverdue('11.07.26', today), '-1');  // 2-digit year, Sat -> Fri
+  assert.equal(s.fmtOverdue('13/07/2026', today), '-4'); // slash separator, day-first
+  assert.equal(s.fmtOverdue('13-07-2026', today), '-4'); // dash separator, day-first
+  assert.equal(s.fmtOverdue('13.07.2026 00:00:00', today), '-4'); // trailing time ignored
+  assert.equal(s.fmtOverdue('2026-07-13', today), '-4'); // ISO still via new Date
   assert.equal(s.fmtOverdue('', today), '');
   assert.equal(s.fmtOverdue(undefined, today), '');
   assert.equal(s.fmtOverdue('garbage', today), 'garbage');

@@ -481,8 +481,9 @@
     let d = null;
     if (v && typeof v.getTime === 'function') d = v;
     else if (typeof v === 'string' && v.trim()) {
-      // German dd.mm.yyyy text (KSP/FNP exports) — new Date() can't read it
-      const m = v.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})/);
+      // Day-first text: dd.mm.yyyy (German exports), also / and - separators —
+      // new Date() can't read these. ISO yyyy-mm-dd falls through to new Date.
+      const m = v.trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
       d = m ? new Date(+m[3] < 100 ? 2000 + +m[3] : +m[3], m[2] - 1, +m[1]) : new Date(v);
     }
     return d && !isNaN(d) ? d : null;
