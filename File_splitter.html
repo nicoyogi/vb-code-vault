@@ -332,16 +332,17 @@
   let kreditorDirty = new Set();
   let kreditorSaveTimer = null;
   function kreditorDoc() { return firebase.firestore().collection('wmf_splitter_config').doc('kreditor'); }
+  let kreditorLoaded = false; // shared lists fetched (or fetch failed / SDK absent -> local copy)
   function initKreditorSync() {
-    if (typeof firebase === 'undefined' || !firebase.firestore) return; // SDK blocked -> local-only
+    if (typeof firebase === 'undefined' || !firebase.firestore) { kreditorLoaded = true; return; } // SDK blocked -> local-only
     if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
     kreditorDoc().get().then(snap => {
       const lists = snap.exists && snap.data().lists;
       if (!lists) return;
       kreditorStore = lists;
       try { localStorage.setItem(KREDITOR_KEY, JSON.stringify(kreditorStore)); } catch (e) {}
-      if (step === 2) renderKreditor();
-    }).catch(err => console.warn('Kreditor lists: Firestore read failed, using local copy.', err));
+    }).catch(err => console.warn('Kreditor lists: Firestore read failed, using local copy.', err))
+      .finally(() => { kreditorLoaded = true; renderWizard(); });
   }
   // Persist one system's list: localStorage immediately, Firestore debounced.
   // Only the edited systems are written (set+merge), so a colleague's
@@ -673,18 +674,24 @@
   }
 
   // ---- wizard ----
+  // Kreditor exclusion only matters for tariff work: a factual-only upload
+  // skips step 2 entirely (goNext/goBack jump over it, stepper stays locked).
+  function kreditorNeeded() { return systems.some(s => !s.error && s.group !== 'factual'); }
   function stepUnlocked(i) {
     const valid = systems.filter(s => !s.error);
-    const hasFiles = valid.length > 0;
     if (i <= 0) return true;
-    if (i <= 4) return hasFiles; // notes, kreditor, totals, people
+    if (valid.length === 0) return false;
+    if (i === 2) return kreditorNeeded();
+    if (i >= 3 && kreditorNeeded() && !kreditorLoaded) return false; // shared lists still refreshing
+    if (i <= 4) return true; // notes, totals, people
     const groups = [...new Set(valid.map(s => s.group))];
-    return hasFiles && groups.every(g => getNames(g).length > 0); // split
+    return groups.every(g => getNames(g).length > 0); // split
   }
 
   function setStep(i) { step = i; hideError(); renderWizard(); }
-  function goBack() { setStep(Math.max(0, step - 1)); }
-  function goNext() { if (stepUnlocked(step + 1)) setStep(Math.min(5, step + 1)); }
+  function nextStepIdx() { return step + 1 === 2 && !kreditorNeeded() ? 3 : step + 1; }
+  function goBack() { setStep(Math.max(0, step - 1 === 2 && !kreditorNeeded() ? 1 : step - 1)); }
+  function goNext() { const n = nextStepIdx(); if (stepUnlocked(n)) setStep(Math.min(5, n)); }
 
   function renderWizard() {
     const stepper = document.getElementById('stepper');
@@ -710,12 +717,13 @@
     document.getElementById('backBtn').style.visibility = (step > 0 && !splitting) ? 'visible' : 'hidden';
     const nextBtn = document.getElementById('nextBtn');
     const hint = document.getElementById('nextHint');
-    const nextOk = stepUnlocked(step + 1);
+    const nextOk = stepUnlocked(nextStepIdx());
     nextBtn.hidden = step === 5;
     nextBtn.disabled = !nextOk;
     nextBtn.textContent = step === 4 ? 'Review & split →' : 'Continue →';
     hint.textContent = (step === 5 || nextOk) ? ''
       : step === 0 ? 'Upload at least one valid file to continue'
+      : (!kreditorLoaded && kreditorNeeded()) ? 'Loading the shared Kreditor lists — one moment…'
       : 'Add at least one name to each list to continue';
   }
 
@@ -753,6 +761,10 @@
   // daily FNP/KSP/OPP/PS1 lists reload on the next visit.
   function renderKreditor() {
     const body = document.getElementById('kreditorBody');
+    if (!kreditorLoaded) { // no textareas while refreshing — the arriving shared copy would overwrite edits
+      body.innerHTML = '<div class="note-empty">Loading the shared Kreditor lists…</div>';
+      return;
+    }
     body.innerHTML = '';
     const names = [...new Set(systems.filter(s => !s.error).map(s => s.name))];
     if (names.length === 0) {
