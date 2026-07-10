@@ -2085,11 +2085,18 @@ function granularLabel(beforeRaw,afterRaw,pd){
    forwarder/sheet/row/inputs across DIFFERENT source files stay
    distinct instead of being deduped into one — the whole point of
    aggregating many pairs into one wider corpus. */
+/* Input keys added to the export AFTER uids started circulating in AI
+   bundles. They are EXCLUDED from the uid seed so a row's uid stays
+   byte-identical to the one in every historical bundle — uids join
+   training corpora across engine versions, and hashing a newly-exported
+   cell would silently re-key every row that carries it. Add every future
+   collectInputsForRow key here too; the frozen seed is the v1.29 set. */
+const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl']);
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
   const keys=Object.keys(inputs||{}).sort();
-  for(const k of keys)seedParts.push(k+'='+(inputs[k]==null?'':inputs[k]));
+  for(const k of keys){if(UID_EXCLUDED_INPUT_KEYS.has(k))continue;seedParts.push(k+'='+(inputs[k]==null?'':inputs[k]));}
   const seed=seedParts.join('|');
   let h=2166136261>>>0;
   for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
@@ -2107,7 +2114,7 @@ const CANONICAL_INPUT_ORDER={
            'snk_dl','snk_diff','snk_tarif',
            'zz_diff','sam_diff','dgr_diff',
            'exp_diff','exp_dl','maut_diff','sbfu_diff','tz_diff',
-           'lg_diff','av_diff',
+           'lg_diff','av_diff','c502_dl','c503_dl',
            'referenz3','empf_plz','empf_ort','anz_sdg','serv_art','sachkonto'],
   kn:['stat','tarif','fr_diff','exp_diff','mt_diff','tz_diff',
       'snk_dl','snk_diff',
@@ -2119,7 +2126,8 @@ const CANONICAL_INPUT_ORDER={
        'kostenstelle','sachkonto'],
   wackler:['stat','tarif','existing_anmerkung',
            'avis_diff','snk_diff','fr_diff','fr_tarif','fr_dl','mt_diff','tz_diff',
-           'referenz','vkg','vkg_dl','empf_plz','empf_ort',
+           'referenz','vkg','vkg_dl',
+           'abg_land','abg_plz','empf_land','empf_plz','empf_ort','zone',
            'kostenstelle','sachkonto'],
 };
 
@@ -2507,6 +2515,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('exp_diff',cols.exp);get('exp_dl',cols.exp_dl);
     get('maut_diff',cols.maut);get('sbfu_diff',cols.sbfu);get('tz_diff',cols.tz);
     get('lg_diff',cols.lg_diff);get('av_diff',cols.av_diff);
+    get('c502_dl',cols.c502_dl);get('c503_dl',cols.c503_dl);
     const placeIf=(k,idx)=>{const v=cellStr(ws,r,idx);if(v)o[k]=v;};
     placeIf('referenz3',DA_COL_REFERENZ3);placeIf('empf_plz',DA_COL_EMPF_PLZ);
     placeIf('empf_ort',DA_COL_EMPF_ORT);placeIf('anz_sdg',DA_COL_ANZ_SDG);
@@ -2533,6 +2542,13 @@ function collectInputsForRow(fw,ws,r,cols){
     get('referenz',cols.referenz);
     get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
     get('empf_plz',cols.empf_plz);get('empf_ort',cols.empf_ort);
+    /* Lane / zone signals (v1.30.0): the engine gates rate-card + zone
+       resolution on these (wacklerLane / wacklerResolveNatZone /
+       wacklerResolveIntlZone), so a training consumer that can't see them
+       can neither explain a "Wackler rechnet" tier nor replay the row.
+       They are UID-excluded — see UID_EXCLUDED_INPUT_KEYS. */
+    get('abg_land',cols.abg_land);get('empf_land',cols.empf_land);
+    get('abg_plz',cols.abg_plz);get('zone',cols.zone);
     get('kostenstelle',cols.kostenstelle);get('sachkonto',cols.sachkonto);
   }
   return o;
@@ -3201,6 +3217,49 @@ function buildTrainingSummary(records){
   };
 }
 
+/* Build the regression set shipped as regression.jsonl in the AI Bundle:
+   one COMPACT record per row the CURRENT engine already solves
+   (engineMatchesB===true). These are the rows a rule fix must not break —
+   the bundle used to only COUNT them (engine_solved), so an AI consumer
+   had the constraint stated but never the constraining rows themselves.
+
+   Deliberately built from the FULL enriched row set, not the filtered
+   scope: a bundle filtered to `missed`+`wackler` still needs every solved
+   row as its regression fence. Pure — takes rows, returns records — so
+   it's unit-testable. Rows where the expected side is empty but inputs
+   exist are kept: they pin "the engine must NOT fire here", the negatives
+   an overeager gate loosening breaks first. Padding rows (no phrases on
+   either side AND no inputs) are dropped, same rule as buildTrainingSet. */
+function buildRegressionSet(rows){
+  const out=[];const seen=new Set();
+  for(const r of rows||[]){
+    if(r.change==='sheet')continue;
+    if(r.engineMatchesB!==true)continue;
+    const hasInputs=Object.keys(r.inputs||{}).length>0;
+    const hasContent=(r.before||'').trim()!==''||(r.after||'').trim()!==''||(r.engineNow||'').trim()!=='';
+    if(!hasContent&&!hasInputs)continue;
+    if(r.row_uid&&seen.has(r.row_uid))continue;
+    if(r.row_uid)seen.add(r.row_uid);
+    out.push({
+      row_uid:r.row_uid||'',
+      source_file:r.source||'',
+      sheet:r.sheet,
+      row:r.row,
+      forwarder:r.fw,
+      processor:r.processor||'',
+      expected:r.after,
+      expected_phrase_keys:r.expected_phrase_keys||[],
+      inputs:r.inputs||{},
+    });
+  }
+  out.sort((a,b)=>
+    String(a.forwarder).localeCompare(String(b.forwarder))||
+    String(a.source_file||'').localeCompare(String(b.source_file||''))||
+    String(a.sheet).localeCompare(String(b.sheet))||
+    (a.row-b.row));
+  return out;
+}
+
 function downloadTrainingSet(format){
   const{records,inputKeys}=buildTrainingSet();
   if(!records.length){showLog('Training set \u2014 no rows to export (maybe all rows matched; try "Include matching rows").','err');return;}
@@ -3352,8 +3411,14 @@ const INPUT_GLOSSARY={
   referenz          :'ReferenzNr — Sendungs-Referenznummer. A "," in the value is the bundling signal.',
   referenz3         :'ReferenzNr3 — Dachser-specific tertiary reference column (used in trigger trace).',
   recip             :'Empf.-Name — recipient name. "amazon" substring triggers Amazon-tier branches in K+N.',
-  empf_plz          :'Empf.-PLZ — recipient ZIP code. 88499 is the Wackler return hub.',
+  empf_plz          :'Empf.-PLZ — recipient ZIP code. 88499 is the Wackler return hub. On a Wackler international export lane it disambiguates multi-zone countries (CH/FR/ES/PL…).',
   empf_ort          :'Empf.-Ort — recipient city. RIEDLINGEN is the Wackler return hub city.',
+  abg_land          :'Abg.-Land — origin country code (Wackler). Together with empf_land it classifies the lane (DE→DE national vs international) that decides which rate card + zone the freight is published under (wacklerLane).',
+  empf_land         :'Empf.-Land — destination country code (Wackler). Non-DE ⇒ international lane keyed by this country + Empf.-PLZ; DE (with DE/blank origin) ⇒ national lane, zone from Empf.-PLZ.',
+  abg_plz           :'Abg.-PLZ — origin postal code (Wackler). Zone-resolves the non-German side on an import lane (Abg.-Land ≠ DE).',
+  zone              :'Tarifzone — explicit rate-card zone token (DE1..DE9 national, or AT1/CH2/FR3/TR/… international). When present it wins over the Land/PLZ lane classification.',
+  c502_dl           :'502 Kosten DL — Einlagern (into-storage) cost line (Dachser). Any non-zero value emits "Einlagern".',
+  c503_dl           :'503 Kosten DL — Auslagern (out-of-storage) cost line (Dachser). Any non-zero value emits "Auslagern".',
   serv_art          :'Serv.-Art — service category code (Dachser). K1AV / K1AS gate several SNK branches.',
   kostenstelle      :'KOSTENSTELLE — cost-center. Empty or "X" triggers Kontierung?.',
   sachkonto         :'SACHKONTO — GL account. Empty or "X" triggers Kontierung? (or VORHOLUNG on Dachser when "X").',
@@ -3462,8 +3527,9 @@ function buildRuleSpec(){
         '2. For engine_missing (engine UNDER-fired vs truth): locate the existing branch that emits the missing key (or add one). Loosen its gate using the inputs.* signals on the failing rows.',
         '3. For engine_extra (engine OVER-fired vs truth): locate the branch that emits the extra key. Tighten its gate so the inputs.* signature on these rows no longer matches.',
         '4. For rows that are both: handle the missing and extra key sets independently.',
-        '5. Preserve the join() pattern — phrases are de-duplicated case-insensitively automatically.',
-        '6. After editing, the user re-runs Train & Compare; engine_matches_b flips to true and the row drops out of the wrong/missed/overfired (and engine-drift) buckets.',
+        '5. Preserve the join() pattern — phrases are de-duplicated case-insensitively automatically. Any new phrase comparison must go through normPhrase, never a bare toLowerCase().trim().',
+        '6. Check every proposed gate change against the bundle\'s regression.jsonl rows for that forwarder (the rows the current engine already solves): their inputs must keep producing exactly their expected_phrase_keys.',
+        '7. After editing, the user re-runs Train & Compare; engine_matches_b flips to true and the row drops out of the wrong/missed/overfired (and engine-drift) buckets.',
       ],
     },
   };
@@ -3486,7 +3552,7 @@ function downloadRuleSpec(){
    (engine_* over A-vs-B), the pattern-first workflow, the engine
    constraints, and the expected output shape, with the live pattern
    counts interpolated so the assistant knows the size of the job. */
-function buildAiBundlePrompt(spec,summary){
+function buildAiBundlePrompt(spec,summary,regressionCount){
   const topPatterns=(summary.patterns||[]).slice(0,3).map(p=>
     '  - '+p.forwarder+' · '+p.count+'× · '+p.suggested_action+
     (p.missing_phrase_keys.length?' · missing: '+p.missing_phrase_keys.join(', '):'')+
@@ -3494,7 +3560,7 @@ function buildAiBundlePrompt(spec,summary){
   return [
 '# Prompt — paste into your AI assistant together with this bundle\'s files',
 '',
-'> Attach `training.jsonl`, `rule_spec.json`, and `summary.json` (and `assets/anmerkung.js` if the assistant cannot read the repository), then paste everything below the line.',
+'> Attach `training.jsonl`, `regression.jsonl`, `rule_spec.json`, and `summary.json` (and `assets/anmerkung.js` if the assistant cannot read the repository), then paste everything below the line.',
 '',
 '---',
 '',
@@ -3503,6 +3569,7 @@ function buildAiBundlePrompt(spec,summary){
 '- `summary.json` — failure patterns, pre-grouped by forwarder and by the phrase keys the CURRENT engine gets wrong vs ground truth. '+summary.pattern_count+' pattern(s) over '+summary.engine_actionable+' actionable row(s); '+summary.engine_solved+' row(s) the engine already solves. Top patterns:',
 topPatterns||'  - (none)',
 '- `training.jsonl` — one JSON record per row; join to patterns via `row_uid`.',
+'- `regression.jsonl` — '+(regressionCount||0)+' row(s) the CURRENT engine already solves (expected phrase set + the inputs that produce it). Your patch must keep every one of them passing.',
 '- `rule_spec.json` — the PHRASES catalog, per-forwarder thresholds, processor/resolver symbols, and an English glossary for every `inputs.*` key.',
 '',
 '## Task',
@@ -3514,8 +3581,10 @@ topPatterns||'  - (none)',
 '1. The `engine_*` fields are authoritative: `engine_missing_phrase_keys` = phrases ground truth wants that the engine fails to emit (ADD a branch or LOOSEN its gate); `engine_extra_phrase_keys` = phrases the engine emits that truth rejects (GUARD or TIGHTEN the branch). Ignore the plain `predicted`/`missing_*`/`extra_*` fields unless `engine_label` is blank — they compare a possibly-stale tool output, not the current engine.',
 '2. Diagnose gates from `summary.json` first: each pattern\'s `shared_inputs` are the cell values identical on EVERY failing row (prime gate signals); `varying_inputs` differ across rows and must not become gate conditions. Pull the matching `training.jsonl` records by `example_row_uids` for the full picture.',
 '3. Emit phrases only via the existing `PHRASES` catalog and `join()` helper (it dedupes case-insensitively). New wording goes into `PHRASES` first; keys prefixed `lit_`/`tpl_`/`?:` are explained in `rule_spec.json`.',
-'4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Do not weaken a gate so far that it would fire on rows the engine currently gets right ('+summary.engine_solved+' solved rows are the regression set).',
+'4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Before proposing ANY gate change, replay it mentally against every `regression.jsonl` record for that forwarder: applying the new/changed gate to the record\'s `inputs` must still yield exactly its `expected_phrase_keys` — including the records whose `expected` is empty, where the engine must stay silent.',
 '5. Keep edits inside the `process<Forwarder>` functions (resolvers are already wired) unless a pattern clearly needs a new resolver column.',
+'6. Any phrase comparison or phrase→key lookup you add must go through `normPhrase` — never a bare `toLowerCase().trim()` (hand-edited truth cells carry NFD umlauts, zero-width chars, soft hyphens, dash variants). A new `PHRASES` entry must not normPhrase-fold onto an existing entry.',
+'7. If a pattern\'s truth phrase depends on data that is NOT in the row\'s `inputs` (cross-document references like "bereits berechnet in <other Beleg>", intermediate-consignee addresses from unexported columns), say so and mark it "not derivable from row inputs" instead of forcing a rule — a guessed rule poisons the next training iteration.',
 '',
 '## Output format',
 '',
@@ -3531,7 +3600,7 @@ topPatterns||'  - (none)',
 /* Build the README.md a downstream AI agent reads first. Hard-coded
    so the bundle is self-explanatory; the schema description echoes
    what's actually in rule_spec.json. */
-function buildAiBundleReadme(spec,recordCount,filterScope){
+function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   const lines=[];
   lines.push('# Anmerkung Rule-Update Bundle');
   lines.push('');
@@ -3545,13 +3614,14 @@ function buildAiBundleReadme(spec,recordCount,filterScope){
   lines.push('- `prompt.md` — ready-to-paste prompt. Attach the other files to your AI assistant and paste this; it encodes the whole workflow below.');
   lines.push('- `summary.json` — failure patterns, pre-grouped: every (forwarder × engine_missing/extra_phrase_keys) combination with its row count, label distribution, example `row_uid`s, and the input cells shared by every failing row (gate-signal candidates). Records are sorted deterministically (forwarder → source pair → sheet → row) so bundles diff cleanly across runs.');
   lines.push('- `training.jsonl` — one JSON record per line, one record per failing/correct row from Diff Mode.');
+  lines.push('- `regression.jsonl` — '+(regressionCount||0)+' compact record(s), one per row the CURRENT engine already gets right (`engine_matches_b === true`), from the FULL diff (regardless of any export filter). Each carries `expected` + `expected_phrase_keys` + `inputs`: the constraint rows a rule change must not regress. Records whose `expected` is empty pin rows where the engine must stay silent.');
   lines.push('- `rule_spec.json` — the schema. Lists every PHRASES key, every threshold, every input field per forwarder, and the exact source-code symbol an AI should edit to update rules.');
   lines.push('- `README.md` — this file.');
   lines.push('');
   lines.push('## How an AI assistant should use this bundle');
   lines.push('');
   lines.push('### 0. Start with `summary.json`');
-  lines.push('It already does workflow step 1 (grouping) for you: patterns are sorted by row count, each carries `suggested_action` (`add_or_loosen_branch` / `guard_or_tighten_branch` / `fix_both`), `shared_inputs` (cell values identical on every failing row — prime gate signals), `varying_inputs` (present everywhere but differing — must NOT become gate conditions), and `example_row_uids` to pull the full records from `training.jsonl`. Rows the engine already solves are counted in `engine_solved` and excluded from patterns — they are the regression set a fix must not break.');
+  lines.push('It already does workflow step 1 (grouping) for you: patterns are sorted by row count, each carries `suggested_action` (`add_or_loosen_branch` / `guard_or_tighten_branch` / `fix_both`), `shared_inputs` (cell values identical on every failing row — prime gate signals), `varying_inputs` (present everywhere but differing — must NOT become gate conditions), and `example_row_uids` to pull the full records from `training.jsonl`. Rows the engine already solves are counted in `engine_solved` and excluded from patterns — they ship in full as `regression.jsonl`, the set a fix must not break.');
   lines.push('');
   lines.push('### 1. Read `rule_spec.json`');
   lines.push('It tells you:');
@@ -3615,7 +3685,9 @@ function buildAiBundleReadme(spec,recordCount,filterScope){
   lines.push('- Treat the missing and extra sets independently. Often a single branch picked the wrong phrase: change the phrase emitted, not the gate.');
   lines.push('');
   lines.push('### 5. Verify');
-  lines.push('Re-run Diff Mode → Train & Compare. Each fixed row\'s `engine_matches_b` flips to `true`, its `engine_missing_phrase_keys` / `engine_extra_phrase_keys` empty out, and the `engine drift` overlay clears. Watch the chip counts move from `wrong`/`missed`/`overfired` toward `correct`.');
+  lines.push('Before finalising a patch, walk `regression.jsonl`: for every record of the forwarder you touched, the patched branch applied to the record\'s `inputs` must still produce exactly `expected_phrase_keys` (empty `expected` = the engine must emit nothing). If a truth phrase needs data absent from `inputs` (cross-document notes, unexported columns), report it as not derivable instead of inventing a gate.');
+  lines.push('');
+  lines.push('Then re-run Diff Mode → Train & Compare. Each fixed row\'s `engine_matches_b` flips to `true`, its `engine_missing_phrase_keys` / `engine_extra_phrase_keys` empty out, and the `engine drift` overlay clears. Watch the chip counts move from `wrong`/`missed`/`overfired` toward `correct` — and the regression rows stay `correct`.');
   return lines.join('\n')+'\n';
 }
 
@@ -3638,13 +3710,17 @@ async function downloadAiBundle(){
   summary.engine_version=spec.engine_version;
   summary.exported_at=spec.exported_at;
   summary.filter_scope=filterScope||'';
-  const readme=buildAiBundleReadme(spec,records.length,filterScope);
-  const prompt=buildAiBundlePrompt(spec,summary);
+  /* Regression fence: every engine-solved row from the FULL result set
+     (ignores the filter scope on purpose — see buildRegressionSet). */
+  const regression=buildRegressionSet(diffState.results.rows);
+  const readme=buildAiBundleReadme(spec,records.length,filterScope,regression.length);
+  const prompt=buildAiBundlePrompt(spec,summary,regression.length);
   const zip=new JSZip();
   zip.file('README.md',readme);
   zip.file('prompt.md',prompt);
   zip.file('summary.json',JSON.stringify(summary,null,2)+'\n');
   zip.file('training.jsonl',jsonl);
+  if(regression.length)zip.file('regression.jsonl',regression.map(r=>JSON.stringify(r)).join('\n')+'\n');
   zip.file('rule_spec.json',JSON.stringify(spec,null,2)+'\n');
   const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
@@ -3653,7 +3729,8 @@ async function downloadAiBundle(){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   showLog('AI Bundle exported \u2014 '+records.length+' record(s) \u00b7 '+summary.pattern_count+
     ' failure pattern(s) ('+summary.engine_actionable+' actionable, '+summary.engine_solved+' already solved)'+
-    ' \u00b7 training.jsonl + summary.json + rule_spec.json + prompt.md + README.md'+
+    ' \u00b7 '+regression.length+' regression row(s)'+
+    ' \u00b7 training.jsonl + regression.jsonl + summary.json + rule_spec.json + prompt.md + README.md'+
     (filterScope?' (filter: '+filterScope+')':'')+'.','ok');
 }
 
