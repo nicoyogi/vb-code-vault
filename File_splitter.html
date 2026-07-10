@@ -488,16 +488,18 @@
     if (!d) return false;
     return dayNum(today) - dayNum(d) >= -5;
   }
-  // Overdue cell for the output sheet: dates render dd.mm.yyyy on the nearest
-  // local calendar day (same rounding as prioByDate); weekend dates roll back
-  // to the previous Friday; non-dates pass through.
-  function fmtOverdue(v) {
+  // Overdue cell for the output sheet: days overdue relative to today —
+  // today − overdue with the same nearest-day rounding as prioByDate, so
+  // '+2' = 2 days overdue, '-5' = due in 5 days. Weekend dates roll back to
+  // the previous Friday before the diff; non-dates pass through.
+  function fmtOverdue(v, today) {
     const d = parseOverdue(v);
     if (!d) return String(v ?? '');
-    let u = new Date(dayNum(d) * 86400000); // UTC midnight of that day
+    let n = dayNum(d);
     // ponytail: weekends only; add a holiday list if non-working holidays matter
-    while (u.getUTCDay() === 0 || u.getUTCDay() === 6) u = new Date(u.getTime() - 86400000);
-    return `${String(u.getUTCDate()).padStart(2, '0')}.${String(u.getUTCMonth() + 1).padStart(2, '0')}.${u.getUTCFullYear()}`;
+    while (new Date(n * 86400000).getUTCDay() === 0 || new Date(n * 86400000).getUTCDay() === 6) n--;
+    const diff = dayNum(today) - n;
+    return diff > 0 ? '+' + diff : String(diff);
   }
   // A row gets the PRIO mark if it's on the PRIO list (docs, may be null) or
   // its overdue date is within the window.
@@ -1063,7 +1065,7 @@
             const cells = chunk.map(r => [
               ...r.slice(0, 4),
               ...(prioOn ? [isPrio(r, prio && prio.docs, today) ? 'PRIO' : ''] : []),
-              ...(overdueOn ? [fmtOverdue(r[5])] : []),
+              ...(overdueOn ? [fmtOverdue(r[5], today)] : []),
             ]);
             const ws = XLSX.utils.aoa_to_sheet([header, ...cells]);
             for (let R = 0; R <= cells.length; R++) for (let C = 0; C < header.length; C++) {

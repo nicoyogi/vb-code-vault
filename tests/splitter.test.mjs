@@ -225,17 +225,20 @@ test('prioByDate: PRIO when today − overdue ≥ −5 days, nearest-day roundin
   assert.equal(s.prioByDate('2026-07-06T12:00:00', today), true); // diff +3
 });
 
-test('fmtOverdue: dd.mm.yyyy on the nearest local day; non-dates pass through', () => {
-  assert.equal(s.fmtOverdue(new Date(2026, 6, 13)), '13.07.2026'); // Monday stays
-  // weekend rolls back to the previous Friday
-  assert.equal(s.fmtOverdue(new Date(2026, 6, 11)), '10.07.2026'); // Saturday
-  assert.equal(s.fmtOverdue(new Date(2026, 6, 12)), '10.07.2026'); // Sunday
+test('fmtOverdue: signed day diff vs today (+ = overdue), weekend rolls to Friday first', () => {
+  const today = new Date(2026, 6, 9); // Thursday 2026-07-09
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 13), today), '-4'); // Monday, due in 4 days
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 6), today), '+3');  // 3 days overdue
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 9), today), '0');   // due today
+  // weekend rolls back to the previous Friday before the diff
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 11), today), '-1'); // Sat -> Fri 10.07
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 12), today), '-1'); // Sun -> Fri 10.07
   // SheetJS quirk: serial lands 23:59:48 the day before -> rounds to next day
-  assert.equal(s.fmtOverdue(new Date(2026, 6, 12, 23, 59, 48)), '13.07.2026');
-  assert.equal(s.fmtOverdue('2026-07-06T09:00:00'), '06.07.2026'); // parseable string
-  assert.equal(s.fmtOverdue(''), '');
-  assert.equal(s.fmtOverdue(undefined), '');
-  assert.equal(s.fmtOverdue('garbage'), 'garbage');
+  assert.equal(s.fmtOverdue(new Date(2026, 6, 12, 23, 59, 48), today), '-4'); // is really Mon 7/13
+  assert.equal(s.fmtOverdue('2026-07-06T09:00:00', today), '+3'); // parseable string
+  assert.equal(s.fmtOverdue('', today), '');
+  assert.equal(s.fmtOverdue(undefined, today), '');
+  assert.equal(s.fmtOverdue('garbage', today), 'garbage');
 });
 
 test('isPrio: PRIO-list doc match OR overdue date within window', () => {
