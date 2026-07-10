@@ -361,6 +361,24 @@
     }, 600);
   }
   initKreditorSync();
+  // Forwarder defaults: remember the check state used in the last 10 splits
+  // (per system + forwarder, this device). A forwarder defaults to checked
+  // unless it was unchecked in most of those splits; unseen ones start checked.
+  const FWD_HIST_KEY = 'fileSplitter.fwdHistory';
+  let fwdHistory = {};
+  try { fwdHistory = JSON.parse(localStorage.getItem(FWD_HIST_KEY) || '{}') || {}; } catch (e) {}
+  function fwdDefault(sysName, fwdName) {
+    const h = (fwdHistory[sysName] || {})[fwdName];
+    return !h || h.reduce((a, b) => a + b, 0) * 2 >= h.length; // majority checked; ties stay checked
+  }
+  function recordFwdChoices(valid) {
+    for (const sys of valid) {
+      if (sys.group === 'factual') continue;
+      const h = fwdHistory[sys.name] = fwdHistory[sys.name] || {};
+      for (const f of sys.forwarders) h[f.name] = [...(h[f.name] || []), f.checked ? 1 : 0].slice(-10);
+    }
+    try { localStorage.setItem(FWD_HIST_KEY, JSON.stringify(fwdHistory)); } catch (e) { /* storage unavailable */ }
+  }
   const GROUPS = [['tariff', 'Tariff'], ['factual', 'Factual']];
   const TARGET_COLS = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
   const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
@@ -837,8 +855,9 @@
           systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), 'tariff'), fileName: file.name, rows: [], forwarders: [], group: 'tariff', error: res.error });
         } else {
           for (const en of res.entries) {
-            systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(en.base, en.group), fileName: file.name, rows: en.rows,
-              forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: true })), group: en.group });
+            const name = dedupeName(en.base, en.group);
+            systems.push({ id: 'sys' + (sysSeq++), name, fileName: file.name, rows: en.rows,
+              forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: fwdDefault(name, f.name) })), group: en.group });
           }
         }
         systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
@@ -1121,6 +1140,7 @@
       if (names.length === 0) { showError(`Please enter at least one ${label} person name.`); return; }
       jobs.push({ group, label, names, systems: groupSys });
     }
+    recordFwdChoices(valid); // this selection is the one actually used — feed the defaults
 
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const doShuffle = document.getElementById('shuffleRows').checked;

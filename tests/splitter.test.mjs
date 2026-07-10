@@ -185,6 +185,23 @@ test('splitRows: Kreditor exclusion drops Supplier matches in every group', () =
   assert.equal(s.splitRows({ group: 'factual', rows }, new Set(), true).length, 2);
 });
 
+test('forwarder defaults: majority of recorded splits wins, unseen stays checked', () => {
+  const sys = { name: 'FNP', group: 'tariff', forwarders: [{ name: 'DHL', checked: false }, { name: 'Schenker', checked: true }] };
+  s.recordFwdChoices([sys]);
+  s.recordFwdChoices([sys]);
+  assert.equal(s.fwdDefault('FNP', 'DHL'), false);     // unchecked in both recorded splits
+  assert.equal(s.fwdDefault('FNP', 'Schenker'), true);
+  assert.equal(s.fwdDefault('FNP', 'Kuehne'), true);   // never seen -> checked
+  assert.equal(s.fwdDefault('KSP', 'DHL'), true);      // per system — other systems unaffected
+  sys.forwarders[0].checked = true;                    // 2 unchecked vs 1 checked -> still unchecked
+  s.recordFwdChoices([sys]);
+  assert.equal(s.fwdDefault('FNP', 'DHL'), false);
+  s.recordFwdChoices([sys]);                           // 2 vs 2 -> tie keeps checked
+  assert.equal(s.fwdDefault('FNP', 'DHL'), true);
+  s.recordFwdChoices([{ name: 'FNP', group: 'factual', forwarders: [{ name: 'X', checked: false }] }]);
+  assert.equal(s.fwdDefault('FNP', 'X'), true);        // factual systems record nothing
+});
+
 test('workbookEntries: multi-sheet workbook — one system per qualifying sheet, named by sheet name', () => {
   const H = ['Vendor details', 'Supplier', 'Reference', 'Document number', 'Step description'];
   const sheets = [
