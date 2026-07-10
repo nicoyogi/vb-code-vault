@@ -182,7 +182,7 @@ export function loadEngine() {
     'phraseToKey', 'phraseKeysFor',
     // diff-mode labeling / training-output primitives
     'classifyDiff', 'computePhraseDiff', 'granularLabel', 'rowUid', 'phraseCellParts',
-    'buildTrainingSummary',
+    'buildTrainingSummary', 'buildRegressionSet', 'collectInputsForRow',
   ];
   const engine = {};
   const missing = [];

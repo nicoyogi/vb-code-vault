@@ -1,6 +1,17 @@
 {
-  "version": "1.29.0",
+  "version": "1.30.0",
   "entries": [
+    {
+      "ver": "1.30.0",
+      "date": "2026-07-10",
+      "items": [
+        "AI Bundle — new file `regression.jsonl`: one compact record (expected + expected_phrase_keys + inputs) per row the CURRENT engine already solves, taken from the FULL diff regardless of the export filter. The bundle used to only COUNT the solved rows (engine_solved), so an AI consumer had the \"don't break solved rows\" constraint stated but never the constraining rows — the root cause of fixes that closed one pattern while regressing another. Rows whose truth cell is empty are kept: they pin where the engine must stay silent, the negatives an overeager gate loosening breaks first.",
+        "AI Bundle — Wackler training inputs now export the lane/zone signals the engine actually gates rate-card resolution on: abg_land, empf_land, abg_plz and zone (Tarifzone). Prior bundles omitted them, so numeric-PLZ international rows (NL/IT/…) could not be lane-classified from the exported inputs and replays showed FALSE failures on rows the engine solves live; an AI also could not see WHY a \"Wackler rechnet\" tier resolved. Dachser now exports c502_dl / c503_dl (the Einlagern / Auslagern gate cells) for the same reason. K+N and DHL were audited and already export every cell their processors read.",
+        "AI Bundle — row_uid is UNCHANGED for every row: the six newly-exported keys are excluded from the uid seed (UID_EXCLUDED_INPUT_KEYS, frozen at the v1.29 key set), so uids keep joining training corpora across engine versions and historical bundles. Any future collectInputsForRow key must be added to that exclusion set.",
+        "AI Bundle — prompt.md / README.md / rule_spec.json guidance hardened from the recurring failure modes of past rule-fix iterations: every proposed gate change must be replayed against regression.jsonl before proposing it; all phrase comparison must go through normPhrase (never bare toLowerCase().trim()) and a new PHRASES entry must not normPhrase-fold onto an existing one; and truth phrases that depend on data absent from the row's inputs (cross-document \"bereits berechnet in <Beleg>\" notes, unexported intermediate-consignee columns) must be reported as \"not derivable from row inputs\" instead of forcing a guessed rule that poisons the next training iteration.",
+        "Tests — 3 new cases pin the uid freeze (adding the v1.30 keys must not re-key a row; v1.29 keys still differentiate), the new input exports (Wackler lane/zone + Dachser 502/503 reach collectInputsForRow output), and buildRegressionSet's contract (engine-solved rows only, uid-deduped, forwarder→source→sheet→row sort, silent negatives kept, padding dropped). Full suite: 171 passing."
+      ]
+    },
     {
       "ver": "1.29.0",
       "date": "2026-06-29",

@@ -17,7 +17,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadEngine } from './harness/load-engine.mjs';
+import { loadEngine, makeRow } from './harness/load-engine.mjs';
 
 const e = loadEngine();
 
@@ -121,6 +121,65 @@ test('rowUid: different content yields a different hash', () => {
   const u1 = e.rowUid('wackler', 'Sheet1', 5, { a: '1' });
   const u2 = e.rowUid('wackler', 'Sheet1', 6, { a: '1' });
   assert.notEqual(u1, u2);
+});
+
+test('rowUid: v1.30 input keys are excluded from the seed — uids stay joinable with historical bundles', () => {
+  const legacy = e.rowUid('wackler', 'Sheet1', 5, { stat: '10', empf_plz: '88499' });
+  const enriched = e.rowUid('wackler', 'Sheet1', 5, {
+    stat: '10', empf_plz: '88499',
+    abg_land: 'DE', empf_land: 'FR', abg_plz: '70173', zone: 'FR3',
+    c502_dl: '12', c503_dl: '7',
+  });
+  assert.equal(enriched, legacy,
+    'newly-exported lane/zone/storage cells must not re-key rows that exist in pre-v1.30 bundles');
+  const changedLegacyKey = e.rowUid('wackler', 'Sheet1', 5, { stat: '10', empf_plz: '88499', vkg: '250' });
+  assert.notEqual(changedLegacyKey, legacy, 'v1.29 seed keys still differentiate rows');
+});
+
+/* ── collectInputsForRow — the export must carry every cell the engine gates on ── */
+
+test('collectInputsForRow: wackler exports the lane/zone signals, dachser the 502/503 storage cells', () => {
+  const wRow = makeRow(4, { 0: '10', 1: 'DE', 2: 'FR', 3: '70173', 4: 'FR3' });
+  const wCols = { stat: 0, abg_land: 1, empf_land: 2, abg_plz: 3, zone: 4 };
+  const w = e.collectInputsForRow('wackler', wRow, 4, wCols);
+  assert.equal(w.abg_land, 'DE');
+  assert.equal(w.empf_land, 'FR');
+  assert.equal(w.abg_plz, '70173');
+  assert.equal(w.zone, 'FR3');
+  const dRow = makeRow(4, { 0: '10', 1: '12', 2: '7' });
+  const dCols = { stat: 0, c502_dl: 1, c503_dl: 2 };
+  const d = e.collectInputsForRow('dachser', dRow, 4, dCols);
+  assert.equal(d.c502_dl, '12', 'Einlagern gate cell reaches the training export');
+  assert.equal(d.c503_dl, '7', 'Auslagern gate cell reaches the training export');
+});
+
+/* ── buildRegressionSet — the solved-row fence shipped as regression.jsonl ── */
+
+test('buildRegressionSet: keeps only engine-solved rows, dedupes, sorts, and preserves silent negatives', () => {
+  const mk = (over) => ({
+    change: 'changed', sheet: 'S1', row: 5, fw: 'wackler', processor: 'processWackler',
+    before: 'x', after: 'x', engineNow: 'x', engineMatchesB: true,
+    expected_phrase_keys: ['kontierungQ'], inputs: { stat: '10' }, row_uid: 'u1', source: '',
+    ...over,
+  });
+  const rows = [
+    mk({}),                                                          /* solved → kept */
+    mk({ row_uid: 'u1' }),                                           /* duplicate uid → dropped */
+    mk({ row_uid: 'u2', engineMatchesB: false }),                    /* failing → dropped */
+    mk({ row_uid: 'u3', engineMatchesB: null }),                     /* engine not evaluated → dropped */
+    mk({ row_uid: 'u4', change: 'sheet' }),                          /* sheet-level warning → dropped */
+    mk({ row_uid: 'u5', before: '', after: '', engineNow: '', inputs: {} }), /* padding → dropped */
+    mk({ row_uid: 'u6', before: '', after: '', engineNow: '', expected_phrase_keys: [] }), /* silent negative → KEPT */
+    mk({ row_uid: 'u7', fw: 'dachser', processor: 'processDachser', sheet: 'A', row: 2 }),
+  ];
+  const out = A(e.buildRegressionSet(rows));
+  assert.deepStrictEqual(out.map((r) => r.row_uid), ['u7', 'u1', 'u6'],
+    'forwarder → source → sheet → row sort; solved rows only; uid-deduped');
+  const neg = out.find((r) => r.row_uid === 'u6');
+  assert.equal(neg.expected, '', 'a row where the engine must stay silent is a regression constraint too');
+  const pos = out.find((r) => r.row_uid === 'u1');
+  assert.deepStrictEqual(A(pos.expected_phrase_keys), ['kontierungQ']);
+  assert.deepStrictEqual({ ...pos.inputs }, { stat: '10' }, 'inputs travel with the constraint');
 });
 
 /* ── engine-vs-truth (#26) derivation ──
