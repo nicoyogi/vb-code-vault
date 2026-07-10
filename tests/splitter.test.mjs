@@ -223,6 +223,9 @@ test('prioByDate: PRIO when today − overdue ≥ −5 days, nearest-day roundin
   assert.equal(s.prioByDate(undefined, today), false);
   // parseable string dates work
   assert.equal(s.prioByDate('2026-07-06T12:00:00', today), true); // diff +3
+  // German dd.mm.yyyy text marks too (KSP/FNP carry the column as text)
+  assert.equal(s.prioByDate('06.07.2026', today), true);  // diff +3
+  assert.equal(s.prioByDate('20.07.2026', today), false); // diff -11
 });
 
 test('fmtOverdue: signed day diff vs today (+ = overdue), weekend rolls to Friday first', () => {
@@ -236,6 +239,10 @@ test('fmtOverdue: signed day diff vs today (+ = overdue), weekend rolls to Frida
   // SheetJS quirk: serial lands 23:59:48 the day before -> rounds to next day
   assert.equal(s.fmtOverdue(new Date(2026, 6, 12, 23, 59, 48), today), '-4'); // is really Mon 7/13
   assert.equal(s.fmtOverdue('2026-07-06T09:00:00', today), '+3'); // parseable string
+  // German dd.mm.yyyy text (KSP/FNP exports carry the column as text)
+  assert.equal(s.fmtOverdue('13.07.2026', today), '-4');
+  assert.equal(s.fmtOverdue(' 06.07.2026 ', today), '+3');
+  assert.equal(s.fmtOverdue('11.07.26', today), '-1');  // 2-digit year, Sat -> Fri
   assert.equal(s.fmtOverdue('', today), '');
   assert.equal(s.fmtOverdue(undefined, today), '');
   assert.equal(s.fmtOverdue('garbage', today), 'garbage');
