@@ -47,12 +47,13 @@ test('noteColumns: every column literally named "Note"', () => {
   assert.deepEqual(plain(s.noteColumns(['A', 'B'])), []);
 });
 
-test('noteKeep: no notes always kept; else any note value in the checked set', () => {
+test('noteKeep: no notes always kept; else EVERY note value must be checked', () => {
   const checked = new Set(['fehlende Kreditorenangabe', 'Kreditor fehlt']);
   assert.equal(s.noteKeep([], checked), true);                              // blank -> always kept
   assert.equal(s.noteKeep(['fehlende Kreditorenangabe'], checked), true);
   assert.equal(s.noteKeep(['Falschabrechnung Diesel'], checked), false);    // exact value, no substring
-  assert.equal(s.noteKeep(['Falschabrechnung Diesel', 'Kreditor fehlt'], checked), true); // any-match
+  assert.equal(s.noteKeep(['Falschabrechnung Diesel', 'Kreditor fehlt'], checked), false); // one unchecked note drops the row
+  assert.equal(s.noteKeep(['fehlende Kreditorenangabe', 'Kreditor fehlt'], checked), true); // all checked -> kept
   assert.equal(s.noteKeep(['anything'], new Set()), false);                 // nothing checked -> noted rows drop
 });
 

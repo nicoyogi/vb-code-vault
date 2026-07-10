@@ -228,7 +228,7 @@
 
 <div class="card step-card" hidden>
   <div class="card-head"><h2>Filter by note <span class="opt-tag">optional</span></h2><span class="step-tag">step 2 of 6</span></div>
-  <p class="card-desc">Tick the <strong>Note</strong> values to keep. Rows with no note are always kept. Applies to <strong>Tariff</strong> systems only — Factual rows are never filtered.</p>
+  <p class="card-desc">Tick the <strong>Note</strong> values to keep. A row is kept only when <strong>all</strong> of its notes are ticked; rows with no note are always kept. Applies to <strong>Tariff</strong> systems only — Factual rows are never filtered.</p>
   <div id="noteFilterBody"><div class="note-empty">No Note values found in your files — nothing to filter here. Continue to the next step.</div></div>
   <div class="note-stat" id="noteStat"></div>
 </div>
@@ -515,11 +515,12 @@
     for (const r of rows) for (const n of r[4]) m.set(n, (m.get(n) || 0) + 1);
     return [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
   }
-  // Keep a row by its notes: rows without a note always pass; otherwise at
-  // least one of the row's note values must be in the checked set.
+  // Keep a row by its notes: rows without a note always pass; otherwise
+  // EVERY one of the row's note values must be in the checked set — one
+  // unchecked note on the row means it is not extracted.
   function noteKeep(notes, checked) {
     if (!notes || notes.length === 0) return true;
-    return notes.some(n => checked.has(n));
+    return notes.every(n => checked.has(n));
   }
   function normDoc(v) { return String(v ?? '').trim(); }
   // Date-based PRIO: a row is PRIO when today − overdue ≥ −5 whole days —
