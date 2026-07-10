@@ -131,6 +131,11 @@
   #noteFilterBody .fwd-list { max-height: 240px; }
   .note-empty { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; font-size: 13px; color: var(--text2); line-height: 1.5; }
   .note-stat { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-top: 12px; min-height: 14px; }
+  .kred-block { margin-top: 14px; }
+  .kred-block label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+  .kred-input { width: 100%; min-height: 62px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; font-family: var(--mono); color: var(--text); outline: none; resize: vertical; transition: border-color 0.15s; }
+  .kred-input:focus { border-color: var(--accent); }
+  .kred-block .note-stat { margin-top: 6px; }
 
   /* step 4 — split */
   .recap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
@@ -194,13 +199,13 @@
 
 <header>
   <h1>Extract &amp; split by <em>system</em></h1>
-  <p class="sub">Five quick steps: upload your files, filter notes, check totals, add people, and download the split.</p>
+  <p class="sub">Six quick steps: upload your files, filter notes, exclude Kreditors, check totals, add people, and download the split.</p>
 </header>
 
 <div class="stepper" id="stepper"></div>
 
 <div class="card step-card">
-  <div class="card-head"><h2>Upload your files</h2><span class="step-tag">step 1 of 5</span></div>
+  <div class="card-head"><h2>Upload your files</h2><span class="step-tag">step 1 of 6</span></div>
   <p class="card-desc">One Excel file per system — or a single workbook with one sheet per system. We read the <strong>Vendor details</strong>, <strong>Supplier</strong>, <strong>Reference</strong> and <strong>Document number</strong> columns. The <strong>Step description</strong> column decides Tariff vs Factual work.</p>
   <div class="dropzone" id="dropzone">
     <input type="file" id="fileInput" accept=".xlsx,.xls" multiple />
@@ -219,20 +224,26 @@
 </div>
 
 <div class="card step-card" hidden>
-  <div class="card-head"><h2>Filter by note <span class="opt-tag">optional</span></h2><span class="step-tag">step 2 of 5</span></div>
+  <div class="card-head"><h2>Filter by note <span class="opt-tag">optional</span></h2><span class="step-tag">step 2 of 6</span></div>
   <p class="card-desc">Tick the <strong>Note</strong> values to keep. Rows with no note are always kept. Applies to <strong>Tariff</strong> systems only — Factual rows are never filtered.</p>
   <div id="noteFilterBody"><div class="note-empty">No Note values found in your files — nothing to filter here. Continue to the next step.</div></div>
   <div class="note-stat" id="noteStat"></div>
 </div>
 
 <div class="card step-card" hidden>
-  <div class="card-head"><h2>How much work is there?</h2><span class="step-tag">step 3 of 5</span></div>
+  <div class="card-head"><h2>Exclude Kreditor <span class="opt-tag">optional</span></h2><span class="step-tag">step 3 of 6</span></div>
+  <p class="card-desc">Per system: <strong>Supplier</strong> (Kreditor) numbers that should <strong>not</strong> be extracted — one per line or comma-separated. Each list is saved on this device under the system name and reloads next time.</p>
+  <div id="kreditorBody"><div class="note-empty">No files uploaded yet — nothing to exclude here.</div></div>
+</div>
+
+<div class="card step-card" hidden>
+  <div class="card-head"><h2>How much work is there?</h2><span class="step-tag">step 4 of 6</span></div>
   <p class="card-desc">Rows that survive your forwarder and note filters, per work type — use this to decide how many people you need.</p>
   <div id="totalsBody"></div>
 </div>
 
 <div class="card step-card" id="peopleCard" hidden>
-  <div class="card-head"><h2>Who gets a share?</h2><span class="step-tag">step 4 of 5</span></div>
+  <div class="card-head"><h2>Who gets a share?</h2><span class="step-tag">step 5 of 6</span></div>
   <p class="card-desc">Rows are shared out as evenly as possible — one Excel file per person, per work type.</p>
   <div class="people-group" id="groupTariff">
     <div class="group-head"><span class="type-badge tariff">TARIFF</span><span class="group-note">forwarder + note filters apply</span></div>
@@ -274,7 +285,7 @@
 </div>
 
 <div class="card step-card" hidden>
-  <div class="card-head"><h2>Ready to split</h2><span class="step-tag">step 5 of 5</span></div>
+  <div class="card-head"><h2>Ready to split</h2><span class="step-tag">step 6 of 6</span></div>
   <p class="card-desc">Check the plan below, then split. Each person gets one Excel file with a sheet per system.</p>
   <div class="recap" id="recapChips"></div>
   <button class="split-btn" id="splitBtn" onclick="splitFile()">⚡ Split files</button>
@@ -304,10 +315,13 @@
   let generatedFiles = [];
   let noteChecked = new Map(); // note string -> boolean (global checklist state)
   let prio = null;             // { fileName, docs:Set<string> } from the optional PRIO workbook
-  let step = 0;            // wizard step: 0 files, 1 notes, 2 totals, 3 people, 4 split
+  let step = 0;            // wizard step: 0 files, 1 notes, 2 kreditor, 3 totals, 4 people, 5 split
   let splitting = false;
-  const STEP_LABELS = ['Files', 'Notes', 'Totals', 'People', 'Split'];
+  let kreditorStore = {};  // system name -> raw Kreditor-exclusion text, persisted per device
+  const STEP_LABELS = ['Files', 'Notes', 'Kreditor', 'Totals', 'People', 'Split'];
   const NAMES_KEYS = { tariff: 'fileSplitter.names', factual: 'fileSplitter.namesFactual' };
+  const KREDITOR_KEY = 'fileSplitter.kreditor';
+  try { kreditorStore = JSON.parse(localStorage.getItem(KREDITOR_KEY) || '{}') || {}; } catch (e) {}
   const GROUPS = [['tariff', 'Tariff'], ['factual', 'Factual']];
   const TARGET_COLS = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
   const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
@@ -592,10 +606,18 @@
     return { entries };
   }
 
-  // Rows a system contributes to the split: tariff rows pass the forwarder
-  // checklist + note filter; factual rows skip both. Blank-skip applies to all.
-  function splitRows(sys, keepNotes, skipBlanks) {
+  // Kreditor exclusion list: one token per line / comma / semicolon / space.
+  function parseKreditors(text) {
+    return new Set(String(text || '').split(/[\s,;]+/).filter(Boolean));
+  }
+  function kreditorSetFor(name) { return parseKreditors(kreditorStore[name]); }
+  // Rows a system contributes to the split: the system's Kreditor exclusion
+  // (matched against the Supplier column) drops rows first for every group;
+  // then tariff rows pass the forwarder checklist + note filter; factual rows
+  // skip both. Blank-skip applies to all.
+  function splitRows(sys, keepNotes, skipBlanks, kreditorExcl) {
     let rows = sys.rows;
+    if (kreditorExcl && kreditorExcl.size) rows = rows.filter(r => !kreditorExcl.has(normDoc(r[1])));
     if (sys.group !== 'factual') {
       const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
       rows = rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keepNotes));
@@ -617,14 +639,14 @@
     const valid = systems.filter(s => !s.error);
     const hasFiles = valid.length > 0;
     if (i <= 0) return true;
-    if (i <= 3) return hasFiles; // notes, totals, people
+    if (i <= 4) return hasFiles; // notes, kreditor, totals, people
     const groups = [...new Set(valid.map(s => s.group))];
     return hasFiles && groups.every(g => getNames(g).length > 0); // split
   }
 
   function setStep(i) { step = i; hideError(); renderWizard(); }
   function goBack() { setStep(Math.max(0, step - 1)); }
-  function goNext() { if (stepUnlocked(step + 1)) setStep(Math.min(4, step + 1)); }
+  function goNext() { if (stepUnlocked(step + 1)) setStep(Math.min(5, step + 1)); }
 
   function renderWizard() {
     const stepper = document.getElementById('stepper');
@@ -643,17 +665,18 @@
     const inUse = new Set(systems.filter(s => !s.error).map(s => s.group));
     document.getElementById('groupTariff').hidden = inUse.size > 0 && !inUse.has('tariff');
     document.getElementById('groupFactual').hidden = !inUse.has('factual');
-    if (step === 2) renderTotals();
-    if (step === 4) renderRecap();
+    if (step === 2) renderKreditor();
+    if (step === 3) renderTotals();
+    if (step === 5) renderRecap();
 
     document.getElementById('backBtn').style.visibility = (step > 0 && !splitting) ? 'visible' : 'hidden';
     const nextBtn = document.getElementById('nextBtn');
     const hint = document.getElementById('nextHint');
     const nextOk = stepUnlocked(step + 1);
-    nextBtn.hidden = step === 4;
+    nextBtn.hidden = step === 5;
     nextBtn.disabled = !nextOk;
-    nextBtn.textContent = step === 3 ? 'Review & split →' : 'Continue →';
-    hint.textContent = (step === 4 || nextOk) ? ''
+    nextBtn.textContent = step === 4 ? 'Review & split →' : 'Continue →';
+    hint.textContent = (step === 5 || nextOk) ? ''
       : step === 0 ? 'Upload at least one valid file to continue'
       : 'Add at least one name to each list to continue';
   }
@@ -674,7 +697,7 @@
       if (groupSys.length === 0) continue;
       let planned = 0;
       for (const sys of groupSys) {
-        const rows = splitRows(sys, keep, skipBlanks);
+        const rows = splitRows(sys, keep, skipBlanks, kreditorSetFor(sys.name));
         planned += rows.length;
         if (prioOn) for (const r of rows) if (isPrio(r, prio && prio.docs, today)) prioHits++;
       }
@@ -685,6 +708,45 @@
     chips.push(`${skipBlanks ? 'blanks skipped' : 'blanks kept'} · ${shuffle ? 'shuffled' : 'in order'}${noteFilterOn ? ' · notes filtered' : ''}`);
     if (prioOn) chips.push(`PRIO · ${prioHits} match${prioHits === 1 ? '' : 'es'}`);
     document.getElementById('recapChips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
+  }
+
+  // Kreditor step: one saved exclusion textarea per distinct system name.
+  // Edits persist to localStorage immediately, keyed by system name, so the
+  // daily FNP/KSP/OPP/PS1 lists reload on the next visit.
+  function renderKreditor() {
+    const body = document.getElementById('kreditorBody');
+    body.innerHTML = '';
+    const names = [...new Set(systems.filter(s => !s.error).map(s => s.name))];
+    if (names.length === 0) {
+      body.innerHTML = '<div class="note-empty">No files uploaded yet — nothing to exclude here.</div>';
+      return;
+    }
+    for (const name of names) {
+      const block = document.createElement('div');
+      block.className = 'kred-block';
+      block.innerHTML = `<label></label>
+        <textarea class="kred-input" rows="3" placeholder="Kreditor numbers to exclude — one per line or comma-separated"></textarea>
+        <div class="note-stat"></div>`;
+      block.querySelector('label').textContent = name;
+      const ta = block.querySelector('textarea');
+      const stat = block.querySelector('.note-stat');
+      ta.value = kreditorStore[name] || '';
+      const update = () => {
+        const excl = parseKreditors(ta.value);
+        let hit = 0;
+        for (const sys of systems) if (!sys.error && sys.name === name)
+          for (const r of sys.rows) if (excl.has(normDoc(r[1]))) hit++;
+        stat.textContent = excl.size === 0 ? ''
+          : `${excl.size} Kreditor${excl.size === 1 ? '' : 's'} listed — excludes ${hit} row${hit === 1 ? '' : 's'}.`;
+      };
+      ta.addEventListener('input', () => {
+        kreditorStore[name] = ta.value;
+        try { localStorage.setItem(KREDITOR_KEY, JSON.stringify(kreditorStore)); } catch (e) { /* storage unavailable */ }
+        update();
+      });
+      update();
+      body.appendChild(block);
+    }
   }
 
   // Totals step: per work type, rows surviving the current forwarder + note
@@ -698,7 +760,7 @@
     for (const [group, label] of GROUPS) {
       const groupSys = valid.filter(s => s.group === group);
       if (groupSys.length === 0) continue;
-      const per = groupSys.map(sys => ({ name: sys.name, rows: splitRows(sys, keep, skipBlanks).length }));
+      const per = groupSys.map(sys => ({ name: sys.name, rows: splitRows(sys, keep, skipBlanks, kreditorSetFor(sys.name)).length }));
       const total = per.reduce((a, p) => a + p.rows, 0);
       const block = document.createElement('div');
       block.className = 'total-block';
@@ -1042,7 +1104,7 @@
         const isPrioRow = prioOn ? (r => isPrio(r, prio && prio.docs, today)) : (() => false);
         const shares = {};
         for (const sys of job.systems) {
-          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks), job.names.length, doShuffle, isPrioRow);
+          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name)), job.names.length, doShuffle, isPrioRow);
         }
 
         const usedNames = {}; // per job — the Tariff/Factual filename token separates jobs
