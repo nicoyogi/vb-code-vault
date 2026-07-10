@@ -6,6 +6,9 @@
 <title>File Splitter</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Syne:wght@400;500;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" integrity="sha384-AQ3POAMqIhwS81FrUH95ekxqBZHeP5tG2JfEL3+7GuTtfRLWnrRh32UxwzM+//A9" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="assets/firebase-config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -232,7 +235,7 @@
 
 <div class="card step-card" hidden>
   <div class="card-head"><h2>Exclude Kreditor <span class="opt-tag">optional</span></h2><span class="step-tag">step 3 of 6</span></div>
-  <p class="card-desc">Per system: <strong>Supplier</strong> (Kreditor) numbers that should <strong>not</strong> be extracted — one per line or comma-separated. Each list is saved on this device under the system name and reloads next time.</p>
+  <p class="card-desc">Per system: <strong>Supplier</strong> (Kreditor) numbers that should <strong>not</strong> be extracted — one per line or comma-separated. Each list is shared with the whole team (saved online under the system name) and reloads next time, on any computer.</p>
   <div id="kreditorBody"><div class="note-empty">No files uploaded yet — nothing to exclude here.</div></div>
 </div>
 
@@ -322,6 +325,41 @@
   const NAMES_KEYS = { tariff: 'fileSplitter.names', factual: 'fileSplitter.namesFactual' };
   const KREDITOR_KEY = 'fileSplitter.kreditor';
   try { kreditorStore = JSON.parse(localStorage.getItem(KREDITOR_KEY) || '{}') || {}; } catch (e) {}
+
+  // ---- shared Kreditor lists: one Firestore doc, localStorage as offline
+  // fallback. No login — the doc is open like the other Grimoire collections.
+  // ponytail: last-writer-wins per system, no live sync; snapshot listener if simultaneous edits become real
+  let kreditorDirty = new Set();
+  let kreditorSaveTimer = null;
+  function kreditorDoc() { return firebase.firestore().collection('wmf_splitter_config').doc('kreditor'); }
+  function initKreditorSync() {
+    if (typeof firebase === 'undefined' || !firebase.firestore) return; // SDK blocked -> local-only
+    if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
+    kreditorDoc().get().then(snap => {
+      const lists = snap.exists && snap.data().lists;
+      if (!lists) return;
+      kreditorStore = lists;
+      try { localStorage.setItem(KREDITOR_KEY, JSON.stringify(kreditorStore)); } catch (e) {}
+      if (step === 2) renderKreditor();
+    }).catch(err => console.warn('Kreditor lists: Firestore read failed, using local copy.', err));
+  }
+  // Persist one system's list: localStorage immediately, Firestore debounced.
+  // Only the edited systems are written (set+merge), so a colleague's
+  // concurrent edit to another system is not overwritten with stale data.
+  function saveKreditors(name) {
+    try { localStorage.setItem(KREDITOR_KEY, JSON.stringify(kreditorStore)); } catch (e) { /* storage unavailable */ }
+    if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) return;
+    kreditorDirty.add(name);
+    clearTimeout(kreditorSaveTimer);
+    kreditorSaveTimer = setTimeout(() => {
+      const patch = {};
+      for (const n of kreditorDirty) patch[n] = kreditorStore[n] || '';
+      kreditorDirty.clear();
+      kreditorDoc().set({ lists: patch, updatedAt: new Date().toISOString() }, { merge: true })
+        .catch(err => console.warn('Kreditor lists: Firestore save failed — saved locally only.', err));
+    }, 600);
+  }
+  initKreditorSync();
   const GROUPS = [['tariff', 'Tariff'], ['factual', 'Factual']];
   const TARGET_COLS = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
   const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
@@ -741,7 +779,7 @@
       };
       ta.addEventListener('input', () => {
         kreditorStore[name] = ta.value;
-        try { localStorage.setItem(KREDITOR_KEY, JSON.stringify(kreditorStore)); } catch (e) { /* storage unavailable */ }
+        saveKreditors(name);
         update();
       });
       update();
