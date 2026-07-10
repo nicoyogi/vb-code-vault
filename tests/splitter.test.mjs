@@ -161,6 +161,30 @@ test('splitRows: tariff rows pass forwarder+note filters; factual rows bypass bo
     plain(rows));                              // factual ignores forwarders and notes
 });
 
+test('parseKreditors: splits on newline/comma/semicolon/space, drops blanks', () => {
+  assert.deepEqual([...s.parseKreditors('111\n222, 333;444  555')].sort(),
+    ['111', '222', '333', '444', '555']);
+  assert.equal(s.parseKreditors('').size, 0);
+  assert.equal(s.parseKreditors(undefined).size, 0);
+});
+
+test('splitRows: Kreditor exclusion drops Supplier matches in every group', () => {
+  const rows = [
+    ['DHL', '111', 'R', 'D1', []],
+    ['DHL', '222', 'R', 'D2', []],
+  ];
+  const fwd = [{ name: 'DHL', checked: true }];
+  const excl = s.parseKreditors('111, 999');
+  assert.deepEqual(plain(s.splitRows({ group: 'tariff', rows, forwarders: fwd }, new Set(), true, excl)),
+    [['DHL', '222', 'R', 'D2', []]]);
+  assert.deepEqual(plain(s.splitRows({ group: 'factual', rows }, new Set(), true, excl)),
+    [['DHL', '222', 'R', 'D2', []]]);  // factual bypasses filters, but not the exclusion
+  // numeric Supplier cells match via normDoc
+  assert.deepEqual(plain(s.splitRows({ group: 'factual', rows: [['V', 111, 'R', 'D', []]] }, new Set(), true, excl)), []);
+  // no exclusion arg -> unchanged (pre-feature behavior)
+  assert.equal(s.splitRows({ group: 'factual', rows }, new Set(), true).length, 2);
+});
+
 test('workbookEntries: multi-sheet workbook — one system per qualifying sheet, named by sheet name', () => {
   const H = ['Vendor details', 'Supplier', 'Reference', 'Document number', 'Step description'];
   const sheets = [
