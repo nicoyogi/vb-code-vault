@@ -183,6 +183,7 @@ export function loadEngine() {
     // diff-mode labeling / training-output primitives
     'classifyDiff', 'computePhraseDiff', 'granularLabel', 'rowUid', 'phraseCellParts',
     'buildTrainingSummary', 'buildRegressionSet', 'collectInputsForRow', 'buildEngineSourceDoc',
+    'buildPhraseEmitterIndex',
   ];
   const engine = {};
   const missing = [];

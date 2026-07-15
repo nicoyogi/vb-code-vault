@@ -381,10 +381,64 @@ test('buildTrainingSummary: contrast rows empty without a regression set', () =>
   assert.deepStrictEqual(A(s.patterns[0].silent_contrast_row_uids), []);
 });
 
+test('buildTrainingSummary: signature_hypothesis drafted from shared + numeric shape, checked on contrast rows', () => {
+  const regression = [
+    { row_uid: 'r-match', forwarder: 'wackler', expected: 'Differenz Energiezuschlag',
+      expected_phrase_keys: ['differenzEnergiezuschlag'],
+      inputs: { stat: '10', fr_diff: '-9,5' } },
+    { row_uid: 'r-nomatch', forwarder: 'wackler', expected: 'Differenz Energiezuschlag',
+      expected_phrase_keys: ['differenzEnergiezuschlag'],
+      inputs: { stat: '10', fr_diff: '3' } },
+    { row_uid: 'r-silent', forwarder: 'wackler', expected: '',
+      expected_phrase_keys: [], inputs: { stat: '10', fr_diff: '-0,4' } },
+  ];
+  const s = e.buildTrainingSummary([
+    rec({ applicable_threshold: 1.5, inputs: { stat: '10', fr_diff: '-31,65' } }),
+    rec({ applicable_threshold: 1.5, inputs: { stat: '10', fr_diff: '-2.1' } }),
+  ], regression);
+  const h = s.patterns[0].signature_hypothesis;
+  assert.equal(h.readable, 'stat == "10" && fr_diff < 0 && |fr_diff| > 1.5');
+  assert.deepStrictEqual(A(h.predicates).map(p => p.op), ['==', 'sign', 'beyond_threshold']);
+  assert.equal(h.contrast_rows_matching, 1, 'r-match fires (−9,5), r-nomatch is positive');
+  assert.equal(h.contrast_rows_total, 2);
+  assert.equal(h.silent_rows_matching, 0, '−0,4 is below the threshold');
+  assert.equal(h.silent_rows_total, 1);
+});
+
+test('buildTrainingSummary: signature_hypothesis null when nothing is shared or consistent', () => {
+  const s = e.buildTrainingSummary([
+    rec({ inputs: { fr_diff: '-1', zone: 'DE5' } }),
+    rec({ inputs: { fr_diff: '3', zone: 'AT1' } }),
+  ]);
+  assert.equal(s.patterns[0].signature_hypothesis, null);
+});
+
+test('buildTrainingSummary: known_not_derivable rows counted per pattern', () => {
+  const s = e.buildTrainingSummary([
+    rec({ known_not_derivable: true }),
+    rec(),
+  ]);
+  assert.equal(s.patterns[0].known_not_derivable_rows, 1);
+  assert.equal(s.patterns[0].count, 2);
+});
+
+test('buildPhraseEmitterIndex: maps phrase keys to emitting functions, covers the whole catalog', () => {
+  const idx = e.buildPhraseEmitterIndex();
+  assert.ok(A(idx.terminZuschlag).includes('daEvalEXP'), 'P.<key> token scan');
+  assert.ok(A(idx.ausfallfrachtSchadensersatz).includes('daEvalSNK'),
+    'hard-coded phrase string inside an enumerated helper (the hand-list used to miss daEvalSNK)');
+  for (const key of Object.keys(e.PHRASES)) {
+    assert.ok(Array.isArray(idx[key]), 'every catalog key present: ' + key);
+  }
+  const unemitted = Object.entries(idx).filter(([, a]) => !a.length).map(([k]) => k);
+  assert.deepStrictEqual(unemitted, [],
+    'every catalog key resolves to an emitter today — a new unemitted key means either a truth-only label (fine, update this list) or a scan gap (bug)');
+});
+
 test('buildEngineSourceDoc: live-extracted processor source with gate constants', () => {
   const doc = e.buildEngineSourceDoc();
   for (const sym of ['processDachser', 'processKN', 'processDHL', 'processWackler',
-    'resolveWackler', 'normPhrase', 'wacklerRechnetTier']) {
+    'resolveWackler', 'normPhrase', 'wacklerRechnetTier', 'daEvalSNK', 'daZWNote']) {
     assert.ok(doc.includes('### `' + sym + '`'), 'doc carries ' + sym);
   }
   assert.ok(doc.includes('function processWackler'), 'actual function source, not just a heading');

@@ -264,7 +264,18 @@
         <button type="button" class="tester-btn" id="btnDiffTrainJsonl" style="display:none" onclick="downloadTrainingSet('jsonl')" title="Same as CSV but JSONL — one JSON record per line, ML-friendly">↓ Training Set (JSONL) <span class="btn-ct" id="ctTrainJsonl"></span></button>
         <button type="button" class="tester-btn" id="btnDiffRuleSpec" style="display:none" onclick="downloadRuleSpec()" title="Self-describing schema: PHRASES catalog, thresholds, per-forwarder input glossary, gate, processor symbol, engine version. Pair with a Training Set export to give an AI everything it needs to update the rules.">↓ Rule Spec (JSON)</button>
         <button type="button" class="tester-btn primary-soft" id="btnDiffAiBundle" style="display:none" onclick="downloadAiBundle()" title="One-click ZIP: training.jsonl + regression.jsonl (engine-solved rows a fix must not break) + summary.json (failure patterns, pre-grouped with shared gate-signal inputs) + rule_spec.json + prompt.md (ready to paste) + README.md. Drop into any AI assistant — it has everything to propose a rule patch without reading anmerkung.js.">✦ AI Bundle (ZIP) <span class="btn-ct" id="ctAiBundle"></span></button>
+        <button type="button" class="tester-btn" id="btnDiffNotDerivable" style="display:none" onclick="openNotDerivable()" title="Ledger of rows an AI iteration judged NOT derivable from row inputs (cross-document notes, unexported columns). Paste the row_uid: reason lines from the assistant's answer; every future AI Bundle flags them so they stop being re-attempted.">⛔ Not derivable <span class="btn-ct" id="ctNotDerivable"></span></button>
       </div>
+
+      <dialog id="dlgNotDerivable" class="nd-dialog">
+        <h3>Not-derivable ledger</h3>
+        <p class="nd-hint">One row per line: <code>row_uid: reason</code>. Saving replaces the whole list; delete a line to un-flag a row. Flagged rows carry <code>known_not_derivable: true</code> in every future AI Bundle.</p>
+        <textarea id="ndText" rows="12" spellcheck="false" placeholder="3ac4d429: needs Zwischenempfänger address column, not exported&#10;33def378: references another document's Beleg number"></textarea>
+        <div class="nd-actions">
+          <button type="button" class="tester-btn primary-soft" onclick="saveNotDerivableDialog()">Save</button>
+          <button type="button" class="tester-btn" onclick="document.getElementById('dlgNotDerivable').close()">Cancel</button>
+        </div>
+      </dialog>
 
       <!-- Bulk diff — many pairs at once, for a wider training corpus -->
       <div class="diff-bulk" id="diffBulk">

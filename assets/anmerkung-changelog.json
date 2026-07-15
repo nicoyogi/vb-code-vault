@@ -1,6 +1,17 @@
 {
-  "version": "1.31.0",
+  "version": "1.32.0",
   "entries": [
+    {
+      "ver": "1.32.0",
+      "date": "2026-07-15",
+      "items": [
+        "AI Bundle — rule_spec.json gains `phrase_emitters`: every phrase key mapped to the function(s) whose source emits it (P.<key> token scan + phrase/literal string scan over the live Function.toString source + the WACKLER_SNK_CODES code book + PHRASE_TEMPLATES' processor field). Full catalog coverage: all 77 keys currently resolve to at least one emitter, pinned by test. An empty list would mean no branch emits the key — the fix is a NEW branch, not a gate change.",
+        "AI Bundle — engine_source.md is now COMPLETE: the v1.31 hand-maintained function list silently missed daEvalSNK (the entire Dachser SNK code book with its 502/503/K1AV/K1AS gates) and daZWNote. The list is gone — engine functions are enumerated from the global scope by naming convention (process*/resolve*/da*/kn*/dhl*/wackler*), so a future helper following the convention cannot be forgotten. 37 functions ship now vs 35 before.",
+        "AI Bundle — each summary.json pattern carries a machine-drafted `signature_hypothesis`: the conjunction of the failing rows' shared values and consistent numeric shapes (structured predicates + a readable one-liner like stat == \"10\" && fr_diff < 0 && |fr_diff| > 1.5), pre-evaluated against the pattern's contrast and silent rows. The match counts are evidence, not verdicts: a good gate for a missed pattern matches the contrast rows and no silent row; a good guard for an overfired pattern must NOT match the contrast rows. prompt.md tells the assistant to start from this draft and refine, not paste blindly.",
+        "AI Bundle — Not-derivable ledger: rows an AI iteration judged \"not derivable from row inputs\" are now persisted (localStorage, edited via a native <dialog> behind a new \"Not derivable\" button next to the AI Bundle export — one row_uid: reason per line, pasteable straight from the assistant's answer, which prompt.md now asks it to emit). Flagged rows carry known_not_derivable: true in training.jsonl, patterns count them in known_not_derivable_rows, and the ledger ships as not_derivable.json — so each training iteration stops re-attempting known-impossible rows (the v1.29 Dachser ZW/Fremdnummer class). row_uids are stable across engine versions by design, so the ledger survives re-exports.",
+        "Tests — 4 new cases pin the emitter index (whole-catalog coverage, terminZuschlag → daEvalEXP), signature-hypothesis drafting and contrast-row evaluation (German decimals, sub-threshold silent row excluded, null when nothing is consistent) and per-pattern not-derivable counting. Full suite: 180 passing."
+      ]
+    },
     {
       "ver": "1.31.0",
       "date": "2026-07-15",

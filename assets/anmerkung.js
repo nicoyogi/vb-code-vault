@@ -2622,6 +2622,7 @@ function renderDiff(){
     const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='none';
     const tSpec=document.getElementById('btnDiffRuleSpec');if(tSpec)tSpec.style.display='none';
     const tBundle=document.getElementById('btnDiffAiBundle');if(tBundle)tBundle.style.display='none';
+    const tNd=document.getElementById('btnDiffNotDerivable');if(tNd)tNd.style.display='none';
     const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='none';
   } else {
     document.getElementById('diffResults').style.display='block';
@@ -2631,6 +2632,7 @@ function renderDiff(){
     const tJsonl=document.getElementById('btnDiffTrainJsonl');if(tJsonl)tJsonl.style.display='inline-block';
     const tSpec=document.getElementById('btnDiffRuleSpec');if(tSpec)tSpec.style.display='inline-block';
     const tBundle=document.getElementById('btnDiffAiBundle');if(tBundle)tBundle.style.display='inline-block';
+    const tNd=document.getElementById('btnDiffNotDerivable');if(tNd){tNd.style.display='inline-block';updateNotDerivableCount();}
     const incWrap=document.getElementById('diffIncludeMatchWrap');if(incWrap)incWrap.style.display='flex';
   }
 
@@ -3028,6 +3030,7 @@ function buildTrainingSet(){
   if(!diffState.results||!diffState.results.rows.length)return{records:[],inputKeys:[]};
   const includeMatches=!!document.getElementById('diffIncludeMatch')?.checked;
   const scope=filterDiffRows();
+  const ndLedger=loadNotDerivable();
   const records=[];
   const seenUids=new Set();
   for(const r of scope){
@@ -3046,7 +3049,11 @@ function buildTrainingSet(){
     /* Dedupe by stable row UID. */
     if(r.row_uid&&seenUids.has(r.row_uid))continue;
     if(r.row_uid)seenUids.add(r.row_uid);
+    const nd=ndLedger[r.row_uid];
     records.push({
+      /* Ledger flag first so the spread below can never clobber it.
+         NOT part of the uid seed (it is not an input) — uids stay stable. */
+      ...(nd?{known_not_derivable:true,known_not_derivable_reason:nd.reason||''}:{}),
       row_uid:r.row_uid||'',
       source_file:r.source||'',
       sheet:r.sheet,
@@ -3170,12 +3177,13 @@ function buildTrainingSummary(records,regression){
         extra_phrases:((useEngine?r.engine_extra_phrases:r.extra_phrases)||[]).slice(),
         suggested_action:missK.length&&extraK.length?'fix_both'
           :(missK.length?'add_or_loosen_branch':'guard_or_tighten_branch'),
-        count:0,labels:{},example_row_uids:[],_inputsList:[],
+        count:0,labels:{},known_not_derivable_rows:0,example_row_uids:[],_inputsList:[],
         _th:r.applicable_threshold==null?null:r.applicable_threshold};
       patterns.set(key,p);
     }
     p.count++;
     p.labels[r.label]=(p.labels[r.label]||0)+1;
+    if(r.known_not_derivable)p.known_not_derivable_rows++;
     if(p.example_row_uids.length<5&&r.row_uid)p.example_row_uids.push(r.row_uid);
     p._inputsList.push(r.inputs||{});
   }
@@ -3220,12 +3228,49 @@ function buildTrainingSummary(records,regression){
        (must keep firing) and solved-silent rows (must stay silent). */
     const target=new Set([...p.missing_phrase_keys,...p.extra_phrase_keys]);
     const pool=regByFw[p.forwarder]||[];
-    p.contrast_row_uids=pool
+    const contrastRows=pool
       .filter(rr=>(rr.expected_phrase_keys||[]).some(k=>target.has(k)))
-      .slice(0,5).map(rr=>rr.row_uid);
-    p.silent_contrast_row_uids=pool
+      .slice(0,5);
+    const silentRows=pool
       .filter(rr=>!(rr.expected||'').trim())
-      .slice(0,2).map(rr=>rr.row_uid);
+      .slice(0,2);
+    p.contrast_row_uids=contrastRows.map(rr=>rr.row_uid);
+    p.silent_contrast_row_uids=silentRows.map(rr=>rr.row_uid);
+    /* Signature hypothesis: a machine-drafted conjunction describing the
+       failing rows — every shared value plus every consistent numeric
+       shape — pre-evaluated against the contrast rows. The counts are
+       EVIDENCE, not verdicts: for a missed pattern a good gate matches
+       the contrast rows and no silent row; for an overfired pattern the
+       guard must NOT match the contrast rows. */
+    const preds=[];
+    for(const[k,v]of Object.entries(shared))preds.push({key:k,op:'==',value:v});
+    for(const[k,prof]of Object.entries(profiles)){
+      if(k in shared)continue; /* == on the exact value is strictly stronger */
+      if(prof.sign!=='mixed')preds.push({key:k,op:'sign',value:prof.sign});
+      if(prof.all_beyond_threshold===true)preds.push({key:k,op:'beyond_threshold',threshold:th});
+    }
+    const evalPred=(pr,inputs)=>{
+      const v=inputs?inputs[pr.key]:null;
+      if(v==null)return false;
+      const s=String(v).trim();
+      if(pr.op==='==')return s===String(pr.value).trim();
+      if(!NUM_RE.test(s))return false;
+      const n=parseFloat(s.replace(',','.'));
+      if(pr.op==='sign')return pr.value==='all_negative'?n<0:pr.value==='all_positive'?n>0:n===0;
+      return Math.abs(n)>pr.threshold;
+    };
+    const matchAll=rr=>preds.every(pr=>evalPred(pr,rr.inputs));
+    p.signature_hypothesis=preds.length?{
+      predicates:preds,
+      readable:preds.map(pr=>
+        pr.op==='=='?pr.key+' == "'+pr.value+'"'
+        :pr.op==='sign'?(pr.value==='all_negative'?pr.key+' < 0':pr.value==='all_positive'?pr.key+' > 0':pr.key+' == 0')
+        :'|'+pr.key+'| > '+pr.threshold).join(' && '),
+      contrast_rows_matching:contrastRows.filter(matchAll).length,
+      contrast_rows_total:contrastRows.length,
+      silent_rows_matching:silentRows.filter(matchAll).length,
+      silent_rows_total:silentRows.length,
+    }:null;
   }
   out.sort((a,b)=>(b.count-a.count)||
     String(a.forwarder).localeCompare(String(b.forwarder))||
@@ -3522,6 +3567,9 @@ function buildRuleSpec(){
     phrases:{...PHRASES},
     phrase_literals:phraseLiterals,
     phrase_templates:phraseTemplates,
+    /* phrase key → emitting function(s), scanned from the live source.
+       [] = no branch emits it yet (a fix means a NEW branch). */
+    phrase_emitters:buildPhraseEmitterIndex(),
     thresholds:{...TH},
     label_taxonomy:{
       wrong:'A and B both non-empty and their phrase sets genuinely differ (content, not just order/case/whitespace).',
@@ -3598,8 +3646,9 @@ function buildAiBundlePrompt(spec,summary,regressionCount){
 topPatterns||'  - (none)',
 '- `training.jsonl` — one JSON record per row; join to patterns via `row_uid`.',
 '- `regression.jsonl` — '+(regressionCount||0)+' row(s) the CURRENT engine already solves (expected phrase set + the inputs that produce it). Your patch must keep every one of them passing.',
-'- `rule_spec.json` — the PHRASES catalog, per-forwarder thresholds, processor/resolver symbols, and an English glossary for every `inputs.*` key.',
+'- `rule_spec.json` — the PHRASES catalog, per-forwarder thresholds, processor/resolver symbols, an English glossary for every `inputs.*` key, and `phrase_emitters`: phrase key → the function(s) that emit it (an empty list means NO branch emits it yet — the fix is a new branch, not a gate change).',
 '- `engine_source.md` — the CURRENT source of every processor, resolver, and helper, extracted from the running engine at export time. This is the ground truth for what each gate does today — reason from it, not from memory of earlier versions.',
+'- `not_derivable.json` (when present) — rows a previous iteration judged NOT derivable from row inputs, with the reason. Matching training records carry `known_not_derivable: true`.',
 '',
 '## Task',
 '',
@@ -3609,14 +3658,15 @@ topPatterns||'  - (none)',
 '',
 '1. The `engine_*` fields are authoritative: `engine_missing_phrase_keys` = phrases ground truth wants that the engine fails to emit (ADD a branch or LOOSEN its gate); `engine_extra_phrase_keys` = phrases the engine emits that truth rejects (GUARD or TIGHTEN the branch). Ignore the plain `predicted`/`missing_*`/`extra_*` fields unless `engine_label` is blank — they compare a possibly-stale tool output, not the current engine.',
 '2. Work each pattern as a hypothesis → verify loop, and only then patch:',
-'   a. **Hypothesise** the gate from `summary.json`: `shared_inputs` are the cell values identical on EVERY failing row (prime gate signals); `numeric_profiles` give the numeric shape (`sign`, `min`/`max`, `all_beyond_threshold`) of every numeric key — a gate condition is usually one of these plus a shared value. `varying_inputs` differ across rows and must NOT become gate conditions. Read the current gate\'s actual code in `engine_source.md` before deciding what to change.',
+'   a. **Hypothesise** the gate from `summary.json`: start from the pattern\'s `signature_hypothesis` — a machine-drafted conjunction of the failing rows\' shared values and numeric shapes, pre-evaluated against the contrast rows (`contrast_rows_matching`/`silent_rows_matching` are evidence, not verdicts: a good gate for a MISSED pattern matches the contrast rows and no silent row; a good guard for an OVERFIRED pattern must NOT match the contrast rows). Refine it with `shared_inputs` and `numeric_profiles`; `varying_inputs` differ across rows and must NOT become gate conditions. Use `rule_spec.phrase_emitters[key]` to jump to the emitting function and read its actual code in `engine_source.md` before deciding what to change.',
 '   b. **Verify against the contrast rows** before writing any code: the pattern\'s `contrast_row_uids` are solved rows in `regression.jsonl` where a disputed phrase fires legitimately — your hypothesised gate applied to their `inputs` must keep producing exactly their `expected_phrase_keys`; `silent_contrast_row_uids` are solved rows where the engine must stay silent — the rows a loosened gate over-fires on first. If the hypothesis breaks either set, revise it, do not patch around it.',
 '   c. **Patch** only a hypothesis that survived (b), and pull the matching `training.jsonl` records by `example_row_uids` to confirm the full picture.',
 '3. Emit phrases only via the existing `PHRASES` catalog and `join()` helper (it dedupes case-insensitively). New wording goes into `PHRASES` first; keys prefixed `lit_`/`tpl_`/`?:` are explained in `rule_spec.json`.',
 '4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Before proposing ANY gate change, replay it mentally against every `regression.jsonl` record for that forwarder: applying the new/changed gate to the record\'s `inputs` must still yield exactly its `expected_phrase_keys` — including the records whose `expected` is empty, where the engine must stay silent.',
 '5. Keep edits inside the `process<Forwarder>` functions (resolvers are already wired) unless a pattern clearly needs a new resolver column.',
 '6. Any phrase comparison or phrase→key lookup you add must go through `normPhrase` — never a bare `toLowerCase().trim()` (hand-edited truth cells carry NFD umlauts, zero-width chars, soft hyphens, dash variants). A new `PHRASES` entry must not normPhrase-fold onto an existing entry.',
-'7. If a pattern\'s truth phrase depends on data that is NOT in the row\'s `inputs` (cross-document references like "bereits berechnet in <other Beleg>", intermediate-consignee addresses from unexported columns), say so and mark it "not derivable from row inputs" instead of forcing a rule — a guessed rule poisons the next training iteration.',
+'7. If a pattern\'s truth phrase depends on data that is NOT in the row\'s `inputs` (cross-document references like "bereits berechnet in <other Beleg>", intermediate-consignee addresses from unexported columns), say so and mark it "not derivable from row inputs" instead of forcing a rule — a guessed rule poisons the next training iteration. End your answer with the `row_uid: reason` lines for every such row, ready to paste into the tool\'s Not-derivable ledger.',
+'8. Rows already flagged `known_not_derivable: true` (see `not_derivable.json`) were judged not derivable by a previous iteration — skip them unless their `inputs` now carry a signal the recorded reason says was missing. A pattern whose `known_not_derivable_rows` equals its `count` is not a rule bug; do not force a gate for it.',
 '',
 '## Output format',
 '',
@@ -3647,8 +3697,9 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('- `summary.json` — failure patterns, pre-grouped: every (forwarder × engine_missing/extra_phrase_keys) combination with its row count, label distribution, example `row_uid`s, and the input cells shared by every failing row (gate-signal candidates). Records are sorted deterministically (forwarder → source pair → sheet → row) so bundles diff cleanly across runs.');
   lines.push('- `training.jsonl` — one JSON record per line, one record per failing/correct row from Diff Mode.');
   lines.push('- `regression.jsonl` — '+(regressionCount||0)+' compact record(s), one per row the CURRENT engine already gets right (`engine_matches_b === true`), from the FULL diff (regardless of any export filter). Each carries `expected` + `expected_phrase_keys` + `inputs`: the constraint rows a rule change must not regress. Records whose `expected` is empty pin rows where the engine must stay silent.');
-  lines.push('- `rule_spec.json` — the schema. Lists every PHRASES key, every threshold, every input field per forwarder, and the exact source-code symbol an AI should edit to update rules.');
+  lines.push('- `rule_spec.json` — the schema. Lists every PHRASES key, every threshold, every input field per forwarder, the exact source-code symbol an AI should edit to update rules, and `phrase_emitters` — phrase key → the function(s) whose source emits it, scanned live at export time. An empty emitter list means no branch emits the key yet: the fix is a NEW branch, not a gate change.');
   lines.push('- `engine_source.md` — the current source of every processor/resolver/helper plus the gate constants, extracted live from the running engine at export time (it cannot drift from the engine that produced the labels). The ground truth for what each gate does today.');
+  lines.push('- `not_derivable.json` (only when the ledger is non-empty) — `row_uid → {reason, added}` for rows a previous AI iteration judged not derivable from row inputs. Matching training records carry `known_not_derivable: true` and patterns count them in `known_not_derivable_rows`; a pattern where that equals `count` is not a rule bug. Maintained in the tool via the "Not derivable" button next to the AI Bundle export.');
   lines.push('- `README.md` — this file.');
   lines.push('');
   lines.push('## How an AI assistant should use this bundle');
@@ -3659,6 +3710,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('Two reasoning aids per pattern:');
   lines.push('- `numeric_profiles` — for every numeric-typed input key present on all failing rows: `min`/`max`, `sign` (`all_negative`/`all_positive`/`all_zero`/`mixed`), and on `*_diff` keys `all_beyond_threshold` (every row clears the forwarder\'s `hasErr` tolerance). A gate condition is usually one of these shapes; e.g. `fr_diff: {sign: "all_negative", all_beyond_threshold: true}` says "gate on a negative freight delta above threshold", even though the raw values differ row to row.');
   lines.push('- `contrast_row_uids` / `silent_contrast_row_uids` — `row_uid`s into `regression.jsonl`: solved same-forwarder rows where a disputed phrase fires legitimately (your changed gate must keep firing on their `inputs`), and solved rows where the engine must stay silent (the first casualties of an over-loosened gate). Replay any hypothesised gate against both BEFORE writing the patch.');
+  lines.push('- `signature_hypothesis` — a machine-drafted conjunction of the failing rows\' shared values and consistent numeric shapes (`predicates` + a `readable` one-liner), already evaluated against the contrast rows. Read the match counts by `suggested_action`: for `add_or_loosen_branch` a good gate matches the contrast rows and zero silent rows; for `guard_or_tighten_branch` the signature (as a guard) must NOT match the contrast rows. It is a STARTING POINT — refine it, do not paste it blindly.');
   lines.push('');
   lines.push('### 1. Read `rule_spec.json`');
   lines.push('It tells you:');
@@ -3667,6 +3719,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('- The threshold per forwarder for the `hasErr()` numeric guard.');
   lines.push('- The English glossary for every input field on every forwarder.');
   lines.push('- The exact label / granular_label taxonomy.');
+  lines.push('- `phrase_emitters`: which function(s) emit each phrase key — jump straight to the branch instead of grepping `engine_source.md`.');
   lines.push('');
   lines.push('### 2. Walk `training.jsonl`');
   lines.push('Each line is a JSON object with these fields (selected):');
@@ -3690,6 +3743,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('| `engine_vs_expected_jaccard` | phrase-set similarity of current engine output vs truth (1.0 = solved) |');
   lines.push('| `inputs` | per-row map of cell values the rules read; keys explained in `rule_spec.forwarders.<fw>.input_glossary` |');
   lines.push('| `reason` | trigger trace (raw cell values that fired branches) |');
+  lines.push('| `known_not_derivable` | `true` when a previous iteration judged this row unfixable from its inputs (see `not_derivable.json`) — skip unless its inputs gained the missing signal |');
   lines.push('| `row_uid` | stable hash for joining across runs |');
   lines.push('| `source_file` | which predicted/expected file pair this row came from (set when exported from Bulk Diff; blank for a single-pair run) |');
   lines.push('');
@@ -3728,20 +3782,105 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   return lines.join('\n')+'\n';
 }
 
+/* ── Not-derivable ledger ──
+   Rows an AI iteration judged "not derivable from row inputs" (cross-
+   document notes, unexported columns). Persisted so every later bundle
+   flags them and the assistant stops re-attempting known-impossible
+   rows. row_uid is stable across engine versions by design, so the
+   ledger survives re-exports. Edited as plain text in a <dialog> —
+   one `row_uid: reason` per line; saving replaces the whole map. */
+const ND_KEY='anm_not_derivable_v1';
+function loadNotDerivable(){try{return JSON.parse(localStorage.getItem(ND_KEY))||{};}catch(_){return{};}}
+function saveNotDerivable(m){try{localStorage.setItem(ND_KEY,JSON.stringify(m));}catch(_){}}
+function updateNotDerivableCount(){
+  const el=document.getElementById('ctNotDerivable');
+  if(el){const n=Object.keys(loadNotDerivable()).length;el.textContent=n?'· '+n:'';}
+}
+function openNotDerivable(){
+  const m=loadNotDerivable();
+  document.getElementById('ndText').value=
+    Object.entries(m).map(([u,e])=>u+(e.reason?': '+e.reason:'')).join('\n');
+  document.getElementById('dlgNotDerivable').showModal();
+}
+function saveNotDerivableDialog(){
+  const old=loadNotDerivable(),m={};
+  for(const line of document.getElementById('ndText').value.split('\n')){
+    const t=line.trim();if(!t)continue;
+    const i=t.indexOf(':');
+    const uid=(i<0?t:t.slice(0,i)).trim();
+    if(!uid)continue;
+    m[uid]={reason:i<0?'':t.slice(i+1).trim(),
+      added:(old[uid]&&old[uid].added)||new Date().toISOString().slice(0,10)};
+  }
+  saveNotDerivable(m);
+  document.getElementById('dlgNotDerivable').close();
+  updateNotDerivableCount();
+  showLog('Not-derivable ledger — '+Object.keys(m).length+' row(s).','ok');
+}
+
+/* The symbols an AI rule fix edits or reasons about. Shared by
+   buildEngineSourceDoc (ships their source) and buildPhraseEmitterIndex
+   (maps phrase keys to the functions that emit them). ENUMERATED from
+   the global scope by naming convention, not hand-listed — a hand-
+   maintained list silently missed daEvalSNK/daZWNote, shipping an
+   incomplete engine_source.md. Any new per-forwarder helper following
+   the prefix convention is picked up automatically. */
+function engineSourceSections(){
+  const g=globalThis;
+  const names=Object.getOwnPropertyNames(g).filter(n=>typeof g[n]==='function');
+  const bucket=re=>names.filter(n=>re.test(n)).sort().map(n=>g[n]);
+  return[
+    ['Shared helpers',[hasErr,join,normPhrase,cellNum,cellStr]],
+    ['Dachser',bucket(/^(processDachser$|resolveDachser$|dachser|da[A-Z])/)],
+    ['K+N',bucket(/^(processKN$|resolveKN$|kn[A-Z])/)],
+    ['DHL',bucket(/^(processDHL$|resolveDHL$|dhl[A-Z])/)],
+    ['Wackler',bucket(/^(processWackler$|resolveWackler$|wackler|isWackler)/)],
+  ];
+}
+
+/* Map every phrase key to the function(s) that emit it, scanned from the
+   LIVE source at export time (Function.prototype.toString), so an AI
+   consumer jumps straight to the emitting branch instead of grepping.
+   Emission takes three shapes, all covered: a `P.<key>` catalog token, a
+   hard-coded phrase string inside a function body (string-scanned; a key
+   may therefore also map to a function emitting a LONGER phrase that
+   contains it — navigation fuzz, not an error), and a code-book label
+   consumed by a lookup helper (WACKLER_SNK_CODES → wacklerSnkCode). An
+   empty list means NO branch emits the key today — either the fix is a
+   new branch, or the key exists only to label truth cells in Diff Mode.
+   Pure — no DOM, no I/O. */
+function buildPhraseEmitterIndex(){
+  const idx={};
+  for(const k of Object.keys(PHRASES))idx[k]=[];
+  const add=(key,name)=>{
+    const a=idx[key]||(idx[key]=[]);
+    if(!a.includes(name))a.push(name);
+  };
+  const phraseLow=Object.entries(PHRASES)
+    .filter(([,v])=>v)
+    .map(([k,v])=>[k,String(v).toLowerCase()]);
+  const scanStrings=(low,name)=>{
+    for(const[key,pl]of phraseLow)if(low.includes(pl))add(key,name);
+    /* PHRASE_LITERALS keys are already the lowercased phrase strings. */
+    for(const[phrase,id]of Object.entries(PHRASE_LITERALS))
+      if(low.includes(phrase))add(id,name);
+  };
+  for(const[,fns]of engineSourceSections())for(const fn of fns){
+    const src=fn.toString();
+    for(const m of src.matchAll(/\bP\.([A-Za-z0-9_]+)/g))add(m[1],fn.name);
+    scanStrings(src.toLowerCase(),fn.name);
+  }
+  scanStrings(JSON.stringify(WACKLER_SNK_CODES).toLowerCase(),'wacklerSnkCode');
+  for(const t of PHRASE_TEMPLATES)if(t.processor)add(t.key,t.processor);
+  return idx;
+}
+
 /* Build engine_source.md for the AI Bundle: the exact CURRENT source of
    every symbol a rule fix edits or reasons about, captured live via
    Function.prototype.toString() so it can never drift from the shipped
    engine (unlike a hand-maintained copy). Pure — no DOM, no I/O. */
 function buildEngineSourceDoc(){
-  const sections=[
-    ['Shared helpers',[hasErr,join,normPhrase,cellNum,cellStr]],
-    ['Dachser',[resolveDachser,processDachser,dachserGetTier,daIsTarifZero,daEvalEXP,daIsNonInteger,daDetectSurchargeFromDiff]],
-    ['K+N',[resolveKN,processKN,knGetTier]],
-    ['DHL',[resolveDHL,processDHL]],
-    ['Wackler',[resolveWackler,processWackler,wacklerGetTier,wacklerGetTierIdx,wacklerFloorTier,wacklerTierLabel,
-      wacklerLand,wacklerLane,wacklerResolveNatZone,wacklerResolveIntlZone,wacklerRechnetNote,wacklerRateProbe,
-      wacklerTariffFreight,wacklerRateToTier,wacklerRechnetTier,wacklerSnkCode,isWacklerAvisCode,wacklerAvisLabel]],
-  ];
+  const sections=engineSourceSections();
   const consts={
     DA_COL:{REFERENZ3:DA_COL_REFERENZ3,EMPF_PLZ:DA_COL_EMPF_PLZ,EMPF_ORT:DA_COL_EMPF_ORT,
       ANZ_SDG:DA_COL_ANZ_SDG,SERV_ART:DA_COL_SERV_ART,SACHKONTO:DA_COL_SACHKONTO},
@@ -3794,6 +3933,8 @@ async function downloadAiBundle(){
   if(regression.length)zip.file('regression.jsonl',regression.map(r=>JSON.stringify(r)).join('\n')+'\n');
   zip.file('rule_spec.json',JSON.stringify(spec,null,2)+'\n');
   zip.file('engine_source.md',buildEngineSourceDoc());
+  const ndLedger=loadNotDerivable();
+  if(Object.keys(ndLedger).length)zip.file('not_derivable.json',JSON.stringify(ndLedger,null,2)+'\n');
   const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   const url=URL.createObjectURL(blob),a=document.createElement('a');
