@@ -60,6 +60,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     const el=document.getElementById(id);
     el.addEventListener('input',()=>onThInput(key,el));
     el.addEventListener('change',()=>onThInput(key,el));
+    const hint=el.parentElement.querySelector('.default-hint');
+    if(hint)hint.textContent='default '+TH_DEFAULTS[key];
   });
   setVersionBadge();
   loadChangelog();
@@ -2204,8 +2206,6 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
       const vA=cellStr(wsA,r,cA),vB=cellStr(wsB,r,cB);
       const label=classifyDiff(vA,vB);
 
-      /* Training labels — the top 4 classic tiles are derived from these
-         afterward (added = missed, removed = overfired, changed = wrong). */
       if(label==='correct'){correct++;}
       else if(label==='wrong'){wrong++;}
       else if(label==='missed'){missed++;}
@@ -2338,10 +2338,7 @@ function finalizeDiff(parts,metaText,multiSource){
     total+=p.counters.total;wrong+=p.counters.wrong;missed+=p.counters.missed;
     overfired+=p.counters.overfired;correct+=p.counters.correct;drift+=p.counters.drift;
   }
-  /* Keep classic tile semantics: "added" = missed (B filled, A empty),
-     "removed" = overfired (A filled, B empty), "changed" = wrong. */
-  const added=missed,removed=overfired,changed=wrong;
-  diffState.results={rows,total,added,removed,changed,wrong,missed,overfired,correct,drift,
+  diffState.results={rows,total,wrong,missed,overfired,correct,drift,
     forwarders:[...fwSet].sort(),sheets:[...sheetSet].sort(),
     meta:metaText||'',multiSource:!!multiSource};
   renderDiff();
@@ -2586,13 +2583,7 @@ function filterDiffRows(){
 function renderDiff(){
   if(!diffState.results)return;
   diffRenderLimit=DIFF_PAGE; /* fresh compare → snap the table back to one page */
-  const{total,added,removed,changed,wrong,missed,overfired,correct,drift,forwarders,sheets}=diffState.results;
-
-  /* Classic top-4 tiles */
-  document.getElementById('dCount').textContent=total;
-  document.getElementById('dAdded').textContent=added;
-  document.getElementById('dRemoved').textContent=removed;
-  document.getElementById('dChanged').textContent=changed;
+  const{total,wrong,missed,overfired,correct,drift,forwarders,sheets}=diffState.results;
 
   /* Training chips */
   const totalNonSheet=wrong+missed+overfired+correct;
@@ -2708,14 +2699,6 @@ function refreshDiffView(){
   /* Active chip visual state */
   document.querySelectorAll('#trainChips .train-chip').forEach(b=>
     b.classList.toggle('active',b.dataset.label===diffFilter.label));
-  /* The classic summary tiles double as filter shortcuts (added→missed,
-     removed→overfired, changed→wrong) — mirror the same active state. */
-  document.querySelectorAll('.diff-summary .diff-stat[data-label]').forEach(b=>{
-    const on=b.dataset.label===diffFilter.label;
-    b.classList.toggle('active',on);
-    b.setAttribute('aria-pressed',on?'true':'false');
-  });
-
 }
 
 function renderDiffRow(r,i,esc){
