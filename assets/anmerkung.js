@@ -3130,8 +3130,18 @@ function buildTrainingSet(){
      • shared_inputs are the input cells that hold the IDENTICAL value on
        every row of the pattern — prime gate-signal candidates; keys
        present on every row but with differing values land in
-       varying_inputs. Keys missing from some rows are omitted. */
-function buildTrainingSummary(records){
+       varying_inputs. Keys missing from some rows are omitted.
+     • numeric_profiles carry the shape a gate condition is made of for
+       numeric-TYPED keys present on every row: min/max, sign consistency,
+       and (for *_diff keys) whether every row clears the hasErr threshold.
+       Text keys (referenz, zone, PLZ…) are never profiled even when their
+       values happen to parse — "123,456" in referenz is a ref list.
+     • contrast rows (optional `regression` = buildRegressionSet output):
+       per pattern, solved same-forwarder rows whose expected keys overlap
+       the pattern's disputed keys (the WORKING gate signature a fix must
+       not break) plus silent solved rows (where a loosened gate would
+       over-fire first). */
+function buildTrainingSummary(records,regression){
   const byLabel={},byEngineLabel={},byForwarder={};
   let solved=0,actionable=0,notEvaluated=0;
   const patterns=new Map();
@@ -3160,7 +3170,8 @@ function buildTrainingSummary(records){
         extra_phrases:((useEngine?r.engine_extra_phrases:r.extra_phrases)||[]).slice(),
         suggested_action:missK.length&&extraK.length?'fix_both'
           :(missK.length?'add_or_loosen_branch':'guard_or_tighten_branch'),
-        count:0,labels:{},example_row_uids:[],_inputsList:[]};
+        count:0,labels:{},example_row_uids:[],_inputsList:[],
+        _th:r.applicable_threshold==null?null:r.applicable_threshold};
       patterns.set(key,p);
     }
     p.count++;
@@ -3168,26 +3179,60 @@ function buildTrainingSummary(records){
     if(p.example_row_uids.length<5&&r.row_uid)p.example_row_uids.push(r.row_uid);
     p._inputsList.push(r.inputs||{});
   }
+  /* Numeric typing is by KEY, not by value — only these keys carry
+     quantities the gates compare numerically. */
+  const NUM_KEY=k=>k==='vkg'||k==='tarif'||k==='anz_sdg'||k==='stat'||/_(diff|dl|tarif)$/.test(k);
+  const NUM_RE=/^[+-]?\d+(?:[.,]\d+)?$/;
+  /* Same-forwarder regression pools for contrast-row lookup. */
+  const regByFw={};
+  for(const rr of regression||[])(regByFw[rr.forwarder]||(regByFw[rr.forwarder]=[])).push(rr);
   const out=[...patterns.values()];
   for(const p of out){
-    const lists=p._inputsList;delete p._inputsList;
+    const lists=p._inputsList,th=p._th;delete p._inputsList;delete p._th;
     const allKeys=new Set();
     for(const o of lists)for(const k of Object.keys(o))allKeys.add(k);
-    const shared={},varying=[];
+    const shared={},varying=[],profiles={};
     for(const k of [...allKeys].sort()){
       const vals=lists.map(o=>o[k]);
       if(vals.some(v=>v==null))continue; /* not on every row → omit */
       if(vals.every(v=>v===vals[0]))shared[k]=vals[0];
       else varying.push(k);
+      if(!NUM_KEY(k))continue;
+      const nums=[];
+      let numeric=true;
+      for(const v of vals){
+        const s=String(v).trim();
+        if(!NUM_RE.test(s)){numeric=false;break;}
+        nums.push(parseFloat(s.replace(',','.')));
+      }
+      if(!numeric)continue;
+      const prof={
+        min:Math.min(...nums),max:Math.max(...nums),
+        sign:nums.every(n=>n<0)?'all_negative'
+            :nums.every(n=>n>0)?'all_positive'
+            :nums.every(n=>n===0)?'all_zero':'mixed',
+      };
+      if(/_diff$/.test(k)&&th!=null)prof.all_beyond_threshold=nums.every(n=>Math.abs(n)>th);
+      profiles[k]=prof;
     }
-    p.shared_inputs=shared;p.varying_inputs=varying;
+    p.shared_inputs=shared;p.varying_inputs=varying;p.numeric_profiles=profiles;
+    /* Contrast rows: solved rows that legitimately carry a disputed key
+       (must keep firing) and solved-silent rows (must stay silent). */
+    const target=new Set([...p.missing_phrase_keys,...p.extra_phrase_keys]);
+    const pool=regByFw[p.forwarder]||[];
+    p.contrast_row_uids=pool
+      .filter(rr=>(rr.expected_phrase_keys||[]).some(k=>target.has(k)))
+      .slice(0,5).map(rr=>rr.row_uid);
+    p.silent_contrast_row_uids=pool
+      .filter(rr=>!(rr.expected||'').trim())
+      .slice(0,2).map(rr=>rr.row_uid);
   }
   out.sort((a,b)=>(b.count-a.count)||
     String(a.forwarder).localeCompare(String(b.forwarder))||
     String(a.missing_phrase_keys).localeCompare(String(b.missing_phrase_keys))||
     String(a.extra_phrase_keys).localeCompare(String(b.extra_phrase_keys)));
   return{
-    schema:'anmerkung.training-summary/v1',
+    schema:'anmerkung.training-summary/v2',
     total_records:(records||[]).length,
     by_label:byLabel,
     by_engine_label:byEngineLabel,
@@ -3543,7 +3588,7 @@ function buildAiBundlePrompt(spec,summary,regressionCount){
   return [
 '# Prompt — paste into your AI assistant together with this bundle\'s files',
 '',
-'> Attach `training.jsonl`, `regression.jsonl`, `rule_spec.json`, and `summary.json` (and `assets/anmerkung.js` if the assistant cannot read the repository), then paste everything below the line.',
+'> Attach `training.jsonl`, `regression.jsonl`, `rule_spec.json`, `summary.json`, and `engine_source.md` (and `assets/anmerkung.js` if the assistant can read the repository), then paste everything below the line.',
 '',
 '---',
 '',
@@ -3554,6 +3599,7 @@ topPatterns||'  - (none)',
 '- `training.jsonl` — one JSON record per row; join to patterns via `row_uid`.',
 '- `regression.jsonl` — '+(regressionCount||0)+' row(s) the CURRENT engine already solves (expected phrase set + the inputs that produce it). Your patch must keep every one of them passing.',
 '- `rule_spec.json` — the PHRASES catalog, per-forwarder thresholds, processor/resolver symbols, and an English glossary for every `inputs.*` key.',
+'- `engine_source.md` — the CURRENT source of every processor, resolver, and helper, extracted from the running engine at export time. This is the ground truth for what each gate does today — reason from it, not from memory of earlier versions.',
 '',
 '## Task',
 '',
@@ -3562,7 +3608,10 @@ topPatterns||'  - (none)',
 '## Rules',
 '',
 '1. The `engine_*` fields are authoritative: `engine_missing_phrase_keys` = phrases ground truth wants that the engine fails to emit (ADD a branch or LOOSEN its gate); `engine_extra_phrase_keys` = phrases the engine emits that truth rejects (GUARD or TIGHTEN the branch). Ignore the plain `predicted`/`missing_*`/`extra_*` fields unless `engine_label` is blank — they compare a possibly-stale tool output, not the current engine.',
-'2. Diagnose gates from `summary.json` first: each pattern\'s `shared_inputs` are the cell values identical on EVERY failing row (prime gate signals); `varying_inputs` differ across rows and must not become gate conditions. Pull the matching `training.jsonl` records by `example_row_uids` for the full picture.',
+'2. Work each pattern as a hypothesis → verify loop, and only then patch:',
+'   a. **Hypothesise** the gate from `summary.json`: `shared_inputs` are the cell values identical on EVERY failing row (prime gate signals); `numeric_profiles` give the numeric shape (`sign`, `min`/`max`, `all_beyond_threshold`) of every numeric key — a gate condition is usually one of these plus a shared value. `varying_inputs` differ across rows and must NOT become gate conditions. Read the current gate\'s actual code in `engine_source.md` before deciding what to change.',
+'   b. **Verify against the contrast rows** before writing any code: the pattern\'s `contrast_row_uids` are solved rows in `regression.jsonl` where a disputed phrase fires legitimately — your hypothesised gate applied to their `inputs` must keep producing exactly their `expected_phrase_keys`; `silent_contrast_row_uids` are solved rows where the engine must stay silent — the rows a loosened gate over-fires on first. If the hypothesis breaks either set, revise it, do not patch around it.',
+'   c. **Patch** only a hypothesis that survived (b), and pull the matching `training.jsonl` records by `example_row_uids` to confirm the full picture.',
 '3. Emit phrases only via the existing `PHRASES` catalog and `join()` helper (it dedupes case-insensitively). New wording goes into `PHRASES` first; keys prefixed `lit_`/`tpl_`/`?:` are explained in `rule_spec.json`.',
 '4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Before proposing ANY gate change, replay it mentally against every `regression.jsonl` record for that forwarder: applying the new/changed gate to the record\'s `inputs` must still yield exactly its `expected_phrase_keys` — including the records whose `expected` is empty, where the engine must stay silent.',
 '5. Keep edits inside the `process<Forwarder>` functions (resolvers are already wired) unless a pattern clearly needs a new resolver column.',
@@ -3572,9 +3621,9 @@ topPatterns||'  - (none)',
 '## Output format',
 '',
 'For each pattern you fix, in priority order:',
-'1. **Diagnosis** — which branch/gate is wrong and why, citing the `shared_inputs` evidence.',
+'1. **Diagnosis** — which branch/gate is wrong and why, citing the `shared_inputs` / `numeric_profiles` evidence and the current gate code from `engine_source.md`.',
 '2. **Patch** — the exact code change (unified diff or before/after snippet).',
-'3. **Coverage** — the `row_uid`s this change fixes, and any solved rows it could plausibly affect.',
+'3. **Coverage** — the `row_uid`s this change fixes, and the contrast/regression `row_uid`s you replayed the new gate against (both the must-still-fire and must-stay-silent sets).',
 '',
 'A fix is complete when re-running Train & Compare flips the row\'s `engine_matches_b` to `true` and empties its `engine_missing_phrase_keys` / `engine_extra_phrase_keys`.',
 ''].join('\n');
@@ -3599,12 +3648,17 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('- `training.jsonl` — one JSON record per line, one record per failing/correct row from Diff Mode.');
   lines.push('- `regression.jsonl` — '+(regressionCount||0)+' compact record(s), one per row the CURRENT engine already gets right (`engine_matches_b === true`), from the FULL diff (regardless of any export filter). Each carries `expected` + `expected_phrase_keys` + `inputs`: the constraint rows a rule change must not regress. Records whose `expected` is empty pin rows where the engine must stay silent.');
   lines.push('- `rule_spec.json` — the schema. Lists every PHRASES key, every threshold, every input field per forwarder, and the exact source-code symbol an AI should edit to update rules.');
+  lines.push('- `engine_source.md` — the current source of every processor/resolver/helper plus the gate constants, extracted live from the running engine at export time (it cannot drift from the engine that produced the labels). The ground truth for what each gate does today.');
   lines.push('- `README.md` — this file.');
   lines.push('');
   lines.push('## How an AI assistant should use this bundle');
   lines.push('');
   lines.push('### 0. Start with `summary.json`');
   lines.push('It already does workflow step 1 (grouping) for you: patterns are sorted by row count, each carries `suggested_action` (`add_or_loosen_branch` / `guard_or_tighten_branch` / `fix_both`), `shared_inputs` (cell values identical on every failing row — prime gate signals), `varying_inputs` (present everywhere but differing — must NOT become gate conditions), and `example_row_uids` to pull the full records from `training.jsonl`. Rows the engine already solves are counted in `engine_solved` and excluded from patterns — they ship in full as `regression.jsonl`, the set a fix must not break.');
+  lines.push('');
+  lines.push('Two reasoning aids per pattern:');
+  lines.push('- `numeric_profiles` — for every numeric-typed input key present on all failing rows: `min`/`max`, `sign` (`all_negative`/`all_positive`/`all_zero`/`mixed`), and on `*_diff` keys `all_beyond_threshold` (every row clears the forwarder\'s `hasErr` tolerance). A gate condition is usually one of these shapes; e.g. `fr_diff: {sign: "all_negative", all_beyond_threshold: true}` says "gate on a negative freight delta above threshold", even though the raw values differ row to row.');
+  lines.push('- `contrast_row_uids` / `silent_contrast_row_uids` — `row_uid`s into `regression.jsonl`: solved same-forwarder rows where a disputed phrase fires legitimately (your changed gate must keep firing on their `inputs`), and solved rows where the engine must stay silent (the first casualties of an over-loosened gate). Replay any hypothesised gate against both BEFORE writing the patch.');
   lines.push('');
   lines.push('### 1. Read `rule_spec.json`');
   lines.push('It tells you:');
@@ -3674,6 +3728,39 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   return lines.join('\n')+'\n';
 }
 
+/* Build engine_source.md for the AI Bundle: the exact CURRENT source of
+   every symbol a rule fix edits or reasons about, captured live via
+   Function.prototype.toString() so it can never drift from the shipped
+   engine (unlike a hand-maintained copy). Pure — no DOM, no I/O. */
+function buildEngineSourceDoc(){
+  const sections=[
+    ['Shared helpers',[hasErr,join,normPhrase,cellNum,cellStr]],
+    ['Dachser',[resolveDachser,processDachser,dachserGetTier,daIsTarifZero,daEvalEXP,daIsNonInteger,daDetectSurchargeFromDiff]],
+    ['K+N',[resolveKN,processKN,knGetTier]],
+    ['DHL',[resolveDHL,processDHL]],
+    ['Wackler',[resolveWackler,processWackler,wacklerGetTier,wacklerGetTierIdx,wacklerFloorTier,wacklerTierLabel,
+      wacklerLand,wacklerLane,wacklerResolveNatZone,wacklerResolveIntlZone,wacklerRechnetNote,wacklerRateProbe,
+      wacklerTariffFreight,wacklerRateToTier,wacklerRechnetTier,wacklerSnkCode,isWacklerAvisCode,wacklerAvisLabel]],
+  ];
+  const consts={
+    DA_COL:{REFERENZ3:DA_COL_REFERENZ3,EMPF_PLZ:DA_COL_EMPF_PLZ,EMPF_ORT:DA_COL_EMPF_ORT,
+      ANZ_SDG:DA_COL_ANZ_SDG,SERV_ART:DA_COL_SERV_ART,SACHKONTO:DA_COL_SACHKONTO},
+    WACKLER_BP,WACKLER_RATE_TOL,WACKLER_RETIER_EXACT_TOL,WACKLER_SNK_CODES,WACKLER_AVIS_CODES,
+    WACKLER_SNK_NOISE,WACKLER_PAUSCHAL_RATIO,WACKLER_SNK_TERMIN80_ABS,WACKLER_SNK_TERMIN80_TOL,
+    WACKLER_TZ_ADDITIVE,WACKLER_HEBEBUEHNE_ABS,WACKLER_HEBEBUEHNE_TOL,WACKLER_BUENDEL_MAX_KG,
+    WACKLER_XTIER_NEAR_BAND,
+  };
+  const lines=['# Engine source — v'+VERSION,'',
+    '> Extracted live via `Function.prototype.toString()` at export time — this IS the running engine, not a copy.',
+    '> Edit these symbols in `assets/anmerkung.js`. `PHRASES` / thresholds / input glossary are in `rule_spec.json`.',''];
+  for(const[title,fns]of sections){
+    lines.push('## '+title,'');
+    for(const fn of fns)lines.push('### `'+fn.name+'`','','```js',fn.toString(),'```','');
+  }
+  lines.push('## Gate constants','','```json',JSON.stringify(consts,null,2),'```','');
+  return lines.join('\n');
+}
+
 async function downloadAiBundle(){
   if(!diffState.results){showLog('AI Bundle \u2014 run Train & Compare first.','err');return;}
   if(typeof JSZip==='undefined'){showLog('AI Bundle \u2014 JSZip not loaded yet, retry in a moment.','err');return;}
@@ -3687,15 +3774,16 @@ async function downloadAiBundle(){
       diffFilter.q?'search='+diffFilter.q:''].filter(Boolean).join(', ')
     :'';
   const jsonl=records.map(r=>JSON.stringify(r)).join('\n')+'\n';
+  /* Regression fence: every engine-solved row from the FULL result set
+     (ignores the filter scope on purpose — see buildRegressionSet).
+     Built BEFORE the summary so patterns can carry contrast rows. */
+  const regression=buildRegressionSet(diffState.results.rows);
   /* summary.json: pure aggregation + provenance stamps the tests don't
      need to see (kept out of buildTrainingSummary so it stays pure). */
-  const summary=buildTrainingSummary(records);
+  const summary=buildTrainingSummary(records,regression);
   summary.engine_version=spec.engine_version;
   summary.exported_at=spec.exported_at;
   summary.filter_scope=filterScope||'';
-  /* Regression fence: every engine-solved row from the FULL result set
-     (ignores the filter scope on purpose — see buildRegressionSet). */
-  const regression=buildRegressionSet(diffState.results.rows);
   const readme=buildAiBundleReadme(spec,records.length,filterScope,regression.length);
   const prompt=buildAiBundlePrompt(spec,summary,regression.length);
   const zip=new JSZip();
@@ -3705,6 +3793,7 @@ async function downloadAiBundle(){
   zip.file('training.jsonl',jsonl);
   if(regression.length)zip.file('regression.jsonl',regression.map(r=>JSON.stringify(r)).join('\n')+'\n');
   zip.file('rule_spec.json',JSON.stringify(spec,null,2)+'\n');
+  zip.file('engine_source.md',buildEngineSourceDoc());
   const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   const url=URL.createObjectURL(blob),a=document.createElement('a');

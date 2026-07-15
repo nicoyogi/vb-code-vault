@@ -1,6 +1,17 @@
 {
-  "version": "1.30.0",
+  "version": "1.31.0",
   "entries": [
+    {
+      "ver": "1.31.0",
+      "date": "2026-07-15",
+      "items": [
+        "AI Bundle — summary.json patterns now carry `numeric_profiles`: for every numeric-typed input key present on all failing rows, the min/max range, sign consistency (all_negative / all_positive / all_zero / mixed) and — on *_diff keys — whether every row clears the forwarder's hasErr threshold. Gate signals like \"fr_diff is always negative and above threshold\" were previously invisible: shared_inputs only reported exact-equal values, so any numeric key whose values differed row-to-row was reduced to a bare name in varying_inputs. Numeric typing is by KEY (vkg, tarif, anz_sdg, stat, *_diff/_dl/_tarif), never by value — referenz \"123,456\" is a ref list, not 123.456. Schema bumps to anmerkung.training-summary/v2.",
+        "AI Bundle — each pattern now names its counter-examples: `contrast_row_uids` (up to 5 solved same-forwarder regression rows whose expected phrases overlap the pattern's disputed keys — the working gate signature a fix must keep firing on) and `silent_contrast_row_uids` (up to 2 solved rows where the engine must stay silent — the first casualties of an over-loosened gate). The regression fence existed since v1.30 but only as an undifferentiated file; the AI had to find its own counter-examples, and in practice didn't.",
+        "AI Bundle — new file `engine_source.md`: the exact current source of all four processors, all four resolvers, the per-forwarder tier/lane/rate/code-book helpers, shared helpers (hasErr, join, normPhrase, cellNum, cellStr) and the gate constants (WACKLER_* tolerances, DA_COL_* positions), extracted live via Function.prototype.toString() at export time so it cannot drift from the engine that produced the labels. An assistant without repository access previously reasoned about gates from prose descriptions only.",
+        "AI Bundle — prompt.md workflow restructured as an explicit hypothesis → verify → patch loop per pattern: hypothesise the gate from shared_inputs + numeric_profiles and the current gate code in engine_source.md; replay the hypothesis against the pattern's contrast rows (must keep firing) and silent contrast rows (must stay silent) BEFORE writing any code; the Coverage output section now requires citing the replayed row_uids. README.md documents the new fields and file.",
+        "Tests — 5 new cases pin numeric_profiles (sign/range/threshold flag, German decimal commas, text keys like referenz/zone never profiled), contrast-row selection (same-forwarder + key-intersection, silence tripwires, empty without a regression arg) and engine_source.md assembly (all processor symbols present with real source, gate constants included). Full suite: 176 passing."
+      ]
+    },
     {
       "ver": "1.30.0",
       "date": "2026-07-10",

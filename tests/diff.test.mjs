@@ -326,6 +326,71 @@ test('buildTrainingSummary: patterns sorted by count desc; fix_both action', () 
   assert.deepStrictEqual({ ...s.by_engine_label }, { missed: 1, wrong: 2 });
 });
 
+test('buildTrainingSummary: numeric_profiles — sign, range, threshold flag, German decimals', () => {
+  const s = e.buildTrainingSummary([
+    rec({ applicable_threshold: 1.5, inputs: { stat: '10', fr_diff: '-31,65', vkg: '120' } }),
+    rec({ applicable_threshold: 1.5, inputs: { stat: '10', fr_diff: '-2.1', vkg: '80' } }),
+  ]);
+  const prof = s.patterns[0].numeric_profiles;
+  assert.deepStrictEqual({ ...prof.fr_diff },
+    { min: -31.65, max: -2.1, sign: 'all_negative', all_beyond_threshold: true },
+    'German decimal comma parsed; every |value| clears hasErr threshold');
+  assert.deepStrictEqual({ ...prof.vkg }, { min: 80, max: 120, sign: 'all_positive' },
+    'non-diff numeric key profiled without the threshold flag');
+  assert.deepStrictEqual({ ...prof.stat }, { min: 10, max: 10, sign: 'all_positive' },
+    'shared keys are profiled too');
+  assert.equal(s.schema, 'anmerkung.training-summary/v2');
+});
+
+test('buildTrainingSummary: numeric_profiles — mixed sign, sub-threshold, text keys excluded', () => {
+  const s = e.buildTrainingSummary([
+    rec({ applicable_threshold: 5, inputs: { fr_diff: '-1', referenz: '123,456', zone: 'DE5' } }),
+    rec({ applicable_threshold: 5, inputs: { fr_diff: '3', referenz: '789,012', zone: 'DE5' } }),
+  ]);
+  const p = s.patterns[0];
+  assert.equal(p.numeric_profiles.fr_diff.sign, 'mixed');
+  assert.equal(p.numeric_profiles.fr_diff.all_beyond_threshold, false,
+    'no row clears the threshold');
+  assert.ok(!('referenz' in p.numeric_profiles),
+    'referenz is a ref LIST — "123,456" must not be profiled as 123.456');
+  assert.ok(!('zone' in p.numeric_profiles), 'text-typed keys never profiled');
+});
+
+test('buildTrainingSummary: contrast rows from the regression set', () => {
+  const regression = [
+    { row_uid: 'r-fires', forwarder: 'wackler', expected: 'Differenz Energiezuschlag',
+      expected_phrase_keys: ['differenzEnergiezuschlag'], inputs: {} },
+    { row_uid: 'r-other', forwarder: 'wackler', expected: 'Mautdifferenz',
+      expected_phrase_keys: ['mautdifferenz'], inputs: {} },
+    { row_uid: 'r-silent', forwarder: 'wackler', expected: '',
+      expected_phrase_keys: [], inputs: { stat: '10' } },
+    { row_uid: 'r-foreign', forwarder: 'dhl', expected: 'Differenz Energiezuschlag',
+      expected_phrase_keys: ['differenzEnergiezuschlag'], inputs: {} },
+  ];
+  const s = e.buildTrainingSummary([rec()], regression);
+  const p = s.patterns[0];
+  assert.deepStrictEqual(A(p.contrast_row_uids), ['r-fires'],
+    'same forwarder AND expected keys intersect the disputed keys');
+  assert.deepStrictEqual(A(p.silent_contrast_row_uids), ['r-silent'],
+    'empty-expected rows are the silence tripwires');
+});
+
+test('buildTrainingSummary: contrast rows empty without a regression set', () => {
+  const s = e.buildTrainingSummary([rec()]);
+  assert.deepStrictEqual(A(s.patterns[0].contrast_row_uids), []);
+  assert.deepStrictEqual(A(s.patterns[0].silent_contrast_row_uids), []);
+});
+
+test('buildEngineSourceDoc: live-extracted processor source with gate constants', () => {
+  const doc = e.buildEngineSourceDoc();
+  for (const sym of ['processDachser', 'processKN', 'processDHL', 'processWackler',
+    'resolveWackler', 'normPhrase', 'wacklerRechnetTier']) {
+    assert.ok(doc.includes('### `' + sym + '`'), 'doc carries ' + sym);
+  }
+  assert.ok(doc.includes('function processWackler'), 'actual function source, not just a heading');
+  assert.ok(doc.includes('## Gate constants') && doc.includes('WACKLER_SNK_CODES'));
+});
+
 /* ── normalization hardening — invisible encoding/formatting noise in
    hand-edited truth cells must NEVER create a false training label ── */
 
