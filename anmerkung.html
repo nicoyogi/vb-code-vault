@@ -233,7 +233,7 @@
       <span class="chev">›</span>
     </button>
     <div class="bonus-panel" id="diffPanel" role="region" aria-label="Diff between before and after files">
-      <div class="diff-intro">Drop two processed workbooks and Kiro will <strong>train the engine</strong> against them. Put your tool's output in <strong>A</strong>, the hand-corrected ground truth in <strong>B</strong>. Every disagreement becomes a labeled training case — <span class="lbl-pill lbl-wrong">wrong</span> <span class="lbl-pill lbl-missed">missed</span> <span class="lbl-pill lbl-overfired">overfired</span> — with the input cells the rules read and the trigger trace. Ship it as CSV/JSONL, or click <strong>✦</strong> on any row to open it in the Rule Tester and iterate on the rule against that exact case. <strong>For AI-driven rule updates:</strong> grab the <strong>✦ AI Bundle (ZIP)</strong> — it packages the training set with a self-describing rule spec and a prompt template so any AI assistant can propose patches to <code>assets/anmerkung.js</code> without reading the source. <strong>Need a wider corpus?</strong> Use <strong>Bulk</strong> below to compare many predicted/expected pairs in one pass.</div>
+      <div class="diff-intro">Put your tool's output in <strong>A</strong> and the hand-corrected ground truth in <strong>B</strong> — every disagreement becomes a labeled training case: <span class="lbl-pill lbl-wrong">wrong</span> <span class="lbl-pill lbl-missed">missed</span> <span class="lbl-pill lbl-overfired">overfired</span>. Export as CSV/JSONL or <strong>✦ AI Bundle (ZIP)</strong>, click <strong>✦</strong> on a row to replay it in the Rule Tester, or use <strong>Bulk</strong> below for many pairs at once (hover any button for details).</div>
 
       <div class="diff-slots">
         <div class="diff-slot" id="diffSlotA" data-slot="a" role="button" tabindex="0"
@@ -310,14 +310,6 @@
 
       <div id="diffResults" style="display:none">
         <div class="diff-meta" id="diffMeta"></div>
-
-        <!-- Classic diff summary — tiles double as filter shortcuts -->
-        <div class="diff-summary" role="group" aria-label="Diff summary — click a tile to filter the table">
-          <button type="button" class="diff-stat" data-label="all" aria-pressed="false" onclick="setDiffLabelFilter('all')" title="Show every differing row"><span class="diff-stat-n" id="dCount">0</span><span class="diff-stat-l">total rows</span></button>
-          <button type="button" class="diff-stat added" data-label="missed" aria-pressed="false" onclick="setDiffLabelFilter('missed')" title="Filter: rows where B added an Anmerkung that A lacks (missed)"><span class="diff-stat-n" id="dAdded">0</span><span class="diff-stat-l">added</span></button>
-          <button type="button" class="diff-stat removed" data-label="overfired" aria-pressed="false" onclick="setDiffLabelFilter('overfired')" title="Filter: rows where A has an Anmerkung that B removed (overfired)"><span class="diff-stat-n" id="dRemoved">0</span><span class="diff-stat-l">removed</span></button>
-          <button type="button" class="diff-stat changed" data-label="wrong" aria-pressed="false" onclick="setDiffLabelFilter('wrong')" title="Filter: rows where both sides disagree (wrong)"><span class="diff-stat-n" id="dChanged">0</span><span class="diff-stat-l">changed</span></button>
-        </div>
 
         <!-- Training-set summary (label chips — click to filter) -->
         <div class="train-panel" id="trainPanel">

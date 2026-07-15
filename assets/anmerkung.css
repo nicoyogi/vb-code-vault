@@ -413,16 +413,6 @@ body.theme-light :focus-visible { outline-color: rgba(13,140,95,0.7); }
 .diff-slot-label { font-family: var(--cinzel); font-size: 9.5px; color: var(--text3); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 6px; }
 .diff-slot-name { font-family: var(--mono); font-size: 10.5px; color: var(--text2); word-break: break-all; }
 .diff-slot.loaded .diff-slot-name { color: var(--accent); }
-.diff-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-/* Tiles are <button>s — they double as label-filter shortcuts. */
-.diff-stat { appearance: none; font: inherit; color: inherit; cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .7rem .8rem; text-align: center; transition: border-color .15s, background .15s; }
-.diff-stat:hover { border-color: var(--border2); }
-.diff-stat.active { border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.05); }
-.diff-stat-n { display: block; font-family: var(--cinzel); font-size: 18px; font-weight: 900; color: var(--text); }
-.diff-stat-l { display: block; font-family: var(--mono); font-size: 9px; color: var(--text3); margin-top: 2px; letter-spacing: .04em; }
-.diff-stat.added .diff-stat-n { color: var(--accent); }
-.diff-stat.removed .diff-stat-n { color: var(--danger); }
-.diff-stat.changed .diff-stat-n { color: #fbbf24; }
 .diff-table-wrap { max-height: 380px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
 .diff-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 10px; }
 .diff-table thead { position: sticky; top: 0; background: #08081a; z-index: 1; }
@@ -858,13 +848,6 @@ body.theme-pro .diff-slot { border-radius: 8px; background: #ffffff; }
 body.theme-pro .diff-slot:hover, body.theme-pro .diff-slot.drag { border-color: var(--accent); background: #f8fafc; }
 body.theme-pro .diff-slot.loaded { border-color: var(--accent); background: #eff6ff; }
 body.theme-pro .diff-slot.loaded .diff-slot-name { color: var(--accent); }
-body.theme-pro .diff-stat { border-radius: 6px; background: #ffffff; }
-body.theme-pro .diff-stat:hover { border-color: var(--accent); }
-body.theme-pro .diff-stat.active { border-color: var(--accent); background: #eff6ff; }
-body.theme-pro .diff-stat-n { font-weight: 700; }
-body.theme-pro .diff-stat.added .diff-stat-n { color: #059669; }
-body.theme-pro .diff-stat.removed .diff-stat-n { color: var(--danger); }
-body.theme-pro .diff-stat.changed .diff-stat-n { color: #d97706; }
 body.theme-pro .diff-table-wrap { border-radius: 6px; }
 body.theme-pro .diff-table thead { background: #f1f5f9; }
 body.theme-pro .diff-table th { color: var(--text2); }
@@ -987,7 +970,6 @@ body.theme-pro .log::-webkit-scrollbar-thumb, body.theme-pro .cl-list::-webkit-s
 /* Small screens: stack side-by-side grids that get cramped */
 @media (max-width: 520px) {
   .diff-slots, .diff-bulk-slots, .adv-grid { grid-template-columns: 1fr; }
-  .diff-summary { grid-template-columns: repeat(2, 1fr); }
   .bdp-file { max-width: 30%; }
 }
 
