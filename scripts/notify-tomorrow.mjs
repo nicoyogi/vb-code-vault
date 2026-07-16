@@ -16,8 +16,10 @@
  *                             when a webhook request is received" Workflow.
  *
  * ── Optional env vars ──
- *   TIMEZONE   IANA tz name (default: Asia/Bangkok).
- *   DRY_RUN    If set to "1" / "true", prints the payload but does not POST.
+ *   TIMEZONE       IANA tz name (default: Asia/Bangkok).
+ *   SKIP_IF_EMPTY  If "1"/"true", skip posting when no one is on leave
+ *                  (default: true). Set to "0"/"false" to always post.
+ *   DRY_RUN        If set to "1" / "true", prints the payload but does not POST.
  * ────────────────────────────────────────────────────────────────────────────
  */
 
@@ -27,6 +29,7 @@ const TIMEZONE     = process.env.TIMEZONE || 'Asia/Bangkok';
 const WEBHOOK_URL  = process.env.TEAMS_WEBHOOK_URL;
 const SVC_ACCOUNT  = process.env.FIREBASE_SERVICE_ACCOUNT;
 const DRY_RUN      = /^(1|true)$/i.test(process.env.DRY_RUN || '');
+const SKIP_IF_EMPTY = !/^(0|false)$/i.test(process.env.SKIP_IF_EMPTY || 'true');
 
 if (!SVC_ACCOUNT) {
   console.error('FIREBASE_SERVICE_ACCOUNT is required.');
@@ -219,6 +222,11 @@ async function main() {
   entries.forEach(e => {
     console.log(`  · ${e.personName} — ${e.type} (${e.start} → ${e.end})`);
   });
+
+  if (!entries.length && SKIP_IF_EMPTY && !DRY_RUN) {
+    console.log('No one on leave tomorrow, and SKIP_IF_EMPTY is set. Skipping post.');
+    return;
+  }
 
   const payload = buildAdaptiveCard(tomorrowIso, entries);
 
