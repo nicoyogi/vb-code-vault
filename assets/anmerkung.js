@@ -815,16 +815,24 @@ function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.
    share a single source of truth and the big rate matrix never has to live inside this engine.
    The literal below is an identical fallback for when the rate-card asset isn't loaded (e.g. a
    bare unit-test context), keeping the engine self-sufficient and deterministic. */
-const WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
+let WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
 /* National (domestic German) rate card — standalone asset assets/wackler-national-ratecard.js,
    generated from data/Wackler National Rate.xlsx. It carries the EUR rates for the German zones
    DE1‑DE9 that the international card leaves blank, and is what enriches the "Wackler rechnet"
    note with the actual domestic rate Wackler billed against. Optional: null when not loaded
    (e.g. a bare unit-test context), in which case the note degrades to the plain tier wording. */
-const WACKLER_NAT_RC=(typeof WACKLER_NATIONAL_RATECARD!=='undefined'&&WACKLER_NATIONAL_RATECARD)?WACKLER_NATIONAL_RATECARD:null;
-const WACKLER_BP=(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.length)
+let WACKLER_NAT_RC=(typeof WACKLER_NATIONAL_RATECARD!=='undefined'&&WACKLER_NATIONAL_RATECARD)?WACKLER_NATIONAL_RATECARD:null;
+let WACKLER_BP=(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.length)
   ? WACKLER_RC.tiers.slice()
   : [50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
+/* Late-bind hook for assets/wackler-ratecard-loader.js: the rate cards now arrive
+   asynchronously (decrypted in the browser AFTER this script has evaluated), so the
+   loader calls this to re-read the globals it just defined. Safe no-op otherwise. */
+function wacklerRatecardsReady(){
+  WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
+  WACKLER_NAT_RC=(typeof WACKLER_NATIONAL_RATECARD!=='undefined'&&WACKLER_NATIONAL_RATECARD)?WACKLER_NATIONAL_RATECARD:null;
+  if(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.length)WACKLER_BP=WACKLER_RC.tiers.slice();
+}
 function wacklerGetTier(kg){if(kg<=0)return 0;for(const b of WACKLER_BP)if(kg<=b)return b;return 999999;}
 function wacklerGetTierIdx(kg){if(kg<=0)return -1;for(let i=0;i<WACKLER_BP.length;i++)if(kg<=WACKLER_BP[i])return i;return WACKLER_BP.length-1;}
 /* Largest tier breakpoint at or below kg — the rate-card bracket a weight has already CLEARED
