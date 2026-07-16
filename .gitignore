@@ -111,3 +111,6 @@ data/*Soll-Ist*
 *REPORT DATA*.xls*
 data/REPORT DATA*
 data/
+
+# Generated local reports
+docs/File_Splitter_Report.*
