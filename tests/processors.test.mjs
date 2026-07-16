@@ -818,3 +818,67 @@ test('processWackler: an off-card FR Kosten lt. Tarif falls back to the FR-delta
     'Wackler rechnet Frachtrate für 2000kg ab // Mautdifferenz'
   );
 });
+
+
+/* ──────────────────────────────────────────────────────────
+   WACKLER — AI-bundle 2026-07-16 rule updates
+   Two patterns: SNK Nachlauf codes 49/113 (NL-12 / NL-SPEZ
+   queries instead of the generic SNK Differenz), and the
+   partial-billing bundle (VKG_DL a small fraction of VKG on a
+   cross-tier multi-ref row -> terminal bundling finding).
+─────────────────────────────────────────────────────────── */
+
+test('processWackler: SNK=49 -> "NL-12, ok?" (not SNK Differenz)', () => {
+  // Bundle row b9ca0d3c: SNK=49, equal weights, no FR/MT/TZ, DE Waghäusel.
+  const ws = makeRow(R, {
+    51: 10, 52: '586.97', 54: '49', 58: '2543825001', 59: '4983', 60: '4983',
+    61: '68753', 62: 'Waghäusel', 63: '211FO011', 64: '612100', 66: 'DE', 67: 'DE',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'NL-12, ok?');
+});
+
+test('processWackler: SNK=113 + AVIS code -> "Avis, ok? // NL-SPEZ, ok?"', () => {
+  // Bundle row f914abff: AVIS=8.7 stays additive next to the NL-SPEZ Nachlauf query.
+  const ws = makeRow(R, {
+    51: 10, 52: '321.91', 53: '8.7', 54: '113', 58: '2543869370', 59: '2750', 60: '2750',
+    61: '68753', 62: 'Waghäusel', 63: '211FO011', 64: '612100', 66: 'DE', 67: 'DE',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Avis, ok? // NL-SPEZ, ok?');
+});
+
+test('processWackler: partial-billing bundle (FR credit) -> terminal "hätte gebündelt werden müssen"', () => {
+  // Bundle row 81dd411f: 2 refs, VKG=3540 / VKG_DL=94 (2.7%), FR=-15.39, AVIS=8.7, MT=-3.67.
+  // The DL billed one consignment of the bundle; AVIS and Maut are artefacts and stay suppressed.
+  const ws = makeRow(R, {
+    51: 10, 52: '282.89', 53: '8.7', 54: '-0.06', 55: '-15.39', 56: '-3.67', 57: '-1.77',
+    58: '2543877957,2543833208', 59: '3540', 60: '94',
+    61: '89081', 62: 'Ulm', 63: '211FO011', 64: '612100', 66: 'DE', 67: 'DE',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'hätte gebündelt werden müssen');
+});
+
+test('processWackler: partial-billing bundle (positive FR) suppresses SNK/Maut/fuel too', () => {
+  // Bundle row 45c3d6e8: 3 refs, VKG=2079 / VKG_DL=152 (7.3%), FR=+30.21, SNK=226.12,
+  // MT=4.05, TZ=3.47 — the truth cell carries ONLY the bundling phrase.
+  const ws = makeRow(R, {
+    51: 10, 52: '301.52', 53: '26.1', 54: '226.12', 55: '30.21', 56: '4.05', 57: '3.47',
+    58: '2543938364,2543938391,2543938397', 59: '2079', 60: '152',
+    61: '68753', 62: 'Waghäusel', 63: '211FO011', 64: '612100', 66: 'DE', 67: 'DE',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'hätte gebündelt werden müssen');
+});
+
+test('processWackler: 2-ref half-split (VKG_DL 49% of VKG) stays abweichende Gewichte', () => {
+  // Guard from workbook 10354157 row 13: GB, 2 refs, VKG=2280 / VKG_DL=1120 (49%), FR=-455.42.
+  // A genuine half-split across two consignments is a weight discrepancy, not partial billing —
+  // this row forced WACKLER_BUENDEL_PARTIAL down to 0.2. The FR credit absorbs the fuel note.
+  const ws = makeRow(R, {
+    51: 10, 52: '1070.53', 54: '-1.37', 55: '-455.42', 56: '-62.54', 57: '-59.21',
+    58: '503474541,503474542', 59: '2280', 60: '1120',
+    61: 'MK5 8GH', 62: 'Knowlhill', 63: '201FO001', 64: '612110', 66: 'GB', 67: 'DE',
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Differenz aufgrund abweichender Gewichte // Mautdifferenz'
+  );
+});

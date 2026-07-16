@@ -1,6 +1,15 @@
 {
-  "version": "1.32.0",
+  "version": "1.33.0",
   "entries": [
+    {
+      "ver": "1.33.0",
+      "date": "2026-07-16",
+      "items": [
+        "Wackler — SNK ≈49 and ≈113 join the SNK code book as Nachlauf (onward-carriage) surcharge queries: 49 → \"NL-12, ok?\", 113 → \"NL-SPEZ, ok?\" — instead of falling through to the generic \"SNK Differenz\". AVIS codes stay additive next to them. AI-bundle 2026-07-16 rows b9ca0d3c (SNK=49), 41e2524b (SNK=113) and f914abff (AVIS=8.7 + SNK=113 → \"Avis, ok? // NL-SPEZ, ok?\"), all DE Waghäusel. Both phrases are promoted into the PHRASES catalog (nl12Ok / nlSpezOk) so training exports resolve them to stable keys.",
+        "Wackler — partial-billing bundle finding: a cross-tier multi-reference row whose DL-billed weight is at most a FIFTH of the chargeable weight (VKG_DL ≤ 0.2 × VKG, new WACKLER_BUENDEL_PARTIAL gate) now reads as a TERMINAL \"hätte gebündelt werden müssen\" — Wackler billed a single consignment of the bundle while the tariff rated the combined load, so the AVIS/MT/TZ/SNK deltas on the row are artefacts of the partial billing and are suppressed (only Kontierung? still appends, mirroring the other terminal branches). AI-bundle 2026-07-16 rows 81dd411f (2 refs, VKG 3540 / VKG_DL 94 = 2.7%, FR credit) and 45c3d6e8 (3 refs, VKG 2079 / VKG_DL 152 = 7.3%, positive FR). Comparable-weight guards keep reading as \"Differenz aufgrund abweichender Gewichte\": workbook 10354157 row 13 (GB 2-ref half-split at 49% — caught by the Soll-Ist workbook validation, which forced the gate down from an initial 0.5) plus the 2026-06-05 rows 3aaa6bed (95%) and 3ac4d429 (139%).",
+        "Verification — all 5 failing bundle rows now match ground truth and all 113 regression.jsonl rows replay unchanged, and all 200 rows of the corrected Soll-Ist workbooks (10358287 / 10358298 / 10354156 / 10354157) match the auditor's truth column; 5 new pinned tests. Full suite: 185 passing."
+      ]
+    },
     {
       "ver": "1.32.0",
       "date": "2026-07-15",

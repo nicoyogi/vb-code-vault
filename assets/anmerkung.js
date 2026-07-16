@@ -228,6 +228,8 @@ const PHRASES={
   // Wackler
   fremdnummer:                'Fremdnummer Doppelt berechnet',
   nlFix:                      'NL-FIX',
+  nl12Ok:                     'NL-12, ok?',
+  nlSpezOk:                   'NL-SPEZ, ok?',
   terminzustellung:           'Terminzustellung',
   b2cLine:                    'hätte B2C-Line abrechnen dürfen',
   buendelMuessen:             'hätte gebündelt werden müssen',
@@ -1063,7 +1065,13 @@ const WACKLER_SNK_CODES=[
   /* SNK≈289 with no freight tariff backing is an "Umverfügung" (re-disposition / re-routing fee)
      billed as a bare surcharge on an un-tariffed row (AI-bundle row 0f1d3d96: TARIF blank,
      SNK=289, AT destination Pasching). */
-  {abs:289,  tol:0.5,  label:'Umverfügung'}
+  {abs:289,  tol:0.5,  label:'Umverfügung'},
+  /* SNK≈49 / ≈113 are published Nachlauf (onward-carriage) surcharges the auditor queries by
+     tier: 49 → "NL-12, ok?", 113 → "NL-SPEZ, ok?" — never the generic "SNK Differenz"
+     (AI-bundle 2026-07-16 rows b9ca0d3c: SNK=49 → NL-12 and 41e2524b / f914abff: SNK=113 →
+     NL-SPEZ, all DE Waghäusel; AVIS codes stay additive: f914abff = "Avis, ok? // NL-SPEZ, ok?"). */
+  {abs:49,   tol:0.5,  label:'NL-12, ok?'},
+  {abs:113,  tol:0.5,  label:'NL-SPEZ, ok?'}
 ];
 function wacklerSnkCode(snk){const a=Math.abs(snk);for(const c of WACKLER_SNK_CODES)if(Math.abs(a-c.abs)<=c.tol)return c.label;return null;}
 /* Wackler AVIS surcharge codes — sign-insensitive (a credit AVIS=-6.5 is the same code as 6.5).
@@ -1122,6 +1130,14 @@ const WACKLER_BUENDEL_MAX_KG=1000;
    apart, FR=+1110.86 → abweichende Gewichte) and the FR-credit rows f8ce2bae / 3aaa6bed /
    9de2427a (all → abweichende Gewichte). */
 const WACKLER_XTIER_NEAR_BAND=0.2;
+/* Partial-billing bundle signature: on a cross-tier multi-reference row, a DL-billed weight of
+   at most this fraction of the chargeable weight means Wackler billed a single consignment of
+   the bundle while the tariff rated the combined load — a should-have-bundled finding, not a
+   weight discrepancy. Evidence band: bundle 2026-07-16 rows 81dd411f (94/3540 = 2.7%) and
+   45c3d6e8 (152/2079 = 7.3%) fire; guards stay abweichende Gewichte at 49% (workbook 10354157
+   row 13: GB, 2 refs, 1120/2280, FR credit — a genuine half-split, not partial billing), 95%
+   (3aaa6bed) and 139% (3ac4d429). 0.2 splits the 7.3%↔49% gap with margin on both sides. */
+const WACKLER_BUENDEL_PARTIAL=0.2;
 /* The engine is fully deterministic: every Anmerkung is recomputed from the
    row's inputs, regardless of any value already sitting in the target cell.
    There is no "preserve existing / protected phrase" short-circuit — the rules
@@ -1241,6 +1257,9 @@ function processWackler(ws,r,cols){
                                                     FR/TZ deltas are systemic rounding for that
                                                     tier — see wacklerRechnetFired suppression below)
      ─ different rate tier:
+         · multi-ref + VKG_DL ≤ PARTIAL × VKG    → "hätte gebündelt werden müssen" (TERMINAL —
+                                                   DL billed one consignment of the bundle;
+                                                   AVIS/MT/TZ/SNK suppressed, see branch)
          · multi-ref + positive FR + weights
            within WACKLER_XTIER_NEAR_BAND        → "hätte gebündelt werden müssen"
                                                    (bundle 2026-06-12 row 447856d4: 5465,44 vs
@@ -1312,6 +1331,22 @@ function processWackler(ws,r,cols){
           res=join(res,wacklerRechnetNote(reportTier));
           wacklerRechnetFired=true;
         }
+      } else if(isBundle&&vkgDl<=WACKLER_BUENDEL_PARTIAL*vkg){
+        /* Cross-tier multi-reference row where the DL billed only a small FRACTION of the
+           chargeable weight (VKG_DL ≤ 20% of VKG): Wackler processed one consignment of the bundle
+           separately while the tariff rated the combined load — the references should have
+           ridden one booking. TERMINAL: the truth cell carries "hätte gebündelt werden müssen"
+           ALONE; the AVIS/MT/TZ/SNK deltas on these rows are artefacts of the partial billing,
+           not findings of their own (AI-bundle 2026-07-16 rows 81dd411f: 2 refs, VKG 3540 /
+           VKG_DL 94, FR=-15.39, AVIS=8.7, MT=-3.67 and 45c3d6e8: 3 refs, VKG 2079 / VKG_DL 152,
+           FR=+30.21, SNK=226.12, MT=4.05, TZ=3.47 — both expect only the bundling phrase).
+           Only Kontierung? still appends, mirroring the other terminal branches. */
+        let out=P.buendelMuessen;
+        if(cols.kostenstelle>=0&&cols.sachkonto>=0){
+          const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
+          if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
+        }
+        return out;
       } else if(isBundle&&frVal>0&&Math.abs(vkg-vkgDl)<=WACKLER_XTIER_NEAR_BAND*Math.max(vkg,vkgDl)){
         /* Cross-tier multi-reference row whose weights still roughly agree, with a POSITIVE FR
            delta (system tariff above the bill): the system rated the references separately while
@@ -3887,7 +3922,7 @@ function buildEngineSourceDoc(){
     WACKLER_BP,WACKLER_RATE_TOL,WACKLER_RETIER_EXACT_TOL,WACKLER_SNK_CODES,WACKLER_AVIS_CODES,
     WACKLER_SNK_NOISE,WACKLER_PAUSCHAL_RATIO,WACKLER_SNK_TERMIN80_ABS,WACKLER_SNK_TERMIN80_TOL,
     WACKLER_TZ_ADDITIVE,WACKLER_HEBEBUEHNE_ABS,WACKLER_HEBEBUEHNE_TOL,WACKLER_BUENDEL_MAX_KG,
-    WACKLER_XTIER_NEAR_BAND,
+    WACKLER_XTIER_NEAR_BAND,WACKLER_BUENDEL_PARTIAL,
   };
   const lines=['# Engine source — v'+VERSION,'',
     '> Extracted live via `Function.prototype.toString()` at export time — this IS the running engine, not a copy.',
