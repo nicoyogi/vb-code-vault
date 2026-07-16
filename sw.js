@@ -14,7 +14,7 @@
    keyed off VERSION so SW logic changes can rotate the cache cleanly when
    needed. But VERSION no longer needs to bump for content updates.
 */
-const VERSION = 'v1.7.4';
+const VERSION = 'v1.7.5';
 const CACHE = 'alchemist-' + VERSION;
 
 /* Core assets to pre-cache on install so the very first offline visit works.
@@ -28,8 +28,8 @@ const CORE = [
   './assets/grimoire-core.js',
   './assets/anmerkung.css',
   './assets/anmerkung.js',
-  './assets/wackler-ratecard.js',
-  './assets/wackler-national-ratecard.js',
+  './assets/wackler-ratecard-loader.js',
+  './assets/wackler-ratecards.enc.json',
   './assets/anmerkung-changelog.json',
   './manifest.webmanifest',
 ];
