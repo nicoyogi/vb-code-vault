@@ -112,6 +112,4 @@ data/*Soll-Ist*
 data/REPORT DATA*
 data/
 
-# Generated local reports
-docs/File_Splitter_Report.*
-docs/superpowers/
+docs/
