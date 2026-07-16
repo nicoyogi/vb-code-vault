@@ -112,5 +112,10 @@ data/*Soll-Ist*
 data/REPORT DATA*
 data/
 
+# Wackler tariff matrices — business data, local only. The public artifact is
+# assets/wackler-ratecards.enc.json (built by scripts/encrypt-ratecards.mjs).
+assets/wackler-ratecard.js
+assets/wackler-national-ratecard.js
+
 docs/
 firestore.rules
