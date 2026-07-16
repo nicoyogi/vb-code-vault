@@ -110,3 +110,4 @@ data/*Soll-Ist*
 # into assets/report-data-seed.js; the raw workbook stays local only.
 *REPORT DATA*.xls*
 data/REPORT DATA*
+data/
