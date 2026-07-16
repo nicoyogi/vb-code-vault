@@ -410,8 +410,8 @@ function fwKeydown(e){
     urls: window.Grimoire.Offline.defaultUrls().concat([
       './assets/anmerkung.css',
       './assets/anmerkung.js',
-      './assets/wackler-ratecard.js',
-      './assets/wackler-national-ratecard.js',
+      './assets/wackler-ratecard-loader.js',
+      './assets/wackler-ratecards.enc.json',
       './assets/anmerkung-changelog.json'
     ]),
     idleLabel:    'Download for offline',
@@ -813,6 +813,8 @@ function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.
 /* Tier breakpoints are sourced from the standalone rate-card asset (assets/wackler-ratecard.js,
    generated from data/Wackler International Rate.xlsx) so the tier table and the EUR rate lookup
    share a single source of truth and the big rate matrix never has to live inside this engine.
+   The asset now ships encrypted (assets/wackler-ratecards.enc.json) and arrives asynchronously
+   via assets/wackler-ratecard-loader.js + the wacklerRatecardsReady() hook.
    The literal below is an identical fallback for when the rate-card asset isn't loaded (e.g. a
    bare unit-test context), keeping the engine self-sufficient and deterministic. */
 let WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
