@@ -167,6 +167,7 @@ function processExcel() {
         }
 
         const reportLines = [];
+        const reportLinesHtml = [];
         let totalMinutes = 0;
         const targetMonthPad = String(month).padStart(2, '0');
 
@@ -203,6 +204,7 @@ function processExcel() {
                     }
 
                     reportLines.push(`**${dayNum} ${monthName}**\nOvertime ${durasi}\nTema: ${themeText}\n`);
+                    reportLinesHtml.push(`<b>${dayNum} ${monthName}</b><br>Overtime ${durasi}<br>Tema: ${themeText}<br><br>`);
                 }
             }
         }
@@ -213,7 +215,10 @@ function processExcel() {
         let outputText = reportLines.join('\n');
         outputText += `---\n**Total Overtime:** ${totH} jam ${totM} menit`;
 
+        let outputHtml = reportLinesHtml.join('') + `---<br><b>Total Overtime:</b> ${totH} jam ${totM} menit`;
+
         document.getElementById('resultText').value = outputText;
+        document.getElementById('resultText').dataset.html = outputHtml;
         document.getElementById('outputSection').style.display = 'block';
     };
 
@@ -222,15 +227,76 @@ function processExcel() {
 
 function copyResult() {
     const copyText = document.getElementById("resultText");
-    copyText.select();
-    copyText.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(copyText.value);
+    const plainText = copyText.value;
+    const htmlText = copyText.dataset.html || plainText;
 
-    const alertBox = document.getElementById("copyAlert");
-    alertBox.style.display = "block";
-    setTimeout(() => {
-        alertBox.style.display = "none";
-    }, 3000);
+    const showAlert = () => {
+        const alertBox = document.getElementById("copyAlert");
+        alertBox.style.display = "block";
+        setTimeout(() => {
+            alertBox.style.display = "none";
+        }, 3000);
+    };
+
+    // Primary method: build a hidden contenteditable div with the real HTML
+    // (bold tags etc), select it, and use execCommand('copy'). This copies
+    // rich text (with formatting) the way a normal browser copy would,
+    // and is well supported across browsers including when pasting into Gmail.
+    function copyViaContentEditable() {
+        const helper = document.createElement('div');
+        helper.contentEditable = true;
+        helper.innerHTML = htmlText;
+        helper.style.position = 'fixed';
+        helper.style.left = '-9999px';
+        helper.style.top = '0';
+        document.body.appendChild(helper);
+
+        const range = document.createRange();
+        range.selectNodeContents(helper);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        let success = false;
+        try {
+            success = document.execCommand('copy');
+        } catch (e) {
+            success = false;
+        }
+
+        selection.removeAllRanges();
+        document.body.removeChild(helper);
+        return success;
+    }
+
+    // Fallback: modern async Clipboard API with both text/plain and text/html.
+    function copyViaClipboardApi() {
+        if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+            const item = new ClipboardItem({
+                "text/plain": new Blob([plainText], { type: "text/plain" }),
+                "text/html": new Blob([htmlText], { type: "text/html" })
+            });
+            return navigator.clipboard.write([item]);
+        }
+        return Promise.reject(new Error('Clipboard API not available'));
+    }
+
+    if (copyViaContentEditable()) {
+        showAlert();
+        return;
+    }
+
+    copyViaClipboardApi().then(showAlert).catch(() => {
+        // Last resort: plain text only
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        try {
+            navigator.clipboard.writeText(plainText).then(showAlert);
+        } catch (e) {
+            document.execCommand('copy');
+            showAlert();
+        }
+    });
 }
 </script>
 
