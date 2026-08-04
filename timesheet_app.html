@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Laporan Overtime Timesheet</title>
+    <!-- Library SheetJS untuk membaca file Excel secara offline -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 700px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-copy {
+            background-color: #28a745;
+            margin-top: 10px;
+        }
+        .btn-copy:hover {
+            background-color: #218838;
+        }
+        textarea {
+            width: 100%;
+            height: 250px;
+            margin-top: 15px;
+            padding: 12px;
+            font-family: monospace;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: #f8f9fa;
+        }
+        .alert {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Generator Laporan Overtime Timesheet</h2>
+    
+    <div class="form-group">
+        <label for="excelFile">Pilih / Drop File Excel Timesheet:</label>
+        <input type="file" id="excelFile" accept=".xlsx, .xls">
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+        <div class="form-group" style="flex: 1;">
+            <label for="yearSelect">Tahun:</label>
+            <input type="number" id="yearSelect" value="2026">
+        </div>
+        <div class="form-group" style="flex: 1;">
+            <label for="monthSelect">Bulan:</label>
+            <select id="monthSelect">
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7" selected>July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="themeInput">Tema / Nama Kegiatan Overtime:</label>
+        <input type="text" id="themeInput" value="Mengerjakan priority siemens">
+    </div>
+
+    <button onclick="processExcel()">Proses & Buat Teks Laporan</button>
+
+    <div id="outputSection" style="display:none; margin-top: 20px;">
+        <label for="resultText">Hasil Laporan (Siap Copy-Paste):</label>
+        <textarea id="resultText" readonly></textarea>
+        <button class="btn-copy" onclick="copyResult()">Copy Teks Hasil</button>
+        <div id="copyAlert" class="alert">Teks berhasil disalin! Anda bisa langsung menempelkannya (Paste) di Gmail.</div>
+    </div>
+</div>
+
+<script>
+function processExcel() {
+    const fileInput = document.getElementById('excelFile');
+    const year = document.getElementById('yearSelect').value;
+    const month = document.getElementById('monthSelect').value;
+    const monthName = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
+    const themeText = document.getElementById('themeInput').value;
+
+    if (!fileInput.files.length) {
+        alert("Silakan pilih file Excel terlebih dahulu!");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array', cellDates: true});
+        
+        // Ambil sheet pertama
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert sheet ke JSON (header di baris ke-5)
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+        
+        if (jsonData.length < 6) {
+            alert("Format sheet tidak sesuai.");
+            return;
+        }
+
+        const reportLines = [];
+        let totalMinutes = 0;
+        const targetMonthPad = String(month).padStart(2, '0');
+
+        // Iterasi mulai baris data (index 5)
+        for (let i = 5; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            const rawTag = row[0]; // Kolom A (Tag / Date)
+            const istHours = parseFloat(row[11]); // Kolom L (Ist-Arbeitszeit)
+
+            if (rawTag && !isNaN(istHours) && istHours > 8.0) {
+                let dateObj = new Date(rawTag);
+                if (isNaN(dateObj.getTime())) continue;
+
+                const rowYear = dateObj.getFullYear();
+                const rowMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+
+                if (rowYear == year && rowMonth == targetMonthPad) {
+                    const dayNum = dateObj.getDate();
+                    
+                    const otHoursDecimal = istHours - 8.0;
+                    const otMinutes = Math.round(otHoursDecimal * 60);
+                    totalMinutes += otMinutes;
+
+                    const otH = Math.floor(otMinutes / 60);
+                    const otM = otMinutes % 60;
+
+                    let durasi = "";
+                    if (otH > 0 && otM > 0) {
+                        durasi = `${otH} jam ${otM} menit`;
+                    } else if (otH > 0) {
+                        durasi = `${otH} jam`;
+                    } else {
+                        durasi = `${otM} menit`;
+                    }
+
+                    reportLines.push(`**${dayNum} ${monthName}**\nOvertime ${durasi}\nTema: ${themeText}\n`);
+                }
+            }
+        }
+
+        const totH = Math.floor(totalMinutes / 60);
+        const totM = totalMinutes % 60;
+
+        let outputText = reportLines.join('\n');
+        outputText += `---\n**Total Overtime:** ${totH} jam ${totM} menit`;
+
+        document.getElementById('resultText').value = outputText;
+        document.getElementById('outputSection').style.display = 'block';
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+function copyResult() {
+    const copyText = document.getElementById("resultText");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyText.value);
+
+    const alertBox = document.getElementById("copyAlert");
+    alertBox.style.display = "block";
+    setTimeout(() => {
+        alertBox.style.display = "none";
+    }, 3000);
+}
+</script>
+
+</body>
+</html>
