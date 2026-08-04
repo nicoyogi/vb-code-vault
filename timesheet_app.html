@@ -152,7 +152,10 @@ function processExcel() {
 
     reader.onload = function(e) {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array', cellDates: true});
+        // cellDates:false -> kita baca serial number Excel mentah, lalu hitung
+        // sendiri tahun/bulan/tanggalnya. Ini menghindari isu timezone yang
+        // muncul saat SheetJS/browser mengonversi ke objek Date JavaScript.
+        const workbook = XLSX.read(data, {type: 'array', cellDates: false});
         
         // Ambil sheet pertama
         const firstSheetName = workbook.SheetNames[0];
@@ -178,14 +181,25 @@ function processExcel() {
             const istHours = parseFloat(row[11]); // Kolom L (Ist-Arbeitszeit)
 
             if (rawTag && !isNaN(istHours) && istHours > 8.0) {
-                let dateObj = new Date(rawTag);
-                if (isNaN(dateObj.getTime())) continue;
+                // rawTag adalah serial number Excel (angka). Kita decode langsung
+                // pakai utilitas SheetJS yang bekerja di ruang tanggal Excel murni,
+                // tanpa melibatkan objek Date/timezone browser sama sekali.
+                let dateInfo;
+                if (typeof rawTag === 'number') {
+                    dateInfo = XLSX.SSF.parse_date_code(rawTag);
+                } else {
+                    // fallback: kalau bukan angka (misal string tanggal), coba parse manual
+                    const parsed = new Date(rawTag);
+                    if (isNaN(parsed.getTime())) continue;
+                    dateInfo = { y: parsed.getUTCFullYear(), m: parsed.getUTCMonth() + 1, d: parsed.getUTCDate() };
+                }
+                if (!dateInfo) continue;
 
-                const rowYear = dateObj.getFullYear();
-                const rowMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const rowYear = dateInfo.y;
+                const rowMonth = String(dateInfo.m).padStart(2, '0');
 
                 if (rowYear == year && rowMonth == targetMonthPad) {
-                    const dayNum = dateObj.getDate();
+                    const dayNum = dateInfo.d;
                     
                     const otHoursDecimal = istHours - 8.0;
                     const otMinutes = Math.round(otHoursDecimal * 60);
