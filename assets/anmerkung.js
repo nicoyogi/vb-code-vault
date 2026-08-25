@@ -49,6 +49,10 @@ let TH={...TH_DEFAULTS};
 /* Dynamic threshold accessors — used everywhere the old constants were used. */
 let T_DACHSER=TH.dachser,T_KN=TH.kn,T_DHL=TH.dhl,T_WACKLER=TH.wackler;
 function applyThresholds(){T_DACHSER=TH.dachser;T_KN=TH.kn;T_DHL=TH.dhl;T_WACKLER=TH.wackler;}
+/* Kontierung? check disabled — every "KOST/SACH blank or X" emission below is gated on this.
+   Set to true to restore the original behavior. Other rules that merely branch on the same
+   blank/X condition for a different message (e.g. Zone korrekt?) are unaffected. */
+const KONTIERUNG_ENABLED=false;
 function saveThresholds(){try{localStorage.setItem(TH_KEY,JSON.stringify(TH));}catch(_){}}
 function syncThFields(){document.getElementById('thDachser').value=TH.dachser;document.getElementById('thKN').value=TH.kn;document.getElementById('thDHL').value=TH.dhl;document.getElementById('thWackler').value=TH.wackler;}
 function onThInput(key,el){const n=parseFloat(el.value);if(!isNaN(n)&&n>=0){TH[key]=n;applyThresholds();saveThresholds();}}
@@ -410,8 +414,8 @@ function fwKeydown(e){
     urls: window.Grimoire.Offline.defaultUrls().concat([
       './assets/anmerkung.css',
       './assets/anmerkung.js',
-      './assets/wackler-ratecard-loader.js',
-      './assets/wackler-ratecards.enc.json',
+      './assets/wackler-ratecard.js',
+      './assets/wackler-national-ratecard.js',
       './assets/anmerkung-changelog.json'
     ]),
     idleLabel:    'Download for offline',
@@ -786,13 +790,13 @@ function processKN(ws,r,cols){
      standalone fuel gap), unlike the previous rule which suppressed treibstoff whenever
      any other trigger fired and lost those cases. */
   if(hasErr(fuelDiff,T)&&!hasErr(frDiff,T)&&!hasErr(tollDiff,T))res=join(res,'Differenz treibstoff');
-  if(!kost||kost==='-'||!sach||sach==='-')res=join(res,'Kontierung?');
+  if(KONTIERUNG_ENABLED&&(!kost||kost==='-'||!sach||sach==='-'))res=join(res,'Kontierung?');
   return res;
 }
 
 /* ── DHL Express ── */
 function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),addr:fc('FR','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz')};}
-function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer doppelt berechnet.';}let res='';if(cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
+function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer doppelt berechnet.';}let res='';if(KONTIERUNG_ENABLED&&cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(KONTIERUNG_ENABLED&&cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
 
 /* ── Wackler ── */
 /* Weight tier breakpoints (kg "bis" upper bounds) — taken DIRECTLY from the supplied
@@ -813,28 +817,18 @@ function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.
 /* Tier breakpoints are sourced from the standalone rate-card asset (assets/wackler-ratecard.js,
    generated from data/Wackler International Rate.xlsx) so the tier table and the EUR rate lookup
    share a single source of truth and the big rate matrix never has to live inside this engine.
-   The asset now ships encrypted (assets/wackler-ratecards.enc.json) and arrives asynchronously
-   via assets/wackler-ratecard-loader.js + the wacklerRatecardsReady() hook.
    The literal below is an identical fallback for when the rate-card asset isn't loaded (e.g. a
    bare unit-test context), keeping the engine self-sufficient and deterministic. */
-let WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
+const WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
 /* National (domestic German) rate card — standalone asset assets/wackler-national-ratecard.js,
    generated from data/Wackler National Rate.xlsx. It carries the EUR rates for the German zones
    DE1‑DE9 that the international card leaves blank, and is what enriches the "Wackler rechnet"
    note with the actual domestic rate Wackler billed against. Optional: null when not loaded
    (e.g. a bare unit-test context), in which case the note degrades to the plain tier wording. */
-let WACKLER_NAT_RC=(typeof WACKLER_NATIONAL_RATECARD!=='undefined'&&WACKLER_NATIONAL_RATECARD)?WACKLER_NATIONAL_RATECARD:null;
-let WACKLER_BP=(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.length)
+const WACKLER_NAT_RC=(typeof WACKLER_NATIONAL_RATECARD!=='undefined'&&WACKLER_NATIONAL_RATECARD)?WACKLER_NATIONAL_RATECARD:null;
+const WACKLER_BP=(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.length)
   ? WACKLER_RC.tiers.slice()
   : [50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
-/* Late-bind hook for assets/wackler-ratecard-loader.js: the rate cards now arrive
-   asynchronously (decrypted in the browser AFTER this script has evaluated), so the
-   loader calls this to re-read the globals it just defined. Safe no-op otherwise. */
-function wacklerRatecardsReady(){
-  WACKLER_RC=(typeof WACKLER_RATECARD!=='undefined'&&WACKLER_RATECARD)?WACKLER_RATECARD:null;
-  WACKLER_NAT_RC=(typeof WACKLER_NATIONAL_RATECARD!=='undefined'&&WACKLER_NATIONAL_RATECARD)?WACKLER_NATIONAL_RATECARD:null;
-  if(WACKLER_RC&&Array.isArray(WACKLER_RC.tiers)&&WACKLER_RC.tiers.length)WACKLER_BP=WACKLER_RC.tiers.slice();
-}
 function wacklerGetTier(kg){if(kg<=0)return 0;for(const b of WACKLER_BP)if(kg<=b)return b;return 999999;}
 function wacklerGetTierIdx(kg){if(kg<=0)return -1;for(let i=0;i<WACKLER_BP.length;i++)if(kg<=WACKLER_BP[i])return i;return WACKLER_BP.length-1;}
 /* Largest tier breakpoint at or below kg — the rate-card bracket a weight has already CLEARED
@@ -1156,7 +1150,7 @@ function processWackler(ws,r,cols){
   /* STAT gate: on stat≠10 only the Kontierung check runs; all other rules are skipped. */
   const statOk=(cols.stat<0)||(cellNum(ws,r,cols.stat)===10);
   if(!statOk){
-    if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))return'Kontierung?';}
+    if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))return'Kontierung?';}
     return null;
   }
   /* 1. Fremdnummer doppelt — fires when the tariff baseline is missing AND there's a real
@@ -1180,7 +1174,7 @@ function processWackler(ws,r,cols){
     const emptyWithSignal=tarifRaw===''&&(Math.abs(_frEarly)>T_WACKLER||Math.abs(_mtEarly)>T_WACKLER||Math.abs(_tzEarly)>T_WACKLER);
     if(dashOrZero||emptyWithSignal){
       let out='Fremdnummer doppelt berechnet';
-      if(cols.kostenstelle>=0&&cols.sachkonto>=0){
+      if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
         const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
         if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
       }
@@ -1220,7 +1214,7 @@ function processWackler(ws,r,cols){
      &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE&&!isWacklerAvisCode(avisVal)
      &&!wacklerSnkCode(snkVal)){
     let out=P.lagergeld;
-    if(cols.kostenstelle>=0&&cols.sachkonto>=0){
+    if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
       const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
       if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
     }
@@ -1352,7 +1346,7 @@ function processWackler(ws,r,cols){
            FR=+30.21, SNK=226.12, MT=4.05, TZ=3.47 — both expect only the bundling phrase).
            Only Kontierung? still appends, mirroring the other terminal branches. */
         let out=P.buendelMuessen;
-        if(cols.kostenstelle>=0&&cols.sachkonto>=0){
+        if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
           const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
           if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
         }
@@ -1437,7 +1431,7 @@ function processWackler(ws,r,cols){
     }
   }
   /* 13. Kontierung? — both KOST and SACH blank/X. */
-  if(cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}
+  if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}
   /* 14. Pure fuel fallback — row had nothing but a fuel/energy delta above the noise floor. */
   if(res===''&&cols.tz>=0&&hasErr(tzVal,T_WACKLER))res=P.differenzEnergiezuschlag;
   return res;
