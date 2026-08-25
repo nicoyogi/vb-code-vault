@@ -212,7 +212,7 @@ const PHRASES={
   differenzAvis:              'Differenz avis',
   b2cZuschlag:                'B2C-zuschlag, ok?',
   // DHL
-  fremdnummerDotPunkt:        'Fremdnummer doppelt berechnet.',
+  fremdnummerDotPunkt:        'Fremdnummer xxx bereits berechnet in RExxx, ok?.',
   kontierungLower:            'kontierung?',
   abweichGewichtVolumen:      'Differenz aufgrund von abweichendem Gewicht/Volumen',
   nichtStapelbar:             'nicht stapelbar ok?',
@@ -230,7 +230,7 @@ const PHRASES={
   demandSurcharge:            'demand surcharge ok?',
   oversizePiece:              'Oversize piece ok?',
   // Wackler
-  fremdnummer:                'Fremdnummer Doppelt berechnet',
+  fremdnummer:                'Fremdnummer xxx bereits berechnet in RExxx, ok?',
   nlFix:                      'NL-FIX',
   nl12Ok:                     'NL-12, ok?',
   nlSpezOk:                   'NL-SPEZ, ok?',
@@ -642,9 +642,9 @@ function processDachser(ws,r,cols){
      row is an accounting artifact, not a billing differential. Two flavors:
        - No SACH and no SERV_ART → Vorholung advance-freight line (training row 344:
          FR=646.7, every other input column blank → expected "VORHOLUNG").
-       - SACH+SERV present → Fremdnummer doppelt berechnet (training row 345:
+       - SACH+SERV present → Fremdnummer xxx bereits berechnet in RExxx, ok? (training row 345:
          FR=47.2, EXP=10, MAUT=1.15, SERV=DA01, SACH=612100 → expected
-         "Fremdnummer Doppelt berechnet" alone, with every other classification
+         "Fremdnummer xxx bereits berechnet in RExxx, ok?" alone, with every other classification
          suppressed).
      Returns early so the standard Produktzuschlag/Mautdifferenz/Gewichte cascade
      doesn't pile irrelevant labels onto these accounting rows. */
@@ -796,7 +796,7 @@ function processKN(ws,r,cols){
 
 /* ── DHL Express ── */
 function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),addr:fc('FR','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz')};}
-function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer doppelt berechnet.';}let res='';if(KONTIERUNG_ENABLED&&cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(KONTIERUNG_ENABLED&&cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
+function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer xxx bereits berechnet in RExxx, ok?.';}let res='';if(KONTIERUNG_ENABLED&&cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(KONTIERUNG_ENABLED&&cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
 
 /* ── Wackler ── */
 /* Weight tier breakpoints (kg "bis" upper bounds) — taken DIRECTLY from the supplied
@@ -1164,7 +1164,7 @@ function processWackler(ws,r,cols){
      When this fires, all delta-derived rules (3–12) are suppressed since their inputs are
      comparing against a non-existent tariff. Kontierung (rule 13) still runs inline — when
      KOST/SACH are blank/X the row carries both classifications, matching training row 20's
-     expected "Fremdnummer doppelt berechnet // Kontierung?". */
+     expected "Fremdnummer xxx bereits berechnet in RExxx, ok? // Kontierung?". */
   if(cols.tarif>=0){
     const tarifRaw=cellStr(ws,r,cols.tarif),tarifNumEarly=cellNum(ws,r,cols.tarif);
     const _frEarly=cols.fr>=0?cellNum(ws,r,cols.fr):0;
@@ -1173,7 +1173,7 @@ function processWackler(ws,r,cols){
     const dashOrZero=tarifRaw==='-'||(tarifNumEarly===0&&tarifRaw!=='');
     const emptyWithSignal=tarifRaw===''&&(Math.abs(_frEarly)>T_WACKLER||Math.abs(_mtEarly)>T_WACKLER||Math.abs(_tzEarly)>T_WACKLER);
     if(dashOrZero||emptyWithSignal){
-      let out='Fremdnummer doppelt berechnet';
+      let out='Fremdnummer xxx bereits berechnet in RExxx, ok?';
       if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
         const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
         if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
