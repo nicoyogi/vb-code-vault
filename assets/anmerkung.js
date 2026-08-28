@@ -489,6 +489,15 @@ function hasErr(v,t){return Math.abs(v)>t;}
 function join(a,b){if(!b)return a;if(a.toLowerCase().includes(b.toLowerCase()))return a;return a?a+' // '+b:b;}
 
 /* ── DACHSER ── */
+/* Legacy fixed positional fallbacks — only used if a header-based `findCol`
+   lookup fails to find the column on the sheet (e.g. an older workbook
+   export whose row2/row3 header text doesn't match). These indices matched
+   the PRE-2026-08 Dachser layout, before the `KI_ZW_PLZ`/`KI_ZW_ORT`
+   ("Zwischenempfänger" intermediate-consignee address) columns were inserted
+   ahead of Empf.-Name/-Land/-PLZ/-Ort. On the current layout every one of
+   these now resolves via `findCol` in `resolveDachser` instead — see cols.*
+   below — so these constants should never actually fire on a current
+   workbook; they exist purely as a last-resort safety net. */
 const DA_COL_REFERENZ3=15,DA_COL_EMPF_PLZ=13,DA_COL_EMPF_ORT=14,DA_COL_ANZ_SDG=3,DA_COL_SERV_ART=16,DA_COL_SACHKONTO=35;
 
 function resolveDachser(ws,range){
@@ -515,6 +524,24 @@ function resolveDachser(ws,range){
     av_diff:  fc('AV','Differenz'),
     vkg:      fc('','Volumen kg'),
     vkg_dl:   fc('','Volumen kg DL'),
+    /* Header-resolved versions of the DA_COL_* positional constants above.
+       Kept alongside them (rather than replacing DA_COL_* outright) so
+       processDachser/collectInputsForRow can prefer the resolved column and
+       fall back to the fixed index only if resolution fails. */
+    referenz3:fc('','REFERENZ3'),
+    serv_art: fc('','SERVICE_ART'),
+    sachkonto:fc('','SACHKONTO'),
+    anz_sdg:  fc('','Anz. Sdg'),
+    empf_plz: fc('','Empf.-PLZ'),
+    empf_ort: fc('','Empf.-Ort'),
+    /* Zwischenempfänger (intermediate consignee) address — the actual
+       deviating-hub location the ZW note should report, as opposed to the
+       shipment's final Empf.-PLZ/Ort. Row 2 is blank for these two columns,
+       so the '' group-header needle plus the exact 'KI_ZW_PLZ'/'KI_ZW_ORT'
+       sub-header needle is required to avoid `findCol`'s includes() match
+       colliding with Abg.-PLZ / Empf.-PLZ / Abg.-Ort / Empf.-Ort. */
+    ki_zw_plz:fc('','KI_ZW_PLZ'),
+    ki_zw_ort:fc('','KI_ZW_ORT'),
   };
 }
 
@@ -626,15 +653,39 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
 }
 
 function daEvalEXP(ws,r,cols){if(cols.exp<0)return'';const expDiff=cellNum(ws,r,cols.exp);if(!hasErr(expDiff,T_DACHSER))return'';const expDl=cols.exp_dl>=0?cellNum(ws,r,cols.exp_dl):0;return(expDl===95)?P.terminZuschlag:P.produktZuschlag;}
-function daZWNote(ws,r){const plz=cellStr(ws,r,DA_COL_EMPF_PLZ),ort=cellStr(ws,r,DA_COL_EMPF_ORT),loc=(plz&&ort)?plz+' '+ort:(plz||ort);return'Differenz aufgrund abweichender Zwischenempfänger'+(loc?' '+loc:'');}
+/* Zwischenempfänger note location: prefer the dedicated KI_ZW_PLZ/KI_ZW_ORT
+   ("Zwischenempfänger" intermediate-consignee) columns — these carry the
+   actual deviating hub address (e.g. "77600 BUSSY SAINT MARTIN") that the
+   auditor's ZW note reports, which is NOT the same as the shipment's final
+   Empf.-PLZ/Ort. Falls back to Empf.-PLZ/Ort only if KI_ZW_* isn't present
+   on the sheet (older workbook layouts pre-dating these columns), so the
+   note still emits *something* rather than going silent. */
+function daZWNote(ws,r,cols){
+  const zwPlzCol=(cols&&cols.ki_zw_plz>=0)?cols.ki_zw_plz:-1;
+  const zwOrtCol=(cols&&cols.ki_zw_ort>=0)?cols.ki_zw_ort:-1;
+  let plz=zwPlzCol>=0?cellStr(ws,r,zwPlzCol):'';
+  let ort=zwOrtCol>=0?cellStr(ws,r,zwOrtCol):'';
+  if(!plz&&!ort){
+    const fbPlzCol=(cols&&cols.empf_plz>=0)?cols.empf_plz:DA_COL_EMPF_PLZ;
+    const fbOrtCol=(cols&&cols.empf_ort>=0)?cols.empf_ort:DA_COL_EMPF_ORT;
+    plz=cellStr(ws,r,fbPlzCol);
+    ort=cellStr(ws,r,fbOrtCol);
+  }
+  const loc=(plz&&ort)?plz+' '+ort:(plz||ort);
+  return'Differenz aufgrund abweichender Zwischenempfänger'+(loc?' '+loc:'');
+}
 
 function processDachser(ws,r,cols){
   const T=T_DACHSER;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
-  const isZW=cellStr(ws,r,DA_COL_REFERENZ3).toUpperCase().trim()==='ZW',
-        servArt=cellStr(ws,r,DA_COL_SERV_ART),
-        sachkonto=cellStr(ws,r,DA_COL_SACHKONTO),
-        anzSdg=parseInt(cellStr(ws,r,DA_COL_ANZ_SDG))||0,
+  const referenz3Col=cols.referenz3>=0?cols.referenz3:DA_COL_REFERENZ3,
+        servArtCol=cols.serv_art>=0?cols.serv_art:DA_COL_SERV_ART,
+        sachkontoCol=cols.sachkonto>=0?cols.sachkonto:DA_COL_SACHKONTO,
+        anzSdgCol=cols.anz_sdg>=0?cols.anz_sdg:DA_COL_ANZ_SDG;
+  const isZW=cellStr(ws,r,referenz3Col).toUpperCase().trim()==='ZW',
+        servArt=cellStr(ws,r,servArtCol),
+        sachkonto=cellStr(ws,r,sachkontoCol),
+        anzSdg=parseInt(cellStr(ws,r,anzSdgCol))||0,
         isTarifZero=daIsTarifZero(ws,r,cols.tarif);
 
   /* Blank-TARIF + significant FR pattern. When the TARIF cell is completely empty
@@ -681,7 +732,7 @@ function processDachser(ws,r,cols){
        first. Single-shipment ZW rows (Anz.Sdg=1, e.g. f278b340) still fall through
        to the ZW note below. */
     if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
-    else if(isZW)res=join(res,daZWNote(ws,r));
+    else if(isZW)res=join(res,daZWNote(ws,r,cols));
     else if(sachkonto.toUpperCase()==='X')res=join(res,'VORHOLUNG');
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
     else {
@@ -1691,6 +1742,7 @@ const TESTER_FIELDS={
     ['c502_dl','502 Kosten DL','str'],['c503_dl','503 Kosten DL','str'],
     ['_referenz3','ReferenzNr3','str'],['_serv','Serv.-Art','str'],['_sach','Sachkonto','str'],
     ['_plz','Empf.-PLZ','str'],['_ort','Empf.-Ort','str'],['_anzSdg','Anz.Sdg','str'],
+    ['_zwPlz','KI_ZW_PLZ','str'],['_zwOrt','KI_ZW_ORT','str'],
   ],
   kn:[
     ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],
@@ -1725,7 +1777,8 @@ const TESTER_PRESETS={
   dachser:[
     {name:'AUSFALLFRACHT 190',values:{stat:10,snk_dl:190,snk_diff:0}},
     {name:'Saturday delivery',values:{stat:10,sam:25,tarif:'150,00'}},
-    {name:'ZW intermediary',values:{stat:10,fr:15,_referenz3:'ZW',_plz:'88499',_ort:'Riedlingen',tarif:'200,00'}},
+    {name:'ZW intermediary (KI_ZW hub)',values:{stat:10,fr:15,_referenz3:'ZW',_zwPlz:'77600',_zwOrt:'Bussy Saint Martin',tarif:'200,00'}},
+    {name:'ZW intermediary (legacy, no KI_ZW)',values:{stat:10,fr:15,_referenz3:'ZW',_plz:'88499',_ort:'Riedlingen',tarif:'200,00'}},
     {name:'K1AV zeitfenster',values:{stat:10,snk_dl:5,snk_diff:12,_serv:'K1AV',tarif:'100,00'}},
     {name:'SNK non-int → 9 (Tel. ZTV)',values:{stat:10,snk_dl:14.72,snk_diff:9.01,snk_tar:5.71,tarif:'156,88',maut:-6.23,_serv:'DA01',_sach:'612100'}},
     {name:'SNK non-int → 5 (Auto ZTV)',values:{stat:10,snk_dl:7.57,snk_diff:5.01,snk_tar:2.56,tarif:'73,21',tz:0.01}},
@@ -1811,7 +1864,11 @@ function buildSyntheticWs(fw,userVals){
     }
   }
   /* Dachser reads a handful of values from hard-coded indices — we need
-     to place them at those exact DA_COL_* indices for the processor to find. */
+     to place them at those exact DA_COL_* indices for the processor to find.
+     (processDachser/daZWNote fall back to DA_COL_* whenever the corresponding
+     cols.* entry is -1, which is always true here since this synthetic sheet
+     has no real header rows for findCol to resolve against — so placing
+     values at the fixed DA_COL_* positions is correct for the tester.) */
   if(fw==='dachser'){
     const placeAt=(idx,v)=>{if(v!==undefined&&v!=='')ws[XLSX.utils.encode_cell({r:3,c:idx})]={v};};
     placeAt(DA_COL_REFERENZ3,userVals._referenz3);
@@ -1820,6 +1877,14 @@ function buildSyntheticWs(fw,userVals){
     placeAt(DA_COL_EMPF_PLZ,userVals._plz);
     placeAt(DA_COL_EMPF_ORT,userVals._ort);
     placeAt(DA_COL_ANZ_SDG,userVals._anzSdg);
+    /* KI_ZW_PLZ/ORT have no fixed DA_COL_* home (they only ever resolve via
+       findCol on a real sheet) — give them synthetic-tester-only column slots
+       and wire those slots into cols.ki_zw_plz/ki_zw_ort directly, mirroring
+       how every other tester field gets a fresh nextCol++ slot above. */
+    const zwPlzCol=nextCol++,zwOrtCol=nextCol++;
+    cols.ki_zw_plz=zwPlzCol;cols.ki_zw_ort=zwOrtCol;
+    placeAt(zwPlzCol,userVals._zwPlz);
+    placeAt(zwOrtCol,userVals._zwOrt);
   }
   /* Fill missing cols with -1 so processors know the field is absent. */
   const allKeys={
@@ -2132,7 +2197,7 @@ function granularLabel(beforeRaw,afterRaw,pd){
    training corpora across engine versions, and hashing a newly-exported
    cell would silently re-key every row that carries it. Add every future
    collectInputsForRow key here too; the frozen seed is the v1.29 set. */
-const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl']);
+const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort']);
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
@@ -2156,7 +2221,7 @@ const CANONICAL_INPUT_ORDER={
            'zz_diff','sam_diff','dgr_diff',
            'exp_diff','exp_dl','maut_diff','sbfu_diff','tz_diff',
            'lg_diff','av_diff','c502_dl','c503_dl',
-           'referenz3','empf_plz','empf_ort','anz_sdg','serv_art','sachkonto'],
+           'referenz3','empf_plz','empf_ort','ki_zw_plz','ki_zw_ort','anz_sdg','serv_art','sachkonto'],
   kn:['stat','tarif','fr_diff','exp_diff','mt_diff','tz_diff',
       'snk_dl','snk_diff',
       'referenz','recip','vkg','vkg_dl',
@@ -2553,9 +2618,19 @@ function collectInputsForRow(fw,ws,r,cols){
     get('lg_diff',cols.lg_diff);get('av_diff',cols.av_diff);
     get('c502_dl',cols.c502_dl);get('c503_dl',cols.c503_dl);
     const placeIf=(k,idx)=>{const v=cellStr(ws,r,idx);if(v)o[k]=v;};
-    placeIf('referenz3',DA_COL_REFERENZ3);placeIf('empf_plz',DA_COL_EMPF_PLZ);
-    placeIf('empf_ort',DA_COL_EMPF_ORT);placeIf('anz_sdg',DA_COL_ANZ_SDG);
-    placeIf('serv_art',DA_COL_SERV_ART);placeIf('sachkonto',DA_COL_SACHKONTO);
+    placeIf('referenz3',cols.referenz3>=0?cols.referenz3:DA_COL_REFERENZ3);
+    placeIf('empf_plz',cols.empf_plz>=0?cols.empf_plz:DA_COL_EMPF_PLZ);
+    placeIf('empf_ort',cols.empf_ort>=0?cols.empf_ort:DA_COL_EMPF_ORT);
+    placeIf('anz_sdg',cols.anz_sdg>=0?cols.anz_sdg:DA_COL_ANZ_SDG);
+    placeIf('serv_art',cols.serv_art>=0?cols.serv_art:DA_COL_SERV_ART);
+    placeIf('sachkonto',cols.sachkonto>=0?cols.sachkonto:DA_COL_SACHKONTO);
+    /* Zwischenempfänger address — exported so a training/AI consumer can see
+       WHY the ZW note resolved to a particular hub location, and so Diff
+       Mode's row_uid / detail drawer / CSV exports carry the actual input
+       daZWNote reads (mirrors the v1.29 fix's own request for this column,
+       previously undocumented and marked "not derivable"). */
+    if(cols.ki_zw_plz>=0)placeIf('ki_zw_plz',cols.ki_zw_plz);
+    if(cols.ki_zw_ort>=0)placeIf('ki_zw_ort',cols.ki_zw_ort);
   } else if(fw==='kn'){
     get('stat',cols.stat);get('tarif',cols.tarif);
     get('fr_diff',cols.fr);get('exp_diff',cols.exp);get('mt_diff',cols.toll);get('tz_diff',cols.fuel);
@@ -2879,6 +2954,7 @@ function sendDiffToTester(i){
       exp_diff:'exp',maut_diff:'maut',sbfu_diff:'sbfu',tz_diff:'tz',
       referenz3:'_referenz3',empf_plz:'_plz',empf_ort:'_ort',anz_sdg:'_anzSdg',
       serv_art:'_serv',sachkonto:'_sach',
+      ki_zw_plz:'_zwPlz',ki_zw_ort:'_zwOrt',
     },
     kn:{
       fr_diff:'fr',exp_diff:'exp',mt_diff:'toll',tz_diff:'fuel',
@@ -3525,6 +3601,8 @@ const INPUT_GLOSSARY={
   recip             :'Empf.-Name — recipient name. "amazon" substring triggers Amazon-tier branches in K+N.',
   empf_plz          :'Empf.-PLZ — recipient ZIP code. 88499 is the Wackler return hub. On a Wackler international export lane it disambiguates multi-zone countries (CH/FR/ES/PL…).',
   empf_ort          :'Empf.-Ort — recipient city. RIEDLINGEN is the Wackler return hub city.',
+  ki_zw_plz         :'KI_ZW_PLZ — Zwischenempfänger (intermediate-consignee) ZIP code (Dachser). The actual deviating hub daZWNote reports on a REFERENZ3=ZW row — distinct from, and preferred over, Empf.-PLZ.',
+  ki_zw_ort         :'KI_ZW_ORT — Zwischenempfänger (intermediate-consignee) city (Dachser). Paired with ki_zw_plz in the ZW note; falls back to Empf.-Ort when absent.',
   abg_land          :'Abg.-Land — origin country code (Wackler). Together with empf_land it classifies the lane (DE→DE national vs international) that decides which rate card + zone the freight is published under (wacklerLane).',
   empf_land         :'Empf.-Land — destination country code (Wackler). Non-DE ⇒ international lane keyed by this country + Empf.-PLZ; DE (with DE/blank origin) ⇒ national lane, zone from Empf.-PLZ.',
   abg_plz           :'Abg.-PLZ — origin postal code (Wackler). Zone-resolves the non-German side on an import lane (Abg.-Land ≠ DE).',
@@ -3544,7 +3622,7 @@ const FORWARDER_SPEC={
     processor:'processDachser',
     resolver :'resolveDachser',
     gate     :'Stat_Freigabe == 10',
-    notes    :'Position-based reads for ReferenzNr3/Empf.-PLZ/Ort/Anz.Sdg/Serv.-Art/Sachkonto (DA_COL_*). Threshold T_DACHSER applied via hasErr() to every *_diff cell.',
+    notes    :'Header-resolved reads (findCol, with DA_COL_* fixed-index fallback) for ReferenzNr3/Empf.-PLZ/Ort/Anz.Sdg/Serv.-Art/Sachkonto. The ZW note additionally resolves KI_ZW_PLZ/KI_ZW_ORT (Zwischenempfänger hub address), falling back to Empf.-PLZ/Ort when absent. Threshold T_DACHSER applied via hasErr() to every *_diff cell.',
   },
   kn:{
     processor:'processKN',
