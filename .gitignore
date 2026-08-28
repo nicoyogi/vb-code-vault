@@ -98,6 +98,12 @@ apply_redesign.py
 redesign.py
 redesign.js
 
+# graphify knowledge-graph output — generated artifact, local only
+graphify-out/
+
+# Local working backups (e.g. timesheet_app.local-backup.html)
+*.local-backup.*
+
 # =========================
 # Confidential source data — local only, never commit
 # =========================
