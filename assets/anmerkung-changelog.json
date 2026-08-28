@@ -1,6 +1,17 @@
 {
-  "version": "1.33.0",
+  "version": "1.34.0",
   "entries": [
+    {
+      "ver": "1.34.0",
+      "date": "2026-08-28",
+      "items": [
+        "Dachser — the ZW note now reads the dedicated KI_ZW_PLZ/KI_ZW_ORT (\"Zwischenempfänger\" intermediate-consignee address) columns instead of Empf.-PLZ/Ort. The current Soll-Ist workbook layout inserts these two columns ahead of Empf.-Name/-Land/-PLZ/-Ort, and on every REFERENZ3=ZW row in the supplied workbook (Straße 116, rows 69/102/106/136/160/169/172/207/227) KI_ZW_PLZ/ORT names a genuinely different location than Empf.-PLZ/Ort — e.g. row 69 resolves \"90451 Nürnberg\" (the actual deviating hub) versus Empf.-Ort's \"Chisinau\" (the shipment's final destination). This is the column the 2026-06-29 fix (v1.29) flagged as missing and marked \"not derivable from row inputs\" for the 77600 BUSSY SAINT MARTIN case — it is now exported and read. daZWNote falls back to Empf.-PLZ/Ort when KI_ZW_PLZ/ORT aren't present on the sheet (older layouts), so the note still emits a location either way.",
+        "Dachser — daZWNote's inputs, and REFERENZ3/Serv.-Art/Sachkonto/Anz.Sdg/Empf.-PLZ/Empf.-Ort, now resolve via findCol (header-matched) with the old DA_COL_* fixed positions kept only as a last-resort fallback. The fixed indices (DA_COL_EMPF_PLZ=13, DA_COL_SACHKONTO=35, …) matched the pre-2026-08 column order; on the current layout they silently pointed at the wrong cells (index 13/14 land on Empf.-Name/-Land, not Empf.-PLZ/-Ort; SACHKONTO moved from index 35 to 37). Every Dachser column now resolves the same header-matched way as the rest of the engine, so a future column insertion breaks loudly (columns simply fail to resolve, -1) instead of silently reading the wrong cell.",
+        "Diff Mode — Dachser rows now capture ki_zw_plz/ki_zw_ort in the per-row inputs bag (collectInputsForRow, CANONICAL_INPUT_ORDER), so the detail drawer, diff CSV, and training-set CSV/JSONL show the exact Zwischenempfänger hub address daZWNote read — closing the same gap the v1.29 changelog entry flagged as needing \"a Zwischenempfänger address column the bundle does not export.\" Both keys are added to UID_EXCLUDED_INPUT_KEYS so historical row_uids are unaffected.",
+        "Rule Tester — added KI_ZW_PLZ/KI_ZW_ORT fields (_zwPlz/_zwOrt) to the Dachser panel, wired through the synthetic-worksheet builder and the diff-row-to-tester remap table. The old 'ZW intermediary' preset is kept (renamed 'legacy, no KI_ZW') to pin the Empf.-PLZ/Ort fallback path, and a new 'ZW intermediary (KI_ZW hub)' preset exercises the primary KI_ZW_PLZ/ORT path.",
+        "Verification — daZWNote and the full processDachser pipeline were run directly against the supplied Straße 116 Soll-Ist workbook (real header rows, real column layout, no mocked data). All 9 real ZW rows resolve ki_zw_plz=11/ki_zw_ort=12 and emit the correct KI_ZW_* hub address; a synthetic gate-open clone of row 69 (Stat_Freigabe forced to 10) confirms the end-to-end phrase 'Mautdifferenz // Differenz aufgrund abweichender Zwischenempfänger 90451 Nürnberg', pulling from KI_ZW_PLZ/ORT rather than Empf.-PLZ/Ort (which would have named Chisinau)."
+      ]
+    },
     {
       "ver": "1.33.0",
       "date": "2026-07-16",
