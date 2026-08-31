@@ -177,7 +177,7 @@ export function loadEngine() {
     'wacklerSnkCode', 'isWacklerAvisCode', 'wacklerAvisLabel',
     // generic helpers
     'join', 'hasErr', 'cellNum', 'cellStr', 'findCol',
-    'findAnmerkungCol', 'ensureAnmerkungCol', 'patchSheet',
+    'findAnmerkungCol', 'ensureAnmerkungCol', 'patchSheet', 'setAnmerkungColumnWidth',
     'normPhrase', 'samePhraseSet', 'splitTriggers',
     'idxToCol', 'colToIdx',
     'phraseToKey', 'phraseKeysFor',
