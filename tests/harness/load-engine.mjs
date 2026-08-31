@@ -16,12 +16,38 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import vm from 'node:vm';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC = join(__dirname, '..', '..', 'assets', 'anmerkung.js');
-const SRC_RATECARD = join(__dirname, '..', '..', 'assets', 'wackler-ratecard.js');
-const SRC_NAT_RATECARD = join(__dirname, '..', '..', 'assets', 'wackler-national-ratecard.js');
+const REPO_ROOT = join(__dirname, '..', '..');
+const SRC = join(REPO_ROOT, 'assets', 'anmerkung.js');
+const SRC_RATECARD = join(REPO_ROOT, 'assets', 'wackler-ratecard.js');
+const SRC_NAT_RATECARD = join(REPO_ROOT, 'assets', 'wackler-national-ratecard.js');
+
+/* The two Wackler ratecard .js files are business data and live local-only since
+   b7f3c57 (only assets/wackler-ratecards.enc.json ships, decryptable with the team
+   passphrase the tests deliberately don't have). The plaintext was tracked in git
+   up to that point, so on a machine without the local files we fall back to the
+   newest commit that still carried each file. Keeps the ratecard-dependent tier
+   tests (FR-delta re-tiering, domestic rate notes) faithful in a plain clone.
+   Returns null when neither source is available — callers degrade gracefully. */
+function readRatecardSource(relPath) {
+  try {
+    return readFileSync(join(REPO_ROOT, relPath), 'utf8');
+  } catch { /* not on disk — fall through to git history */ }
+  try {
+    const lastLive = execFileSync('git', ['log', '--diff-filter=d', '--format=%H', '-1', '--', relPath],
+      { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
+    if (lastLive) {
+      return execFileSync('git', ['show', `${lastLive}:${relPath}`],
+        { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+    }
+  } catch { /* shallow clone / no git — give up */ }
+  return null;
+}
+const RATECARD_SRC = readRatecardSource('assets/wackler-ratecard.js');
+const NAT_RATECARD_SRC = readRatecardSource('assets/wackler-national-ratecard.js');
 
 /* XLSX cell address encoding, matching XLSX.utils.encode_cell({r,c})
    (0-based r/c -> e.g. {r:0,c:0} => "A1", {r:1,c:2} => "C2"). */
@@ -139,7 +165,7 @@ export function loadEngine() {
      rate note. It's optional by design — the engine falls back to its inline tier table
      if this is absent — but loading it keeps the tests faithful to the browser runtime. */
   try {
-    vm.runInContext(readFileSync(SRC_RATECARD, 'utf8'), ctx, { filename: 'wackler-ratecard.js' });
+    if (RATECARD_SRC) vm.runInContext(RATECARD_SRC, ctx, { filename: 'wackler-ratecard.js' });
   } catch (err) {
     /* Non-fatal: the engine degrades gracefully without the rate card. */
   }
@@ -149,7 +175,7 @@ export function loadEngine() {
      WACKLER_RATECARD loaded just above. Optional by design — the "Wackler rechnet" note
      simply falls back to the plain tier wording when it's absent. */
   try {
-    vm.runInContext(readFileSync(SRC_NAT_RATECARD, 'utf8'), ctx, { filename: 'wackler-national-ratecard.js' });
+    if (NAT_RATECARD_SRC) vm.runInContext(NAT_RATECARD_SRC, ctx, { filename: 'wackler-national-ratecard.js' });
   } catch (err) {
     /* Non-fatal: the engine degrades gracefully without the national rate card. */
   }

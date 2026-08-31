@@ -1,6 +1,16 @@
 {
-  "version": "1.37.0",
+  "version": "1.38.0",
   "entries": [
+    {
+      "ver": "1.38.0",
+      "date": "2026-08-31",
+      "items": [
+        "Wackler — the storage-fee finding on un-tariffed, code-less SNK rows is now phrased as a query, \"Lagergeld, ok?\": it is a charge to confirm, not a proven discrepancy. AI-bundle 2026-08-31 rows 77caa1f2 / d93c324b / 17484fa2 / 82b4c84b (all Haldensleben); no regression row expects the bare \"Lagergeld\" wording.",
+        "Wackler — the ≥7 Colli weight classification no longer judges the row by comparing the synthetic pallet-volume weight (Colli × 285) against the DL-billed weight: that single tier comparison produced 17 of the bundle's 32 misses. The finding is now read off the REAL weights and the reference count — VKG vs VKG_DL in different tiers → Differenz aufgrund abweichender Gewichte; a multi-reference row whose weights sit 1–5% apart → hätte gebündelt werden müssen (evidence rows at 2.2/2.3/2.8%, next real gap 20.7%); same tier with ≥6 references → bundling; pallet volume materially outrunning the declared volume weight across tiers → weight discrepancy; otherwise Wackler rechnet the synthetic tier's rate. On these rows an over-billed fuel gap stays itemised instead of being absorbed into the rate-card note.",
+        "Wackler — retired the light-row bundling carve-out (≤1000 kg → hätte gebündelt werden müssen on identical weights). It rested on a single row absent from the 2026-08-31 evidence set, whose two rows reaching that branch instead expect the rate-card note; identical weights on one shared tier are one tier rate at any weight.",
+        "Tests — the Node harness now falls back to the last git revision that carried the local-only Wackler ratecard .js files, so the rate-dependent tier tests stay faithful in a plain clone (they had silently degraded since the ratecards were encrypted). Updated tests that still pinned pre-flag Kontierung? output and the flat Fremdnummer wording, and added pins for every branch of the new ≥7 Colli cascade. Full suite: 203 passing."
+      ]
+    },
     {
       "ver": "1.37.0",
       "date": "2026-08-31",
