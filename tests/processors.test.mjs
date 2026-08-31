@@ -177,9 +177,11 @@ test('processKN: standalone fuel delta -> "Differenz treibstoff"', () => {
   assert.equal(e.processKN(ws, R, KN_COLS), 'Differenz treibstoff');
 });
 
-test('processKN: blank cost-centre / account -> Kontierung?', () => {
+test('processKN: blank cost-centre / account stays silent while KONTIERUNG_ENABLED is false', () => {
+  // KONTIERUNG_ENABLED=false (engine default since the flag was introduced) suppresses the
+  // Kontierung? byproduct everywhere; re-enable the flag and this row reads "Kontierung?" again.
   const ws = makeRow(R, { 50: 10, 51: '100' }); // kost/sach blank
-  assert.equal(e.processKN(ws, R, KN_COLS), 'Kontierung?');
+  assert.equal(e.processKN(ws, R, KN_COLS), '');
 });
 
 /* ──────────────────────────────────────────────────────────
@@ -195,9 +197,12 @@ test('processDHL: STAT != 10 returns null', () => {
   assert.equal(e.processDHL(ws, R, DHL_COLS), null);
 });
 
-test('processDHL: zero tariff with text -> Fremdnummer doppelt berechnet.', () => {
+test('processDHL: zero tariff with text -> templated Fremdnummer-already-billed query', () => {
+  // 4d3b4ad turned the flat "Fremdnummer doppelt berechnet." into a template that names the
+  // other consignment ("berechnet in <Beleg>, ok?"); with no references on the row the
+  // placeholders render as xxx.
   const ws = makeRow(R, { 50: 10, 51: '0' });
-  assert.equal(e.processDHL(ws, R, DHL_COLS), 'Fremdnummer doppelt berechnet.');
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'Fremdnummer xxx bereits berechnet in RExxx, ok?.');
 });
 
 test('processDHL: FR (address) delta -> weight/volume wording', () => {
@@ -247,9 +252,11 @@ test('processWackler: existing annotation is ignored — output recomputed from 
   assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 150kg ab');
 });
 
-test('processWackler: STAT != 10 with blank KOST/SACH -> Kontierung?', () => {
+test('processWackler: STAT != 10 with blank KOST/SACH -> null (Kontierung? flag-gated off)', () => {
+  // The STAT!=10 early path used to end in "Kontierung?"; with KONTIERUNG_ENABLED=false the
+  // blank KOST/SACH branch contributes nothing and the row stays unannotated.
   const ws = makeRow(R, { 51: 5 }); // stat != 10, kost/sach blank
-  assert.equal(e.processWackler(ws, R, W_COLS), 'Kontierung?');
+  assert.equal(e.processWackler(ws, R, W_COLS), null);
 });
 
 test('processWackler: STAT != 10 with filled KOST/SACH -> null', () => {
@@ -257,14 +264,16 @@ test('processWackler: STAT != 10 with filled KOST/SACH -> null', () => {
   assert.equal(e.processWackler(ws, R, W_COLS), null);
 });
 
-test('processWackler: dash tariff -> Fremdnummer doppelt berechnet', () => {
+test('processWackler: dash tariff -> templated Fremdnummer-already-billed query', () => {
   const ws = makeRow(R, { 51: 10, 52: '-', 63: '12', 64: '34' });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'Fremdnummer doppelt berechnet');
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Fremdnummer xxx bereits berechnet in RExxx, ok?');
 });
 
-test('processWackler: dash tariff + blank KOST/SACH -> Fremdnummer // Kontierung', () => {
+test('processWackler: dash tariff + blank KOST/SACH -> Fremdnummer query only (no Kontierung?)', () => {
+  // Kontierung? is gated behind KONTIERUNG_ENABLED=false, so the blank KOST/SACH byproduct
+  // no longer joins the Fremdnummer query.
   const ws = makeRow(R, { 51: 10, 52: '-' });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'Fremdnummer doppelt berechnet // Kontierung?');
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Fremdnummer xxx bereits berechnet in RExxx, ok?');
 });
 
 test('processWackler: |SNK| >= tariff, no FR/MT/TZ, unknown code -> Pauschalfracht, ok?', () => {
@@ -294,18 +303,67 @@ test('processWackler: cross-tier weights + FR -> Differenz aufgrund abweichender
   assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 });
 
-test('processWackler: 7+ Colli compares max(Colli*285, Volumen, Brutto) with VKG DL tier', () => {
+test('processWackler: 7+ Colli cascade judges on the REAL weights, names tiers via the pallet-volume synthetic', () => {
+  // v1.38.0: for colli>=7 the chargeable weight max(Colli*285, Volumen, Brutto) is a SYNTHETIC
+  // pallet-volume estimate — right for NAMING the tier, wrong for deciding the finding. The
+  // cascade now reads the finding off VKG vs VKG_DL and the reference count:
+  //   VKG / VKG_DL in different tiers           -> Differenz aufgrund abweichender Gewichte
+  //   multi-ref, weights 1-5% apart             -> hätte gebündelt werden müssen
+  //   same tier, >= 6 references                -> hätte gebündelt werden müssen
+  //   pallet volume outruns VKG, tiers apart    -> Differenz aufgrund abweichender Gewichte
+  //   otherwise                                 -> Wackler rechnet Frachtrate für <tier>kg ab
+
+  // Different REAL-weight tiers (VKG 1200 vs DL 1950/2200/2350) -> weight discrepancy, even
+  // though the synthetic pallet volume (7×285=1995) once steered these to "rechnet 2000kg".
   let ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 1200, 60: 1950, 63: 1, 64: 2, 71: 7, 72: 1500 });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 2000kg ab');
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 
   ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 1200, 60: 2200, 63: 1, 64: 2, 71: 7, 72: 1500 });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 
   ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 1200, 60: 2350, 63: 1, 64: 2, 71: 7, 72: 2300 });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 2400kg ab', 'Brutto kg can be the maximum');
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 
+  // Same real-weight tier (2500/2550 -> 2600), single reference, no other signal -> Wackler
+  // simply billed that tier's rate; the note names the tier of the synthetic chargeable weight.
   ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 2500, 60: 2550, 63: 1, 64: 2, 71: 7, 72: 1500 });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 2600kg ab', 'Volumen kg can be the maximum');
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 2600kg ab');
+
+  // MT stays additive on a positive-FR "rechnet" row (fuel itemised, not absorbed).
+  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 56: 3, 59: 2500, 60: 2550, 63: 1, 64: 2, 71: 7, 72: 1500 });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 2600kg ab // Mautdifferenz'
+  );
+});
+
+test('processWackler: 7+ Colli, same tier, >= 6 references -> hätte gebündelt werden müssen', () => {
+  // At six references the row is unambiguously several consignments on one booking
+  // (AI-bundle 97181c3c 8 refs / a0405b05 6 refs), regardless of how closely the weights agree.
+  const ws = makeRow(R, {
+    51: 10, 52: 100, 55: 5, 58: 'r1,r2,r3,r4,r5,r6',
+    59: 1200, 60: 1200, 63: 1, 64: 2, 71: 7, 72: 1500,
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'hätte gebündelt werden müssen');
+});
+
+test('processWackler: 7+ Colli, multi-ref weights within the near-band -> hätte gebündelt werden müssen', () => {
+  // Separate consignments whose weights sit 1-5% apart should have ridden one booking, whether
+  // or not the two weights share a tier (AI-bundle 6756eaf6 2.3% / fa79ebc2 2.2% / 5e168bd5 2.8%).
+  // VKG 1000 vs VKG_DL 1023 cross tiers, so only the near-band branch can produce the finding.
+  const ws = makeRow(R, {
+    51: 10, 52: 100, 55: 5, 58: 'r1,r2',
+    59: 1000, 60: 1023, 63: 1, 64: 2, 71: 8, 72: 1200,
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'hätte gebündelt werden müssen');
+});
+
+test('processWackler: 7+ Colli, pallet volume materially outruns the declared volume weight', () => {
+  // colli*285 (1995) far exceeds VKG=VKG_DL=980 and the synthetic volume tier (2000) sits above
+  // the declared tier (1000): the pallet space is the true chargeable weight and the DL billed a
+  // lower one -> weight discrepancy (AI-bundle ec7eb2d5 1995 vs 980).
+  const ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 980, 60: 980, 63: 1, 64: 2, 71: 7 });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 });
 
 test('processWackler: bare FR delta -> Frachtdifferenz', () => {
@@ -313,9 +371,9 @@ test('processWackler: bare FR delta -> Frachtdifferenz', () => {
   assert.equal(e.processWackler(ws, R, W_COLS), 'Frachtdifferenz');
 });
 
-test('processWackler: blank KOST/SACH only -> Kontierung?', () => {
+test('processWackler: blank KOST/SACH only stays silent while KONTIERUNG_ENABLED is false', () => {
   const ws = makeRow(R, { 51: 10, 52: '100' });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'Kontierung?');
+  assert.equal(e.processWackler(ws, R, W_COLS), '');
 });
 
 test('processWackler: TZ >= 2.0 alone -> Differenz Energiezuschlag', () => {
@@ -403,14 +461,15 @@ test('processWackler: blank tariff + SNK=43 -> 2.Zustellung ok? (not Lagergeld)'
   assert.equal(e.processWackler(ws, R, W_COLS), '2.Zustellung ok?');
 });
 
-test('processWackler: blank tariff + code-less SNK still falls through to Lagergeld', () => {
+test('processWackler: blank tariff + code-less SNK still falls through to the Lagergeld query', () => {
   // Guard: the new SNK-code escape must not break the Lagergeld catch-all for un-tariffed,
-  // code-less SNK gaps (SNK=60 matches no code).
+  // code-less SNK gaps (SNK=60 matches no code). v1.38.0 re-phrased the storage-fee finding
+  // as a query — "Lagergeld, ok?" — since it is a charge to confirm, not a proven discrepancy.
   const ws = makeRow(R, {
     51: 10, 54: '60', 59: '500', 60: '500',
     61: '12345', 62: 'Musterstadt', 63: '211FO998', 64: '612100',
   });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'Lagergeld');
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Lagergeld, ok?');
 });
 
 test('processWackler: same-tier multi-ref near-equal weights -> billed-tier from FR delta (MT additive)', () => {
@@ -636,10 +695,13 @@ test('processWackler: domestic "Wackler rechnet" note carries no national EUR su
   );
 });
 
-test('processWackler: LIGHT equal-weight multi-ref bundle -> hätte gebündelt werden müssen', () => {
-  // Bundle row cf56daaa: 2 refs, VKG=VKG_DL=231 (250 kg tier), DE5, FR=+15.39, AVIS=8.7.
-  // Light consignments (combined <= 1000 kg) should have ridden one booking — bundling wins
-  // over the rate-card wording. MT/TZ stay additive, AVIS resolves to "Avis, ok?".
+test('processWackler: LIGHT equal-weight multi-ref bundle now reads "Wackler rechnet" (carve-out retired)', () => {
+  // Was bundle row cf56daaa: 2 refs, VKG=VKG_DL=231 (250 kg tier), DE5, FR=+15.39, AVIS=8.7.
+  // The light-row bundling carve-out (combined <= WACKLER_BUENDEL_MAX_KG) was retired in
+  // v1.38.0 — it rested on that single row, which the 2026-08-31 evidence set does not contain,
+  // while the rows that reach the branch there (9b8769a3, 3f501ba0) expect the rate-card note.
+  // Identical weights on one shared tier are one tier rate at any weight. MT/TZ stay additive,
+  // AVIS resolves to "Avis, ok?".
   const ws = makeRow(R, {
     51: 10, 52: '78.9', 53: '8.7', 54: '0.07', 55: '15.39', 56: '1.25', 57: '2.01',
     58: '2543320386,2543320633', 59: '231', 60: '231',
@@ -648,7 +710,7 @@ test('processWackler: LIGHT equal-weight multi-ref bundle -> hätte gebündelt w
   });
   assert.equal(
     e.processWackler(ws, R, W_COLS),
-    'Avis, ok? // hätte gebündelt werden müssen // Mautdifferenz // Differenz Energiezuschlag'
+    'Avis, ok? // Wackler rechnet Frachtrate für 250kg ab // Mautdifferenz // Differenz Energiezuschlag'
   );
 });
 

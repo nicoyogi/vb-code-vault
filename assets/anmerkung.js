@@ -193,6 +193,7 @@ const PHRASES={
   einlagern:                  'Einlagern',
   auslagern:                  'Auslagern',
   lagergeld:                  'Lagergeld',
+  lagergeldOk:                'Lagergeld, ok?',
   gebuehrVergeblich:          'Gebühr für vergeblichen Abholversuch',
   zustell2:                   '2. Zustellung',
   gutschriftErhalten:         'Gutschrift erhalten',
@@ -1193,14 +1194,13 @@ const WACKLER_TZ_ADDITIVE=2.0;
    so it never poaches real SNK Differenz residuals. Resolves AI-bundle training rows 1 & 42. */
 const WACKLER_HEBEBUEHNE_ABS=150;
 const WACKLER_HEBEBUEHNE_TOL=2.0;
-/* Bundling weight ceiling (kg): a same-tier multi-reference row with (near-)identical weights
-   reads as "hätte gebündelt werden müssen" only while the combined weight is light enough that
-   the consignments could realistically have ridden one booking. Heavy rows are already at
-   full-load tier rates — the auditor records the rate-card note there, not a bundling finding.
-   Bracketed by AI-bundle 2026-06-12: cf56daaa (231 kg, 2 refs, DE5 → bundling) vs 9ab8df23
-   (2556 kg, 4 refs, DE6 → "Wackler rechnet für 2600kg"), consistent with the 2026-06-05 heavy
-   rows 08a0d985 (8565 kg) / d97ce4ec (9760 kg) / f04300d4 (~6850 kg) that all read as
-   "Wackler rechnet". */
+/* RETIRED in v1.38.0 (kept only so older exports still resolve the symbol). This was the bundling
+   weight ceiling: a same-tier multi-reference row with (near-)identical weights read as "hätte
+   gebündelt werden müssen" while its weight stayed under it. It rested on a single row, cf56daaa,
+   which the 2026-08-31 evidence set does not contain, and the two rows that actually reach that
+   branch there — 9b8769a3 (379 kg, 6 refs) and 3f501ba0 (654 kg, 2 refs) — both contradict it and
+   expect the rate-card note. Identical weights on one shared tier are one tier rate at any weight,
+   so the branch no longer consults this value. */
 const WACKLER_BUENDEL_MAX_KG=1000;
 /* Cross-tier near-weight band: on a multi-reference row whose two weights land in DIFFERENT
    rate tiers, a bundling finding needs the weights to roughly agree (within 20% of the larger)
@@ -1218,6 +1218,24 @@ const WACKLER_XTIER_NEAR_BAND=0.2;
    row 13: GB, 2 refs, 1120/2280, FR credit — a genuine half-split, not partial billing), 95%
    (3aaa6bed) and 139% (3ac4d429). 0.2 splits the 7.3%↔49% gap with margin on both sides. */
 const WACKLER_BUENDEL_PARTIAL=0.2;
+/* Nominal kg per collo used to turn a colli count into a pallet-volume weight. The rate card is
+   weight-based, but a high-colli shipment is priced on the space it occupies, so from 7 colli up
+   the engine costs the row at colli × this figure when that exceeds the declared weights. */
+const WACKLER_COLLI_KG=285;
+/* "Same weight" band: two measurements within 1% of the larger (1 kg floor) are one consignment
+   weighed twice, not two parcels. Shared by the colli≥7 and colli<7 weight cascades. */
+const WACKLER_SAME_WEIGHT_BAND=0.01;
+/* Bundling band on a high-colli multi-reference row: weights that differ by MORE than the
+   same-weight band but no more than this are separate consignments close enough that they should
+   have ridden one booking → "hätte gebündelt werden müssen". Evidence: 6756eaf6 (2.3%),
+   fa79ebc2 (2.2%), 5e168bd5 (2.8%) all bundle; the next real weight discrepancy sits at 20.7%
+   (de5f12a6), so 0.05 splits the gap with an order of magnitude of margin on both sides. */
+const WACKLER_BUENDEL_NEAR_BAND=0.05;
+/* Reference count from which a same-tier high-colli row reads as a bundling finding regardless of
+   how closely the weights agree: at this many references the row is unambiguously several
+   consignments on one booking (97181c3c: 8 refs, identical weights; a0405b05: 6 refs, 0.1% apart).
+   ponytail: two rows pin this threshold — widen the evidence before trusting it further. */
+const WACKLER_BUENDEL_MIN_REFS=6;
 /* The engine is fully deterministic: every Anmerkung is recomputed from the
    row's inputs, regardless of any value already sitting in the target cell.
    There is no "preserve existing / protected phrase" short-circuit — the rules
@@ -1266,6 +1284,7 @@ function processWackler(ws,r,cols){
   const tarifNum=cols.tarif>=0?cellNum(ws,r,cols.tarif):0;
   const refNr=cols.referenz>=0?cellStr(ws,r,cols.referenz):'';
   const isBundle=refNr.includes(',');
+  const refCount=refNr.split(',').filter(x=>x.trim()).length;
   const frHasVal=Math.abs(frVal)>T_WACKLER;
   const mtHasVal=Math.abs(mtVal)>T_WACKLER;
   const snkHasVal=Math.abs(snkVal)>T_WACKLER;
@@ -1284,12 +1303,15 @@ function processWackler(ws,r,cols){
      the SNK-only remainder. The `!wacklerSnkCode(snkVal)` guard hands recognised bare-SNK codes
      (2.Zustellung ok? @43, Umverfügung @289, …) to the SNK code book in rule 4 instead — AI-bundle
      rows 0f1d3d96 (SNK=289 → Umverfügung) and b7111e68 / fa68e7cb (SNK=43 → 2.Zustellung ok?) were
-     previously swallowed here as Lagergeld. Terminal: the expected wording is "Lagergeld" alone, so
-     we early-return (still appending Kontierung? when KOST/SACH are blank/X, mirroring Fremdnummer). */
+      previously swallowed here as Lagergeld. Terminal: the expected wording is "Lagergeld, ok?"
+     alone, so we early-return (still appending Kontierung? when KOST/SACH are blank/X, mirroring
+     Fremdnummer). The auditor phrases a storage fee as a QUERY — it is a charge to confirm, not a
+     proven discrepancy (AI-bundle 2026-08-31 rows 77caa1f2 / d93c324b / 17484fa2 / 82b4c84b, all
+     Haldensleben; no regression row expects the bare "Lagergeld" wording). */
   if(cols.tarif>=0&&cellStr(ws,r,cols.tarif)===''&&snkHasVal&&!frHasVal&&!mtHasVal
      &&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE&&!isWacklerAvisCode(avisVal)
      &&!wacklerSnkCode(snkVal)){
-    let out=P.lagergeld;
+    let out=P.lagergeldOk;
     if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
       const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
       if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
@@ -1366,8 +1388,61 @@ function processWackler(ws,r,cols){
          zone can't resolve it (AI-bundle row e40698ee: 7000 weight tier → tariff tier 7500). */
       const reportTier=wacklerRechnetTier(tA,frVal,ws,r,cols);
       if(colli>=7){
-        res=join(res,tA===tB?wacklerRechnetNote(reportTier):P.abweichGewichte);
-        wacklerRechnetFired=tA===tB;
+        /* colli≥7 rows: `chargeable` is a SYNTHETIC pallet-volume estimate (colli×285). It is the
+           right basis for NAMING the tier (reportTier), but it is not a measurement, so deciding
+           the finding by comparing its tier (tA) against the DL weight tier (tB) judged the row on
+           a fiction — that single comparison produced 17 of this bundle's 32 misses. The auditor
+           reads the finding off the REAL weights and the reference count instead:
+
+             ─ multi-ref, weights CLOSE but not identical (1–5% apart)
+                                          → "hätte gebündelt werden müssen" — separate consignments
+                                            that should have ridden one booking, whether or not the
+                                            two weights happen to share a tier (6756eaf6 2.3%,
+                                            fa79ebc2 2.2%, 5e168bd5 2.8% and cross-tier).
+             ─ VKG and VKG_DL in DIFFERENT rate tiers
+                                          → "Differenz aufgrund abweichender Gewichte" — a genuine
+                                            weight discrepancy (71575728 / 73b678eb / 81f04c9f /
+                                            e250335a / 18ae0323 / 7912dbe9 / de5f12a6 / d6685519 /
+                                            667e6c47 / c1e20a03, plus regression rows 4f2f7d1b /
+                                            b86fdaf7 / 3621a99d / eac4486b).
+             ─ same tier, ≥ 6 references   → still a bundling finding (97181c3c 8 refs,
+                                            a0405b05 6 refs).
+             ─ same tier, but the PALLET VOLUME materially outruns the declared volume weight
+               (colli×285 > VKG, tiers apart)
+                                          → the pallet volume is the true chargeable weight and the
+                                            DL billed a lower one → weight discrepancy (ec7eb2d5
+                                            1995 vs 980, a307afc9 7980 vs 3920, 7baca34a 10260 vs
+                                            9727 — the last one right off the top of the rate card).
+             ─ otherwise                   → Wackler simply billed that tier's rate
+                                            ("Wackler rechnet …": 4c4576a6 / b40e29c1 / b84ad3b9 /
+                                            9abfdcaa / 4ab5b1c2).
+
+           ponytail: the ≥6-reference and ≥3-reference splits each rest on only one or two rows in
+           this bundle (a0405b05 / 97181c3c, and 0e254a61 respectively). They are the weakest gates
+           here — revisit them as soon as more multi-reference colli≥7 rows are labelled. */
+        const tReal=wacklerGetTier(vkg);
+        const gap=Math.abs(vkg-vkgDl)/Math.max(vkg,vkgDl);
+        const palletVol=colli*WACKLER_COLLI_KG;
+        if(isBundle&&gap>WACKLER_SAME_WEIGHT_BAND&&gap<=WACKLER_BUENDEL_NEAR_BAND){
+          res=join(res,P.buendelMuessen);
+        } else if(tReal!==tB){
+          res=join(res,P.abweichGewichte);
+        } else if(refCount>=WACKLER_BUENDEL_MIN_REFS){
+          res=join(res,P.buendelMuessen);
+        } else if(palletVol>vkg&&tA!==tB){
+          res=join(res,P.abweichGewichte);
+        } else if(refCount>=3){
+          res=join(res,P.abweichGewichte);
+        } else {
+          res=join(res,wacklerRechnetNote(reportTier));
+          /* On a high-colli row the fuel note is NOT absorbed into the rate-card finding when the
+             freight was over-billed: the auditor itemises it (b40e29c1 FR +200.50 / TZ +18.05,
+             b84ad3b9 +316.95 / +28.53, 4ab5b1c2 +22.19 / +2.00). Only FR credits stay absorbed,
+             and those are already covered by the frIsCredit guard on rule 11, so suppression here
+             is limited to the credit case — matching the low-colli rows (70cfd9a3 / efe5b124 /
+             49f8e936) whose positive-FR fuel gap the truth does keep silent. */
+          wacklerRechnetFired=frVal<0;
+        }
       } else if(tA===tB){
         /* A multi-reference row whose two weights share a rate tier is normally separate
            consignments that should have ridden one booking → "hätte gebündelt werden müssen".
@@ -1404,11 +1479,14 @@ function processWackler(ws,r,cols){
              deltas on these rows. Tier = reportTier: the weight's ceiling bracket, or the tier the
              tariff freight (FR Kosten lt. Tarif) maps to when it differs (2026-06-16 row f6cb2770:
              NL 2125 kg, Tarif 389.73 = rate(2000) vs the 2200 weight tier → the 2000 tier). */
-          if(Math.max(vkg,vkgDl)<=WACKLER_BUENDEL_MAX_KG){
-            res=join(res,P.buendelMuessen);
-          } else {
-            res=join(res,wacklerRechnetNote(reportTier));
-          }
+          /* The light-row carve-out (≤ WACKLER_BUENDEL_MAX_KG → bundling) was pinned by a single
+             row, cf56daaa, which is absent from the 2026-08-31 evidence set; the two rows that do
+             land here contradict it — 9b8769a3 (379 kg, 6 refs) and 3f501ba0 (654 kg, 2 refs) both
+             expect "Wackler rechnet Frachtrate für <tier>kg ab". Identical weights on one shared
+             tier are one tier rate regardless of how light the row is, so the weight test is gone
+             and this path always reads as the rate-card note. No regression row relied on the
+             carve-out. */
+          res=join(res,wacklerRechnetNote(reportTier));
         } else if(isBundle&&volumetric){
           res=join(res,wacklerRechnetNote(wacklerFloorTier(Math.max(vkg,vkgDl))));
           wacklerRechnetFired=true;
@@ -4064,7 +4142,8 @@ function buildEngineSourceDoc(){
     WACKLER_BP,WACKLER_RATE_TOL,WACKLER_RETIER_EXACT_TOL,WACKLER_SNK_CODES,WACKLER_AVIS_CODES,
     WACKLER_SNK_NOISE,WACKLER_PAUSCHAL_RATIO,WACKLER_SNK_TERMIN80_ABS,WACKLER_SNK_TERMIN80_TOL,
     WACKLER_TZ_ADDITIVE,WACKLER_HEBEBUEHNE_ABS,WACKLER_HEBEBUEHNE_TOL,WACKLER_BUENDEL_MAX_KG,
-    WACKLER_XTIER_NEAR_BAND,WACKLER_BUENDEL_PARTIAL,
+    WACKLER_XTIER_NEAR_BAND,WACKLER_BUENDEL_PARTIAL,WACKLER_COLLI_KG,WACKLER_SAME_WEIGHT_BAND,
+    WACKLER_BUENDEL_NEAR_BAND,WACKLER_BUENDEL_MIN_REFS,
   };
   const lines=['# Engine source — v'+VERSION,'',
     '> Extracted live via `Function.prototype.toString()` at export time — this IS the running engine, not a copy.',
