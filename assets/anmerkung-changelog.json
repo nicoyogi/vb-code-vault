@@ -1,6 +1,14 @@
 {
-  "version": "1.36.0",
+  "version": "1.37.0",
   "entries": [
+    {
+      "ver": "1.37.0",
+      "date": "2026-08-31",
+      "items": [
+        "Diff Mode — all resolved rule-input columns are now retained in the detail view, Diff CSV, Training CSV/JSONL, and AI Bundle even when their cells are blank. This preserves important blank gate signals while keeping historical row_uids stable and excluding blank worksheet padding.",
+        "What's New — the changelog now opens automatically once for each new Alchemist version. The News button remains available to reopen the full history at any time."
+      ]
+    },
     {
       "ver": "1.36.0",
       "date": "2026-08-31",
