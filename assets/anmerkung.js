@@ -87,6 +87,7 @@ document.addEventListener('keydown',e=>{
    the full history.
 ══════════════════════════════════════════════════════════ */
 const CHANGELOG_URL='assets/anmerkung-changelog.json';
+const CHANGELOG_SEEN_KEY='anmerkung.changelog.seen.v1';
 let VERSION='0.0.0';
 let CHANGELOG=[];
 async function loadChangelog(){
@@ -102,6 +103,7 @@ async function loadChangelog(){
   }
   setVersionBadge();
   renderChangelog();
+  showChangelogOnUpdate();
 }
 function setVersionBadge(){const b=document.getElementById('verBadge');if(b)b.textContent='v'+VERSION;const sub=document.getElementById('clSub');if(sub)sub.textContent='// The Alchemist \u00b7 v'+VERSION;}
 function renderChangelog(){
@@ -119,6 +121,14 @@ function renderChangelog(){
 function openChangelog(){document.getElementById('cl-overlay').classList.add('open');}
 function closeChangelog(){document.getElementById('cl-overlay').classList.remove('open');}
 function handleClBgClick(e){if(e.target===document.getElementById('cl-overlay'))closeChangelog();}
+function showChangelogOnUpdate(){
+  if(VERSION==='0.0.0'||!CHANGELOG.length)return;
+  try{
+    if(localStorage.getItem(CHANGELOG_SEEN_KEY)===VERSION)return;
+    localStorage.setItem(CHANGELOG_SEEN_KEY,VERSION);
+  }catch(_){}
+  openChangelog();
+}
 
 /* ══════════════════════════════════════════════════════════
    THEME TOGGLE — "Scriptorium" light (#13)
@@ -2250,7 +2260,7 @@ function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
   const keys=Object.keys(inputs||{}).sort();
-  for(const k of keys){if(UID_EXCLUDED_INPUT_KEYS.has(k))continue;seedParts.push(k+'='+(inputs[k]==null?'':inputs[k]));}
+  for(const k of keys){if(UID_EXCLUDED_INPUT_KEYS.has(k)||inputs[k]==null||inputs[k]==='')continue;seedParts.push(k+'='+inputs[k]);}
   const seed=seedParts.join('|');
   let h=2166136261>>>0;
   for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
@@ -2655,7 +2665,7 @@ function runBulkDiff(){
    drift out of sync. */
 function collectInputsForRow(fw,ws,r,cols){
   const o={};
-  const get=(k,c)=>{if(c===undefined||c<0)return;const v=cellStr(ws,r,c);if(v!=='')o[k]=v;};
+  const get=(k,c)=>{if(c===undefined||c<0)return;o[k]=cellStr(ws,r,c);};
   if(fw==='dachser'){
     get('stat',cols.stat);get('tarif',cols.tarif);get('fr_diff',cols.fr);
     get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
@@ -2665,7 +2675,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('maut_diff',cols.maut);get('sbfu_diff',cols.sbfu);get('tz_diff',cols.tz);
     get('lg_diff',cols.lg_diff);get('av_diff',cols.av_diff);
     get('c502_dl',cols.c502_dl);get('c503_dl',cols.c503_dl);
-    const placeIf=(k,idx)=>{const v=cellStr(ws,r,idx);if(v)o[k]=v;};
+    const placeIf=(k,idx)=>{if(idx===undefined||idx<0)return;o[k]=cellStr(ws,r,idx);};
     placeIf('referenz3',cols.referenz3>=0?cols.referenz3:DA_COL_REFERENZ3);
     placeIf('empf_plz',cols.empf_plz>=0?cols.empf_plz:DA_COL_EMPF_PLZ);
     placeIf('empf_ort',cols.empf_ort>=0?cols.empf_ort:DA_COL_EMPF_ORT);
@@ -3206,7 +3216,7 @@ function buildTrainingSet(){
        "Include matching rows" toggle. */
     if(r.label==='correct'&&!includeMatches&&r.engineMatchesB!==false)continue;
     /* Drop padding rows: nothing on either side, no inputs, no engine. */
-    const hasInputs=Object.keys(r.inputs||{}).length>0;
+    const hasInputs=Object.values(r.inputs||{}).some(v=>v!=null&&v!=='');
     const hasContent=(r.before||'').trim()!==''||(r.after||'').trim()!==''||(r.engineNow||'').trim()!=='';
     if(!hasContent&&!hasInputs)continue;
     /* Dedupe by stable row UID. */
@@ -3471,7 +3481,7 @@ function buildRegressionSet(rows){
   for(const r of rows||[]){
     if(r.change==='sheet')continue;
     if(r.engineMatchesB!==true)continue;
-    const hasInputs=Object.keys(r.inputs||{}).length>0;
+    const hasInputs=Object.values(r.inputs||{}).some(v=>v!=null&&v!=='');
     const hasContent=(r.before||'').trim()!==''||(r.after||'').trim()!==''||(r.engineNow||'').trim()!=='';
     if(!hasContent&&!hasInputs)continue;
     if(r.row_uid&&seen.has(r.row_uid))continue;

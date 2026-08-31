@@ -123,6 +123,12 @@ test('rowUid: different content yields a different hash', () => {
   assert.notEqual(u1, u2);
 });
 
+test('rowUid: newly preserved blank inputs do not change historical hashes', () => {
+  const legacy = e.rowUid('kn', 'Sheet1', 5, { stat: '10' });
+  const withBlanks = e.rowUid('kn', 'Sheet1', 5, { stat: '10', tarif: '', kostenstelle: '' });
+  assert.equal(withBlanks, legacy);
+});
+
 test('rowUid: v1.30 input keys are excluded from the seed — uids stay joinable with historical bundles', () => {
   const legacy = e.rowUid('wackler', 'Sheet1', 5, { stat: '10', empf_plz: '88499' });
   const enriched = e.rowUid('wackler', 'Sheet1', 5, {
@@ -155,6 +161,12 @@ test('collectInputsForRow: wackler exports weight/lane signals, dachser the 502/
   assert.equal(d.c503_dl, '7', 'Auslagern gate cell reaches the training export');
 });
 
+test('collectInputsForRow: resolved blank columns remain present and unresolved columns stay absent', () => {
+  const row = makeRow(4, { 0: '10' });
+  const inputs = e.collectInputsForRow('kn', row, 4, { stat: 0, tarif: 1, kost: 2, sach: -1 });
+  assert.deepStrictEqual({ ...inputs }, { stat: '10', tarif: '', kostenstelle: '' });
+});
+
 /* ── buildRegressionSet — the solved-row fence shipped as regression.jsonl ── */
 
 test('buildRegressionSet: keeps only engine-solved rows, dedupes, sorts, and preserves silent negatives', () => {
@@ -171,6 +183,7 @@ test('buildRegressionSet: keeps only engine-solved rows, dedupes, sorts, and pre
     mk({ row_uid: 'u3', engineMatchesB: null }),                     /* engine not evaluated → dropped */
     mk({ row_uid: 'u4', change: 'sheet' }),                          /* sheet-level warning → dropped */
     mk({ row_uid: 'u5', before: '', after: '', engineNow: '', inputs: {} }), /* padding → dropped */
+    mk({ row_uid: 'u8', before: '', after: '', engineNow: '', inputs: { stat: '', tarif: '' } }), /* blank resolved columns: still padding */
     mk({ row_uid: 'u6', before: '', after: '', engineNow: '', expected_phrase_keys: [] }), /* silent negative → KEPT */
     mk({ row_uid: 'u7', fw: 'dachser', processor: 'processDachser', sheet: 'A', row: 2 }),
   ];
