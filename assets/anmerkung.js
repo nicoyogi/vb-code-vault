@@ -1501,7 +1501,8 @@ function ensureSharedStringsContentType(ctXml){const ssType='application/vnd.ope
 function ensureSharedStringsRel(relXml){if(relXml.includes('sharedStrings'))return relXml;const ssType='http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings';return relXml.replace('</Relationships>',`<Relationship Id="rIdSS" Type="${ssType}" Target="sharedStrings.xml"/></Relationships>`);}
 
 /* ── SHEET XML PATCHER ── */
-function patchSheet(sheetXml,targetCol,rowResults,strings){const tIdx=colToIdx(targetCol);for(const[rowNum,value]of rowResults){if(value===null)continue;const cellRef=targetCol+rowNum,ssIdx=getOrAdd(strings,value);const existRe=new RegExp(`<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`);const existMatch=existRe.exec(sheetXml);if(existMatch){const rawAttrs=(existMatch[1]+' '+(existMatch[2]||'')).replace(/\s*\bt="[^"]*"/g,'').replace(/\s+/g,' ').trim();const attrStr=rawAttrs?' '+rawAttrs:'';sheetXml=sheetXml.slice(0,existMatch.index)+`<c r="${cellRef}"${attrStr} t="s"><v>${ssIdx}</v></c>`+sheetXml.slice(existMatch.index+existMatch[0].length);continue;}const rowOpenRe=new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^>]*(?<!/)>`);const rowOpenMatch=rowOpenRe.exec(sheetXml);if(!rowOpenMatch)continue;const afterOpen=rowOpenMatch.index+rowOpenMatch[0].length;const closeTag='</row>';const closeIdx=sheetXml.indexOf(closeTag,afterOpen);if(closeIdx<0)continue;const rowContent=sheetXml.slice(afterOpen,closeIdx);const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);const freq={};sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});const styleIdx=sVals.length?Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]:'0';const newCell=`<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;let insertAt=rowContent.length;for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)){if(colToIdx(m[1])>tIdx){insertAt=m.index;break;}}const newContent=rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);sheetXml=sheetXml.slice(0,afterOpen)+newContent+sheetXml.slice(closeIdx);}return sheetXml;}
+function patchSheet(sheetXml,targetCol,rowResults,strings,styleSourceOffset=0){const tIdx=colToIdx(targetCol);for(const[rowNum,value]of rowResults){if(value===null)continue;const cellRef=targetCol+rowNum,ssIdx=getOrAdd(strings,value);const existRe=new RegExp(`<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`);const existMatch=existRe.exec(sheetXml);if(existMatch){const rawAttrs=(existMatch[1]+' '+(existMatch[2]||'')).replace(/\s*\bt="[^"]*"/g,'').replace(/\s+/g,' ').trim();const attrStr=rawAttrs?' '+rawAttrs:'';sheetXml=sheetXml.slice(0,existMatch.index)+`<c r="${cellRef}"${attrStr} t="s"><v>${ssIdx}</v></c>`+sheetXml.slice(existMatch.index+existMatch[0].length);continue;}const rowOpenRe=new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^>]*(?<!/)>`);const rowOpenMatch=rowOpenRe.exec(sheetXml);if(!rowOpenMatch)continue;const afterOpen=rowOpenMatch.index+rowOpenMatch[0].length;const closeTag='</row>';const closeIdx=sheetXml.indexOf(closeTag,afterOpen);if(closeIdx<0)continue;const rowContent=sheetXml.slice(afterOpen,closeIdx);const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);const freq={};sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});const sourceRef=idxToCol(tIdx+styleSourceOffset)+rowNum,sourceMatch=styleSourceOffset?new RegExp(`<c\\b(?=[^>]*\\br="${sourceRef}")(?=[^>]*\\bs="(\\d+)")[^>]*>`).exec(rowContent):null;const styleIdx=sourceMatch?sourceMatch[1]:(sVals.length?Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]:'0');const newCell=`<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;let insertAt=rowContent.length;for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)){if(colToIdx(m[1])>tIdx){insertAt=m.index;break;}}const newContent=rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);sheetXml=sheetXml.slice(0,afterOpen)+newContent+sheetXml.slice(closeIdx);}return sheetXml;}
+function setAnmerkungColumnWidth(sheetXml,targetIdx){const n=targetIdx+1,targetCol=idxToCol(targetIdx),col=`<col min="${n}" max="${n}" width="75.7109375" bestFit="1" customWidth="1"/>`;const exact=new RegExp(`<col\\b(?=[^>]*\\bmin="${n}")(?=[^>]*\\bmax="${n}")[^>]*/>`);if(exact.test(sheetXml))sheetXml=sheetXml.replace(exact,col);else if(sheetXml.includes('</cols>'))sheetXml=sheetXml.replace('</cols>',col+'</cols>');else sheetXml=sheetXml.replace(/<sheetData\b/,`<cols>${col}</cols><sheetData`);sheetXml=sheetXml.replace(/(<dimension\b[^>]*\bref="[A-Z]+\d+:)[A-Z]+(\d+")/,`$1${targetCol}$2`);sheetXml=sheetXml.replace(/(<row\b[^>]*\bspans="\d+:)\d+("[^>]*>)/g,`$1${n}$2`);return sheetXml;}
 
 /* ── MAIN RUNNER ── */
 /* Split a processor result into distinct triggers (they're joined with ' // '). */
@@ -1626,7 +1627,7 @@ function runRules(){
       reasonMap.set(excelRow,reason);
       previewRows.push({sheet:name,row:excelRow,status:result?'filled':'empty',value:result,reason});
     }
-    allResults[name]={targetCol,rowMap,reasonMap,targetIdx:cols.target};
+    allResults[name]={targetCol,rowMap,reasonMap,targetIdx:cols.target,created};
   }
   /* previewRows already has status flags set inline above (filled/empty/skipped). */
   return{total,filled,skipped,empty,unreachable,allResults,trigCounts,previewRows};
@@ -1695,12 +1696,14 @@ async function runProcess(){
     const ridPaths={};for(const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g))ridPaths[m[1]]=m[2];
     const sheetNames=Object.keys(allResults);
     for(let si=0;si<sheetNames.length;si++){
-      const name=sheetNames[si],{targetCol,rowMap,reasonMap,targetIdx}=allResults[name];
+      const name=sheetNames[si],{targetCol,rowMap,reasonMap,targetIdx,created}=allResults[name];
       if(!rowMap.size&&!(wantReason&&reasonMap&&reasonMap.size)){continue;}
       const rId=sheetRids[name];if(!rId)continue;
       let rel=ridPaths[rId]||'';rel=rel.replace(/^\/+/,'');if(!rel.startsWith('xl/'))rel='xl/'+rel;
       let sheetXml=await zip.file(rel).async('string');
-      sheetXml=patchSheet(sheetXml,targetCol,rowMap,strings);
+      if(created)sheetXml=setAnmerkungColumnWidth(sheetXml,targetIdx);
+      if(created)sheetXml=patchSheet(sheetXml,targetCol,new Map([[1,''],[2,''],[3,'Anmerkung']]),strings,-1);
+      sheetXml=patchSheet(sheetXml,targetCol,rowMap,strings,created?-5:0);
       if(wantReason){
         /* Reason column is placed one column to the right of Anmerkung. Header goes in row 3 (the
            header row used by the processors' findCol). */
@@ -4197,13 +4200,15 @@ async function runBulkProcess() {
 
       const sheetNames = Object.keys(allResults);
       for (const name of sheetNames) {
-        const { targetCol, rowMap, reasonMap, targetIdx } = allResults[name];
+        const { targetCol, rowMap, reasonMap, targetIdx, created } = allResults[name];
         if (!rowMap.size && !(wantReason && reasonMap && reasonMap.size)) continue;
         const rId = sheetRids[name]; if (!rId) continue;
         let rel = ridPaths[rId] || '';
         rel = rel.replace(/^\/+/, ''); if (!rel.startsWith('xl/')) rel = 'xl/' + rel;
         let sheetXml = await zip.file(rel).async('string');
-        sheetXml = patchSheet(sheetXml, targetCol, rowMap, strings);
+        if (created) sheetXml = setAnmerkungColumnWidth(sheetXml, targetIdx);
+        if (created) sheetXml = patchSheet(sheetXml, targetCol, new Map([[1, ''], [2, ''], [3, 'Anmerkung']]), strings, -1);
+        sheetXml = patchSheet(sheetXml, targetCol, rowMap, strings, created ? -5 : 0);
         if (wantReason) {
           const reasonColIdx = targetIdx + 1;
           const reasonCol = idxToCol(reasonColIdx);

@@ -43,13 +43,20 @@ const SHEET_XML =
   '<row r="4"><c r="A4" s="7"><v>10</v></c></row>' +
   '</sheetData>';
 
-test('patchSheet writes created header with the row-dominant style', () => {
+test('patchSheet can copy the left header style for a created column', () => {
   const strings = ['Alt', 'X', 'Y'];
-  const out = e.patchSheet(SHEET_XML, 'D', new Map([[3, 'Anmerkung']]), strings);
+  const xml = SHEET_XML.replace('r="C3" s="7"', 'r="C3" s="3"');
+  const out = e.patchSheet(xml, 'D', new Map([[3, 'Anmerkung']]), strings, -1);
   const m = /<c r="D3"[^>]*>/.exec(out);
   assert.ok(m, 'header cell D3 inserted');
-  assert.match(m[0], /s="7"/, 'style copied from neighbouring headers');
+  assert.match(m[0], /s="3"/, 'style copied from the header immediately to the left');
   assert.match(out, /t="s"/);
+});
+
+test('created Anmerkung values copy the reference body style five columns left', () => {
+  const xml = '<sheetData><row r="4"><c r="A4" s="2"/><c r="B4" s="7"/><c r="C4" s="4"/><c r="D4" s="4"/><c r="E4" s="4"/></row></sheetData>';
+  const out = e.patchSheet(xml, 'F', new Map([[4, 'Text']]), [], -5);
+  assert.match(out, /<c r="F4" s="2" t="s">/);
 });
 
 test('patchSheet inserts value cells in column order with row style', () => {
@@ -61,4 +68,18 @@ test('patchSheet inserts value cells in column order with row style', () => {
   const aIdx = row4.indexOf('<c r="A4"');
   assert.ok(dIdx > aIdx, 'new cell placed after A4');
   assert.match(row4.slice(dIdx), /^<c r="D4" s="7"/, 'data style matches row');
+});
+
+test('created Anmerkung column gets the reference workbook width', () => {
+  const out = e.setAnmerkungColumnWidth('<dimension ref="A1:C4"/><sheetData><row r="3" spans="1:3"></row></sheetData>', 3);
+  assert.match(out, /<cols><col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/><\/cols><sheetData>/);
+  assert.match(out, /<dimension ref="A1:D4"\/>/);
+  assert.match(out, /<row r="3" spans="1:4">/);
+});
+
+test('created Anmerkung column replaces an existing exact column definition', () => {
+  const xml = SHEET_XML.replace('<sheetData>', '<cols><col min="4" max="4" width="12" customWidth="1"/></cols><sheetData>');
+  const out = e.setAnmerkungColumnWidth(xml, 3);
+  assert.equal((out.match(/<col\b/g) || []).length, 1);
+  assert.match(out, /<col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/>/);
 });
