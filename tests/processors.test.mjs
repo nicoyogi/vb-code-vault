@@ -111,6 +111,26 @@ test('processDachser: cents SNK_DL re-derives code 9 -> tel. Zustellterminverein
   );
 });
 
+test('processDachser: 2026-08-31 Dachser bundle signatures', () => {
+  const cols = {
+    stat: 50, tarif: 51, fr: 52, vkg: 53, vkg_dl: 54, snk_dl: 55,
+    snk_diff: 56, snk_tar: 57, exp: 58, exp_dl: 59, maut: 60, zz: 61,
+    empf_plz: 62, empf_ort: 63, anz_sdg: 64, serv_art: 65, sachkonto: 66,
+  };
+
+  let ws = makeRow(R, { 50: 10, 51: 48.07, 52: 4.5, 53: 88, 54: 88, 55: 3.82, 56: 1.87, 57: 1.95, 58: 10, 59: 10, 62: '60325', 63: 'FRANKFURT', 64: 1 });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung // Produktzuschlag // Frachtdifferenz');
+
+  ws = makeRow(R, { 50: 10, 51: 37.05, 52: 4.9, 53: 34, 54: 34, 55: 3.07, 56: 1.57, 57: 1.5, 58: 10, 59: 10, 61: 35, 62: '50354', 63: 'HUERTH', 64: 1 });
+  assert.equal(e.processDachser(ws, R, cols), 'Gutschrift erhalten // Differenz Laderaumkostenentwicklung // Produktzuschlag // Fracht Differenz');
+
+  ws = makeRow(R, { 50: 10, 51: 170.9, 53: 0, 54: 201, 55: 6.32, 57: 6.32, 60: -9.83, 62: 'WC2B 4AN', 63: 'LONDON', 64: 1 });
+  assert.equal(e.processDachser(ws, R, cols), 'Mautdifferenz // Zone korrekt berechnet? // Einfuhrzollabfertigung');
+
+  ws = makeRow(R, { 50: 10, 51: 194.43, 52: 90.02, 53: 0, 54: 173, 55: 3.45, 56: 3.45, 58: 40, 59: 50, 60: -7.64, 62: '02-495', 63: 'Warszawa', 64: 1, 65: 'K1AU', 66: '612110' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung // Produktzuschlag // Mautdifferenz // "Sonderfahrt" 90 EUR doppelt berechnet?');
+});
+
 /* ──────────────────────────────────────────────────────────
    K+N
 ─────────────────────────────────────────────────────────── */
@@ -213,7 +233,7 @@ const W_COLS = {
   target: 50, stat: 51, tarif: 52, avis_diff: 53, snk_diff: 54, fr: 55, maut: 56,
   tz: 57, referenz: 58, vkg: 59, vkg_dl: 60, empf_plz: 61, empf_ort: 62,
   kostenstelle: 63, sachkonto: 64, zone: 65, empf_land: 66, abg_land: 67, abg_plz: 68,
-  fr_tar: 69, fr_dl: 70,
+  fr_tar: 69, fr_dl: 70, colli: 71, brutto: 72,
 };
 
 test('processWackler: existing annotation is ignored — output recomputed from inputs', () => {
@@ -272,6 +292,20 @@ test('processWackler: cross-tier weights + FR -> Differenz aufgrund abweichender
   // VKG=120 (tier 150) vs VKG_DL=400 (tier 400) fall in different rate buckets
   const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 59: '120', 60: '400', 63: '1', 64: '2' });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
+});
+
+test('processWackler: 7+ Colli compares max(Colli*285, Volumen, Brutto) with VKG DL tier', () => {
+  let ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 1200, 60: 1950, 63: 1, 64: 2, 71: 7, 72: 1500 });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 2000kg ab');
+
+  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 1200, 60: 2200, 63: 1, 64: 2, 71: 7, 72: 1500 });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
+
+  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 1200, 60: 2350, 63: 1, 64: 2, 71: 7, 72: 2300 });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 2400kg ab', 'Brutto kg can be the maximum');
+
+  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 2500, 60: 2550, 63: 1, 64: 2, 71: 7, 72: 1500 });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 2600kg ab', 'Volumen kg can be the maximum');
 });
 
 test('processWackler: bare FR delta -> Frachtdifferenz', () => {

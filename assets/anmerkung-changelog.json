@@ -1,6 +1,20 @@
 {
-  "version": "1.34.0",
+  "version": "1.36.0",
   "entries": [
+    {
+      "ver": "1.36.0",
+      "date": "2026-08-31",
+      "items": [
+        "Wackler — for rows with at least 7 Colli, the weight classification now compares Volumen kg DL against max(Anz. Colli × 285, Volumen kg, Brutto kg): different tariff tiers emit Differenz aufgrund abweichender Gewichte; the same tier emits Wackler rechnet."
+      ]
+    },
+    {
+      "ver": "1.35.0",
+      "date": "2026-08-31",
+      "items": [
+        "Dachser — updated the rule engine from the 2026-08-31 labeled bundle: corrected Admin-Zeitfenster wording, retained material equal-weight freight differences, recognized ZZ=35 credits, UK zone/customs checks, and the 90 EUR duplicate Sonderfahrt signature."
+      ]
+    },
     {
       "ver": "1.34.0",
       "date": "2026-08-28",

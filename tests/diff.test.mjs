@@ -128,7 +128,7 @@ test('rowUid: v1.30 input keys are excluded from the seed — uids stay joinable
   const enriched = e.rowUid('wackler', 'Sheet1', 5, {
     stat: '10', empf_plz: '88499',
     abg_land: 'DE', empf_land: 'FR', abg_plz: '70173', zone: 'FR3',
-    c502_dl: '12', c503_dl: '7',
+    c502_dl: '12', c503_dl: '7', anz_colli: '8', brutto_kg: '2400',
   });
   assert.equal(enriched, legacy,
     'newly-exported lane/zone/storage cells must not re-key rows that exist in pre-v1.30 bundles');
@@ -138,14 +138,16 @@ test('rowUid: v1.30 input keys are excluded from the seed — uids stay joinable
 
 /* ── collectInputsForRow — the export must carry every cell the engine gates on ── */
 
-test('collectInputsForRow: wackler exports the lane/zone signals, dachser the 502/503 storage cells', () => {
-  const wRow = makeRow(4, { 0: '10', 1: 'DE', 2: 'FR', 3: '70173', 4: 'FR3' });
-  const wCols = { stat: 0, abg_land: 1, empf_land: 2, abg_plz: 3, zone: 4 };
+test('collectInputsForRow: wackler exports weight/lane signals, dachser the 502/503 storage cells', () => {
+  const wRow = makeRow(4, { 0: '10', 1: 'DE', 2: 'FR', 3: '70173', 4: 'FR3', 5: '8', 6: '2400' });
+  const wCols = { stat: 0, abg_land: 1, empf_land: 2, abg_plz: 3, zone: 4, colli: 5, brutto: 6 };
   const w = e.collectInputsForRow('wackler', wRow, 4, wCols);
   assert.equal(w.abg_land, 'DE');
   assert.equal(w.empf_land, 'FR');
   assert.equal(w.abg_plz, '70173');
   assert.equal(w.zone, 'FR3');
+  assert.equal(w.anz_colli, '8');
+  assert.equal(w.brutto_kg, '2400');
   const dRow = makeRow(4, { 0: '10', 1: '12', 2: '7' });
   const dCols = { stat: 0, c502_dl: 1, c503_dl: 2 };
   const d = e.collectInputsForRow('dachser', dRow, 4, dCols);

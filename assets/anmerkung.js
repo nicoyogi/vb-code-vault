@@ -176,7 +176,7 @@ const PHRASES={
   snkAutoZustell:             'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag',
   snkLaderaumEntw:            'Differenz Laderaumkostenentwicklung',
   adminZeitfenster:           'Admin Zeitfensterbuchung Handel',
-  adminZeitfensterDiff:       'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag',
+  adminZeitfensterDiff:       'Differenz Admin Zeitfensterbuchung Handel Laderaumzuschlag',
   snkTelZustell:              'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag',
   terminZuschlag:             'Terminzuschlag',
   produktZuschlag:            'Produktzuschlag',
@@ -185,15 +185,20 @@ const PHRASES={
   lagergeld:                  'Lagergeld',
   gebuehrVergeblich:          'Gebühr für vergeblichen Abholversuch',
   zustell2:                   '2. Zustellung',
+  gutschriftErhalten:         'Gutschrift erhalten',
   samstag:                    'Samstagzustellung',
   gefahrgut:                  'Gefahrgut-Zuschlag',
   mautDiff:                   'Mautdifferenz',
   sbfu:                       'SBfU-Bescheinigung f. Umsatzsteuerzwecke',
   vorholung:                  'VORHOLUNG',
   sonderfahrt:                'Sonderfahrt',
+  sonderfahrtDoppelt90:       '"Sonderfahrt" 90 EUR doppelt berechnet?',
   buendelKoennen:             'hätte gebündelt werden können?',
   abweichGewicht:             'Differenz aufgrund von abweichendem Gewicht',
   frachtzuAbschlag:           'Differenz Frachtzu/ abschlag',
+  frachtDifferenz:            'Fracht Differenz',
+  zoneKorrekt:                'Zone korrekt berechnet?',
+  einfuhrzoll:                'Einfuhrzollabfertigung',
   abholtermin:                'Abholterminvereinbarung',
   treibstof:                  'Differenz treibstof',
   zwPrefix:                   'Differenz aufgrund abweichender Zwischenempfänger',
@@ -628,7 +633,7 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
     case 5:
       if(!hasErr(snkDiff,T))return'';
       if(servArt.toUpperCase()==='K1AV'){
-        return(snkTar===0)?'Admin Zeitfensterbuchung Handel':'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag';
+        return(snkTar===0)?P.adminZeitfenster:P.adminZeitfensterDiff;
       }
       if(isTarifZero)return'';
       return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
@@ -679,14 +684,18 @@ function processDachser(ws,r,cols){
   const T=T_DACHSER;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
   const referenz3Col=cols.referenz3>=0?cols.referenz3:DA_COL_REFERENZ3,
-        servArtCol=cols.serv_art>=0?cols.serv_art:DA_COL_SERV_ART,
-        sachkontoCol=cols.sachkonto>=0?cols.sachkonto:DA_COL_SACHKONTO,
-        anzSdgCol=cols.anz_sdg>=0?cols.anz_sdg:DA_COL_ANZ_SDG;
+         servArtCol=cols.serv_art>=0?cols.serv_art:DA_COL_SERV_ART,
+         sachkontoCol=cols.sachkonto>=0?cols.sachkonto:DA_COL_SACHKONTO,
+         anzSdgCol=cols.anz_sdg>=0?cols.anz_sdg:DA_COL_ANZ_SDG,
+         empfPlzCol=cols.empf_plz>=0?cols.empf_plz:DA_COL_EMPF_PLZ,
+         empfOrtCol=cols.empf_ort>=0?cols.empf_ort:DA_COL_EMPF_ORT;
   const isZW=cellStr(ws,r,referenz3Col).toUpperCase().trim()==='ZW',
-        servArt=cellStr(ws,r,servArtCol),
-        sachkonto=cellStr(ws,r,sachkontoCol),
-        anzSdg=parseInt(cellStr(ws,r,anzSdgCol))||0,
-        isTarifZero=daIsTarifZero(ws,r,cols.tarif);
+         servArt=cellStr(ws,r,servArtCol),
+         sachkonto=cellStr(ws,r,sachkontoCol),
+         anzSdg=parseInt(cellStr(ws,r,anzSdgCol))||0,
+         empfPlz=cellStr(ws,r,empfPlzCol),
+         empfOrt=cellStr(ws,r,empfOrtCol).toUpperCase(),
+         isTarifZero=daIsTarifZero(ws,r,cols.tarif);
 
   /* Blank-TARIF + significant FR pattern. When the TARIF cell is completely empty
      (not '-' which daIsTarifZero already catches) AND FR exceeds threshold, the
@@ -713,13 +722,18 @@ function processDachser(ws,r,cols){
   if(cols.c503_dl>=0){const v=cellStr(ws,r,cols.c503_dl);if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c503_dl)!==0)res=join(res,'Auslagern');}
   if(cols.lg_diff>=0&&hasErr(cellNum(ws,r,cols.lg_diff),T))res=join(res,'Lagergeld');
   if(cols.av_diff>=0&&hasErr(cellNum(ws,r,cols.av_diff),T))res=join(res,'Gebühr für vergeblichen Abholversuch');
-  if(cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T))res=join(res,'2. Zustellung');
+  const zzVal=cols.zz>=0?cellNum(ws,r,cols.zz):0;
+  if(hasErr(zzVal,T))res=join(res,zzVal===35?P.gutschriftErhalten:P.zustell2);
   res=join(res,daEvalSNK(ws,r,cols,isTarifZero,servArt));
   if(cols.sam>=0&&hasErr(cellNum(ws,r,cols.sam),T))res=join(res,'Samstagzustellung');
   if(isTarifZero)return res;
   if(cols.dgr>=0&&hasErr(cellNum(ws,r,cols.dgr),T))res=join(res,'Gefahrgut-Zuschlag');
   res=join(res,daEvalEXP(ws,r,cols));
   if(cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T))res=join(res,'Mautdifferenz');
+  if(empfOrt==='LONDON'&&/^[A-Z]/i.test(empfPlz)){
+    res=join(res,P.zoneKorrekt);
+    if(cols.exp<0||!hasErr(cellNum(ws,r,cols.exp),T))res=join(res,P.einfuhrzoll);
+  }
   if(cols.sbfu>=0&&hasErr(cellNum(ws,r,cols.sbfu),T))res=join(res,'SBfU-Bescheinigung f. Umsatzsteuerzwecke');
   if(cols.fr>=0&&hasErr(cellNum(ws,r,cols.fr),T)){
     hasFR=true;
@@ -735,6 +749,7 @@ function processDachser(ws,r,cols){
     else if(isZW)res=join(res,daZWNote(ws,r,cols));
     else if(sachkonto.toUpperCase()==='X')res=join(res,'VORHOLUNG');
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
+    else if(servArt.toUpperCase()==='K1AU'&&Math.abs(frVal-90)<=0.1)res=join(res,P.sonderfahrtDoppelt90);
     else {
       /* No special flag (ZW / Vorholung / Sonderfahrt / bundling). Classify the
          FR delta against the audit (`Volumen kg`) vs DL (`Volumen kg DL`) weights.
@@ -762,7 +777,7 @@ function processDachser(ws,r,cols){
       const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
       const bothKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
       if(bothKnown&&v1===v2){
-        /* weights identical — no discrepancy, emit nothing */
+        if(frVal>1)res=join(res,zzVal===35?P.frachtDifferenz:P.frachtDiff);
       }else if(bothKnown){
         res=join(res, (dachserGetTier(v1)!==dachserGetTier(v2))
           ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
@@ -1138,7 +1153,7 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
 /* Resolve the audit wording for a Wackler AVIS code. The 8.7 credit (negative) is the
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
-function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),fr_tar:fc('FR','Kosten lt. Tarif'),fr_dl:fc('FR','Kosten DL'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),abg_land:fcAny('Abg.-Land','Absenderland','Versandland'),empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),abg_plz:fcAny('Abg.-PLZ','Absender-PLZ','Versand-PLZ'),zone:fcAny('Tarifzone','Tarifgebiet','Zone')};}
+function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),fr_tar:fc('FR','Kosten lt. Tarif'),fr_dl:fc('FR','Kosten DL'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),colli:fcAny('Anz. Colli','Anz.Colli'),brutto:fc('','Brutto kg'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),abg_land:fcAny('Abg.-Land','Absenderland','Versandland'),empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),abg_plz:fcAny('Abg.-PLZ','Absender-PLZ','Versand-PLZ'),zone:fcAny('Tarifzone','Tarifgebiet','Zone')};}
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
 const WACKLER_SNK_NOISE=5.0;
@@ -1328,17 +1343,22 @@ function processWackler(ws,r,cols){
   let gewichteTriggered=false,wacklerRechnetFired=false,hebebuehneFired=false;
   if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0&&frHasVal){
     const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl);
+    const colli=cols.colli>=0?cellNum(ws,r,cols.colli):0;
+    const chargeable=colli>=7?Math.max(colli*285,vkg,cols.brutto>=0?cellNum(ws,r,cols.brutto):0):vkg;
     /* Both VKG and VKG_DL must carry a real weight. When they do, an FR delta is always a
        Wackler weight/rate-card finding — never a bare Frachtdifferenz. Blank weights
        (vkg/vkgDl === 0) fall through to the Frachtdifferenz fallback in rule 8. */
-    if(vkg>0&&vkgDl>0){
-      const tA=wacklerGetTier(vkg),tB=wacklerGetTier(vkgDl);
+    if(chargeable>0&&vkgDl>0){
+      const tA=wacklerGetTier(chargeable),tB=wacklerGetTier(vkgDl);
       /* The weight tier is the rate-card ceiling of the chargeable weight, but the "Wackler rechnet"
          note reports the tier the freight is rated at PER THE TARIFF (FR Kosten lt. Tarif), which an
          over/undercharge puts at a different bracket. Degrades to tA when the rate card / destination
          zone can't resolve it (AI-bundle row e40698ee: 7000 weight tier → tariff tier 7500). */
       const reportTier=wacklerRechnetTier(tA,frVal,ws,r,cols);
-      if(tA===tB){
+      if(colli>=7){
+        res=join(res,tA===tB?wacklerRechnetNote(reportTier):P.abweichGewichte);
+        wacklerRechnetFired=tA===tB;
+      } else if(tA===tB){
         /* A multi-reference row whose two weights share a rate tier is normally separate
            consignments that should have ridden one booking → "hätte gebündelt werden müssen".
            EXCEPTION — a non-integer (volumetric) chargeable weight, e.g. VKG 3058,5 vs VKG_DL
@@ -1554,7 +1574,7 @@ function buildReason(fw,ws,r,cols){
     push('ZZ',num(cols.zz));push('SAM',num(cols.sam));push('DGR',num(cols.dgr));
     push('EXP',num(cols.exp));push('EXP_DL',num(cols.exp_dl));push('MAUT',num(cols.maut));
     push('LG',num(cols.lg_diff));push('AV',num(cols.av_diff));push('TZ',num(cols.tz));
-    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
+    push('COLLI',num(cols.colli));push('BRUTTO',num(cols.brutto));push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
     const ref3=cellStr(ws,r,DA_COL_REFERENZ3);if(ref3)parts.push('REF3='+ref3);
     const sa=cellStr(ws,r,DA_COL_SERV_ART);if(sa)parts.push('SERV='+sa);
     const sk=cellStr(ws,r,DA_COL_SACHKONTO);if(sk)parts.push('SACH='+sk);
@@ -1776,6 +1796,7 @@ const TESTER_FIELDS={
     ['fr_tar','FR Kosten lt.Tarif','num'],['fr_dl','FR Kosten DL','num'],
     ['maut','MT Differenz','num'],['tz','TZ Differenz','num'],
     ['referenz','ReferenzNr','str'],
+    ['colli','Anz. Colli','num'],['brutto','Brutto kg','num'],
     ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
     ['empf_plz','Empf.-PLZ','str'],['empf_ort','Empf.-Ort','str'],
     ['kostenstelle','KOSTENSTELLE','str'],['sachkonto','SACHKONTO','str'],
@@ -1901,7 +1922,7 @@ function buildSyntheticWs(fw,userVals){
     dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','c502_dl','c503_dl','lg_diff','av_diff'],
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
-    wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
+    wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','colli','brutto','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
   }[fw]||[];
   for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
   return{ws,cols};
@@ -2224,7 +2245,7 @@ function granularLabel(beforeRaw,afterRaw,pd){
    training corpora across engine versions, and hashing a newly-exported
    cell would silently re-key every row that carries it. Add every future
    collectInputsForRow key here too; the frozen seed is the v1.29 set. */
-const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort']);
+const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort','anz_colli','brutto_kg']);
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
@@ -2259,7 +2280,7 @@ const CANONICAL_INPUT_ORDER={
        'kostenstelle','sachkonto'],
   wackler:['stat','tarif','existing_anmerkung',
            'avis_diff','snk_diff','fr_diff','fr_tarif','fr_dl','mt_diff','tz_diff',
-           'referenz','vkg','vkg_dl',
+            'referenz','anz_colli','brutto_kg','vkg','vkg_dl',
            'abg_land','abg_plz','empf_land','empf_plz','empf_ort','zone',
            'kostenstelle','sachkonto'],
 };
@@ -2677,7 +2698,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('avis_diff',cols.avis_diff);get('snk_diff',cols.snk_diff);get('fr_diff',cols.fr);
     get('fr_tarif',cols.fr_tar);get('fr_dl',cols.fr_dl);
     get('mt_diff',cols.maut);get('tz_diff',cols.tz);
-    get('referenz',cols.referenz);
+    get('referenz',cols.referenz);get('anz_colli',cols.colli);get('brutto_kg',cols.brutto);
     get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
     get('empf_plz',cols.empf_plz);get('empf_ort',cols.empf_ort);
     /* Lane / zone signals (v1.30.0): the engine gates rate-card + zone
@@ -3622,6 +3643,8 @@ const INPUT_GLOSSARY={
   avis_diff         :'AVIS Differenz — Wackler-only avisierung delta. Codes ±7.5/±8.5/±6.5/±8.7 each map to a specific phrase. AVIS=1 has its own phrase.',
   vkg               :'Volumen kg — gross/volume weight on the audit row (numeric).',
   vkg_dl            :'Volumen kg DL — DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table.',
+  anz_colli         :'Anz. Colli — package count. For Wackler rows with at least 7 Colli, chargeable weight is max(Anz. Colli × 285, Volumen kg, Brutto kg).',
+  brutto_kg          :'Brutto kg — gross weight used in Wackler chargeable-weight calculation when Anz. Colli is at least 7.',
   anz_sdg           :'Anz.Sdg — number of shipments on the row (Dachser).',
   referenz          :'ReferenzNr — Sendungs-Referenznummer. A "," in the value is the bundling signal.',
   referenz3         :'ReferenzNr3 — Dachser-specific tertiary reference column (used in trigger trace).',
