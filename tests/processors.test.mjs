@@ -129,6 +129,15 @@ test('processDachser: 2026-08-31 Dachser bundle signatures', () => {
 
   ws = makeRow(R, { 50: 10, 51: 194.43, 52: 90.02, 53: 0, 54: 173, 55: 3.45, 56: 3.45, 58: 40, 59: 50, 60: -7.64, 62: '02-495', 63: 'Warszawa', 64: 1, 65: 'K1AU', 66: '612110' });
   assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung // Produktzuschlag // Mautdifferenz // "Sonderfahrt" 90 EUR doppelt berechnet?');
+
+  // Bundle 2026-09-01: Admin Zeitfensterbuchung Handel - Laderaumzuschlag (with hyphen)
+  ws = makeRow(R, { 50: 10, 51: 666.43, 54: 1594, 55: 5, 56: -65.84, 57: 70.84, 62: '59368', 63: 'Werne', 64: 1, 65: 'K1AV', 66: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag');
+
+  // Bundle 2026-09-01: 38L Differenz -> Maut von/bis NL
+  const colsWith38L = { ...cols, tz: 67, c38l_diff: 68 };
+  ws = makeRow(R, { 50: 10, 51: 600.03, 52: 70.16, 53: 1536, 54: 1451, 55: 23.41, 56: 3.06, 57: 20.35, 58: 46.8, 59: 46.8, 62: '73312', 63: 'GEISLINGEN AN DER STEIGE', 64: 1, 67: 6.71, 68: 14.51 });
+  assert.equal(e.processDachser(ws, R, colsWith38L), 'Differenz Laderaumkostenentwicklung // Produktzuschlag // Differenz aufgrund abweichender Gewichte // Maut von/bis NL');
 });
 
 /* ──────────────────────────────────────────────────────────
