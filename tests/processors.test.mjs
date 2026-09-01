@@ -987,3 +987,18 @@ test('processWackler: 2-ref half-split (VKG_DL 49% of VKG) stays abweichende Gew
     'Differenz aufgrund abweichender Gewichte // Mautdifferenz'
   );
 });
+
+test('processWackler: 2026-08-31 bundle — pallet volume boundary gate (4c4576a6)', () => {
+  // Row 4c4576a6 (10361841 r=3): 30 colli, vkg=8474, vkg_dl=8481, palletVol=8550 (0.9% gap -> tier 9000).
+  // Pallet volume within 5% of vkg does not trigger abweichende Gewichte; emits "Wackler rechnet".
+  const ws = makeRow(R, {
+    51: 10, 52: '2103.87', 54: '0.22', 55: '56.08', 57: '5.05',
+    58: '2544271231,2544299476', 59: '8474', 60: '8481',
+    61: '45340', 62: 'ONTIGOLA', 63: '211FG004', 64: '612110', 66: 'ES', 67: 'DE',
+    68: '89160', 69: '1832.12', 70: '1888.20', 71: 30, 72: 4429
+  });
+  assert.equal(
+    e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 9000kg ab // Differenz Energiezuschlag'
+  );
+});

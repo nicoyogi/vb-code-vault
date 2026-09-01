@@ -6,7 +6,8 @@
       "date": "2026-09-01",
       "items": [
         "Dachser — added 38L column header search (`fc('38L', 'Differenz')`) to emit \"Maut von/bis NL\" when a difference is present. Resolves row 88 from Dachser bundle 2026-09-01.",
-        "Dachser — fixed wording of adminZeitfensterDiff in PHRASES catalog to match auditor truth: \"Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag\" (added missing hyphen). Resolves 15 wrong rows from Dachser bundle 2026-09-01."
+        "Dachser — fixed wording of adminZeitfensterDiff in PHRASES catalog to match auditor truth: \"Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag\" (added missing hyphen). Resolves 15 wrong rows from Dachser bundle 2026-09-01.",
+        "Wackler — in the ≥7 Colli weight cascade, adjusted the pallet volume gate to require pallet volume to exceed declared volume weight by at least 5% (or exceed 10000kg) before classifying as weight discrepancy. Sub-1% pallet volume boundaries now correctly resolve to \"Wackler rechnet\". Resolves row 4c4576a6 from bundle 2026-08-31."
       ]
     },
     {
