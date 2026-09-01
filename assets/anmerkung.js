@@ -186,7 +186,7 @@ const PHRASES={
   snkAutoZustell:             'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag',
   snkLaderaumEntw:            'Differenz Laderaumkostenentwicklung',
   adminZeitfenster:           'Admin Zeitfensterbuchung Handel',
-  adminZeitfensterDiff:       'Differenz Admin Zeitfensterbuchung Handel Laderaumzuschlag',
+  adminZeitfensterDiff:       'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag',
   snkTelZustell:              'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag',
   terminZuschlag:             'Terminzuschlag',
   produktZuschlag:            'Produktzuschlag',
@@ -200,6 +200,7 @@ const PHRASES={
   samstag:                    'Samstagzustellung',
   gefahrgut:                  'Gefahrgut-Zuschlag',
   mautDiff:                   'Mautdifferenz',
+  mautNl:                     'Maut von/bis NL',
   sbfu:                       'SBfU-Bescheinigung f. Umsatzsteuerzwecke',
   vorholung:                  'VORHOLUNG',
   sonderfahrt:                'Sonderfahrt',
@@ -534,6 +535,7 @@ function resolveDachser(ws,range){
     fr:       fc('FR','Differenz'),
     maut:     fc('MT','Differenz'),
     tz:       fc('TZ','Differenz'),
+    c38l_diff:fc('38L','Differenz'),
     c502_dl:  fc('502','Kosten DL'),
     c503_dl:  fc('503','Kosten DL'),
     lg_diff:  fc('LG','Differenz'),
@@ -802,6 +804,7 @@ function processDachser(ws,r,cols){
   }
   if(cols.snk_dl>=0&&cellNum(ws,r,cols.snk_dl)===14&&cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))
     res=join(res,'Abholterminvereinbarung');
+  if(cols.c38l_diff>=0&&hasErr(cellNum(ws,r,cols.c38l_diff),T))res=join(res,P.mautNl);
   if(res===''&&!hasFR&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';
   return res;
 }
@@ -1856,6 +1859,7 @@ const TESTER_FIELDS={
     ['zz','ZZ Differenz','num'],['sam','SAM Differenz','num'],['dgr','DGR Differenz','num'],
     ['exp','EXP Differenz','num'],['exp_dl','EXP Kosten DL','num'],
     ['maut','MT Differenz','num'],['sbfu','SBFU Differenz','num'],['tz','TZ Differenz','num'],
+    ['c38l_diff','38L Differenz','num'],
     ['lg_diff','LG Differenz','num'],['av_diff','AV Differenz','num'],
     ['c502_dl','502 Kosten DL','str'],['c503_dl','503 Kosten DL','str'],
     ['_referenz3','ReferenzNr3','str'],['_serv','Serv.-Art','str'],['_sach','Sachkonto','str'],
@@ -2333,7 +2337,7 @@ function granularLabel(beforeRaw,afterRaw,pd){
    training corpora across engine versions, and hashing a newly-exported
    cell would silently re-key every row that carries it. Add every future
    collectInputsForRow key here too; the frozen seed is the v1.29 set. */
-const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort','anz_colli','brutto_kg']);
+const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort','anz_colli','brutto_kg','c38l_diff']);
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
@@ -2356,6 +2360,7 @@ const CANONICAL_INPUT_ORDER={
            'snk_dl','snk_diff','snk_tarif',
            'zz_diff','sam_diff','dgr_diff',
            'exp_diff','exp_dl','maut_diff','sbfu_diff','tz_diff',
+           'c38l_diff',
            'lg_diff','av_diff','c502_dl','c503_dl',
            'referenz3','empf_plz','empf_ort','ki_zw_plz','ki_zw_ort','anz_sdg','serv_art','sachkonto'],
   kn:['stat','tarif','fr_diff','exp_diff','mt_diff','tz_diff',
@@ -2751,6 +2756,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('zz_diff',cols.zz);get('sam_diff',cols.sam);get('dgr_diff',cols.dgr);
     get('exp_diff',cols.exp);get('exp_dl',cols.exp_dl);
     get('maut_diff',cols.maut);get('sbfu_diff',cols.sbfu);get('tz_diff',cols.tz);
+    get('c38l_diff',cols.c38l_diff);
     get('lg_diff',cols.lg_diff);get('av_diff',cols.av_diff);
     get('c502_dl',cols.c502_dl);get('c503_dl',cols.c503_dl);
     const placeIf=(k,idx)=>{if(idx===undefined||idx<0)return;o[k]=cellStr(ws,r,idx);};
