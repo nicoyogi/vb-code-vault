@@ -1432,7 +1432,7 @@ function processWackler(ws,r,cols){
           res=join(res,P.abweichGewichte);
         } else if(refCount>=WACKLER_BUENDEL_MIN_REFS){
           res=join(res,P.buendelMuessen);
-        } else if(palletVol>vkg&&tA!==tB){
+        } else if((palletVol>10000||palletVol>=1.05*vkg)&&tA!==tB){
           res=join(res,P.abweichGewichte);
         } else if(refCount>=3){
           res=join(res,P.abweichGewichte);
