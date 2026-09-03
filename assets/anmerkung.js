@@ -788,6 +788,9 @@ function processDachser(ws,r,cols){
       const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
       const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
       const bothKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
+      /* ZZ Differenz cell — only consulted here for the FR wording variant
+         (the ZZ branch itself always emits "2. Zustellung" now). */
+      const zzVal=cols.zz>=0?cellNum(ws,r,cols.zz):0;
       if(bothKnown&&v1===v2){
         if(frVal>1)res=join(res,zzVal===35?P.frachtDifferenz:P.frachtDiff);
       }else if(bothKnown){
@@ -3476,7 +3479,12 @@ function buildTrainingSummary(records,regression){
             :nums.every(n=>n>0)?'all_positive'
             :nums.every(n=>n===0)?'all_zero':'mixed',
       };
-      if(/_diff$/.test(k)&&th!=null)prof.all_beyond_threshold=nums.every(n=>Math.abs(n)>th);
+      if(/_diff$/.test(k)){
+        /* Smallest observed |delta| — the concrete gate boundary an AI
+           consumer copies instead of inventing its own threshold. */
+        prof.min_abs=Math.min(...nums.map(n=>Math.abs(n)));
+        if(th!=null)prof.all_beyond_threshold=nums.every(n=>Math.abs(n)>th);
+      }
       profiles[k]=prof;
     }
     p.shared_inputs=shared;p.varying_inputs=varying;p.numeric_profiles=profiles;
@@ -3494,10 +3502,13 @@ function buildTrainingSummary(records,regression){
     p.silent_contrast_row_uids=silentRows.map(rr=>rr.row_uid);
     /* Signature hypothesis: a machine-drafted conjunction describing the
        failing rows — every shared value plus every consistent numeric
-       shape — pre-evaluated against the contrast rows. The counts are
-       EVIDENCE, not verdicts: for a missed pattern a good gate matches
-       the contrast rows and no silent row; for an overfired pattern the
-       guard must NOT match the contrast rows. */
+       shape — pre-evaluated against the contrast rows AND the full
+       same-forwarder regression set. The counts are EVIDENCE, not
+       verdicts: for a missed pattern a good gate matches the contrast
+       rows and no silent row; for an overfired pattern the guard must
+       NOT match the contrast rows.
+     • no_common_signal: set when no predicate survived — the pattern has
+       no machine-evidenced gate and must not get one forced onto it. */
     const preds=[];
     for(const[k,v]of Object.entries(shared))preds.push({key:k,op:'==',value:v});
     for(const[k,prof]of Object.entries(profiles)){
@@ -3516,6 +3527,11 @@ function buildTrainingSummary(records,regression){
       return Math.abs(n)>pr.threshold;
     };
     const matchAll=rr=>preds.every(pr=>evalPred(pr,rr.inputs));
+    /* Full-regression replay, pre-computed over EVERY solved row of this
+       forwarder — the consumer used to do this "mentally" and over-
+       loosened. A match on a regression row outside the contrast set is
+       a false positive: the gate is disproven BEFORE any patch. */
+    const regMatches=preds.length?pool.filter(matchAll):[];
     p.signature_hypothesis=preds.length?{
       predicates:preds,
       readable:preds.map(pr=>
@@ -3526,14 +3542,20 @@ function buildTrainingSummary(records,regression){
       contrast_rows_total:contrastRows.length,
       silent_rows_matching:silentRows.filter(matchAll).length,
       silent_rows_total:silentRows.length,
+      regression_rows_matching:regMatches.length,
+      regression_rows_total:pool.length,
+      regression_matching_row_uids:regMatches.slice(0,5).map(rr=>rr.row_uid),
     }:null;
+    /* No predicate survived → no machine-evidenced gate; the consumer
+       must split the pattern or mark rows not-derivable, not force one. */
+    p.no_common_signal=!preds.length;
   }
   out.sort((a,b)=>(b.count-a.count)||
     String(a.forwarder).localeCompare(String(b.forwarder))||
     String(a.missing_phrase_keys).localeCompare(String(b.missing_phrase_keys))||
     String(a.extra_phrase_keys).localeCompare(String(b.extra_phrase_keys)));
   return{
-    schema:'anmerkung.training-summary/v2',
+    schema:'anmerkung.training-summary/v3',
     total_records:(records||[]).length,
     by_label:byLabel,
     by_engine_label:byEngineLabel,
@@ -3918,15 +3940,15 @@ topPatterns||'  - (none)',
 '',
 '1. The `engine_*` fields are authoritative: `engine_missing_phrase_keys` = phrases ground truth wants that the engine fails to emit (ADD a branch or LOOSEN its gate); `engine_extra_phrase_keys` = phrases the engine emits that truth rejects (GUARD or TIGHTEN the branch). Ignore the plain `predicted`/`missing_*`/`extra_*` fields unless `engine_label` is blank — they compare a possibly-stale tool output, not the current engine.',
 '2. Work each pattern as a hypothesis → verify loop, and only then patch:',
-'   a. **Hypothesise** the gate from `summary.json`: start from the pattern\'s `signature_hypothesis` — a machine-drafted conjunction of the failing rows\' shared values and numeric shapes, pre-evaluated against the contrast rows (`contrast_rows_matching`/`silent_rows_matching` are evidence, not verdicts: a good gate for a MISSED pattern matches the contrast rows and no silent row; a good guard for an OVERFIRED pattern must NOT match the contrast rows). Refine it with `shared_inputs` and `numeric_profiles`; `varying_inputs` differ across rows and must NOT become gate conditions. Use `rule_spec.phrase_emitters[key]` to jump to the emitting function and read its actual code in `engine_source.md` before deciding what to change.',
+'   a. **Hypothesise** the gate from `summary.json`: start from the pattern\'s `signature_hypothesis` — a machine-drafted conjunction of the failing rows\' shared values and numeric shapes, pre-evaluated against the contrast rows AND the FULL same-forwarder regression set (`contrast_rows_matching`/`silent_rows_matching` and `regression_rows_matching`/`regression_rows_total`). The counts are evidence, not verdicts: a good gate for a MISSED pattern matches the contrast rows, no silent row, and no regression row outside the contrast set (`regression_rows_matching > contrast_rows_matching` = false positives on solved rows = disproven gate); a good guard for an OVERFIRED pattern must NOT match the contrast rows. Refine it with `shared_inputs` and `numeric_profiles` (`min_abs` on `*_diff` keys is the concrete boundary the failing rows observe — copy it rather than inventing your own threshold); `varying_inputs` differ across rows and must NOT become gate conditions. Use `rule_spec.phrase_emitters[key]` to jump to the emitting function and read its actual code in `engine_source.md` before deciding what to change.',
 '   b. **Verify against the contrast rows** before writing any code: the pattern\'s `contrast_row_uids` are solved rows in `regression.jsonl` where a disputed phrase fires legitimately — your hypothesised gate applied to their `inputs` must keep producing exactly their `expected_phrase_keys`; `silent_contrast_row_uids` are solved rows where the engine must stay silent — the rows a loosened gate over-fires on first. If the hypothesis breaks either set, revise it, do not patch around it.',
 '   c. **Patch** only a hypothesis that survived (b), and pull the matching `training.jsonl` records by `example_row_uids` to confirm the full picture.',
 '3. Emit phrases only via the existing `PHRASES` catalog and `join()` helper (it dedupes case-insensitively). New wording goes into `PHRASES` first; keys prefixed `lit_`/`tpl_`/`?:` are explained in `rule_spec.json`.',
-'4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Before proposing ANY gate change, replay it mentally against every `regression.jsonl` record for that forwarder: applying the new/changed gate to the record\'s `inputs` must still yield exactly its `expected_phrase_keys` — including the records whose `expected` is empty, where the engine must stay silent.',
+'4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Every `signature_hypothesis` was already replayed against the forwarder\'s FULL `regression.jsonl` set at export time — read `regression_rows_matching`/`regression_rows_total` first. After refining the gate, replay your NEW version against every regression record for that forwarder: applying it to the record\'s `inputs` must still yield exactly its `expected_phrase_keys` — including the records whose `expected` is empty, where the engine must stay silent.',
 '5. Keep edits inside the `process<Forwarder>` functions (resolvers are already wired) unless a pattern clearly needs a new resolver column.',
 '6. Any phrase comparison or phrase→key lookup you add must go through `normPhrase` — never a bare `toLowerCase().trim()` (hand-edited truth cells carry NFD umlauts, zero-width chars, soft hyphens, dash variants). A new `PHRASES` entry must not normPhrase-fold onto an existing entry.',
 '7. If a pattern\'s truth phrase depends on data that is NOT in the row\'s `inputs` (cross-document references like "bereits berechnet in <other Beleg>", intermediate-consignee addresses from unexported columns), say so and mark it "not derivable from row inputs" instead of forcing a rule — a guessed rule poisons the next training iteration. End your answer with the `row_uid: reason` lines for every such row, ready to paste into the tool\'s Not-derivable ledger.',
-'8. Rows already flagged `known_not_derivable: true` (see `not_derivable.json`) were judged not derivable by a previous iteration — skip them unless their `inputs` now carry a signal the recorded reason says was missing. A pattern whose `known_not_derivable_rows` equals its `count` is not a rule bug; do not force a gate for it.',
+'8. Rows already flagged `known_not_derivable: true` (see `not_derivable.json`) were judged not derivable by a previous iteration — skip them unless their `inputs` now carry a signal the recorded reason says was missing. A pattern whose `known_not_derivable_rows` equals its `count` is not a rule bug; do not force a gate for it. A pattern with `no_common_signal: true` carries no machine-evidenced gate at all — split it by a `varying_inputs` value or report its rows as not derivable instead of inventing one.',
 '',
 '## Output format',
 '',
@@ -3968,9 +3990,10 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('It already does workflow step 1 (grouping) for you: patterns are sorted by row count, each carries `suggested_action` (`add_or_loosen_branch` / `guard_or_tighten_branch` / `fix_both`), `shared_inputs` (cell values identical on every failing row — prime gate signals), `varying_inputs` (present everywhere but differing — must NOT become gate conditions), and `example_row_uids` to pull the full records from `training.jsonl`. Rows the engine already solves are counted in `engine_solved` and excluded from patterns — they ship in full as `regression.jsonl`, the set a fix must not break.');
   lines.push('');
   lines.push('Two reasoning aids per pattern:');
-  lines.push('- `numeric_profiles` — for every numeric-typed input key present on all failing rows: `min`/`max`, `sign` (`all_negative`/`all_positive`/`all_zero`/`mixed`), and on `*_diff` keys `all_beyond_threshold` (every row clears the forwarder\'s `hasErr` tolerance). A gate condition is usually one of these shapes; e.g. `fr_diff: {sign: "all_negative", all_beyond_threshold: true}` says "gate on a negative freight delta above threshold", even though the raw values differ row to row.');
+  lines.push('- `numeric_profiles` — for every numeric-typed input key present on all failing rows: `min`/`max`, `sign` (`all_negative`/`all_positive`/`all_zero`/`mixed`), and on `*_diff` keys `min_abs` (smallest observed |delta| — the concrete gate boundary to copy rather than inventing a threshold) and `all_beyond_threshold` (every row clears the forwarder\'s `hasErr` tolerance). A gate condition is usually one of these shapes; e.g. `fr_diff: {sign: "all_negative", min_abs: 2.1, all_beyond_threshold: true}` says "gate on a negative freight delta of at least 2.1", even though the raw values differ row to row.');
   lines.push('- `contrast_row_uids` / `silent_contrast_row_uids` — `row_uid`s into `regression.jsonl`: solved same-forwarder rows where a disputed phrase fires legitimately (your changed gate must keep firing on their `inputs`), and solved rows where the engine must stay silent (the first casualties of an over-loosened gate). Replay any hypothesised gate against both BEFORE writing the patch.');
-  lines.push('- `signature_hypothesis` — a machine-drafted conjunction of the failing rows\' shared values and consistent numeric shapes (`predicates` + a `readable` one-liner), already evaluated against the contrast rows. Read the match counts by `suggested_action`: for `add_or_loosen_branch` a good gate matches the contrast rows and zero silent rows; for `guard_or_tighten_branch` the signature (as a guard) must NOT match the contrast rows. It is a STARTING POINT — refine it, do not paste it blindly.');
+  lines.push('- `signature_hypothesis` — a machine-drafted conjunction of the failing rows\' shared values and consistent numeric shapes (`predicates` + a `readable` one-liner), already evaluated against the contrast rows AND the forwarder\'s FULL regression set. Read the match counts by `suggested_action`: for `add_or_loosen_branch` a good gate matches the contrast rows, zero silent rows, and no regression row outside the contrast set (`regression_rows_matching > contrast_rows_matching` means the hypothesis false-positives on solved rows — revise it before patching); for `guard_or_tighten_branch` the signature (as a guard) must NOT match the contrast rows. It is a STARTING POINT — refine it, do not paste it blindly.');
+  lines.push('- `no_common_signal` — `true` when the failing rows share no value and no consistent numeric shape: there is NO machine-evidenced gate. Do not invent one; split the pattern by a `varying_inputs` value or report the rows as not derivable.');
   lines.push('');
   lines.push('### 1. Read `rule_spec.json`');
   lines.push('It tells you:');
