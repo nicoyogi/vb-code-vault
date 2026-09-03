@@ -540,6 +540,7 @@ function resolveDachser(ws,range){
     c503_dl:  fc('503','Kosten DL'),
     lg_diff:  fc('LG','Differenz'),
     av_diff:  fc('AV','Differenz'),
+    brutto:   fc('','Brutto kg'),
     vkg:      fc('','Volumen kg'),
     vkg_dl:   fc('','Volumen kg DL'),
     /* Header-resolved versions of the DA_COL_* positional constants above.
@@ -764,7 +765,7 @@ function processDachser(ws,r,cols){
     else if(servArt.toUpperCase()==='K1AU'&&Math.abs(frVal-90)<=0.1)res=join(res,P.sonderfahrtDoppelt90);
     else {
       /* No special flag (ZW / Vorholung / Sonderfahrt / bundling). Classify the
-         FR delta against the audit (`Volumen kg`) vs DL (`Volumen kg DL`) weights.
+         FR delta against the audit (`Brutto kg`) vs DL (`Volumen kg DL`) weights.
          Tier table is `DACHSER_BP` above — sourced from the data/Dachser-weight.xlsx
          rate card; mirrors the K+N / Wackler weight-tier guards.
 
@@ -785,9 +786,10 @@ function processDachser(ws,r,cols){
                    (bundle row 163: FR=-31.65, VKG=0, VKG_DL=2313).
                  · positive FR → legacy singular weight wording (no usable tier
                    basis — preserves the FR=+26.24 / no-VKG behaviour). */
-      const v1=cols.vkg>=0?cellNum(ws,r,cols.vkg):0;
+      const v1Col=cols.brutto>=0?cols.brutto:cols.vkg;
+      const v1=v1Col>=0?cellNum(ws,r,v1Col):0;
       const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
-      const bothKnown=(cols.vkg>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
+      const bothKnown=(v1Col>=0&&cols.vkg_dl>=0&&v1>0&&v2>0);
       /* ZZ Differenz cell — only consulted here for the FR wording variant
          (the ZZ branch itself always emits "2. Zustellung" now). */
       const zzVal=cols.zz>=0?cellNum(ws,r,cols.zz):0;
@@ -2753,7 +2755,7 @@ function collectInputsForRow(fw,ws,r,cols){
   const get=(k,c)=>{if(c===undefined||c<0)return;o[k]=cellStr(ws,r,c);};
   if(fw==='dachser'){
     get('stat',cols.stat);get('tarif',cols.tarif);get('fr_diff',cols.fr);
-    get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
+    get('brutto_kg',cols.brutto);get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
     get('snk_dl',cols.snk_dl);get('snk_diff',cols.snk_diff);get('snk_tarif',cols.snk_tar);
     get('zz_diff',cols.zz);get('sam_diff',cols.sam);get('dgr_diff',cols.dgr);
     get('exp_diff',cols.exp);get('exp_dl',cols.exp_dl);

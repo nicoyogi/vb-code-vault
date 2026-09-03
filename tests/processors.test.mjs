@@ -38,9 +38,9 @@ test('processDachser: FR delta, weights unknown -> singular "abweichendem Gewich
   assert.equal(e.processDachser(ws, R, cols), 'Differenz aufgrund von abweichendem Gewicht');
 });
 
-test('processDachser: FR delta crossing a weight tier -> plural "abweichender Gewichte"', () => {
-  // VKG=54 (tier 100) vs VKG_DL=40 (tier 50) cross the 50/100 boundary
-  const cols = { stat: 50, tarif: 51, fr: 52, vkg: 53, vkg_dl: 54 };
+test('processDachser: FR delta crossing a weight tier using Brutto kg -> plural "abweichender Gewichte"', () => {
+  // brutto=54 (tier 100) vs VKG_DL=40 (tier 50) cross the 50/100 boundary
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54 };
   const ws = makeRow(R, { 50: 10, 51: '100', 52: '26.24', 53: '54', 54: '40' });
   assert.equal(e.processDachser(ws, R, cols), 'Differenz aufgrund abweichender Gewichte');
 });
