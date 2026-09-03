@@ -348,13 +348,13 @@ test('buildTrainingSummary: numeric_profiles — sign, range, threshold flag, Ge
   ]);
   const prof = s.patterns[0].numeric_profiles;
   assert.deepStrictEqual({ ...prof.fr_diff },
-    { min: -31.65, max: -2.1, sign: 'all_negative', all_beyond_threshold: true },
-    'German decimal comma parsed; every |value| clears hasErr threshold');
+    { min: -31.65, max: -2.1, sign: 'all_negative', min_abs: 2.1, all_beyond_threshold: true },
+    'German decimal comma parsed; min_abs is the concrete gate boundary');
   assert.deepStrictEqual({ ...prof.vkg }, { min: 80, max: 120, sign: 'all_positive' },
-    'non-diff numeric key profiled without the threshold flag');
+    'non-diff numeric key profiled without the diff flags');
   assert.deepStrictEqual({ ...prof.stat }, { min: 10, max: 10, sign: 'all_positive' },
     'shared keys are profiled too');
-  assert.equal(s.schema, 'anmerkung.training-summary/v2');
+  assert.equal(s.schema, 'anmerkung.training-summary/v3');
 });
 
 test('buildTrainingSummary: numeric_profiles — mixed sign, sub-threshold, text keys excluded', () => {
@@ -364,6 +364,8 @@ test('buildTrainingSummary: numeric_profiles — mixed sign, sub-threshold, text
   ]);
   const p = s.patterns[0];
   assert.equal(p.numeric_profiles.fr_diff.sign, 'mixed');
+  assert.equal(p.numeric_profiles.fr_diff.min_abs, 1,
+    'smallest observed |delta| — the concrete gate boundary');
   assert.equal(p.numeric_profiles.fr_diff.all_beyond_threshold, false,
     'no row clears the threshold');
   assert.ok(!('referenz' in p.numeric_profiles),
@@ -418,6 +420,33 @@ test('buildTrainingSummary: signature_hypothesis drafted from shared + numeric s
   assert.equal(h.contrast_rows_total, 2);
   assert.equal(h.silent_rows_matching, 0, '−0,4 is below the threshold');
   assert.equal(h.silent_rows_total, 1);
+  assert.equal(h.regression_rows_matching, 1,
+    'full-regression replay: only r-match fires across ALL solved wackler rows');
+  assert.equal(h.regression_rows_total, 3);
+  assert.deepStrictEqual(A(h.regression_matching_row_uids), ['r-match']);
+  assert.equal(s.patterns[0].no_common_signal, false);
+});
+
+test('buildTrainingSummary: regression replay exposes a disproven hypothesis', () => {
+  /* The hypothesis (fr_diff < 0 beyond threshold) also matches a solved
+     row expecting a DIFFERENT phrase — a false positive the old
+     contrast-only sample never surfaced, so the consumer over-loosened. */
+  const regression = [
+    { row_uid: 'r-fires', forwarder: 'wackler', expected: 'Differenz Energiezuschlag',
+      expected_phrase_keys: ['differenzEnergiezuschlag'], inputs: { fr_diff: '-9,5' } },
+    { row_uid: 'r-other', forwarder: 'wackler', expected: 'Mautdifferenz',
+      expected_phrase_keys: ['mautdifferenz'], inputs: { fr_diff: '-4,0' } },
+  ];
+  const s = e.buildTrainingSummary([
+    rec({ applicable_threshold: 1.5, inputs: { fr_diff: '-31,65' } }),
+    rec({ applicable_threshold: 1.5, inputs: { fr_diff: '-2.1' } }),
+  ], regression);
+  const h = s.patterns[0].signature_hypothesis;
+  assert.equal(h.contrast_rows_matching, 1);
+  assert.equal(h.regression_rows_matching, 2,
+    'r-other matches too — the hypothesis false-positives on a solved row');
+  assert.ok(h.regression_rows_matching > h.contrast_rows_matching,
+    'consumer reads this as: disproven gate, revise before patching');
 });
 
 test('buildTrainingSummary: signature_hypothesis null when nothing is shared or consistent', () => {
@@ -426,6 +455,8 @@ test('buildTrainingSummary: signature_hypothesis null when nothing is shared or 
     rec({ inputs: { fr_diff: '3', zone: 'AT1' } }),
   ]);
   assert.equal(s.patterns[0].signature_hypothesis, null);
+  assert.equal(s.patterns[0].no_common_signal, true,
+    'no shared value, no consistent shape — no machine-evidenced gate');
 });
 
 test('buildTrainingSummary: known_not_derivable rows counted per pattern', () => {
@@ -446,7 +477,12 @@ test('buildPhraseEmitterIndex: maps phrase keys to emitting functions, covers th
     assert.ok(Array.isArray(idx[key]), 'every catalog key present: ' + key);
   }
   const unemitted = Object.entries(idx).filter(([, a]) => !a.length).map(([k]) => k);
-  assert.deepStrictEqual(unemitted, [],
+  /* Known truth-only keys: present in PHRASES but deliberately emitted by no
+     branch (kept so historical bundle phrases still resolve to a catalog key).
+     A new entry here means either such a label (fine, add it with a reason)
+     or a scan gap (bug). */
+  const TRUTH_ONLY = ['gutschriftErhalten']; // retired as an emitter in the ZZ fix (commit 1ea8f26)
+  assert.deepStrictEqual(unemitted, TRUTH_ONLY,
     'every catalog key resolves to an emitter today — a new unemitted key means either a truth-only label (fine, update this list) or a scan gap (bug)');
 });
 

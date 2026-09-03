@@ -1,6 +1,16 @@
 {
-  "version": "1.39.0",
+  "version": "1.40.0",
   "entries": [
+    {
+      "ver": "1.40.0",
+      "date": "2026-09-03",
+      "items": [
+        "AI Bundle — each pattern's signature_hypothesis is now replayed against the FULL same-forwarder regression set at export time (regression_rows_matching / regression_rows_total / regression_matching_row_uids). A hypothesis that also matches solved rows outside the contrast set is machine-disproven before the AI consumer patches, replacing the error-prone \"replay mentally\" instruction. Summary schema bumped to anmerkung.training-summary/v3.",
+        "AI Bundle — numeric_profiles now carries min_abs on *_diff keys (the smallest observed |delta|), giving the AI consumer a concrete gate boundary to copy instead of inventing its own threshold.",
+        "AI Bundle — patterns whose failing rows share no value and no consistent numeric shape now carry no_common_signal: true, steering the consumer toward splitting the pattern or marking rows not-derivable instead of forcing a gate.",
+        "Dachser — fixed a crash introduced by the ZZ \"2. Zustellung\" change: the FR equal-weights branch still referenced the removed zzVal variable. It is now re-declared locally and keeps the FR wording variant (ZZ=35 → \"Fracht Differenz\", otherwise \"Frachtdifferenz\")."
+      ]
+    },
     {
       "ver": "1.39.0",
       "date": "2026-09-01",
