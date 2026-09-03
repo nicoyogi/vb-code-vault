@@ -735,8 +735,7 @@ function processDachser(ws,r,cols){
   if(cols.c503_dl>=0){const v=cellStr(ws,r,cols.c503_dl);if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c503_dl)!==0)res=join(res,'Auslagern');}
   if(cols.lg_diff>=0&&hasErr(cellNum(ws,r,cols.lg_diff),T))res=join(res,'Lagergeld');
   if(cols.av_diff>=0&&hasErr(cellNum(ws,r,cols.av_diff),T))res=join(res,'Gebühr für vergeblichen Abholversuch');
-  const zzVal=cols.zz>=0?cellNum(ws,r,cols.zz):0;
-  if(hasErr(zzVal,T))res=join(res,zzVal===35?P.gutschriftErhalten:P.zustell2);
+  if(cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T))res=join(res,P.zustell2);
   res=join(res,daEvalSNK(ws,r,cols,isTarifZero,servArt));
   if(cols.sam>=0&&hasErr(cellNum(ws,r,cols.sam),T))res=join(res,'Samstagzustellung');
   if(isTarifZero)return res;

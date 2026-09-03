@@ -122,7 +122,7 @@ test('processDachser: 2026-08-31 Dachser bundle signatures', () => {
   assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung // Produktzuschlag // Frachtdifferenz');
 
   ws = makeRow(R, { 50: 10, 51: 37.05, 52: 4.9, 53: 34, 54: 34, 55: 3.07, 56: 1.57, 57: 1.5, 58: 10, 59: 10, 61: 35, 62: '50354', 63: 'HUERTH', 64: 1 });
-  assert.equal(e.processDachser(ws, R, cols), 'Gutschrift erhalten // Differenz Laderaumkostenentwicklung // Produktzuschlag // Fracht Differenz');
+  assert.equal(e.processDachser(ws, R, cols), '2. Zustellung // Differenz Laderaumkostenentwicklung // Produktzuschlag // Fracht Differenz');
 
   ws = makeRow(R, { 50: 10, 51: 170.9, 53: 0, 54: 201, 55: 6.32, 57: 6.32, 60: -9.83, 62: 'WC2B 4AN', 63: 'LONDON', 64: 1 });
   assert.equal(e.processDachser(ws, R, cols), 'Mautdifferenz // Zone korrekt berechnet? // Einfuhrzollabfertigung');
