@@ -58,6 +58,17 @@ test('processDachser: blank TARIF + FR, no SACH/SERV -> VORHOLUNG', () => {
   assert.equal(e.processDachser(ws, R, cols), 'VORHOLUNG');
 });
 
+test('processDachser: blank TARIF + FR, but has TZ or MT -> do NOT emit VORHOLUNG', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, tz: 53, maut: 54 };
+  // Has FR and TZ
+  let ws = makeRow(R, { 50: 10, 52: '646.7', 53: '15.2' });
+  assert.notEqual(e.processDachser(ws, R, cols), 'VORHOLUNG');
+
+  // Has FR and MT
+  ws = makeRow(R, { 50: 10, 52: '646.7', 54: '3.5' });
+  assert.notEqual(e.processDachser(ws, R, cols), 'VORHOLUNG');
+});
+
 test('processDachser: blank TARIF + FR with SERV/SACH -> Fremdnummer already-billed note', () => {
   const cols = { stat: 50, tarif: 51, fr: 52 };
   // SERV_ART=16, SACHKONTO=35 populated => the "already billed in another Beleg" branch.

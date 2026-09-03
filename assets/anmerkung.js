@@ -714,7 +714,8 @@ function processDachser(ws,r,cols){
   /* Blank-TARIF + significant FR pattern. When the TARIF cell is completely empty
      (not '-' which daIsTarifZero already catches) AND FR exceeds threshold, the
      row is an accounting artifact, not a billing differential. Two flavors:
-       - No SACH and no SERV_ART → Vorholung advance-freight line (training row 344:
+       - No SACH, no SERV_ART, and no other diffs/surcharges (MT, TZ, EXP, SNK, ZZ, etc.)
+         → Vorholung advance-freight line (training row 344:
          FR=646.7, every other input column blank → expected "VORHOLUNG").
        - SACH+SERV present → Fremdnummer xxx bereits berechnet in RExxx, ok? (training row 345:
          FR=47.2, EXP=10, MAUT=1.15, SERV=DA01, SACH=612100 → expected
@@ -725,8 +726,20 @@ function processDachser(ws,r,cols){
   if(cols.tarif>=0&&cols.fr>=0){
     const tarifRaw=cellStr(ws,r,cols.tarif);
     if(tarifRaw===''&&hasErr(cellNum(ws,r,cols.fr),T)){
-      if(!sachkonto&&!servArt)return PHRASES.vorholung;
-      return'Fremdnummer 5034xxx bereits berechnet in RE00123xxx, ok?';
+      const hasOtherDiff=
+        (cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T))||
+        (cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))||
+        (cols.exp>=0&&hasErr(cellNum(ws,r,cols.exp),T))||
+        (cols.snk_diff>=0&&hasErr(cellNum(ws,r,cols.snk_diff),T))||
+        (cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T))||
+        (cols.dgr>=0&&hasErr(cellNum(ws,r,cols.dgr),T))||
+        (cols.lg_diff>=0&&hasErr(cellNum(ws,r,cols.lg_diff),T))||
+        (cols.av_diff>=0&&hasErr(cellNum(ws,r,cols.av_diff),T))||
+        (cols.sam>=0&&hasErr(cellNum(ws,r,cols.sam),T))||
+        (cols.sbfu>=0&&hasErr(cellNum(ws,r,cols.sbfu),T))||
+        (cols.c38l_diff>=0&&hasErr(cellNum(ws,r,cols.c38l_diff),T));
+      if(!sachkonto&&!servArt&&!hasOtherDiff)return PHRASES.vorholung;
+      if(sachkonto&&servArt)return'Fremdnummer 5034xxx bereits berechnet in RE00123xxx, ok?';
     }
   }
 
