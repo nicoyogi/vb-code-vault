@@ -1,6 +1,13 @@
 {
-  "version": "1.40.0",
+  "version": "1.41.0",
   "entries": [
+    {
+      "ver": "1.41.0",
+      "date": "2026-09-03",
+      "items": [
+        "Dachser — Vorholung condition now strictly requires no other surcharge or difference columns (TZ, MT, EXP, SNK, ZZ, etc.) to have non-zero values, ensuring VORHOLUNG is only emitted when a row has an FR delta and nothing else."
+      ]
+    },
     {
       "ver": "1.40.0",
       "date": "2026-09-03",
