@@ -808,7 +808,8 @@ function processDachser(ws,r,cols){
          (the ZZ branch itself always emits "2. Zustellung" now). */
       const zzVal=cols.zz>=0?cellNum(ws,r,cols.zz):0;
       const sameWeight=bothKnown&&(v1===v2||(Math.abs(v1-v2)<1.0&&Math.abs(frVal)<=1.0));
-      if(sameWeight){
+      const sameTier=bothKnown&&(dachserGetTier(v1)===dachserGetTier(v2));
+      if(sameWeight||sameTier){
         if(frVal>1||(frVal>=0.05&&!res))res=join(res,zzVal===35?P.frachtDifferenz:P.frachtDiff);
         else if(frVal<-1.0&&!res)res=join(res,'Differenz aufgrund abweichender Gewichte');
       }else if(bothKnown){

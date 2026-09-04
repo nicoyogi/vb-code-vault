@@ -88,6 +88,13 @@ test('processDachser: equal weights with negative FR < -1.0 and no other trigger
   assert.equal(e.processDachser(ws, R, cols), 'Differenz aufgrund abweichender Gewichte');
 });
 
+test('processDachser: weights differ but in same tier with positive FR -> Frachtdifferenz', () => {
+  // brutto=120, vkg_dl=140 are both in tier 150 (DACHSER_BP breakpoint 150)
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54 };
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: '15.50', 53: '120', 54: '140' });
+  assert.equal(e.processDachser(ws, R, cols), 'Frachtdifferenz');
+});
+
 test('processDachser: weights differ but small positive FR delta (< 1.0) -> Frachtdifferenz', () => {
   const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg: 54, vkg_dl: 55 };
   const ws = makeRow(R, { 50: 10, 51: '73.31', 52: '0.09', 53: '194', 54: '194', 55: '109' });
