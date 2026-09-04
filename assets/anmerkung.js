@@ -328,6 +328,9 @@ const PHRASE_LITERALS={
    template family; the example shows the shape so an AI knows what
    varies. Order matters — first regex that matches wins. */
 const PHRASE_TEMPLATES=[
+  {key:'tpl_keinTarifLand',regex:/^kein tarif f[uü]r/i,
+   example:'kein Tarif für PT',
+   processor:'processDachser'},
   {key:'zwPrefix',         regex:/^differenz aufgrund abweichender zwischenempf/i,
    example:'Differenz aufgrund abweichender Zwischenempfänger 12345 Berlin',
    processor:'processDachser'},
@@ -519,6 +522,7 @@ const DA_COL_REFERENZ3=15,DA_COL_EMPF_PLZ=13,DA_COL_EMPF_ORT=14,DA_COL_ANZ_SDG=3
 
 function resolveDachser(ws,range){
   const fc=(h2,h3)=>findCol(ws,range,h2,h3);
+  const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};
   return{
     target:   fc('','Anmerkung'),
     stat:     fc('','Stat_Freigabe'),
@@ -561,6 +565,8 @@ function resolveDachser(ws,range){
        colliding with Abg.-PLZ / Empf.-PLZ / Abg.-Ort / Empf.-Ort. */
     ki_zw_plz:fc('','KI_ZW_PLZ'),
     ki_zw_ort:fc('','KI_ZW_ORT'),
+    abg_land: fcAny('Abg.-Land','Absenderland','Versandland'),
+    empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),
   };
 }
 
@@ -709,6 +715,7 @@ function processDachser(ws,r,cols){
          anzSdg=parseInt(cellStr(ws,r,anzSdgCol))||0,
          empfPlz=cellStr(ws,r,empfPlzCol),
          empfOrt=cellStr(ws,r,empfOrtCol).toUpperCase(),
+         abgLand=cols.abg_land>=0?cellStr(ws,r,cols.abg_land).toUpperCase().trim():'',
          isTarifZero=daIsTarifZero(ws,r,cols.tarif);
 
   /* Blank-TARIF + significant FR pattern. When the TARIF cell is completely empty
@@ -726,6 +733,7 @@ function processDachser(ws,r,cols){
   if(cols.tarif>=0&&cols.fr>=0){
     const tarifRaw=cellStr(ws,r,cols.tarif);
     if(tarifRaw===''&&hasErr(cellNum(ws,r,cols.fr),T)){
+      if(abgLand&&abgLand!=='DE')return 'kein Tarif für '+abgLand;
       const hasOtherDiff=
         (cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T))||
         (cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))||
@@ -761,7 +769,7 @@ function processDachser(ws,r,cols){
     if(cols.exp<0||!hasErr(cellNum(ws,r,cols.exp),T))res=join(res,P.einfuhrzoll);
   }
   if(cols.sbfu>=0&&hasErr(cellNum(ws,r,cols.sbfu),T))res=join(res,'SBfU-Bescheinigung f. Umsatzsteuerzwecke');
-  if(cols.fr>=0&&hasErr(cellNum(ws,r,cols.fr),T)){
+  if(cols.fr>=0&&(hasErr(cellNum(ws,r,cols.fr),T)||(Math.abs(cellNum(ws,r,cols.fr))>=0.05&&!res))){
     hasFR=true;
     const frVal=cellNum(ws,r,cols.fr);
     /* "could have been bundled" dominates: a freight line carrying more than one
@@ -773,7 +781,6 @@ function processDachser(ws,r,cols){
        to the ZW note below. */
     if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
     else if(isZW)res=join(res,daZWNote(ws,r,cols));
-    else if(sachkonto.toUpperCase()==='X')res=join(res,'VORHOLUNG');
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
     else if(servArt.toUpperCase()==='K1AU'&&Math.abs(frVal-90)<=0.1)res=join(res,P.sonderfahrtDoppelt90);
     else {
@@ -782,23 +789,17 @@ function processDachser(ws,r,cols){
          Tier table is `DACHSER_BP` above — sourced from the data/Dachser-weight.xlsx
          rate card; mirrors the K+N / Wackler weight-tier guards.
 
-           both weights known & EQUAL  → emit NOTHING. There is no weight
-               discrepancy, so the residual FR gap is rounding noise (sub-EUR) or
-               a manual adjustment the auditor annotates by hand — attaching a
-               weight/Frachtzu phrase over-fires. (bundle 2026-06-11 rows 276/277/
-               278: FR=-0.09, VKG==VKG_DL → truth carries no Frachtzu/abschlag;
-               row 269: FR=134.91, VKG==VKG_DL → truth carries no abweich.Gewicht.)
-           both weights known & DIFFER → genuine weight miscalc. Crossing a
-               DACHSER_BP bucket → plural "abweichender Gewichte"; staying in the
-               same bucket → singular "abweichendem Gewicht".
+           both weights known & EQUAL (or within 1kg rounding on sub-EUR delta):
+             · positive FR above threshold (>1, or >=0.05 if no other triggers) → Frachtdifferenz
+             · negative FR (< -1.0) without other surcharge triggers → Differenz aufgrund abweichender Gewichte
+           both weights known & DIFFER → genuine weight miscalc: emit plural "Differenz aufgrund abweichender Gewichte".
            weight basis missing (one or both volumes 0/blank) → the gap can't be
                attributed to weight:
                  · negative FR → freight surcharge/discount "Differenz Frachtzu/
                    abschlag". Covers both the sub-EUR legacy case (FR=-0.09, no
                    weights) and large credits where only the DL weight was recorded
                    (bundle row 163: FR=-31.65, VKG=0, VKG_DL=2313).
-                 · positive FR → legacy singular weight wording (no usable tier
-                   basis — preserves the FR=+26.24 / no-VKG behaviour). */
+                 · positive FR → legacy weight wording. */
       const v1Col=cols.brutto>=0?cols.brutto:cols.vkg;
       const v1=v1Col>=0?cellNum(ws,r,v1Col):0;
       const v2=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
@@ -806,12 +807,13 @@ function processDachser(ws,r,cols){
       /* ZZ Differenz cell — only consulted here for the FR wording variant
          (the ZZ branch itself always emits "2. Zustellung" now). */
       const zzVal=cols.zz>=0?cellNum(ws,r,cols.zz):0;
-      if(bothKnown&&v1===v2){
-        if(frVal>1)res=join(res,zzVal===35?P.frachtDifferenz:P.frachtDiff);
+      const sameWeight=bothKnown&&(v1===v2||(Math.abs(v1-v2)<1.0&&Math.abs(frVal)<=1.0));
+      if(sameWeight){
+        if(frVal>1||(frVal>=0.05&&!res))res=join(res,zzVal===35?P.frachtDifferenz:P.frachtDiff);
+        else if(frVal<-1.0&&!res)res=join(res,'Differenz aufgrund abweichender Gewichte');
       }else if(bothKnown){
-        res=join(res, (dachserGetTier(v1)!==dachserGetTier(v2))
-          ? 'Differenz aufgrund abweichender Gewichte'      /* plural — tiers crossed */
-          : 'Differenz aufgrund von abweichendem Gewicht'); /* singular — same tier, real diff */
+        if(frVal>0&&frVal<1.0)res=join(res,zzVal===35?P.frachtDifferenz:P.frachtDiff);
+        else res=join(res,'Differenz aufgrund abweichender Gewichte');
       }else if(frVal<0&&(Math.abs(frVal)<1.0||v2>0)){
         res=join(res,'Differenz Frachtzu/ abschlag');
       }else{
@@ -2790,6 +2792,8 @@ function collectInputsForRow(fw,ws,r,cols){
        previously undocumented and marked "not derivable"). */
     if(cols.ki_zw_plz>=0)placeIf('ki_zw_plz',cols.ki_zw_plz);
     if(cols.ki_zw_ort>=0)placeIf('ki_zw_ort',cols.ki_zw_ort);
+    if(cols.abg_land>=0)placeIf('abg_land',cols.abg_land);
+    if(cols.empf_land>=0)placeIf('empf_land',cols.empf_land);
   } else if(fw==='kn'){
     get('stat',cols.stat);get('tarif',cols.tarif);
     get('fr_diff',cols.fr);get('exp_diff',cols.exp);get('mt_diff',cols.toll);get('tz_diff',cols.fuel);
