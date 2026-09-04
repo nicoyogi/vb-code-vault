@@ -69,6 +69,37 @@ test('processDachser: blank TARIF + FR, but has TZ or MT -> do NOT emit VORHOLUN
   assert.notEqual(e.processDachser(ws, R, cols), 'VORHOLUNG');
 });
 
+test('processDachser: SACH=X with TARIF + FR delta does not emit VORHOLUNG', () => {
+  // SACH=X on normal rows with TARIF + FR must evaluate weight deviations, not VORHOLUNG
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 51: '64.93', 52: '-9.7', 53: '100.094', 54: '100', 35: 'X' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz aufgrund abweichender Gewichte');
+});
+
+test('processDachser: equal weights with positive FR above 0.08 and no other triggers -> Frachtdifferenz', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54 };
+  const ws = makeRow(R, { 50: 10, 51: '914.23', 52: '0.1', 53: '9550', 54: '9550' });
+  assert.equal(e.processDachser(ws, R, cols), 'Frachtdifferenz');
+});
+
+test('processDachser: equal weights with negative FR < -1.0 and no other triggers -> abweichender Gewichte', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54 };
+  const ws = makeRow(R, { 50: 10, 51: '108.4', 52: '-11.1', 53: '445', 54: '445' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz aufgrund abweichender Gewichte');
+});
+
+test('processDachser: weights differ but small positive FR delta (< 1.0) -> Frachtdifferenz', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg: 54, vkg_dl: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '73.31', 52: '0.09', 53: '194', 54: '194', 55: '109' });
+  assert.equal(e.processDachser(ws, R, cols), 'Frachtdifferenz');
+});
+
+test('processDachser: blank TARIF + FR on inbound shipment from foreign Abg.-Land -> kein Tarif für <Land>', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, maut: 53, tz: 54, abg_land: 55 };
+  const ws = makeRow(R, { 50: 10, 52: '958.8', 53: '64.89', 54: '91.71', 55: 'PT' });
+  assert.equal(e.processDachser(ws, R, cols), 'kein Tarif für PT');
+});
+
 test('processDachser: blank TARIF + FR with SERV/SACH -> Fremdnummer already-billed note', () => {
   const cols = { stat: 50, tarif: 51, fr: 52 };
   // SERV_ART=16, SACHKONTO=35 populated => the "already billed in another Beleg" branch.

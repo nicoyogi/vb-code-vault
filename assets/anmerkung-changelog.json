@@ -1,6 +1,17 @@
 {
-  "version": "1.41.0",
+  "version": "1.42.0",
   "entries": [
+    {
+      "ver": "1.42.0",
+      "date": "2026-09-04",
+      "items": [
+        "Dachser — removed legacy `sachkonto === 'X'` VORHOLUNG trigger in FR evaluation which was improperly masking weight deviations and fracht differences on billed rows.",
+        "Dachser — updated weight discrepancy branch to consistently emit plural \"Differenz aufgrund abweichender Gewichte\" for weight differences, and for equal weights with negative FR (< -1.0) and no other triggers.",
+        "Dachser — allowed positive FR delta above threshold (> 0.08, or >= 0.05 when no other trigger fired and weights match within 1kg) on equal weights to emit \"Frachtdifferenz\".",
+        "Dachser — small positive FR delta (< 1.0 €) on differing weights now classifies as \"Frachtdifferenz\".",
+        "Dachser — added `Abg.-Land` / `Empf.-Land` resolution. Blank-tariff rows on inbound shipments from non-DE origin countries now emit templated \"kein Tarif für <Land>\" (e.g. \"kein Tarif für PT\")."
+      ]
+    },
     {
       "ver": "1.41.0",
       "date": "2026-09-03",
