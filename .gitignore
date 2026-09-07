@@ -94,6 +94,8 @@ claude-skills/
 diff.txt
 .gemini/
 .claude/
+.opencode/
+session-*.md
 apply_redesign.py
 redesign.py
 redesign.js
@@ -123,5 +125,6 @@ data/
 assets/wackler-ratecard.js
 assets/wackler-national-ratecard.js
 
-docs/
+docs/*
+!docs/anmerkung/
 firestore.rules
