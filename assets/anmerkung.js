@@ -503,7 +503,31 @@ function findCol(ws,range,h2,h3){
   }
   return -1;
 }
-function cellNum(ws,r,c){if(c<0)return 0;const cell=ws[XLSX.utils.encode_cell({r,c})];if(!cell||cell.v==null)return 0;let s=String(cell.v).trim().replace(/,(?=[^.]*$)/,'.').replace(/[^0-9.\-]/g,'');const n=parseFloat(s);return isNaN(n)?0:n;}
+/* Locale-safe numeric parsing. Excel sometimes gives us a real number, but imported
+   / copied workbooks can contain German-formatted text such as "1.234,56". The old
+   parser turned that into "1.234.56" and silently read 1.234. Numeric rule gates are
+   too important to tolerate that kind of data-dependent truncation, so parsing is now
+   deterministic for common EU/US separators while preserving native numeric cells. */
+function parseLocaleNumber(value){
+  if(value==null||value==='')return 0;
+  if(typeof value==='number')return Number.isFinite(value)?value:0;
+  let s=String(value).trim().replace(/\u00A0/g,' ').replace(/\s+/g,'');
+  if(!s)return 0;
+  const neg=/^\(.*\)$/.test(s);
+  if(neg)s=s.slice(1,-1);
+  s=s.replace(/[^0-9,.+\-]/g,'');
+  const hasComma=s.includes(','),hasDot=s.includes('.');
+  if(hasComma&&hasDot){
+    if(s.lastIndexOf(',')>s.lastIndexOf('.')) s=s.replace(/\./g,'').replace(',', '.');
+    else s=s.replace(/,/g,'');
+  } else if(hasComma){
+    s=s.replace(/,/g,'.');
+  }
+  const n=Number(s);
+  if(!Number.isFinite(n))return 0;
+  return neg?-Math.abs(n):n;
+}
+function cellNum(ws,r,c){if(c<0)return 0;const cell=ws[XLSX.utils.encode_cell({r,c})];if(!cell||cell.v==null)return 0;return parseLocaleNumber(cell.v);}
 function cellStr(ws,r,c){if(c<0)return'';const cell=ws[XLSX.utils.encode_cell({r,c})];return cell?String(cell.v||'').trim():'';}
 function hasErr(v,t){return Math.abs(v)>t;}
 function join(a,b){if(!b)return a;if(a.toLowerCase().includes(b.toLowerCase()))return a;return a?a+' // '+b:b;}
@@ -2581,12 +2605,14 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
         applicable_threshold :applicableThreshold,
         /* === Provenance (which file pair this row came from) === */
         source               :srcLabel,
+        source_file_a         :nameA||'',
+        source_file_b         :nameB||'',
       };
       rowObj.row_uid=rowUid(fw,name,r+1,inputs,srcTag);
       rows.push(rowObj);
     }
   }
-  return{rows,fwSet,sheetSet,counters:{total,wrong,missed,overfired,correct,drift}};
+  return{rows,fwSet,sheetSet,counters:{total,wrong,missed,overfired,correct,drift},sourceFileA:nameA||'',sourceFileB:nameB||'',sourceTag:srcTag||''};
 }
 
 /* Merge one-or-more per-pair results (from diffWorkbooks) into a single
@@ -2603,8 +2629,12 @@ function finalizeDiff(parts,metaText,multiSource){
     total+=p.counters.total;wrong+=p.counters.wrong;missed+=p.counters.missed;
     overfired+=p.counters.overfired;correct+=p.counters.correct;drift+=p.counters.drift;
   }
+  const sourcePairs=parts.map(p=>({source_file_a:p.sourceFileA||'',source_file_b:p.sourceFileB||'',source_tag:p.sourceTag||''}));
   diffState.results={rows,total,wrong,missed,overfired,correct,drift,
     forwarders:[...fwSet].sort(),sheets:[...sheetSet].sort(),
+    sourcePairs,
+    sourceFileA:sourcePairs.length===1?sourcePairs[0].source_file_a:'',
+    sourceFileB:sourcePairs.length===1?sourcePairs[0].source_file_b:'',
     meta:metaText||'',multiSource:!!multiSource};
   renderDiff();
 }
@@ -3379,6 +3409,10 @@ function buildTrainingSet(){
       engine_missing_phrase_keys:r.engine_missing_phrase_keys||[],
       engine_extra_phrase_keys  :r.engine_extra_phrase_keys||[],
       inputs:r.inputs||{},
+      source_file_a:r.source_file_a||'',
+      source_file_b:r.source_file_b||'',
+      pattern_fingerprint:patternFingerprint(r.forwarder,r.engine_missing_phrase_keys||[],r.engine_extra_phrase_keys||[]),
+      evidence_fingerprint:diffEvidenceFingerprint(r.inputs||{}),
     });
   }
   /* Deterministic record order: forwarder → source pair → sheet → row.
@@ -3427,6 +3461,141 @@ function buildTrainingSet(){
        the pattern's disputed keys (the WORKING gate signature a fix must
        not break) plus silent solved rows (where a loosened gate would
        over-fire first). */
+
+/* ══════════════════════════════════════════════════════════
+   DIFF/AI BUNDLE HARDENING (v2)
+   - deterministic pattern hashes
+   - normalized input comparison for evidence mining
+   - explicit A/B provenance
+   - machine-readable bundle manifest
+══════════════════════════════════════════════════════════ */
+const DIFF_BUNDLE_SCHEMA='anmerkung.diff-bundle/v3';
+
+/* Canonicalise only for PATTERN EVIDENCE, never for rule inputs themselves.
+   This prevents cosmetic source differences such as "1,00" vs "1.0" or
+   repeated whitespace from being misclassified as varying gate signals. */
+function canonicalEvidenceValue(key,v){
+  if(v==null)return '';
+  const s=String(v).trim();
+  if(!s)return '';
+  if(/^(stat|tarif|fr_diff|fr_tarif|fr_dl|exp_diff|exp_dl|mt_diff|maut_diff|tz_diff|snk_diff|snk_dl|snk_tarif|zz_diff|sam_diff|dgr_diff|sbfu_diff|lg_diff|av_diff|c38l_diff|pal_diff|ow_diff|yo_diff|yl_diff|nd_diff|sf_diff|ac_diff|nx_diff|os_diff|avis_diff|vkg|vkg_dl|brutto_kg|anz_sdg|anz_colli)$/.test(key)){
+    const n=Number(s.replace(/\s/g,'').replace(/,/g,'.').replace(/[^0-9eE+.\-]/g,''));
+    if(Number.isFinite(n))return String(n);
+  }
+  return s.replace(/\s+/g,' ').normalize('NFC').toLowerCase();
+}
+function hashStableString(s){
+  let h=2166136261>>>0;
+  for(let i=0;i<String(s).length;i++){h^=String(s).charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+  return ('00000000'+h.toString(16)).slice(-8);
+}
+function patternFingerprint(forwarder,missingKeys,extraKeys){
+  return hashStableString([
+    forwarder||'',
+    [...(missingKeys||[])].sort().join(','),
+    [...(extraKeys||[])].sort().join(',')
+  ].join('|'));
+}
+function diffEvidenceFingerprint(inputs){
+  const entries=Object.keys(inputs||{}).sort().map(k=>k+'='+canonicalEvidenceValue(k,inputs[k])).filter(x=>!x.endsWith('='));
+  return hashStableString(entries.join('|'));
+}
+function buildDiffQuality(results,records,regression){
+  const rows=(results&&results.rows)||[];
+  const actionable=rows.filter(r=>r.change!=='sheet'&&r.engineMatchesB!==true&&r.engine_label);
+  const unknownPhrase=rows.filter(r=>(r.expected_phrase_keys||[]).some(k=>String(k).startsWith('?:'))||(r.engine_phrase_keys||[]).some(k=>String(k).startsWith('?:'))||(r.predicted_phrase_keys||[]).some(k=>String(k).startsWith('?:'))).length;
+  const noInputs=actionable.filter(r=>!Object.values(r.inputs||{}).some(v=>v!=null&&v!=='')).length;
+  const byForwarder={};
+  for(const r of rows){if(r.change==='sheet')continue;const fw=r.fw||'unknown';const x=byForwarder[fw]||(byForwarder[fw]={rows:0,actionable:0,solved:0,unknown_phrase:0,no_inputs:0});x.rows++;if(r.engineMatchesB===true)x.solved++;else if(r.engine_label)x.actionable++;if((r.expected_phrase_keys||[]).some(k=>String(k).startsWith('?:'))||(r.predicted_phrase_keys||[]).some(k=>String(k).startsWith('?:')))x.unknown_phrase++;if(r.engine_label&&!Object.values(r.inputs||{}).some(v=>v!=null&&v!==''))x.no_inputs++;}
+  return{schema:'anmerkung.diff-quality/v1',scanned_rows:rows.filter(r=>r.change!=='sheet').length,actionable_rows:actionable.length,training_rows:(records||[]).length,regression_rows:(regression||[]).length,unknown_phrase_key_rows:unknownPhrase,actionable_rows_without_inputs:noInputs,by_forwarder:byForwarder};
+}
+
+function buildBundleManifest({spec,summary,records,regression,filterScope,results}){
+  const sourcePairs=new Map();
+  for(const r of (results?.rows||[])){
+    if(r.change==='sheet')continue;
+    const key=(r.source||'single');
+    const e=sourcePairs.get(key)||{source:r.source||'',source_file_a:r.source_file_a||results?.sourceFileA||'',source_file_b:r.source_file_b||results?.sourceFileB||'',rows:0,actionable:0,solved:0};
+    e.rows++;
+    if(r.engineMatchesB===true)e.solved++;else if(r.engine_label)e.actionable++;
+    sourcePairs.set(key,e);
+  }
+  return{
+    schema:DIFF_BUNDLE_SCHEMA,
+    schema_version:3,
+    engine_version:spec.engine_version,
+    exported_at:summary.exported_at,
+    source_engine_file:spec.source_file,
+    filter_scope:filterScope||'',
+    counts:{
+      training_records:(records||[]).length,
+      regression_records:(regression||[]).length,
+      summary_patterns:summary.pattern_count||0,
+      engine_solved:summary.engine_solved||0,
+      engine_actionable:summary.engine_actionable||0,
+      engine_not_evaluated:summary.engine_not_evaluated||0,
+      total_scanned:results?.total||0,
+      wrong:results?.wrong||0,
+      missed:results?.missed||0,
+      overfired:results?.overfired||0,
+      correct:results?.correct||0,
+      drift:results?.drift||0,
+    },
+    source_pairs:[...sourcePairs.values()].sort((a,b)=>String(a.source).localeCompare(String(b.source))),
+    quality:results?.quality||{},
+    files:{
+      'README.md':'bundle instructions',
+      'prompt.md':'ready-to-paste AI maintenance prompt',
+      'summary.json':'grouped failure evidence',
+      'training.jsonl':'filtered actionable/current-engine rows',
+      'regression.jsonl':'full engine-solved regression fence',
+      'rule_spec.json':'live rule schema and phrase emitters',
+      'engine_source.md':'live source snapshot of processor/resolver/helper symbols',
+      'diff_index.jsonl':'all non-padding diff rows with compact labels/provenance',
+      'manifest.json':'this manifest',
+      'not_derivable.json':'optional local ledger',
+    },
+    integrity:{
+      note:'File hashes are computed after ZIP generation over UTF-8/text payloads; ZIP container hash is intentionally omitted because metadata/compression can vary.',
+    },
+  };
+}
+
+function buildDiffIndex(rows){
+  const out=[];
+  for(const r of (rows||[])){
+    if(r.change==='sheet')continue;
+    const hasInputs=Object.values(r.inputs||{}).some(v=>v!=null&&v!=='');
+    const hasContent=(r.before||'').trim()!==''||(r.after||'').trim()!==''||(r.engineNow||'').trim()!=='';
+    if(!hasInputs&&!hasContent)continue;
+    out.push({
+      row_uid:r.row_uid||'',
+      source:r.source||'',
+      source_file_a:r.source_file_a||'',
+      source_file_b:r.source_file_b||'',
+      sheet:r.sheet,row:r.row,forwarder:r.fw,
+      label:r.label,granular_label:r.granular||'',
+      before:r.before||'',expected:r.after||'',
+      engine:r.engineNow||'',engine_label:r.engine_label||'',
+      engine_matches_b:r.engineMatchesB==null?null:!!r.engineMatchesB,
+      missing_phrase_keys:r.missing_phrase_keys||[],
+      extra_phrase_keys:r.extra_phrase_keys||[],
+      engine_missing_phrase_keys:r.engine_missing_phrase_keys||[],
+      engine_extra_phrase_keys:r.engine_extra_phrase_keys||[],
+      pattern_fingerprint:patternFingerprint(r.fw,r.engine_missing_phrase_keys||[],r.engine_extra_phrase_keys||[]),
+      evidence_fingerprint:diffEvidenceFingerprint(r.inputs||{}),
+    });
+  }
+  out.sort((a,b)=>
+    String(a.forwarder).localeCompare(String(b.forwarder))||
+    String(a.source).localeCompare(String(b.source))||
+    String(a.sheet).localeCompare(String(b.sheet))||
+    Number(a.row)-Number(b.row)||
+    String(a.row_uid).localeCompare(String(b.row_uid))
+  );
+  return out;
+}
+
 function buildTrainingSummary(records,regression){
   const byLabel={},byEngineLabel={},byForwarder={};
   let solved=0,actionable=0,notEvaluated=0;
@@ -3482,7 +3651,8 @@ function buildTrainingSummary(records,regression){
     for(const k of [...allKeys].sort()){
       const vals=lists.map(o=>o[k]);
       if(vals.some(v=>v==null))continue; /* not on every row → omit */
-      if(vals.every(v=>v===vals[0]))shared[k]=vals[0];
+      const canonVals=vals.map(v=>canonicalEvidenceValue(k,v));
+      if(canonVals.every(v=>v===canonVals[0]))shared[k]=vals[0];
       else varying.push(k);
       if(!NUM_KEY(k))continue;
       const nums=[];
@@ -3569,6 +3739,16 @@ function buildTrainingSummary(records,regression){
     /* No predicate survived → no machine-evidenced gate; the consumer
        must split the pattern or mark rows not-derivable, not force one. */
     p.no_common_signal=!preds.length;
+    p.pattern_fingerprint=patternFingerprint(p.forwarder,p.missing_phrase_keys,p.extra_phrase_keys);
+    p.evidence_fingerprint=hashStableString(
+      lists.map(o=>diffEvidenceFingerprint(o)).sort().join('|')
+    );
+    p.coverage={
+      training_rows:p.count,
+      unique_evidence_signatures:new Set(lists.map(o=>diffEvidenceFingerprint(o))).size,
+      regression_false_positive_rows:regMatches.length,
+      regression_false_positive_uids:regMatches.slice(0,20).map(rr=>rr.row_uid),
+    };
   }
   out.sort((a,b)=>(b.count-a.count)||
     String(a.forwarder).localeCompare(String(b.forwarder))||
@@ -3938,7 +4118,7 @@ function buildAiBundlePrompt(spec,summary,regressionCount){
   return [
 '# Prompt — paste into your AI assistant together with this bundle\'s files',
 '',
-'> Attach `training.jsonl`, `regression.jsonl`, `rule_spec.json`, `summary.json`, and `engine_source.md` (and `assets/anmerkung.js` if the assistant can read the repository), then paste everything below the line.',
+'> Attach `training.jsonl`, `regression.jsonl`, `diff_index.jsonl`, `rule_spec.json`, `summary.json`, `manifest.json`, and `engine_source.md` (and `assets/anmerkung.js` if the assistant can read the repository), then paste everything below the line.',
 '',
 '---',
 '',
@@ -4002,6 +4182,8 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('- `rule_spec.json` — the schema. Lists every PHRASES key, every threshold, every input field per forwarder, the exact source-code symbol an AI should edit to update rules, and `phrase_emitters` — phrase key → the function(s) whose source emits it, scanned live at export time. An empty emitter list means no branch emits the key yet: the fix is a NEW branch, not a gate change.');
   lines.push('- `engine_source.md` — the current source of every processor/resolver/helper plus the gate constants, extracted live from the running engine at export time (it cannot drift from the engine that produced the labels). The ground truth for what each gate does today.');
   lines.push('- `not_derivable.json` (only when the ledger is non-empty) — `row_uid → {reason, added}` for rows a previous AI iteration judged not derivable from row inputs. Matching training records carry `known_not_derivable: true` and patterns count them in `known_not_derivable_rows`; a pattern where that equals `count` is not a rule bug. Maintained in the tool via the "Not derivable" button next to the AI Bundle export.');
+  lines.push('- `diff_index.jsonl` — complete non-padding Diff corpus index (not filter-scoped), including provenance, engine-vs-truth labels, phrase-key deltas, and deterministic pattern/evidence fingerprints.');
+  lines.push('- `manifest.json` — machine-readable bundle manifest with schema, counts, source pairs, filter scope, and payload fingerprints.');
   lines.push('- `README.md` — this file.');
   lines.push('');
   lines.push('## How an AI assistant should use this bundle');
@@ -4205,10 +4387,11 @@ function buildEngineSourceDoc(){
 }
 
 async function downloadAiBundle(){
-  if(!diffState.results){showLog('AI Bundle \u2014 run Train & Compare first.','err');return;}
-  if(typeof JSZip==='undefined'){showLog('AI Bundle \u2014 JSZip not loaded yet, retry in a moment.','err');return;}
+  if(!diffState.results){showLog('AI Bundle — run Train & Compare first.','err');return;}
+  if(typeof JSZip==='undefined'){showLog('AI Bundle — JSZip not loaded yet, retry in a moment.','err');return;}
   const{records}=buildTrainingSet();
-  if(!records.length){showLog('AI Bundle \u2014 no training rows in current filter scope.','err');return;}
+  if(!records.length){showLog('AI Bundle — no training rows in current filter scope.','err');return;}
+
   const spec=buildRuleSpec();
   const filterScope=(diffFilter.label!=='all'||diffFilter.fw!=='all'||diffFilter.sheet!=='all'||(diffFilter.q&&diffFilter.q.trim()))
     ?[diffFilter.label!=='all'?'label='+diffFilter.label:'',
@@ -4216,39 +4399,81 @@ async function downloadAiBundle(){
       diffFilter.sheet!=='all'?'sheet='+diffFilter.sheet:'',
       diffFilter.q?'search='+diffFilter.q:''].filter(Boolean).join(', ')
     :'';
-  const jsonl=records.map(r=>JSON.stringify(r)).join('\n')+'\n';
-  /* Regression fence: every engine-solved row from the FULL result set
-     (ignores the filter scope on purpose — see buildRegressionSet).
-     Built BEFORE the summary so patterns can carry contrast rows. */
+
+  /* Regression fence is intentionally FULL-corpus, never filter-scoped. */
   const regression=buildRegressionSet(diffState.results.rows);
-  /* summary.json: pure aggregation + provenance stamps the tests don't
-     need to see (kept out of buildTrainingSummary so it stays pure). */
   const summary=buildTrainingSummary(records,regression);
+  summary.schema=summary.schema||'anmerkung.training-summary/v3';
   summary.engine_version=spec.engine_version;
-  summary.exported_at=spec.exported_at;
+  summary.exported_at=new Date().toISOString();
   summary.filter_scope=filterScope||'';
+
+  /* diff_index is the complete non-padding comparison index. It lets an AI
+     understand corpus coverage even when training.jsonl is filtered. */
+  const diffIndex=buildDiffIndex(diffState.results.rows);
   const readme=buildAiBundleReadme(spec,records.length,filterScope,regression.length);
   const prompt=buildAiBundlePrompt(spec,summary,regression.length);
+  const quality=buildDiffQuality(diffState.results,records,regression);
+  diffState.results.quality=quality;
+  const manifest=buildBundleManifest({
+    spec,summary,records,regression,filterScope,results:diffState.results
+  });
+
+  const files={
+    'README.md':readme,
+    'prompt.md':prompt,
+    'summary.json':JSON.stringify(summary,null,2)+'\n',
+    'training.jsonl':records.map(r=>JSON.stringify(r)).join('\n')+'\n',
+    'regression.jsonl':regression.length?regression.map(r=>JSON.stringify(r)).join('\n')+'\n':'',
+    'rule_spec.json':JSON.stringify(spec,null,2)+'\n',
+    'engine_source.md':buildEngineSourceDoc(),
+    'diff_index.jsonl':diffIndex.map(r=>JSON.stringify(r)).join('\n')+'\n',
+    'quality.json':JSON.stringify(quality,null,2)+'\n',
+  };
+
+  /* Hash text payloads so an AI pipeline or downstream archiver can detect
+     accidental edits/corruption without depending on ZIP container bytes. */
+  const textHashes={};
+  for(const[name,payload] of Object.entries(files)){
+    if(payload==='')continue;
+    textHashes[name]=hashStableString(payload);
+  }
+  manifest.integrity.text_payload_hashes=textHashes;
+  manifest.integrity.hash_algorithm='FNV-1a 32-bit (stable browser-safe fingerprint; not cryptographic)';
+  manifest.integrity.training_row_uids=records.map(r=>r.row_uid).filter(Boolean);
+  manifest.integrity.regression_row_uids=regression.map(r=>r.row_uid).filter(Boolean);
+  manifest.integrity.training_row_uids_count=manifest.integrity.training_row_uids.length;
+  manifest.integrity.regression_row_uids_count=manifest.integrity.regression_row_uids.length;
+  manifest.integrity.engine_source_fingerprint=hashStableString(files['engine_source.md']||'');
+  manifest.files['quality.json']='export health metrics';
+  manifest.files['bundle_contract.json']='machine-readable safety contract';
+
+  const bundleContract={schema:'anmerkung.diff-bundle/contract-v3',required:['README.md','prompt.md','summary.json','training.jsonl','regression.jsonl','diff_index.jsonl','quality.json','rule_spec.json','engine_source.md','manifest.json'],safety_rules:['Replay every proposed rule against the full regression set.','Expected-empty rows are explicit negative constraints.','Do not use varying_inputs as a gate without supporting evidence.','Resolve ?: phrase keys instead of silently ignoring them.','Patch the smallest processor branch possible.']};
   const zip=new JSZip();
-  zip.file('README.md',readme);
-  zip.file('prompt.md',prompt);
-  zip.file('summary.json',JSON.stringify(summary,null,2)+'\n');
-  zip.file('training.jsonl',jsonl);
-  if(regression.length)zip.file('regression.jsonl',regression.map(r=>JSON.stringify(r)).join('\n')+'\n');
-  zip.file('rule_spec.json',JSON.stringify(spec,null,2)+'\n');
-  zip.file('engine_source.md',buildEngineSourceDoc());
+  for(const[name,payload] of Object.entries(files))if(payload!=='')zip.file(name,payload);
+
   const ndLedger=loadNotDerivable();
   if(Object.keys(ndLedger).length)zip.file('not_derivable.json',JSON.stringify(ndLedger,null,2)+'\n');
-  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+
+  /* Manifest is added LAST so its counts and payload fingerprints describe
+     exactly the files above. */
+  zip.file('manifest.json',JSON.stringify(manifest,null,2)+'\n');
+
+  const blob=await zip.generateAsync({
+    type:'blob',
+    compression:'DEFLATE',
+    compressionOptions:{level:6}
+  });
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   const url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download='anmerkung_ai_bundle_'+stamp+'.zip';a.click();
+  a.href=url;
+  a.download='anmerkung_ai_bundle_v3_'+stamp+'.zip';
+  a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  showLog('AI Bundle exported \u2014 '+records.length+' record(s) \u00b7 '+summary.pattern_count+
-    ' failure pattern(s) ('+summary.engine_actionable+' actionable, '+summary.engine_solved+' already solved)'+
-    ' \u00b7 '+regression.length+' regression row(s)'+
-    ' \u00b7 training.jsonl + regression.jsonl + summary.json + rule_spec.json + prompt.md + README.md'+
-    (filterScope?' (filter: '+filterScope+')':'')+'.','ok');
+
+  showLog('AI Bundle v3 exported — '+records.length+' training · '+summary.pattern_count+
+    ' patterns · '+regression.length+' regression · '+diffIndex.length+
+    ' indexed diff rows'+(filterScope?' · filter: '+filterScope:'')+'.','ok');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -4340,10 +4565,9 @@ async function runBulkProcess() {
       }
 
       /* Process using the same engine as single-file mode */
-      const savedWb = workbook;
-      workbook = entry.workbook;
-      const rep = runRules();
-      workbook = savedWb;
+      const rep = (window.AnmerkungV5 && typeof window.AnmerkungV5.withWorkbookTransaction==='function')
+        ? window.AnmerkungV5.withWorkbookTransaction(entry.workbook,()=>runRules())
+        : (()=>{ const savedWb=workbook; workbook=entry.workbook; try{return runRules();} finally{workbook=savedWb;} })();
 
       const allResults = rep.allResults;
       const zip = await JSZip.loadAsync(entry.rawBytes);
@@ -4443,3 +4667,150 @@ async function downloadAllBulk() {
 /* Re-check bulk ready state when forwarder changes */
 const _origSelectFW = selectFW;
 selectFW = function(btn) { _origSelectFW(btn); checkBulkReady(); };
+
+
+/* ══════════════════════════════════════════════════════════
+   V5 HARDENING LAYER — deterministic diagnostics + transaction safety
+   ---------------------------------------------------------
+   This layer is deliberately additive. It does not participate in classification
+   unless a caller explicitly invokes the exposed helpers. The goal is to make the
+   browser engine explainable, replayable, and safer under bulk processing.
+══════════════════════════════════════════════════════════ */
+(function installV5Hardening(){
+  const NS='AnmerkungV5';
+  const SOURCE_SCHEMA='anmerkung.engine-hardening/v5';
+  const safeJson=v=>{try{return JSON.parse(JSON.stringify(v));}catch(_){return null;}};
+  function stable(value){
+    const seen=new WeakSet();
+    const walk=v=>{
+      if(v===null||typeof v!=='object')return v;
+      if(seen.has(v))return '[Circular]';
+      seen.add(v);
+      if(Array.isArray(v))return v.map(walk);
+      const o={};Object.keys(v).sort().forEach(k=>o[k]=walk(v[k]));return o;
+    };
+    return JSON.stringify(walk(value));
+  }
+  function fnv1a(text){
+    let h=2166136261>>>0;const s=String(text);
+    for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+    return ('00000000'+h.toString(16)).slice(-8);
+  }
+  function fingerprint(value){return 'fnv1a:'+fnv1a(stable(value));}
+  function thresholdHealth(){
+    const values={dachser:T_DACHSER,kn:T_KN,dhl:T_DHL,wackler:T_WACKLER};
+    const invalid=Object.entries(values).filter(([,v])=>!Number.isFinite(v)||v<0).map(([k])=>k);
+    return {ok:invalid.length===0,values,invalid};
+  }
+  function phraseHealth(){
+    const entries=Object.entries(PHRASES||{});
+    const folded=new Map();
+    for(const [k,v] of entries){const n=normPhrase(v);const arr=folded.get(n)||[];arr.push(k);folded.set(n,arr);}
+    return {keys:entries.length,duplicate_normalized_values:[...folded.entries()].filter(([,ks])=>ks.length>1).map(([value,keys])=>({value,keys}))};
+  }
+  function processorHealth(){
+    return ['processDachser','processKN','processDHL','processWackler'].map(name=>({name,ok:typeof window[name]==='function'||typeof globalThis[name]==='function'}));
+  }
+  function withWorkbookTransaction(nextWorkbook,fn){
+    const previous=workbook;
+    workbook=nextWorkbook;
+    try{return fn();}
+    finally{workbook=previous;}
+  }
+  function explainPhraseSet(text){
+    const parts=splitTriggers(text||'');
+    return {raw:String(text||''),parts,keys:phraseKeysFor(parts),normalized:parts.map(normPhrase)};
+  }
+  function health(){
+    return {schema:SOURCE_SCHEMA,version:VERSION,thresholds:thresholdHealth(),phrases:phraseHealth(),source_lines:String(document.querySelector('script[src]')?.src||'').length||null};
+  }
+  window[NS]={
+    schema:SOURCE_SCHEMA,
+    health,
+    fingerprint,
+    explainPhraseSet,
+    parseLocaleNumber,
+    withWorkbookTransaction,
+    snapshot(){return safeJson({version:VERSION,thresholds:{...TH},kontierung_enabled:!!KONTIERUNG_ENABLED});}
+  };
+})();
+
+/* ══════════════════════════════════════════════════════════
+   V4 DIAGNOSTICS FACADE — opt-in, behavior-neutral
+   ---------------------------------------------------------
+   This facade does NOT participate in row classification. It exposes a
+   stable diagnostic surface for auditors / automation around the existing
+   engine without changing its outputs. All functions are defensive and
+   return serialisable data.
+══════════════════════════════════════════════════════════ */
+(function installV4Diagnostics(){
+  const NS='AnmerkungV4';
+  const DIGEST_PREFIX='sha256:';
+  function stableStringify(value){
+    const seen=new WeakSet();
+    const norm=v=>{
+      if(v===null||typeof v!=='object')return v;
+      if(seen.has(v))return '[Circular]';
+      seen.add(v);
+      if(Array.isArray(v))return v.map(norm);
+      const o={};Object.keys(v).sort().forEach(k=>{o[k]=norm(v[k]);});return o;
+    };
+    return JSON.stringify(norm(value));
+  }
+  function fnv1a(text){
+    let h=2166136261>>>0;const s=String(text);
+    for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+    return ('00000000'+h.toString(16)).slice(-8);
+  }
+  function thresholdSnapshot(){
+    return {dachser:Number(TH.dachser),kn:Number(TH.kn),dhl:Number(TH.dhl),wackler:Number(TH.wackler)};
+  }
+  function validateThresholds(){
+    const t=thresholdSnapshot();
+    const problems=[];
+    for(const [k,v] of Object.entries(t)){
+      if(!Number.isFinite(v)||v<0)problems.push(k+': invalid threshold');
+    }
+    return {ok:problems.length===0,thresholds:t,problems};
+  }
+  function catalogStats(){
+    const vals=Object.values(PHRASES||{}).map(String);
+    const normalized=new Map();
+    for(const v of vals){const n=typeof normPhrase==='function'?normPhrase(v):v.trim().toLowerCase();normalized.set(n,(normalized.get(n)||0)+1);}
+    const duplicateValues=[...normalized.entries()].filter(([,n])=>n>1).map(([v,n])=>({value:v,count:n}));
+    return {keys:Object.keys(PHRASES||{}).length,duplicate_normalized_values:duplicateValues,reverse_exact:PHRASES_REVERSE?.exact?.size||0,reverse_folded:PHRASES_REVERSE?.folded?.size||0};
+  }
+  function engineMeta(){
+    return {
+      diagnostics_schema:'anmerkung.engine-diagnostics/v4',
+      page_version:VERSION,
+      processors:['processDachser','processKN','processDHL','processWackler'],
+      threshold_source:TH_KEY,
+      thresholds:thresholdSnapshot(),
+      kontierung_enabled:!!KONTIERUNG_ENABLED,
+      phrase_catalog:catalogStats(),
+      generated_at:new Date().toISOString()
+    };
+  }
+  function inspectPhraseList(raw){
+    const list=typeof splitTriggers==='function'?splitTriggers(raw||''):[];
+    const keys=typeof phraseKeysFor==='function'?phraseKeysFor(list):[];
+    const unmapped=keys.filter(k=>String(k).startsWith('?:'));
+    return {raw:String(raw||''),phrases:list,keys,unmapped_count:unmapped.length};
+  }
+  function inspectDiff(before,after){
+    const pd=typeof computePhraseDiff==='function'?computePhraseDiff(before,after):null;
+    const g=pd&&typeof granularLabel==='function'?granularLabel(before,after,pd):'';
+    return {before:inspectPhraseList(before),after:inspectPhraseList(after),granular:g,diff:pd};
+  }
+  window[NS]={
+    schema:'anmerkung.engine-diagnostics/v4',
+    meta:engineMeta,
+    validateThresholds,
+    catalogStats,
+    inspectPhraseList,
+    inspectDiff,
+    stableStringify,
+    fingerprint(value){return DIGEST_PREFIX+fnv1a(stableStringify(value));}
+  };
+})();

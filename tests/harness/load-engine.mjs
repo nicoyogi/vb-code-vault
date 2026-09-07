@@ -37,13 +37,25 @@ function readRatecardSource(relPath) {
     return readFileSync(join(REPO_ROOT, relPath), 'utf8');
   } catch { /* not on disk — fall through to git history */ }
   try {
-    const lastLive = execFileSync('git', ['log', '--diff-filter=d', '--format=%H', '-1', '--', relPath],
-      { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
-    if (lastLive) {
-      return execFileSync('git', ['show', `${lastLive}:${relPath}`],
-        { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+    /* `git log --diff-filter=d -1` returns the deletion commit itself. That commit
+       no longer contains the path, so `git show <commit>:<path>` fails and the
+       harness silently loses the rate card. Walk history until we find a commit
+       that actually contains the requested blob; this keeps the test fallback
+       correct after plaintext rate cards are removed from the working tree. */
+    const commits = execFileSync('git', ['rev-list', '--all', '--', relPath],
+      { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 2 * 1024 * 1024 })
+      .trim().split(/\r?\n/).filter(Boolean);
+    for (const commit of commits) {
+      try {
+        execFileSync('git', ['cat-file', '-e', `${commit}:${relPath}`],
+          { cwd: REPO_ROOT, stdio: 'ignore' });
+        return execFileSync('git', ['show', `${commit}:${relPath}`],
+          { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+      } catch {
+        /* This commit may be the deletion; keep walking until the blob exists. */
+      }
     }
-  } catch { /* shallow clone / no git — give up */ }
+  } catch { /* shallow clone / no git / no historical blob — give up */ }
   return null;
 }
 const RATECARD_SRC = readRatecardSource('assets/wackler-ratecard.js');
@@ -210,7 +222,7 @@ export function loadEngine() {
     // diff-mode labeling / training-output primitives
     'classifyDiff', 'computePhraseDiff', 'granularLabel', 'rowUid', 'phraseCellParts',
     'buildTrainingSummary', 'buildRegressionSet', 'collectInputsForRow', 'buildEngineSourceDoc',
-    'buildPhraseEmitterIndex',
+    'buildPhraseEmitterIndex', 'parseLocaleNumber',
   ];
   const engine = {};
   const missing = [];
