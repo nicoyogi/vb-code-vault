@@ -129,6 +129,79 @@ test('prioDocsFromSheet: walks actual cells (not !ref), per-header column, skips
   assert.deepEqual(plain(s.prioDocsFromSheet({ '!ref': 'A1:B2', A1: { v: 'no headers here' } })), []);
 });
 
+test('prioRowsFromSheet: parses German headers, extracts [vendor, supplier, ref, doc, notes[], overdue]', () => {
+  const sheet = {
+    '!ref': 'A1:U1000',
+    A1: { v: 'SAP' }, B1: { v: 'Kreditordetails' }, C1: { v: 'Dokumentnummer' },
+    D1: { v: 'Kreditor' }, E1: { v: 'Referenz' }, F1: { v: 'Schrittbezeichnung' },
+    G1: { v: 'Überfällig im Workflow ab' }, H1: { v: 'Notiz' },
+    A2: { v: 'FNP' }, B2: { v: 'Schenker' }, C2: { v: '5001' },
+    D2: { v: '18000' }, E2: { v: 'REF-101' }, F2: { v: 'Tarifarische Prüfung' },
+    G2: { v: '2026-07-06' }, H2: { v: 'prio note' },
+    A3: { v: 'KSP' }, B3: { v: 'DHL' }, C3: { v: '6001' },
+    D3: { v: '19000' }, E3: { v: 'REF-201' }, F3: { v: 'Faktuale Prüfung' },
+    G3: { v: '' }, H3: { v: '' },
+    // repeated header row should be skipped
+    A4: { v: 'SAP' }, B4: { v: 'Kreditordetails' }, C4: { v: 'Dokumentnummer' },
+  };
+  const entries = s.prioRowsFromSheet(sheet, '19.08.2026');
+  assert.equal(entries.length, 2);
+  assert.deepEqual(plain(entries[0]), {
+    system: 'FNP',
+    group: 'tariff',
+    row: ['Schenker', '18000', 'REF-101', '5001', ['prio note'], '2026-07-06']
+  });
+  assert.deepEqual(plain(entries[1]), {
+    system: 'KSP',
+    group: 'factual',
+    row: ['DHL', '19000', 'REF-201', '6001', [], '']
+  });
+});
+
+test('prioRowsFromSheet: ad-hoc sheet (OPP K&N) infers system and vendor from sheet name', () => {
+  const sheet = {
+    '!ref': 'A1:H100',
+    A1: { v: 'Dokumentnummer' }, B1: { v: 'FI / MM Beleg' }, D1: { v: 'Kreditor' }, H1: { v: 'Referenz' },
+    A2: { v: '2457574' }, D2: { v: 'A3001883' }, H2: { v: '77283304' },
+  };
+  const entries = s.prioRowsFromSheet(sheet, 'OPP K&N');
+  assert.equal(entries.length, 1);
+  assert.deepEqual(plain(entries[0]), {
+    system: 'OPP',
+    group: 'tariff',
+    row: ['K&N', 'A3001883', '77283304', '2457574', [], '']
+  });
+});
+
+test('reconcilePrio: missing Referenz rows added to system, existing Referenz skipped, missing systems created', () => {
+  const systems = [
+    { name: 'FNP', group: 'tariff', rows: [['DHL', 'K1', 'REF-1', 'D1', [], '']] },
+    { name: 'KSP', group: 'tariff', rows: [['DHL', 'K2', 'REF-2', 'D2', [], '']] },
+  ];
+  const prioEntries = [
+    { system: 'FNP', group: 'tariff', row: ['DHL', 'K1', 'REF-1', 'D1', [], ''] },        // already in normal file -> skipped
+    { system: 'FNP', group: 'tariff', row: ['Schenker', 'K1', 'REF-NEW-1', 'D10', [], ''] }, // missing in normal file -> added
+    { system: 'OPP', group: 'tariff', row: ['Kuehne', 'K3', 'REF-OPP-1', 'D20', [], ''] },    // system missing in normal files -> created
+  ];
+  const added = s.reconcilePrio(systems, prioEntries);
+  assert.equal(added, 2);
+  assert.equal(systems.length, 3);
+  const fnp = systems.find(sys => sys.name === 'FNP');
+  assert.equal(fnp.rows.length, 2);
+  assert.equal(fnp.prioAdded, 1);
+  assert.equal(fnp.rows[1][2], 'REF-NEW-1');
+  const opp = systems.find(sys => sys.name === 'OPP');
+  assert.equal(opp.rows.length, 1);
+  assert.equal(opp._fromPrio, true);
+  assert.equal(opp.rows[0][2], 'REF-OPP-1');
+  assert.deepEqual(plain(systems.map(sys => sys.name)), ['FNP', 'KSP', 'OPP']);
+
+  const cleared = s.clearPrioFromSystems(systems);
+  assert.equal(cleared.length, 2);
+  assert.deepEqual(plain(cleared.map(sys => sys.name)), ['FNP', 'KSP']);
+  assert.equal(cleared.find(sys => sys.name === 'FNP').rows.length, 1);
+});
+
 test('partitionByStep: factual rows split out per Step description; everything else stays tariff', () => {
   const H = ['Vendor details', 'Step description', 'Document number'];
   const rows = [

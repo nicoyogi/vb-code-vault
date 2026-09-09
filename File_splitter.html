@@ -387,7 +387,15 @@
   const prioInput = document.getElementById('prioInput');
   document.getElementById('prioBtn').addEventListener('click', () => prioInput.click());
   prioInput.addEventListener('change', e => { if (e.target.files[0]) handlePrioFile(e.target.files[0]); prioInput.value = ''; });
-  document.getElementById('prioClear').addEventListener('click', () => { prio = null; renderPrio(); renderWizard(); });
+  document.getElementById('prioClear').addEventListener('click', () => {
+    prio = null;
+    applyPrioToSystems();
+    renderPrio();
+    renderSystems();
+    rebuildNoteFilter();
+    updateNoteStat();
+    renderWizard();
+  });
 
   function handlePrioFile(file) {
     if (!file.name.match(/\.(xlsx|xls)$/i)) { showError('Please upload an Excel file (.xlsx or .xls).'); return; }
@@ -395,15 +403,44 @@
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
         const docs = new Set();
-        for (const sn of wb.SheetNames) for (const d of prioDocsFromSheet(wb.Sheets[sn])) docs.add(d);
+        const entries = [];
+        for (const sn of wb.SheetNames) {
+          const sheet = wb.Sheets[sn];
+          for (const d of prioDocsFromSheet(sheet)) docs.add(d);
+          for (const r of prioRowsFromSheet(sheet, sn)) {
+            entries.push(r);
+            if (r.row && r.row[3]) docs.add(normDoc(r.row[3]));
+          }
+        }
         if (docs.size === 0) { showError('No "Dokumentnummer" column found in ' + file.name + '.'); return; }
-        prio = { fileName: file.name, docs };
-        hideError(); renderPrio(); renderWizard();
+        prio = { fileName: file.name, docs, entries, addedRowsCount: 0 };
+        applyPrioToSystems();
+        hideError(); renderPrio(); renderSystems(); rebuildNoteFilter(); updateNoteStat(); renderWizard();
       } catch (err) { showError('Could not read ' + file.name + ': ' + err.message); }
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  function refreshSystemForwarders(sys) {
+    const prevChecked = new Map((sys.forwarders || []).map(f => [f.name, f.checked]));
+    sys.forwarders = tallyForwarders(sys.rows).map(f => ({
+      ...f,
+      checked: prevChecked.has(f.name) ? prevChecked.get(f.name) : true
+    }));
+  }
+
+  function applyPrioToSystems(allowNew = true) {
+    if (!prio || !prio.entries) {
+      systems = clearPrioFromSystems(systems);
+      for (const s of systems) refreshSystemForwarders(s);
+      return;
+    }
+    systems = clearPrioFromSystems(systems);
+    const added = reconcilePrio(systems, prio.entries, allowNew);
+    prio.addedRowsCount = added;
+    for (const s of systems) refreshSystemForwarders(s);
   }
 
   function renderPrio() {
@@ -411,8 +448,12 @@
     document.getElementById('prioClear').hidden = !prio;
     document.getElementById('prioBtn').hidden = !!prio;
     const label = document.getElementById('prioLabel');
-    if (prio) label.innerHTML = `<strong>${escapeHtml(prio.fileName)}</strong> — ${prio.docs.size} document numbers. Matches get a yellow “PRIO” mark.`;
-    else label.textContent = 'Optional — matching document numbers get a yellow “PRIO” mark in the split files.';
+    if (prio) {
+      const addedText = prio.addedRowsCount > 0 ? ` (${prio.addedRowsCount} missing added)` : '';
+      label.innerHTML = `<strong>${escapeHtml(prio.fileName)}</strong> — ${prio.docs.size} document numbers${addedText}. Matches get a yellow “PRIO” mark.`;
+    } else {
+      label.textContent = 'Optional — matching document numbers get a yellow “PRIO” mark in the split files.';
+    }
   }
 
   // People lists (one per work type): Enter adds/advances within the same
@@ -594,6 +635,136 @@
     }
     return docs;
   }
+  // Extract rows from a PRIO worksheet: maps Dokumentnummer, Referenz,
+  // Kreditordetails, Kreditor, Schrittbezeichnung, Overdue, and Notiz.
+  // Falls back to sheet name for system / forwarder when columns are omitted.
+  function prioRowsFromSheet(sheet, sheetName = '') {
+    const addrs = Object.keys(sheet).filter(k => k.charCodeAt(0) !== 33);
+    if (addrs.length === 0) return [];
+    let headerRow = -1;
+    const colMap = { doc: -1, ref: -1, vendor: -1, supplier: -1, sap: -1, step: -1, overdue: -1, notes: [] };
+    for (const a of addrs) {
+      const val = normDoc(sheet[a] ? sheet[a].v : '').toLowerCase();
+      if (val.includes('dokument') || val.includes('document')) {
+        headerRow = XLSX.utils.decode_cell(a).r;
+        break;
+      }
+    }
+    if (headerRow < 0) return [];
+    for (const a of addrs) {
+      const decoded = XLSX.utils.decode_cell(a);
+      if (decoded.r !== headerRow) continue;
+      const h = normDoc(sheet[a] ? sheet[a].v : '').toLowerCase();
+      if (h.includes('dokument') || h.includes('document')) colMap.doc = decoded.c;
+      else if (h.includes('referenz') || h.includes('reference')) colMap.ref = decoded.c;
+      else if (h.includes('kreditordetail') || h.includes('vendor') || h.includes('spedition') || h.includes('kreditorname')) colMap.vendor = decoded.c;
+      else if (h === 'kreditor' || h.includes('supplier') || h.includes('lieferant')) colMap.supplier = decoded.c;
+      else if (h === 'sap' || h === 'system') colMap.sap = decoded.c;
+      else if (h.includes('schritt') || h.includes('step')) colMap.step = decoded.c;
+      else if (h.includes('berf') || h.includes('overdue')) colMap.overdue = decoded.c;
+      else if (h.includes('notiz') || h.includes('note')) colMap.notes.push(decoded.c);
+    }
+    const defaultSys = SYSTEM_ORDER.find(s => sheetName.toUpperCase().includes(s)) || sheetName.trim().split(/\s+/)[0] || 'Sheet';
+    const sheetVendor = sheetName.replace(/\b(FNP|KSP|OPP|PS1)\b/gi, '').trim() || 'PRIO';
+    const rowCells = new Map();
+    for (const a of addrs) {
+      const decoded = XLSX.utils.decode_cell(a);
+      if (decoded.r <= headerRow) continue;
+      const cell = sheet[a];
+      if (!cell) continue;
+      const val = cell.v !== undefined ? cell.v : cell.w;
+      if (val === undefined || val === null || String(val).trim() === '') continue;
+      if (!rowCells.has(decoded.r)) rowCells.set(decoded.r, new Map());
+      rowCells.get(decoded.r).set(decoded.c, val);
+    }
+    const rows = [];
+    for (const [r, cells] of rowCells.entries()) {
+      const doc = normDoc(colMap.doc >= 0 ? cells.get(colMap.doc) : '');
+      if (!doc || doc.toLowerCase().includes('dokument') || doc.toLowerCase().includes('document')) continue;
+      const ref = normDoc(colMap.ref >= 0 ? cells.get(colMap.ref) : '');
+      let vendor = normDoc(colMap.vendor >= 0 ? cells.get(colMap.vendor) : '');
+      if (!vendor) vendor = sheetVendor;
+      const supplier = normDoc(colMap.supplier >= 0 ? cells.get(colMap.supplier) : '');
+      let sap = normDoc(colMap.sap >= 0 ? cells.get(colMap.sap) : '');
+      if (!sap) sap = defaultSys;
+      const matchedSys = SYSTEM_ORDER.find(s => sap.toUpperCase().includes(s)) || sap;
+      const stepVal = normDoc(colMap.step >= 0 ? cells.get(colMap.step) : '').toLowerCase();
+      const group = (stepVal.includes('factual') || stepVal.includes('faktual')) ? 'factual' : 'tariff';
+      const overdue = colMap.overdue >= 0 ? (cells.get(colMap.overdue) ?? '') : '';
+      const notes = colMap.notes.map(c => normDoc(cells.get(c))).filter(Boolean);
+      rows.push({ system: matchedSys, group, row: [vendor, supplier, ref, doc, notes, overdue] });
+    }
+    return rows;
+  }
+  // Reconcile PRIO rows into systems: for every system, if a PRIO row's
+  // Referenz (or doc) does not appear in the normal file, add it. If a system
+  // in PRIO is completely missing from the normal files, add that system.
+  function reconcilePrio(systems, prioEntries, allowNewSystems = true) {
+    const seen = new Set();
+    const deduped = [];
+    for (const p of prioEntries) {
+      const k = [p.system, p.group, normDoc(p.row[3]), normDoc(p.row[2])].join('|');
+      if (!seen.has(k)) { seen.add(k); deduped.push(p); }
+    }
+    let totalAdded = 0;
+    const handledIndices = new Set();
+    for (const sys of systems) {
+      if (!sys.baseRows) sys.baseRows = [...sys.rows];
+      const existingRefs = new Set(sys.baseRows.map(r => normDoc(r[2])).filter(Boolean));
+      const existingDocs = new Set(sys.baseRows.map(r => normDoc(r[3])).filter(Boolean));
+      const toAdd = [];
+      deduped.forEach((p, idx) => {
+        const sysMatch = systemRank(sys.name) < SYSTEM_ORDER.length && systemRank(p.system) < SYSTEM_ORDER.length
+          ? systemRank(sys.name) === systemRank(p.system)
+          : sys.name.toUpperCase().includes(p.system.toUpperCase()) || p.system.toUpperCase().includes(sys.name.toUpperCase());
+        if (sysMatch && (sys.group || 'tariff') === p.group) {
+          handledIndices.add(idx);
+          const ref = normDoc(p.row[2]);
+          const doc = normDoc(p.row[3]);
+          const appears = (ref && existingRefs.has(ref)) || (doc && existingDocs.has(doc));
+          if (!appears) toAdd.push(p.row);
+        }
+      });
+      sys.rows = [...sys.baseRows, ...toAdd];
+      sys.prioAdded = toAdd.length;
+      totalAdded += toAdd.length;
+    }
+    if (allowNewSystems) {
+      const missingBySys = new Map();
+      deduped.forEach((p, idx) => {
+        if (handledIndices.has(idx)) return;
+        const k = p.system + '|' + p.group;
+        if (!missingBySys.has(k)) missingBySys.set(k, { system: p.system, group: p.group, rows: [] });
+        missingBySys.get(k).rows.push(p.row);
+      });
+      for (const { system, group, rows } of missingBySys.values()) {
+        const nextId = typeof sysSeq !== 'undefined' ? ('sys' + (sysSeq++)) : ('sys_' + Math.random().toString(36).slice(2, 7));
+        systems.push({
+          id: nextId,
+          name: dedupeName(system, group),
+          fileName: 'PRIO',
+          baseRows: [],
+          rows,
+          forwarders: [],
+          group,
+          _fromPrio: true,
+          prioAdded: rows.length
+        });
+        totalAdded += rows.length;
+      }
+    }
+    systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
+    return totalAdded;
+  }
+  // Remove PRIO-injected rows and any system created solely from PRIO.
+  function clearPrioFromSystems(systems) {
+    const kept = systems.filter(s => !s._fromPrio);
+    for (const s of kept) {
+      if (s.baseRows) s.rows = [...s.baseRows];
+      s.prioAdded = 0;
+    }
+    return kept;
+  }
   // Partition raw data rows by the 'Step description' column — real exports mix
   // both work types in one sheet ("Tariff Check" / "Factual Check" rows). Rows
   // whose step contains 'factual'/'faktual' (any case) are factual; everything
@@ -753,7 +924,11 @@
     }
     const noteFilterOn = noteChecked.size > 0 && keep.size < noteChecked.size;
     chips.push(`${skipBlanks ? 'blanks skipped' : 'blanks kept'} · ${shuffle ? 'shuffled' : 'in order'}${noteFilterOn ? ' · notes filtered' : ''}`);
-    if (prioOn) chips.push(`PRIO · ${prioHits} match${prioHits === 1 ? '' : 'es'}`);
+    if (prioOn) {
+      let chipText = `PRIO · ${prioHits} match${prioHits === 1 ? '' : 'es'}`;
+      if (prio && prio.addedRowsCount > 0) chipText += ` (${prio.addedRowsCount} added)`;
+      chips.push(chipText);
+    }
     document.getElementById('recapChips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
   }
 
@@ -835,14 +1010,26 @@
         const sheets = wb.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '' }) }));
         const res = workbookEntries(sheets, file.name);
         if (res.error) {
-          systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), 'tariff'), fileName: file.name, rows: [], forwarders: [], group: 'tariff', error: res.error });
+          systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), 'tariff'), fileName: file.name, baseRows: [], rows: [], forwarders: [], group: 'tariff', error: res.error });
         } else {
           for (const en of res.entries) {
-            systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(en.base, en.group), fileName: file.name, rows: en.rows,
-              forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: true })), group: en.group });
+            const prioSysIdx = systems.findIndex(s => s._fromPrio && s.group === en.group && (systemRank(s.name) === systemRank(en.base) || s.name === en.base));
+            if (prioSysIdx >= 0) {
+              const existing = systems[prioSysIdx];
+              existing.name = en.base;
+              existing.fileName = file.name;
+              existing.baseRows = en.rows;
+              existing.rows = en.rows;
+              existing._fromPrio = false;
+              existing.error = null;
+            } else {
+              systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(en.base, en.group), fileName: file.name, baseRows: en.rows, rows: en.rows,
+                forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: true })), group: en.group });
+            }
           }
         }
-        systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
+        if (prio && prio.entries) applyPrioToSystems(true);
+        else systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
         renderSystems();
         rebuildNoteFilter();
         updateNoteStat();
@@ -855,6 +1042,7 @@
 
   function removeSystem(id) {
     systems = systems.filter(s => s.id !== id);
+    if (prio && prio.entries) applyPrioToSystems(false);
     renderSystems();
     rebuildNoteFilter();
     updateNoteStat();
