@@ -125,7 +125,7 @@ test('balancedSizes: spreads remainder to the front (equal weights), sums to n',
 - [ ] **Step 6: Run the full suite — all pass**
 
 Run: `node --test "tests/*.test.mjs" 2>&1`
-Expected: 228 pass, 0 fail (7 new + 221).
+Expected: 223 pass, 0 fail (2 new tests + 221 baseline; the updated `balancedSizes` test replaces the old one).
 
 - [ ] **Step 7: Commit**
 
@@ -138,72 +138,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-### Task 2: Equal-weights band reconciliation
-
-Proves all-full shares are byte-identical to today — closest to the "don't change anything when toggles are off" guarantee.
-
-**Files:**
-- Modify: `File_splitter.html` (`sliceBounds` handling when weights are all `1`), `tests/splitter.test.mjs`
-
-**Interfaces:**
-- Consumes: `sliceBounds(n, weights)` from Task 1.
-- Produces: (none — pure verification; keeps existing `systemShares(rows, parts, doShuffle, isPrioRow)` untouched for now).
-
-- [ ] **Step 1: Add the no-drift test**
-
-Append to `tests/splitter.test.mjs`:
-
-```js
-test('sliceBounds: equal weights reproduce the legacy equal split exactly', () => {
-  // identical bands for all-full vs the old count-based split, sampled n
-  for (const n of [1, 2, 5, 8, 79]) {
-    assert.deepEqual(plain(s.sliceBounds(n, [1, 1, 1])), plain(s.sliceBoundsLegacy(n, 3)));
-  }
-});
-```
-
-- [ ] **Step 2: Run to confirm it fails**
-
-Expected: `s.sliceBoundsLegacy` is undefined → test FAILS (proves no legacy path exists yet).
-
-- [ ] **Step 3: Expose the legacy splitter as a frozen snapshot**
-
-In `File_splitter.html`, above `function balancedSizes`, add an alias that captures the current count-based behavior verbatim (the file is the source of truth; this is the "don't regress" oracle):
-
-```js
-  // Frozen snapshot of the pre-halfday count-based splitter, kept so the
-  // proportional path can prove it never drifts when all weights are 1.
-  function sliceBoundsLegacy(n, parts) {
-    const b = [];
-    let off = 0;
-    const base = Math.floor(n / parts);
-    let rem = n % parts;
-    for (let p = 0; p < parts; p++) {
-      const size = base + (rem > 0 ? 1 : 0);
-      if (rem > 0) rem--;
-      b.push([off, off + size]); off += size;
-    }
-    return b;
-  }
-```
-
-- [ ] **Step 4: Run the suite — all pass**
-
-Run: `node --test "tests/*.test.mjs" 2>&1`
-Expected: 229 pass, 0 fail.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add File_splitter.html tests/splitter.test.mjs
-git commit -m "test(splitter): pin legacy equal-band split as no-drift oracle
-
-Co-Authored-By: Claude Code <noreply@anthropic.com>"
-```
-
----
-
-### Task 3: Weights wired through systemShares + split flow
+### Task 2: Weights wired through systemShares + split flow
 
 Makes the whole split pipeline weight-aware: `systemShares` takes weights; `splitFile()` builds the weight list per job and passes it through; recap shows the mix.
 
@@ -377,7 +312,7 @@ In `renderRecap()` (`renderRecap` around line 948-977), **change the chip push**
 - [ ] **Step 7: Run the suite — all pass**
 
 Run: `node --test "tests/*.test.mjs" 2>&1`
-Expected: 231 pass, 0 fail.
+Expected: 225 pass, 0 fail.
 
 - [ ] **Step 8: Commit**
 
@@ -390,7 +325,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-### Task 4: Half-day toggle UI in Step 5
+### Task 3: Half-day toggle UI in Step 5
 
 Adds the visible per-person toggle and re-renders the wizard on flip, so a checked person takes half a full share.
 
@@ -398,7 +333,7 @@ Adds the visible per-person toggle and re-renders the wizard on flip, so a check
 - Modify: `File_splitter.html` (Step 5 markup ~252-292, `addPerson` ~1275-1286, `peopleCard` listeners, CSS)
 
 **Interfaces:**
-- Consumes: `currentHalf(group)`, `saveHalfChecked()` (Task 3), `weightsForNames` (Task 3).
+- Consumes: `currentHalf(group)`, `saveHalfChecked()` (Task 2), `weightsForNames` (Task 2).
 - Produces: (none new — the split flow already picks up `currentHalf`).
 
 - [ ] **Step 1: Add the toggle styles**
@@ -470,7 +405,7 @@ Then the full manual pass: upload a test workbook (or use an existing small expo
 - [ ] **Step 5: Run the unit suite — still all pass**
 
 Run: `node --test "tests/*.test.mjs" 2>&1`
-Expected: 231 pass, 0 fail (no pure-logic change; UI wiring only).
+Expected: 225 pass, 0 fail (no pure-logic change; UI wiring only).
 
 - [ ] **Step 6: Commit**
 
@@ -483,7 +418,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>"
 
 ---
 
-### Task 5: Final verification
+### Task 4: Final verification
 
 **Files:** (none — run-only)
 
