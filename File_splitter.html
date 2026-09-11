@@ -361,6 +361,42 @@
     }, 600);
   }
   initKreditorSync();
+
+  // ---- shared Referenz lists: same shape/behavior as the Kreditor store,
+  // one Firestore doc, localStorage as offline fallback. No login.
+  let referenzStore = {};  // system name -> raw Referenz-exclusion text
+  const REFERENZ_KEY = 'fileSplitter.referenz';
+  try { referenzStore = JSON.parse(localStorage.getItem(REFERENZ_KEY) || '{}') || {}; } catch (e) {}
+
+  let referenzDirty = new Set();
+  let referenzSaveTimer = null;
+  function referenzDoc() { return firebase.firestore().collection('wmf_splitter_config').doc('referenz'); }
+  let referenzLoaded = false;
+  function initReferenzSync() {
+    if (typeof firebase === 'undefined' || !firebase.firestore) { referenzLoaded = true; return; }
+    if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
+    referenzDoc().get().then(snap => {
+      const lists = snap.exists && snap.data().lists;
+      if (!lists) return;
+      referenzStore = lists;
+      try { localStorage.setItem(REFERENZ_KEY, JSON.stringify(referenzStore)); } catch (e) {}
+    }).catch(err => console.warn('Referenz lists: Firestore read failed, using local copy.', err))
+      .finally(() => { referenzLoaded = true; renderWizard(); });
+  }
+  function saveReferenz(name) {
+    try { localStorage.setItem(REFERENZ_KEY, JSON.stringify(referenzStore)); } catch (e) {}
+    if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) return;
+    referenzDirty.add(name);
+    clearTimeout(referenzSaveTimer);
+    referenzSaveTimer = setTimeout(() => {
+      const patch = {};
+      for (const n of referenzDirty) patch[n] = referenzStore[n] || '';
+      referenzDirty.clear();
+      referenzDoc().set({ lists: patch, updatedAt: new Date().toISOString() }, { merge: true })
+        .catch(err => console.warn('Referenz lists: Firestore save failed — saved locally only.', err));
+    }, 600);
+  }
+  initReferenzSync();
   const GROUPS = [['tariff', 'Tariff'], ['factual', 'Factual']];
   const TARGET_COLS = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
   const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
@@ -852,23 +888,20 @@
   }
 
   // ---- wizard ----
-  // Kreditor exclusion only matters for tariff work: a factual-only upload
-  // skips step 2 entirely (goNext/goBack jump over it, stepper stays locked).
-  function kreditorNeeded() { return systems.some(s => !s.error && s.group !== 'factual'); }
   function stepUnlocked(i) {
     const valid = systems.filter(s => !s.error);
     if (i <= 0) return true;
     if (valid.length === 0) return false;
-    if (i === 2) return kreditorNeeded();
-    if (i >= 3 && kreditorNeeded() && !kreditorLoaded) return false; // shared lists still refreshing
+    if (i === 2) return true; // exclusions card always shown for any valid upload
+    if (i >= 3 && (!kreditorLoaded || !referenzLoaded)) return false; // shared lists still refreshing
     if (i <= 4) return true; // notes, totals, people
     const groups = [...new Set(valid.map(s => s.group))];
     return groups.every(g => getNames(g).length > 0); // split
   }
 
   function setStep(i) { step = i; hideError(); renderWizard(); }
-  function nextStepIdx() { return step + 1 === 2 && !kreditorNeeded() ? 3 : step + 1; }
-  function goBack() { setStep(Math.max(0, step - 1 === 2 && !kreditorNeeded() ? 1 : step - 1)); }
+  function nextStepIdx() { return step + 1; }
+  function goBack() { setStep(Math.max(0, step - 1)); }
   function goNext() { const n = nextStepIdx(); if (stepUnlocked(n)) setStep(Math.min(5, n)); }
 
   function renderWizard() {
@@ -901,7 +934,7 @@
     nextBtn.textContent = step === 4 ? 'Review & split →' : 'Continue →';
     hint.textContent = (step === 5 || nextOk) ? ''
       : step === 0 ? 'Upload at least one valid file to continue'
-      : (!kreditorLoaded && kreditorNeeded()) ? 'Loading the shared Kreditor lists — one moment…'
+      : (!kreditorLoaded || !referenzLoaded) ? 'Loading the shared exclusions — one moment...'
       : 'Add at least one name to each list to continue';
   }
 
@@ -921,7 +954,7 @@
       if (groupSys.length === 0) continue;
       let planned = 0;
       for (const sys of groupSys) {
-        const rows = splitRows(sys, keep, skipBlanks, kreditorSetFor(sys.name));
+        const rows = splitRows(sys, keep, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name));
         planned += rows.length;
         if (prioOn) for (const r of rows) if (isPrio(r, prio && prio.docs, today)) prioHits++;
       }
@@ -992,7 +1025,7 @@
     for (const [group, label] of GROUPS) {
       const groupSys = valid.filter(s => s.group === group);
       if (groupSys.length === 0) continue;
-      const per = groupSys.map(sys => ({ name: sys.name, rows: splitRows(sys, keep, skipBlanks, kreditorSetFor(sys.name)).length }));
+      const per = groupSys.map(sys => ({ name: sys.name, rows: splitRows(sys, keep, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)).length }));
       const total = per.reduce((a, p) => a + p.rows, 0);
       const block = document.createElement('div');
       block.className = 'total-block';
@@ -1349,7 +1382,7 @@
         const isPrioRow = prioOn ? (r => isPrio(r, prio && prio.docs, today)) : (() => false);
         const shares = {};
         for (const sys of job.systems) {
-          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name)), job.names.length, doShuffle, isPrioRow);
+          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)), job.names.length, doShuffle, isPrioRow);
         }
 
         const usedNames = {}; // per job — the Tariff/Factual filename token separates jobs
