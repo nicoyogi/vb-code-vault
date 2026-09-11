@@ -447,3 +447,28 @@ test('systemShares: more shares than rows -> empty shares, nothing lost', () => 
   const shares = s.systemShares([row('1')], 3, false, () => false);
   assert.deepEqual(plain(shares.map(sh => sh.length)), [1, 0, 0]);
 });
+
+test('splitRows: end-to-end exclusion with Kreditor, Referenz, and PRIO rows', () => {
+  const normalRows = [
+    ['DHL', 'K10', 'REF-001', 'D101', []],
+    ['DHL', 'K20', 'REF-002', 'D102', []],
+    ['DHL', 'K30', 'REF-003', 'D103', []],
+  ];
+  const prioRows = [
+    ['DHL', 'K10', 'REF-004', 'D104', []], // K10 excluded
+    ['DHL', 'K40', 'REF-005', 'D105', []], // kept
+    ['DHL', 'K50', 'REF-001', 'D106', []], // REF-001 excluded
+  ];
+  const sys = {
+    name: 'FNP',
+    group: 'tariff',
+    rows: [...normalRows, ...prioRows],
+    forwarders: [{ name: 'DHL', checked: true }]
+  };
+  const kredExcl = s.parseKreditors('K10');
+  const refExcl = s.parseReferenz('ref-001');
+
+  const kept = s.splitRows(sys, new Set(), true, kredExcl, refExcl);
+  // D101 dropped (ref-001 & K10), D104 dropped (K10), D106 dropped (ref-001)
+  assert.deepEqual(plain(kept.map(r => r[3])), ['D102', 'D103', 'D105']);
+});
