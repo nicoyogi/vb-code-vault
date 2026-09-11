@@ -259,6 +259,36 @@ test('splitRows: Kreditor exclusion drops Supplier matches in every group', () =
   assert.equal(s.splitRows({ group: 'factual', rows }, new Set(), true).length, 2);
 });
 
+test('parseReferenz: splits on newline/comma/semicolon/space, lowercases, drops blanks', () => {
+  assert.deepEqual([...s.parseReferenz('REF-1\nRef-2, ref-3;REF-4  ref-5')].sort(),
+    ['ref-1', 'ref-2', 'ref-3', 'ref-4', 'ref-5']);
+  assert.equal(s.parseReferenz('').size, 0);
+  assert.equal(s.parseReferenz(undefined).size, 0);
+});
+
+test('splitRows: Referenz exclusion drops Reference matches (case-insensitive) in every group', () => {
+  const rows = [
+    ['DHL', '111', 'REF-ABC', 'D1', []],
+    ['DHL', '222', 'REF-XYZ', 'D2', []],
+    ['DHL', '333', '12345',   'D3', []],
+  ];
+  const fwd = [{ name: 'DHL', checked: true }];
+  const excl = s.parseReferenz('ref-abc, 12345');
+  // Tariff group
+  assert.deepEqual(plain(s.splitRows({ group: 'tariff', rows, forwarders: fwd }, new Set(), true, null, excl)),
+    [['DHL', '222', 'REF-XYZ', 'D2', []]]);
+  // Factual group
+  assert.deepEqual(plain(s.splitRows({ group: 'factual', rows }, new Set(), true, null, excl)),
+    [['DHL', '222', 'REF-XYZ', 'D2', []]]);
+  // Both Kreditor and Referenz exclusions combined
+  const kredExcl = s.parseKreditors('222');
+  assert.deepEqual(plain(s.splitRows({ group: 'tariff', rows, forwarders: fwd }, new Set(), true, kredExcl, excl)),
+    []);
+  // Numeric Reference cells match via normDoc
+  assert.deepEqual(plain(s.splitRows({ group: 'factual', rows: [['V', 'S', 12345, 'D', []]] }, new Set(), true, null, excl)),
+    []);
+});
+
 test('workbookEntries: multi-sheet workbook — one system per qualifying sheet, named by sheet name', () => {
   const H = ['Vendor details', 'Supplier', 'Reference', 'Document number', 'Step description'];
   const sheets = [
@@ -416,4 +446,29 @@ test('systemShares: more shares than rows -> empty shares, nothing lost', () => 
   const row = d => ['V', 'S', 'R', d, [], ''];
   const shares = s.systemShares([row('1')], 3, false, () => false);
   assert.deepEqual(plain(shares.map(sh => sh.length)), [1, 0, 0]);
+});
+
+test('splitRows: end-to-end exclusion with Kreditor, Referenz, and PRIO rows', () => {
+  const normalRows = [
+    ['DHL', 'K10', 'REF-001', 'D101', []],
+    ['DHL', 'K20', 'REF-002', 'D102', []],
+    ['DHL', 'K30', 'REF-003', 'D103', []],
+  ];
+  const prioRows = [
+    ['DHL', 'K10', 'REF-004', 'D104', []], // K10 excluded
+    ['DHL', 'K40', 'REF-005', 'D105', []], // kept
+    ['DHL', 'K50', 'REF-001', 'D106', []], // REF-001 excluded
+  ];
+  const sys = {
+    name: 'FNP',
+    group: 'tariff',
+    rows: [...normalRows, ...prioRows],
+    forwarders: [{ name: 'DHL', checked: true }]
+  };
+  const kredExcl = s.parseKreditors('K10');
+  const refExcl = s.parseReferenz('ref-001');
+
+  const kept = s.splitRows(sys, new Set(), true, kredExcl, refExcl);
+  // D101 dropped (ref-001 & K10), D104 dropped (K10), D106 dropped (ref-001)
+  assert.deepEqual(plain(kept.map(r => r[3])), ['D102', 'D103', 'D105']);
 });
