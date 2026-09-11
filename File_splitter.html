@@ -822,13 +822,19 @@
     return new Set(String(text || '').split(/[\s,;]+/).filter(Boolean));
   }
   function kreditorSetFor(name) { return parseKreditors(kreditorStore[name]); }
+  // Referenz exclusion list: one token per line / comma / semicolon / space, normalized to lower case.
+  function parseReferenz(text) {
+    return new Set(String(text || '').split(/[\s,;]+/).map(v => v.trim().toLowerCase()).filter(Boolean));
+  }
+  function referenzSetFor(name) { return parseReferenz(referenzStore[name]); }
   // Rows a system contributes to the split: the system's Kreditor exclusion
   // (matched against the Supplier column) drops rows first for every group;
   // then tariff rows pass the forwarder checklist + note filter; factual rows
   // skip both. Blank-skip applies to all.
-  function splitRows(sys, keepNotes, skipBlanks, kreditorExcl) {
+  function splitRows(sys, keepNotes, skipBlanks, kreditorExcl, referenzExcl) {
     let rows = sys.rows;
     if (kreditorExcl && kreditorExcl.size) rows = rows.filter(r => !kreditorExcl.has(normDoc(r[1])));
+    if (referenzExcl && referenzExcl.size) rows = rows.filter(r => !referenzExcl.has(normDoc(r[2]).toLowerCase()));
     if (sys.group !== 'factual') {
       const checked = new Set(sys.forwarders.filter(f => f.checked).map(f => f.name));
       rows = rows.filter(r => checked.has(r[0]) && noteKeep(r[4], keepNotes));

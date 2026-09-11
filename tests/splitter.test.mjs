@@ -259,6 +259,36 @@ test('splitRows: Kreditor exclusion drops Supplier matches in every group', () =
   assert.equal(s.splitRows({ group: 'factual', rows }, new Set(), true).length, 2);
 });
 
+test('parseReferenz: splits on newline/comma/semicolon/space, lowercases, drops blanks', () => {
+  assert.deepEqual([...s.parseReferenz('REF-1\nRef-2, ref-3;REF-4  ref-5')].sort(),
+    ['ref-1', 'ref-2', 'ref-3', 'ref-4', 'ref-5']);
+  assert.equal(s.parseReferenz('').size, 0);
+  assert.equal(s.parseReferenz(undefined).size, 0);
+});
+
+test('splitRows: Referenz exclusion drops Reference matches (case-insensitive) in every group', () => {
+  const rows = [
+    ['DHL', '111', 'REF-ABC', 'D1', []],
+    ['DHL', '222', 'REF-XYZ', 'D2', []],
+    ['DHL', '333', '12345',   'D3', []],
+  ];
+  const fwd = [{ name: 'DHL', checked: true }];
+  const excl = s.parseReferenz('ref-abc, 12345');
+  // Tariff group
+  assert.deepEqual(plain(s.splitRows({ group: 'tariff', rows, forwarders: fwd }, new Set(), true, null, excl)),
+    [['DHL', '222', 'REF-XYZ', 'D2', []]]);
+  // Factual group
+  assert.deepEqual(plain(s.splitRows({ group: 'factual', rows }, new Set(), true, null, excl)),
+    [['DHL', '222', 'REF-XYZ', 'D2', []]]);
+  // Both Kreditor and Referenz exclusions combined
+  const kredExcl = s.parseKreditors('222');
+  assert.deepEqual(plain(s.splitRows({ group: 'tariff', rows, forwarders: fwd }, new Set(), true, kredExcl, excl)),
+    []);
+  // Numeric Reference cells match via normDoc
+  assert.deepEqual(plain(s.splitRows({ group: 'factual', rows: [['V', 'S', 12345, 'D', []]] }, new Set(), true, null, excl)),
+    []);
+});
+
 test('workbookEntries: multi-sheet workbook — one system per qualifying sheet, named by sheet name', () => {
   const H = ['Vendor details', 'Supplier', 'Reference', 'Document number', 'Step description'];
   const sheets = [
