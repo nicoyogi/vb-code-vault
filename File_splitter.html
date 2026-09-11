@@ -134,11 +134,15 @@
   #noteFilterBody .fwd-list { max-height: 240px; }
   .note-empty { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; font-size: 13px; color: var(--text2); line-height: 1.5; }
   .note-stat { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-top: 12px; min-height: 14px; }
-  .kred-block { margin-top: 14px; }
-  .kred-block label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
-  .kred-input { width: 100%; min-height: 62px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; font-family: var(--mono); color: var(--text); outline: none; resize: vertical; transition: border-color 0.15s; }
+  .kred-block { margin-top: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .kred-sys-title { font-size: 13.5px; font-weight: 600; color: var(--accent); margin-bottom: 10px; font-family: var(--mono); }
+  .excl-cols { display: flex; gap: 14px; }
+  @media (max-width: 620px) { .excl-cols { flex-direction: column; } }
+  .excl-col { flex: 1; min-width: 0; }
+  .excl-col label { display: block; font-size: 11.5px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+  .kred-input { width: 100%; min-height: 64px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: var(--mono); color: var(--text); outline: none; resize: vertical; transition: border-color 0.15s; }
   .kred-input:focus { border-color: var(--accent); }
-  .kred-block .note-stat { margin-top: 6px; }
+  .excl-col .note-stat { margin-top: 5px; font-size: 11px; }
 
   /* step 4 — split */
   .recap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
@@ -202,7 +206,7 @@
 
 <header>
   <h1>Extract &amp; split by <em>system</em></h1>
-  <p class="sub">Six quick steps: upload your files, filter notes, exclude Kreditors, check totals, add people, and download the split.</p>
+  <p class="sub">Six quick steps: upload your files, filter notes, exclude Kreditors &amp; Referenz, check totals, add people, and download the split.</p>
 </header>
 
 <div class="stepper" id="stepper"></div>
@@ -234,8 +238,8 @@
 </div>
 
 <div class="card step-card" hidden>
-  <div class="card-head"><h2>Exclude Kreditor <span class="opt-tag">optional</span></h2><span class="step-tag">step 3 of 6</span></div>
-  <p class="card-desc">Per system: <strong>Supplier</strong> (Kreditor) numbers that should <strong>not</strong> be extracted — one per line or comma-separated. Each list is shared with the whole team (saved online under the system name) and reloads next time, on any computer.</p>
+  <div class="card-head"><h2>Exclusions <span class="opt-tag">optional</span></h2><span class="step-tag">step 3 of 6</span></div>
+  <p class="card-desc">Per system: <strong>Supplier</strong> (Kreditor) numbers and <strong>Reference</strong> (Referenz) values that should <strong>not</strong> be extracted — one per line or comma-separated. Saved online and reloads next time, on any computer.</p>
   <div id="kreditorBody"><div class="note-empty">No files uploaded yet — nothing to exclude here.</div></div>
 </div>
 
@@ -321,7 +325,7 @@
   let step = 0;            // wizard step: 0 files, 1 notes, 2 kreditor, 3 totals, 4 people, 5 split
   let splitting = false;
   let kreditorStore = {};  // system name -> raw Kreditor-exclusion text, persisted per device
-  const STEP_LABELS = ['Files', 'Notes', 'Kreditor', 'Totals', 'People', 'Split'];
+  const STEP_LABELS = ['Files', 'Notes', 'Exclusions', 'Totals', 'People', 'Split'];
   const NAMES_KEYS = { tariff: 'fileSplitter.names', factual: 'fileSplitter.namesFactual' };
   const KREDITOR_KEY = 'fileSplitter.kreditor';
   try { kreditorStore = JSON.parse(localStorage.getItem(KREDITOR_KEY) || '{}') || {}; } catch (e) {}
@@ -971,13 +975,11 @@
     document.getElementById('recapChips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
   }
 
-  // Kreditor step: one saved exclusion textarea per distinct system name.
-  // Edits persist to localStorage immediately, keyed by system name, so the
-  // daily FNP/KSP/OPP/PS1 lists reload on the next visit.
+  // Exclusions step: saved Kreditor and Referenz exclusion textareas per distinct system name.
   function renderKreditor() {
     const body = document.getElementById('kreditorBody');
-    if (!kreditorLoaded) { // no textareas while refreshing — the arriving shared copy would overwrite edits
-      body.innerHTML = '<div class="note-empty">Loading the shared Kreditor lists…</div>';
+    if (!kreditorLoaded || !referenzLoaded) {
+      body.innerHTML = '<div class="note-empty">Loading shared exclusions…</div>';
       return;
     }
     body.innerHTML = '';
@@ -989,27 +991,61 @@
     for (const name of names) {
       const block = document.createElement('div');
       block.className = 'kred-block';
-      block.innerHTML = `<label></label>
-        <textarea class="kred-input" rows="3" placeholder="Kreditor numbers to exclude — one per line or comma-separated"></textarea>
-        <div class="note-stat"></div>`;
-      block.querySelector('label').textContent = name;
-      const ta = block.querySelector('textarea');
-      const stat = block.querySelector('.note-stat');
-      ta.value = kreditorStore[name] || '';
-      const update = () => {
-        const excl = parseKreditors(ta.value);
+      block.innerHTML = `
+        <div class="kred-sys-title">${escapeHtml(name)}</div>
+        <div class="excl-cols">
+          <div class="excl-col">
+            <label>Exclude Kreditor (Supplier)</label>
+            <textarea class="kred-input kred-ta" rows="3" placeholder="Kreditor numbers — one per line or comma-separated"></textarea>
+            <div class="note-stat kred-stat"></div>
+          </div>
+          <div class="excl-col">
+            <label>Exclude Referenz (Reference)</label>
+            <textarea class="kred-input ref-ta" rows="3" placeholder="Referenz values — one per line or comma-separated"></textarea>
+            <div class="note-stat ref-stat"></div>
+          </div>
+        </div>`;
+
+      const kredTa = block.querySelector('.kred-ta');
+      const kredStat = block.querySelector('.kred-stat');
+      const refTa = block.querySelector('.ref-ta');
+      const refStat = block.querySelector('.ref-stat');
+
+      kredTa.value = kreditorStore[name] || '';
+      refTa.value = referenzStore[name] || '';
+
+      const updateKredStat = () => {
+        const excl = parseKreditors(kredTa.value);
         let hit = 0;
         for (const sys of systems) if (!sys.error && sys.name === name)
           for (const r of sys.rows) if (excl.has(normDoc(r[1]))) hit++;
-        stat.textContent = excl.size === 0 ? ''
+        kredStat.textContent = excl.size === 0 ? ''
           : `${excl.size} Kreditor${excl.size === 1 ? '' : 's'} listed — excludes ${hit} row${hit === 1 ? '' : 's'}.`;
       };
-      ta.addEventListener('input', () => {
-        kreditorStore[name] = ta.value;
+
+      const updateRefStat = () => {
+        const excl = parseReferenz(refTa.value);
+        let hit = 0;
+        for (const sys of systems) if (!sys.error && sys.name === name)
+          for (const r of sys.rows) if (excl.has(normDoc(r[2]).toLowerCase())) hit++;
+        refStat.textContent = excl.size === 0 ? ''
+          : `${excl.size} Referenz listed — excludes ${hit} row${hit === 1 ? '' : 's'}.`;
+      };
+
+      kredTa.addEventListener('input', () => {
+        kreditorStore[name] = kredTa.value;
         saveKreditors(name);
-        update();
+        updateKredStat();
       });
-      update();
+
+      refTa.addEventListener('input', () => {
+        referenzStore[name] = refTa.value;
+        saveReferenz(name);
+        updateRefStat();
+      });
+
+      updateKredStat();
+      updateRefStat();
       body.appendChild(block);
     }
   }
