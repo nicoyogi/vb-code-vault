@@ -322,7 +322,7 @@
   let generatedFiles = [];
   let noteChecked = new Map(); // note string -> boolean (global checklist state)
   let prio = null;             // { fileName, docs:Set<string> } from the optional PRIO workbook
-  let step = 0;            // wizard step: 0 files, 1 notes, 2 kreditor, 3 totals, 4 people, 5 split
+  let step = 0;            // wizard step: 0 files, 1 notes, 2 exclusions, 3 totals, 4 people, 5 split
   let splitting = false;
   let kreditorStore = {};  // system name -> raw Kreditor-exclusion text, persisted per device
   const STEP_LABELS = ['Files', 'Notes', 'Exclusions', 'Totals', 'People', 'Split'];
@@ -868,9 +868,10 @@
   }
   function referenzSetFor(name) { return parseReferenz(referenzStore[name]); }
   // Rows a system contributes to the split: the system's Kreditor exclusion
-  // (matched against the Supplier column) drops rows first for every group;
-  // then tariff rows pass the forwarder checklist + note filter; factual rows
-  // skip both. Blank-skip applies to all.
+  // (matched against the Supplier column) drops rows first for every group,
+  // as does the Referenz exclusion (matched against the Reference column,
+  // row[2], case-insensitive); then tariff rows pass the forwarder checklist +
+  // note filter; factual rows skip both. Blank-skip applies to all.
   function splitRows(sys, keepNotes, skipBlanks, kreditorExcl, referenzExcl) {
     let rows = sys.rows;
     if (kreditorExcl && kreditorExcl.size) rows = rows.filter(r => !kreditorExcl.has(normDoc(r[1])));
@@ -938,7 +939,7 @@
     nextBtn.textContent = step === 4 ? 'Review & split →' : 'Continue →';
     hint.textContent = (step === 5 || nextOk) ? ''
       : step === 0 ? 'Upload at least one valid file to continue'
-      : (!kreditorLoaded || !referenzLoaded) ? 'Loading the shared exclusions — one moment...'
+      : (!kreditorLoaded || !referenzLoaded) ? 'Loading the shared exclusions — one moment…'
       : 'Add at least one name to each list to continue';
   }
 
