@@ -512,7 +512,9 @@
     if (e.target.classList.contains('person-input')) { saveNames(); renderWizard(); }
   });
 
-  // Restore previously entered names, per work type.
+  // Restore previously entered names and half-day flags, per work type.
+  const HALF_KEYS = { tariff: 'fileSplitter.halfNames', factual: 'fileSplitter.halfNamesFactual' };
+  let halfChecked = {}; // group -> Set<string> of names marked half-day
   (function restoreNames() {
     for (const [group, key] of Object.entries(NAMES_KEYS)) {
       let saved = [];
@@ -524,7 +526,23 @@
         if (list.children.length === 0) addPerson(group);
       }
     }
+    halfChecked = Object.fromEntries(
+      Object.entries(NAMES_KEYS).map(([group, key]) => {
+        const key2 = HALF_KEYS[group];
+        let arr = [];
+        try { arr = JSON.parse(localStorage.getItem(key2) || '[]'); } catch (e) {}
+        return [group, new Set(Array.isArray(arr) ? arr : [])];
+      })
+    );
   })();
+
+  function currentHalf(group) { return halfChecked[group] || (halfChecked[group] = new Set()); }
+  function saveHalfChecked() {
+    try {
+      for (const [group, key] of Object.entries(HALF_KEYS))
+        localStorage.setItem(key, JSON.stringify([...currentHalf(group)]));
+    } catch (e) { /* storage unavailable */ }
+  }
 
   function isBlankRow(row) {
     return row.every(cell => cell === null || cell === undefined || cell === '');
@@ -964,7 +982,10 @@
         if (prioOn) for (const r of rows) if (isPrio(r, prio && prio.docs, today)) prioHits++;
       }
       const names = getNames(group);
-      chips.push(`${label} · ${groupSys.length} system${groupSys.length === 1 ? '' : 's'} · ${planned} rows → ${names.length} ${names.length === 1 ? 'person' : 'people'}`);
+      const halves = currentHalf(group);
+      const nHalf = names.filter(n => halves.has(n)).length;
+      const mix = (nHalf > 0 && nHalf < names.length) ? ` (${names.length - nHalf} full · ${nHalf} half)` : (nHalf === names.length ? ' (all half)' : '');
+      chips.push(`${label} · ${groupSys.length} system${groupSys.length === 1 ? '' : 's'} · ${planned} rows → ${names.length} ${names.length === 1 ? 'person' : 'people'}${mix}`);
     }
     const noteFilterOn = noteChecked.size > 0 && keep.size < noteChecked.size;
     chips.push(`${skipBlanks ? 'blanks skipped' : 'blanks kept'} · ${shuffle ? 'shuffled' : 'in order'}${noteFilterOn ? ' · notes filtered' : ''}`);
@@ -1359,18 +1380,33 @@
   // balanced contiguous bands, cuts nudged off equal-doc runs, band→person
   // assignment shuffled per pool (shuffle ON) or in-order slices (OFF).
   // With no PRIO rows this is exactly the single-pool split.
-  function systemShares(rows, parts, doShuffle, isPrioRow) {
+  // Split one system's filtered rows into `weights.length` shares.
+  // PRIO rows and the rest split as two independent pools so urgent work
+  // lands evenly (±1 per share); each pool runs through the doc-band
+  // machinery — doc-sorted, weighted contiguous bands, cuts nudged off
+  // equal-doc runs, band→person assignment shuffled per pool (shuffle ON)
+  // or in-order slices (OFF). With no PRIO rows this is exactly the
+  // single-pool split. A weight of 0.5 = half-day → half a full share.
+  function systemShares(rows, weights, doShuffle, isPrioRow) {
+    if (typeof weights === 'number') weights = Array(weights).fill(1); // bare count = all full-day
     const pools = [[], []];
     for (const r of rows) pools[isPrioRow(r) ? 0 : 1].push(r);
-    const shares = Array.from({ length: parts }, () => []);
+    const shares = Array.from({ length: weights.length }, () => []);
     for (const p of pools) {
       if (p.length === 0) continue;
       const pool = doShuffle ? [...p].sort(docNumDesc) : p;
-      const b = sliceBounds(pool.length, parts);
+      const b = sliceBounds(pool.length, weights);
       const bounds = doShuffle ? shuffleArray(snapBoundsToDocRuns(b, pool)) : b;
-      for (let i = 0; i < parts; i++) shares[i].push(...pool.slice(bounds[i][0], bounds[i][1]));
+      shares.forEach((share, i) => share.push(...pool.slice(bounds[i][0], bounds[i][1])));
     }
     return shares;
+  }
+
+  // Per-person split weight: half-day people carry 0.5, everyone else 1.
+  // names is the current people list (strings), halfNames the subset marked
+  // half-day.
+  function weightsForNames(names, halfNames) {
+    return names.map(n => halfNames.has(n) ? 0.5 : 1);
   }
 
   async function splitFile() {
@@ -1420,7 +1456,7 @@
         const isPrioRow = prioOn ? (r => isPrio(r, prio && prio.docs, today)) : (() => false);
         const shares = {};
         for (const sys of job.systems) {
-          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)), job.names.length, doShuffle, isPrioRow);
+          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)), weightsForNames(job.names, currentHalf(job.group)), doShuffle, isPrioRow);
         }
 
         const usedNames = {}; // per job — the Tariff/Factual filename token separates jobs

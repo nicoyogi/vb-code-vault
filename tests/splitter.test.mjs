@@ -493,3 +493,38 @@ test('splitRows: end-to-end exclusion with Kreditor, Referenz, and PRIO rows', (
   // D101 dropped (ref-001 & K10), D104 dropped (K10), D106 dropped (ref-001)
   assert.deepEqual(plain(kept.map(r => r[3])), ['D102', 'D103', 'D105']);
 });
+
+test('systemShares: half-day weight sizes shares ~half of full-day, both pools covered once', () => {
+  const row = (doc, isP) => ['V', 'S', 'R', doc, [], isP ? new Date(2026, 6, 6) : ''];
+  const rows = [];
+  for (let i = 0; i < 9; i++) rows.push(row('P' + i, true));   // 9 PRIO
+  for (let i = 0; i < 9; i++) rows.push(row('R' + i, false));  // 9 rest
+  const isPrioRow = r => !!r[5];
+  for (const doShuffle of [false, true]) {
+    const shares = s.systemShares(rows, [1, 0.5], doShuffle, isPrioRow); // full + half
+    assert.equal(shares.length, 2);
+    // every row covered exactly once
+    assert.deepEqual(plain(shares.flat().map(r => r[3]).sort()), plain(rows.map(r => r[3]).sort()));
+    // the full-day share (weight 1) holds ~2x the half-day share (weight 0.5),
+    // within ±1 — the dominant share is either person when shuffled
+    const byPerson = counts => {
+      const [a, b] = counts.sort((x, y) => y - x); // larger first
+      return Math.abs(a - 2 * b) <= 1;
+    };
+    const main = shares.map(sh => sh.filter(r => !isPrioRow(r)).length);
+    assert.equal(byPerson(main), true, `main ≈2:1, got ${main}`);
+    const prio = shares.map(sh => sh.filter(isPrioRow).length);
+    assert.equal(byPerson(prio), true, `prio ≈2:1, got ${prio}`);
+  }
+  // all-full weights -> equal shares, identical to the pre-weights path
+  const rows2 = [row('P0', true), row('P1', true), row('R0', false), row('R1', false)];
+  const s1 = s.systemShares(rows2, [1, 1], false, isPrioRow);
+  const s2 = s.systemShares(rows2, 2, false, isPrioRow);
+  assert.deepEqual(plain(s1), plain(s2));
+});
+
+test('systemShares: more shares than rows (weights) -> empty shares, nothing lost', () => {
+  const row = d => ['V', 'S', 'R', d, [], ''];
+  const shares = s.systemShares([row('1')], [1, 0.5], false, () => false);
+  assert.deepEqual(plain(shares.map(sh => sh.length)), [1, 0]); // full takes all, half gets 0
+});
