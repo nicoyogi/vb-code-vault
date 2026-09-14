@@ -71,12 +71,33 @@ test('tallyNotes: counts each note value across all rows, sorted desc', () => {
   assert.deepEqual(plain(s.tallyNotes(rows)), [{ name: 'A', count: 2 }, { name: 'B', count: 1 }]);
 });
 
-test('balancedSizes: spreads remainder to the front, sums to n', () => {
-  assert.deepEqual(plain(s.balancedSizes(5, 4)), [2, 1, 1, 1]);
-  assert.deepEqual(plain(s.balancedSizes(8, 4)), [2, 2, 2, 2]);
-  assert.deepEqual(plain(s.balancedSizes(0, 3)), [0, 0, 0]);
-  const sizes = s.balancedSizes(79, 3);
+test('balancedSizes: spreads remainder to the front (equal weights), sums to n', () => {
+  assert.deepEqual(plain(s.balancedSizes(5, [1, 1, 1, 1])), [2, 1, 1, 1]);
+  assert.deepEqual(plain(s.balancedSizes(8, [1, 1, 1, 1])), [2, 2, 2, 2]);
+  assert.deepEqual(plain(s.balancedSizes(0, [1, 1, 1])), [0, 0, 0]);
+  const sizes = s.balancedSizes(79, [1, 1, 1]);
   assert.equal(sizes.reduce((a, b) => a + b, 0), 79); // nothing lost/duplicated
+});
+
+test('balancedSizes: proportional to weights, sums to n (largest-remainder)', () => {
+  assert.deepEqual(plain(s.balancedSizes(9, [1, 0.5])), [6, 3]);          // 1 full + 1 half -> 2:1
+  assert.deepEqual(plain(s.balancedSizes(10, [1, 1, 0.5])), [4, 4, 2]);   // 2 full + 1 half -> 2:2:1
+  assert.deepEqual(plain(s.balancedSizes(100, [1, 0.5, 0.5])), [50, 25, 25]);
+  // edge cases
+  assert.deepEqual(plain(s.balancedSizes(0, [1, 0.5])), [0, 0]);          // nothing to give
+  assert.deepEqual(plain(s.balancedSizes(3, [0.5])), [3]);                // single half-day person takes all
+  assert.deepEqual(plain(s.balancedSizes(6, [1, 1])), [3, 3]);            // all full -> equal (old balancedSizes(6,2))
+  const sizes = s.balancedSizes(79, [1, 1, 1]);
+  assert.equal(sizes.reduce((a, b) => a + b, 0), 79);                     // nothing lost/duplicated
+});
+
+test('sliceBounds: contiguous [start,end) bands proportional to weights, covers all n', () => {
+  assert.deepEqual(plain(s.sliceBounds(6, [1, 0.5])), [[0, 4], [4, 6]]);       // 4:2
+  assert.deepEqual(plain(s.sliceBounds(0, [1, 0.5])), [[0, 0], [0, 0]]);
+  const b = s.sliceBounds(79, [1, 1, 1]);
+  assert.equal(b[0][0], 0);
+  assert.equal(b[b.length - 1][1], 79);                                  // covers everything
+  for (let i = 1; i < b.length; i++) assert.equal(b[i][0], b[i - 1][1]); // no gaps, no overlap
 });
 
 test('systemName: strips the extension', () => {
@@ -382,9 +403,9 @@ test('isPrio: PRIO-list doc match OR overdue date within window', () => {
 });
 
 test('sliceBounds: contiguous balanced [start,end) bands covering all n rows', () => {
-  assert.deepEqual(plain(s.sliceBounds(5, 4)), [[0, 2], [2, 3], [3, 4], [4, 5]]);
-  assert.deepEqual(plain(s.sliceBounds(0, 2)), [[0, 0], [0, 0]]);
-  const b = s.sliceBounds(79, 3);
+  assert.deepEqual(plain(s.sliceBounds(5, [1, 1, 1, 1])), [[0, 2], [2, 3], [3, 4], [4, 5]]);
+  assert.deepEqual(plain(s.sliceBounds(0, [1, 1])), [[0, 0], [0, 0]]);
+  const b = s.sliceBounds(79, [1, 1, 1]);
   assert.equal(b[0][0], 0);
   assert.equal(b[b.length - 1][1], 79);                                  // covers everything
   for (let i = 1; i < b.length; i++) assert.equal(b[i][0], b[i - 1][1]); // no gaps, no overlap
@@ -412,7 +433,7 @@ test('systemShares: PRIO rows split evenly (±1) across shares, all rows covered
   for (let i = 0; i < 7; i++) rows.push(row('R' + i, false));
   const isPrioRow = r => !!r[5];
   for (const doShuffle of [false, true]) {
-    const shares = s.systemShares(rows, 3, doShuffle, isPrioRow);
+    const shares = s.systemShares(rows, [1, 1, 1], doShuffle, isPrioRow);
     assert.equal(shares.length, 3);
     const prioCounts = shares.map(sh => sh.filter(isPrioRow).length);
     assert.equal(Math.max(...prioCounts) - Math.min(...prioCounts) <= 1, true,
@@ -427,7 +448,7 @@ test('systemShares: PRIO rows split evenly (±1) across shares, all rows covered
 test('systemShares: zero PRIO rows + shuffle off -> plain in-order single-pool split', () => {
   const row = d => ['V', 'S', 'R', d, [], ''];
   const rows = [row('5'), row('4'), row('3'), row('2'), row('1')];
-  const shares = s.systemShares(rows, 2, false, () => false);
+  const shares = s.systemShares(rows, [1, 1], false, () => false);
   // remainder to the front, original order preserved — today's no-shuffle behavior
   assert.deepEqual(plain(shares.map(sh => sh.map(r => r[3]))), [['5', '4', '3'], ['2', '1']]);
 });
@@ -436,7 +457,7 @@ test('systemShares: doc runs stay intact within a pool when shuffled', () => {
   const row = d => ['V', 'S', 'R', d, [], ''];
   // doc-sorted pool ['9','9','9','8']: naive cut at 2 lands inside the 9-run
   const rows = [row('9'), row('9'), row('9'), row('8')];
-  const shares = s.systemShares(rows, 2, true, () => false);
+  const shares = s.systemShares(rows, [1, 1], true, () => false);
   const withNine = shares.filter(sh => sh.some(r => r[3] === '9'));
   assert.equal(withNine.length, 1);                              // all '9' rows in one share
   assert.equal(withNine[0].filter(r => r[3] === '9').length, 3); // none lost
@@ -444,7 +465,7 @@ test('systemShares: doc runs stay intact within a pool when shuffled', () => {
 
 test('systemShares: more shares than rows -> empty shares, nothing lost', () => {
   const row = d => ['V', 'S', 'R', d, [], ''];
-  const shares = s.systemShares([row('1')], 3, false, () => false);
+  const shares = s.systemShares([row('1')], [1, 1, 1], false, () => false);
   assert.deepEqual(plain(shares.map(sh => sh.length)), [1, 0, 0]);
 });
 
@@ -471,4 +492,39 @@ test('splitRows: end-to-end exclusion with Kreditor, Referenz, and PRIO rows', (
   const kept = s.splitRows(sys, new Set(), true, kredExcl, refExcl);
   // D101 dropped (ref-001 & K10), D104 dropped (K10), D106 dropped (ref-001)
   assert.deepEqual(plain(kept.map(r => r[3])), ['D102', 'D103', 'D105']);
+});
+
+test('systemShares: half-day weight sizes shares ~half of full-day, both pools covered once', () => {
+  const row = (doc, isP) => ['V', 'S', 'R', doc, [], isP ? new Date(2026, 6, 6) : ''];
+  const rows = [];
+  for (let i = 0; i < 9; i++) rows.push(row('P' + i, true));   // 9 PRIO
+  for (let i = 0; i < 9; i++) rows.push(row('R' + i, false));  // 9 rest
+  const isPrioRow = r => !!r[5];
+  for (const doShuffle of [false, true]) {
+    const shares = s.systemShares(rows, [1, 0.5], doShuffle, isPrioRow); // full + half
+    assert.equal(shares.length, 2);
+    // every row covered exactly once
+    assert.deepEqual(plain(shares.flat().map(r => r[3]).sort()), plain(rows.map(r => r[3]).sort()));
+    // the full-day share (weight 1) holds ~2x the half-day share (weight 0.5),
+    // within ±1 — the dominant share is either person when shuffled
+    const byPerson = counts => {
+      const [a, b] = counts.sort((x, y) => y - x); // larger first
+      return Math.abs(a - 2 * b) <= 1;
+    };
+    const main = shares.map(sh => sh.filter(r => !isPrioRow(r)).length);
+    assert.equal(byPerson(main), true, `main ≈2:1, got ${main}`);
+    const prio = shares.map(sh => sh.filter(isPrioRow).length);
+    assert.equal(byPerson(prio), true, `prio ≈2:1, got ${prio}`);
+  }
+  // all-full weights -> equal shares, identical to the pre-weights path
+  const rows2 = [row('P0', true), row('P1', true), row('R0', false), row('R1', false)];
+  const s1 = s.systemShares(rows2, [1, 1], false, isPrioRow);
+  const s2 = s.systemShares(rows2, 2, false, isPrioRow);
+  assert.deepEqual(plain(s1), plain(s2));
+});
+
+test('systemShares: more shares than rows (weights) -> empty shares, nothing lost', () => {
+  const row = d => ['V', 'S', 'R', d, [], ''];
+  const shares = s.systemShares([row('1')], [1, 0.5], false, () => false);
+  assert.deepEqual(plain(shares.map(sh => sh.length)), [1, 0]); // full takes all, half gets 0
 });
