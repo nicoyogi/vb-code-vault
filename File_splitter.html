@@ -1308,26 +1308,27 @@
     return a;
   }
 
-  // Spread n rows across `parts` people as evenly as possible.
-  // e.g. balancedSizes(5, 4) -> [2, 1, 1, 1] instead of [2, 2, 1, 0].
-  // Remainder rows are handed to the first people so nobody is starved
-  // while others double up.
-  function balancedSizes(n, parts) {
-    const base = Math.floor(n / parts);
-    let rem = n % parts;
-    const sizes = [];
-    for (let p = 0; p < parts; p++) {
-      sizes.push(base + (rem > 0 ? 1 : 0));
-      if (rem > 0) rem--;
-    }
-    return sizes;
+  // Spread n rows across `parts` people (each weight: 1 full day, 0.5 half day)
+  // as evenly as the weights allow. e.g. balancedSizes(9, [1, 0.5]) -> [6, 3].
+  // Largest-remainder rounding keeps every share within ±1 of exact
+  // proportion; a weight list that sums to 0 is not valid here.
+  function balancedSizes(n, weights) {
+    const total = weights.reduce((a, b) => a + b, 0);
+    const ideal = w => (n * w) / total;
+    let floor = weights.map(w => Math.floor(ideal(w)));
+    let rem = n - floor.reduce((a, b) => a + b, 0);
+    const order = weights.map((w, i) => ({ i, f: ideal(w) - Math.floor(ideal(w)) }))
+      .sort((a, b) => b.f - a.f);
+    for (let k = 0; k < rem; k++) floor[order[k % order.length].i]++;
+    return floor;
   }
 
-  // Cut n rows into `parts` contiguous [start, end) slices with balanced sizes.
-  function sliceBounds(n, parts) {
+  // Cut n rows into `parts` contiguous [start, end) slices sized by each
+  // person's weight. e.g. sliceBounds(6, [1, 0.5]) -> [[0, 4], [4, 6]].
+  function sliceBounds(n, weights) {
     const b = [];
     let off = 0;
-    for (const size of balancedSizes(n, parts)) { b.push([off, off + size]); off += size; }
+    for (const size of balancedSizes(n, weights)) { b.push([off, off + size]); off += size; }
     return b;
   }
 
