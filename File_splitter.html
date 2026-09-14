@@ -127,6 +127,9 @@
   .toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #71717c; border-radius: 50%; transition: transform 0.2s, background 0.2s; }
   .toggle input:checked + .toggle-slider { background: var(--accent-dim); border-color: var(--accent); }
   .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--accent); }
+  .person-half { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; }
+  .person-half input { accent-color: var(--accent); cursor: pointer; }
+  .person-half, .person-half input { font-size: 11px; color: var(--text2); font-family: var(--mono); }
 
   /* step 3 — note filter */
   #noteFilterBody .fwd-tools { margin-top: 0; }
@@ -509,7 +512,7 @@
     }
   });
   peopleCard.addEventListener('input', e => {
-    if (e.target.classList.contains('person-input')) { saveNames(); renderWizard(); }
+    if (e.target.classList.contains('person-input')) { pruneHalf(e.target.closest('.people-list').dataset.group); saveNames(); renderWizard(); }
   });
 
   // Restore previously entered names and half-day flags, per work type.
@@ -537,6 +540,12 @@
   })();
 
   function currentHalf(group) { return halfChecked[group] || (halfChecked[group] = new Set()); }
+  // Drop half-day flags whose name is no longer on the list (flags are keyed
+  // by name string; a rename or removal would otherwise orphan them).
+  function pruneHalf(group) {
+    const names = new Set(getNames(group));
+    for (const n of [...currentHalf(group)]) if (!names.has(n)) currentHalf(group).delete(n);
+  }
   function saveHalfChecked() {
     try {
       for (const [group, key] of Object.entries(HALF_KEYS))
@@ -1298,11 +1307,23 @@
     const num = list.children.length + 1;
     const row = document.createElement('div');
     row.className = 'person-row';
-    row.innerHTML = `<span class="person-num">${num}</span><input class="person-input" type="text" placeholder="Enter name…" /><button class="rm-btn" onclick="removePerson(this)" title="Remove">×</button>`;
+    row.innerHTML = `<span class="person-num">${num}</span><input class="person-input" type="text" placeholder="Enter name…" />
+      <label class="person-half" title="Half day"><input type="checkbox" class="half-input" />½</label>
+      <button class="rm-btn" onclick="removePerson(this)" title="Remove">×</button>`;
     list.appendChild(row);
     const input = row.querySelector('input');
     input.value = value;
     if (!value) input.focus();
+    const half = row.querySelector('.half-input');
+    half.checked = value && currentHalf(group).has(value.trim());
+    half.addEventListener('change', () => {
+      const name = input.value.trim();
+      if (!name) { half.checked = false; return; } // unnamed rows can't carry a half flag
+      const set = currentHalf(group);
+      if (half.checked) set.add(name); else set.delete(name);
+      saveHalfChecked();
+      renderWizard();
+    });
     return input;
   }
 
@@ -1311,6 +1332,7 @@
     if (list.children.length > 1) {
       btn.closest('.person-row').remove();
       list.querySelectorAll('.person-num').forEach((el, i) => el.textContent = i + 1);
+      pruneHalf(list.dataset.group);
       saveNames();
       renderWizard();
     }
