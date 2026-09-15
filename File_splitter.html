@@ -327,83 +327,52 @@
   let prio = null;             // { fileName, docs:Set<string> } from the optional PRIO workbook
   let step = 0;            // wizard step: 0 files, 1 notes, 2 exclusions, 3 totals, 4 people, 5 split
   let splitting = false;
-  let kreditorStore = {};  // system name -> raw Kreditor-exclusion text, persisted per device
   const STEP_LABELS = ['Files', 'Notes', 'Exclusions', 'Totals', 'People', 'Split'];
   const NAMES_KEYS = { tariff: 'fileSplitter.names', factual: 'fileSplitter.namesFactual' };
-  const KREDITOR_KEY = 'fileSplitter.kreditor';
-  try { kreditorStore = JSON.parse(localStorage.getItem(KREDITOR_KEY) || '{}') || {}; } catch (e) {}
 
-  // ---- shared Kreditor lists: one Firestore doc, localStorage as offline
-  // fallback. No login — the doc is open like the other Grimoire collections.
-  // ponytail: last-writer-wins per system, no live sync; snapshot listener if simultaneous edits become real
-  let kreditorDirty = new Set();
-  let kreditorSaveTimer = null;
-  function kreditorDoc() { return firebase.firestore().collection('wmf_splitter_config').doc('kreditor'); }
-  let kreditorLoaded = false; // shared lists fetched (or fetch failed / SDK absent -> local copy)
-  function initKreditorSync() {
-    if (typeof firebase === 'undefined' || !firebase.firestore) { kreditorLoaded = true; return; } // SDK blocked -> local-only
-    if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
-    kreditorDoc().get().then(snap => {
-      const lists = snap.exists && snap.data().lists;
-      if (!lists) return;
-      kreditorStore = lists;
-      try { localStorage.setItem(KREDITOR_KEY, JSON.stringify(kreditorStore)); } catch (e) {}
-    }).catch(err => console.warn('Kreditor lists: Firestore read failed, using local copy.', err))
-      .finally(() => { kreditorLoaded = true; renderWizard(); });
+  // Shared exclusion lists (Kreditor = Supplier, Referenz = Reference): one open
+  // Firestore doc per list, no login; localStorage is the offline copy.
+  // ponytail: last-writer-wins per system, no live sync; add a snapshot listener if simultaneous edits become real
+  function sharedList(docName, storageKey, label) {
+    let lists = {};
+    try { lists = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch (e) {}
+    let loaded = false; // fetched (or fetch failed / SDK absent -> local copy)
+    let dirty = new Set();
+    let saveTimer = null;
+    const doc = () => firebase.firestore().collection('wmf_splitter_config').doc(docName);
+    // Save one system's list: localStorage now, Firestore debounced. Only the
+    // edited systems are written (set+merge) so a colleague's concurrent edit
+    // to another system is not overwritten with stale data.
+    function save(name) {
+      try { localStorage.setItem(storageKey, JSON.stringify(lists)); } catch (e) { /* storage unavailable */ }
+      if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) return;
+      dirty.add(name);
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        const patch = {};
+        for (const n of dirty) patch[n] = lists[n] || '';
+        dirty.clear();
+        doc().set({ lists: patch, updatedAt: new Date().toISOString() }, { merge: true })
+          .catch(err => console.warn(`${label} lists: Firestore save failed — saved locally only.`, err));
+      }, 600);
+    }
+    function init() {
+      if (typeof firebase === 'undefined' || !firebase.firestore) { loaded = true; return; } // SDK blocked -> local-only
+      if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
+      doc().get().then(snap => {
+        const remote = snap.exists && snap.data().lists;
+        if (!remote) return;
+        lists = remote;
+        try { localStorage.setItem(storageKey, JSON.stringify(lists)); } catch (e) {}
+      }).catch(err => console.warn(`${label} lists: Firestore read failed, using local copy.`, err))
+        .finally(() => { loaded = true; renderWizard(); });
+    }
+    init();
+    return { get: name => lists[name], set: (name, value) => { lists[name] = value; }, save, isLoaded: () => loaded };
   }
-  // Persist one system's list: localStorage immediately, Firestore debounced.
-  // Only the edited systems are written (set+merge), so a colleague's
-  // concurrent edit to another system is not overwritten with stale data.
-  function saveKreditors(name) {
-    try { localStorage.setItem(KREDITOR_KEY, JSON.stringify(kreditorStore)); } catch (e) { /* storage unavailable */ }
-    if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) return;
-    kreditorDirty.add(name);
-    clearTimeout(kreditorSaveTimer);
-    kreditorSaveTimer = setTimeout(() => {
-      const patch = {};
-      for (const n of kreditorDirty) patch[n] = kreditorStore[n] || '';
-      kreditorDirty.clear();
-      kreditorDoc().set({ lists: patch, updatedAt: new Date().toISOString() }, { merge: true })
-        .catch(err => console.warn('Kreditor lists: Firestore save failed — saved locally only.', err));
-    }, 600);
-  }
-  initKreditorSync();
-
-  // ---- shared Referenz lists: same shape/behavior as the Kreditor store,
-  // one Firestore doc, localStorage as offline fallback. No login.
-  let referenzStore = {};  // system name -> raw Referenz-exclusion text
-  const REFERENZ_KEY = 'fileSplitter.referenz';
-  try { referenzStore = JSON.parse(localStorage.getItem(REFERENZ_KEY) || '{}') || {}; } catch (e) {}
-
-  let referenzDirty = new Set();
-  let referenzSaveTimer = null;
-  function referenzDoc() { return firebase.firestore().collection('wmf_splitter_config').doc('referenz'); }
-  let referenzLoaded = false;
-  function initReferenzSync() {
-    if (typeof firebase === 'undefined' || !firebase.firestore) { referenzLoaded = true; return; }
-    if (!firebase.apps.length) firebase.initializeApp(window.firebaseConfig);
-    referenzDoc().get().then(snap => {
-      const lists = snap.exists && snap.data().lists;
-      if (!lists) return;
-      referenzStore = lists;
-      try { localStorage.setItem(REFERENZ_KEY, JSON.stringify(referenzStore)); } catch (e) {}
-    }).catch(err => console.warn('Referenz lists: Firestore read failed, using local copy.', err))
-      .finally(() => { referenzLoaded = true; renderWizard(); });
-  }
-  function saveReferenz(name) {
-    try { localStorage.setItem(REFERENZ_KEY, JSON.stringify(referenzStore)); } catch (e) {}
-    if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) return;
-    referenzDirty.add(name);
-    clearTimeout(referenzSaveTimer);
-    referenzSaveTimer = setTimeout(() => {
-      const patch = {};
-      for (const n of referenzDirty) patch[n] = referenzStore[n] || '';
-      referenzDirty.clear();
-      referenzDoc().set({ lists: patch, updatedAt: new Date().toISOString() }, { merge: true })
-        .catch(err => console.warn('Referenz lists: Firestore save failed — saved locally only.', err));
-    }, 600);
-  }
-  initReferenzSync();
+  const kreditor = sharedList('kreditor', 'fileSplitter.kreditor', 'Kreditor');
+  const referenz = sharedList('referenz', 'fileSplitter.referenz', 'Referenz');
+  function listsLoaded() { return kreditor.isLoaded() && referenz.isLoaded(); }
   const GROUPS = [['tariff', 'Tariff'], ['factual', 'Factual']];
   const TARGET_COLS = ['Vendor details', 'Supplier', 'Reference', 'Document number'];
   const BORDER_THIN = { style: 'thin', color: { rgb: 'B0B0B0' } };
@@ -434,36 +403,37 @@
     prio = null;
     applyPrioToSystems();
     renderPrio();
-    renderSystems();
-    rebuildNoteFilter();
-    updateNoteStat();
-    renderWizard();
+    refreshAll();
   });
 
-  function handlePrioFile(file) {
-    if (!file.name.match(/\.(xlsx|xls)$/i)) { showError('Please upload an Excel file (.xlsx or .xls).'); return; }
+  function readWorkbook(file, onLoaded, badTypeMessage) {
+    if (!file.name.match(/\.(xlsx|xls)$/i)) { showError(badTypeMessage); return; }
     if (!window.XLSX) { showError('Excel engine is still loading — try again in a second.'); return; }
     const reader = new FileReader();
     reader.onload = e => {
-      try {
-        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-        const docs = new Set();
-        const entries = [];
-        for (const sn of wb.SheetNames) {
-          const sheet = wb.Sheets[sn];
-          for (const d of prioDocsFromSheet(sheet)) docs.add(d);
-          for (const r of prioRowsFromSheet(sheet, sn)) {
-            entries.push(r);
-            if (r.row && r.row[3]) docs.add(normDoc(r.row[3]));
-          }
-        }
-        if (docs.size === 0) { showError('No "Dokumentnummer" column found in ' + file.name + '.'); return; }
-        prio = { fileName: file.name, docs, entries, addedRowsCount: 0 };
-        applyPrioToSystems();
-        hideError(); renderPrio(); renderSystems(); rebuildNoteFilter(); updateNoteStat(); renderWizard();
-      } catch (err) { showError('Could not read ' + file.name + ': ' + err.message); }
+      try { onLoaded(XLSX.read(e.target.result, { type: 'array', cellDates: true })); }
+      catch (err) { showError('Could not read ' + file.name + ': ' + err.message); }
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  function handlePrioFile(file) {
+    readWorkbook(file, wb => {
+      const docs = new Set();
+      const entries = [];
+      for (const sn of wb.SheetNames) {
+        const sheet = wb.Sheets[sn];
+        for (const d of prioDocsFromSheet(sheet)) docs.add(d);
+        for (const r of prioRowsFromSheet(sheet, sn)) {
+          entries.push(r);
+          if (r.row && r.row[3]) docs.add(normDoc(r.row[3]));
+        }
+      }
+      if (docs.size === 0) { showError('No "Dokumentnummer" column found in ' + file.name + '.'); return; }
+      prio = { fileName: file.name, docs, entries, addedRowsCount: 0 };
+      applyPrioToSystems();
+      hideError(); renderPrio(); refreshAll();
+    }, 'Please upload an Excel file (.xlsx or .xls).');
   }
 
   function refreshSystemForwarders(sys) {
@@ -888,12 +858,12 @@
   function parseKreditors(text) {
     return new Set(String(text || '').split(/[\s,;]+/).filter(Boolean));
   }
-  function kreditorSetFor(name) { return parseKreditors(kreditorStore[name]); }
+  function kreditorSetFor(name) { return parseKreditors(kreditor.get(name)); }
   // Referenz exclusion list: one token per line / comma / semicolon / space, normalized to lower case.
   function parseReferenz(text) {
     return new Set(String(text || '').split(/[\s,;]+/).map(v => v.trim().toLowerCase()).filter(Boolean));
   }
-  function referenzSetFor(name) { return parseReferenz(referenzStore[name]); }
+  function referenzSetFor(name) { return parseReferenz(referenz.get(name)); }
   // Rows a system contributes to the split: the system's Kreditor exclusion
   // (matched against the Supplier column) drops rows first for every group,
   // as does the Referenz exclusion (matched against the Reference column,
@@ -919,13 +889,14 @@
     return name;
   }
 
-  // ---- wizard ----
+  function validSystems() { return systems.filter(s => !s.error); }
+
   function stepUnlocked(i) {
-    const valid = systems.filter(s => !s.error);
+    const valid = validSystems();
     if (i <= 0) return true;
     if (valid.length === 0) return false;
     if (i === 2) return true; // exclusions card always shown for any valid upload
-    if (i >= 3 && (!kreditorLoaded || !referenzLoaded)) return false; // shared lists still refreshing
+    if (i >= 3 && !listsLoaded()) return false; // shared lists still refreshing
     if (i <= 4) return true; // notes, totals, people
     const groups = [...new Set(valid.map(s => s.group))];
     return groups.every(g => getNames(g).length > 0); // split
@@ -935,6 +906,8 @@
   function nextStepIdx() { return step + 1; }
   function goBack() { setStep(Math.max(0, step - 1)); }
   function goNext() { const n = nextStepIdx(); if (stepUnlocked(n)) setStep(Math.min(5, n)); }
+
+  function refreshAll() { renderSystems(); rebuildNoteFilter(); updateNoteStat(); renderWizard(); }
 
   function renderWizard() {
     const stepper = document.getElementById('stepper');
@@ -950,7 +923,7 @@
     });
 
     document.querySelectorAll('.step-card').forEach((el, i) => { el.hidden = i !== step; });
-    const inUse = new Set(systems.filter(s => !s.error).map(s => s.group));
+    const inUse = new Set(validSystems().map(s => s.group));
     document.getElementById('groupTariff').hidden = inUse.size > 0 && !inUse.has('tariff');
     document.getElementById('groupFactual').hidden = !inUse.has('factual');
     if (step === 2) renderKreditor();
@@ -966,14 +939,14 @@
     nextBtn.textContent = step === 4 ? 'Review & split →' : 'Continue →';
     hint.textContent = (step === 5 || nextOk) ? ''
       : step === 0 ? 'Upload at least one valid file to continue'
-      : (!kreditorLoaded || !referenzLoaded) ? 'Loading the shared exclusions — one moment…'
+      : !listsLoaded() ? 'Loading the shared exclusions — one moment…'
       : 'Add at least one name to each list to continue';
   }
 
   // Recap chips for the split step: one chip per work type in use (systems,
   // surviving rows, people), then the global options + PRIO chips.
   function renderRecap() {
-    const valid = systems.filter(s => !s.error);
+    const valid = validSystems();
     const keep = checkedNoteSet();
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const shuffle = document.getElementById('shuffleRows').checked;
@@ -1009,12 +982,12 @@
   // Exclusions step: saved Kreditor and Referenz exclusion textareas per distinct system name.
   function renderKreditor() {
     const body = document.getElementById('kreditorBody');
-    if (!kreditorLoaded || !referenzLoaded) {
+    if (!listsLoaded()) {
       body.innerHTML = '<div class="note-empty">Loading shared exclusions…</div>';
       return;
     }
     body.innerHTML = '';
-    const names = [...new Set(systems.filter(s => !s.error).map(s => s.name))];
+    const names = [...new Set(validSystems().map(s => s.name))];
     if (names.length === 0) {
       body.innerHTML = '<div class="note-empty">No files uploaded yet — nothing to exclude here.</div>';
       return;
@@ -1042,41 +1015,33 @@
       const refTa = block.querySelector('.ref-ta');
       const refStat = block.querySelector('.ref-stat');
 
-      kredTa.value = kreditorStore[name] || '';
-      refTa.value = referenzStore[name] || '';
+      kredTa.value = kreditor.get(name) || '';
+      refTa.value = referenz.get(name) || '';
 
-      const updateKredStat = () => {
-        const excl = parseKreditors(kredTa.value);
+      // Live "N listed — excludes M rows" count; cell(r) is the row field the list matches.
+      const updateExclStat = (ta, parse, cell, statEl, noun, nounPlural = noun) => {
+        const excl = parse(ta.value);
         let hit = 0;
         for (const sys of systems) if (!sys.error && sys.name === name)
-          for (const r of sys.rows) if (excl.has(normDoc(r[1]))) hit++;
-        kredStat.textContent = excl.size === 0 ? ''
-          : `${excl.size} Kreditor${excl.size === 1 ? '' : 's'} listed — excludes ${hit} row${hit === 1 ? '' : 's'}.`;
-      };
-
-      const updateRefStat = () => {
-        const excl = parseReferenz(refTa.value);
-        let hit = 0;
-        for (const sys of systems) if (!sys.error && sys.name === name)
-          for (const r of sys.rows) if (excl.has(normDoc(r[2]).toLowerCase())) hit++;
-        refStat.textContent = excl.size === 0 ? ''
-          : `${excl.size} Referenz listed — excludes ${hit} row${hit === 1 ? '' : 's'}.`;
+          for (const r of sys.rows) if (excl.has(cell(r))) hit++;
+        statEl.textContent = excl.size === 0 ? ''
+          : `${excl.size} ${excl.size === 1 ? noun : nounPlural} listed — excludes ${hit} row${hit === 1 ? '' : 's'}.`;
       };
 
       kredTa.addEventListener('input', () => {
-        kreditorStore[name] = kredTa.value;
-        saveKreditors(name);
-        updateKredStat();
+        kreditor.set(name, kredTa.value);
+        kreditor.save(name);
+        updateExclStat(kredTa, parseKreditors, r => normDoc(r[1]), kredStat, 'Kreditor', 'Kreditors');
       });
 
       refTa.addEventListener('input', () => {
-        referenzStore[name] = refTa.value;
-        saveReferenz(name);
-        updateRefStat();
+        referenz.set(name, refTa.value);
+        referenz.save(name);
+        updateExclStat(refTa, parseReferenz, r => normDoc(r[2]).toLowerCase(), refStat, 'Referenz');
       });
 
-      updateKredStat();
-      updateRefStat();
+      updateExclStat(kredTa, parseKreditors, r => normDoc(r[1]), kredStat, 'Kreditor', 'Kreditors');
+      updateExclStat(refTa, parseReferenz, r => normDoc(r[2]).toLowerCase(), refStat, 'Referenz');
       body.appendChild(block);
     }
   }
@@ -1084,7 +1049,7 @@
   // Totals step: per work type, rows surviving the current forwarder + note
   // filters (the exact rows the split would distribute), with per-system detail.
   function renderTotals() {
-    const valid = systems.filter(s => !s.error);
+    const valid = validSystems();
     const keep = checkedNoteSet();
     const skipBlanks = document.getElementById('skipBlanks').checked;
     const body = document.getElementById('totalsBody');
@@ -1107,59 +1072,46 @@
   }
 
   function handleFile(file) {
-    if (!file.name.match(/\.(xlsx|xls)$/i)) { showError('Please upload Excel files (.xlsx or .xls).'); return; }
-    if (!window.XLSX) { showError('Excel engine is still loading — try again in a second.'); return; }
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-        const sheets = wb.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '' }) }));
-        const res = workbookEntries(sheets, file.name);
-        if (res.error) {
-          systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), 'tariff'), fileName: file.name, baseRows: [], rows: [], forwarders: [], group: 'tariff', error: res.error });
-        } else {
-          for (const en of res.entries) {
-            const prioSysIdx = systems.findIndex(s => s._fromPrio && s.group === en.group && (systemRank(s.name) === systemRank(en.base) || s.name === en.base));
-            if (prioSysIdx >= 0) {
-              const existing = systems[prioSysIdx];
-              existing.name = en.base;
-              existing.fileName = file.name;
-              existing.baseRows = en.rows;
-              existing.rows = en.rows;
-              existing._fromPrio = false;
-              existing.error = null;
-            } else {
-              systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(en.base, en.group), fileName: file.name, baseRows: en.rows, rows: en.rows,
-                forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: true })), group: en.group });
-            }
+    readWorkbook(file, wb => {
+      const sheets = wb.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '' }) }));
+      const res = workbookEntries(sheets, file.name);
+      if (res.error) {
+        systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(systemName(file.name), 'tariff'), fileName: file.name, baseRows: [], rows: [], forwarders: [], group: 'tariff', error: res.error });
+      } else {
+        for (const en of res.entries) {
+          const prioSysIdx = systems.findIndex(s => s._fromPrio && s.group === en.group && (systemRank(s.name) === systemRank(en.base) || s.name === en.base));
+          if (prioSysIdx >= 0) {
+            const existing = systems[prioSysIdx];
+            existing.name = en.base;
+            existing.fileName = file.name;
+            existing.baseRows = en.rows;
+            existing.rows = en.rows;
+            existing._fromPrio = false;
+            existing.error = null;
+          } else {
+            systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(en.base, en.group), fileName: file.name, baseRows: en.rows, rows: en.rows,
+              forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: true })), group: en.group });
           }
         }
-        if (prio && prio.entries) applyPrioToSystems(true);
-        else systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
-        renderSystems();
-        rebuildNoteFilter();
-        updateNoteStat();
-        hideError();
-        renderWizard();
-      } catch (err) { showError('Could not read ' + file.name + ': ' + err.message); }
-    };
-    reader.readAsArrayBuffer(file);
+      }
+      if (prio && prio.entries) applyPrioToSystems(true);
+      else systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
+      hideError();
+      refreshAll();
+    }, 'Please upload Excel files (.xlsx or .xls).');
   }
 
   function removeSystem(id) {
     systems = systems.filter(s => s.id !== id);
     if (prio && prio.entries) applyPrioToSystems(false);
-    renderSystems();
-    rebuildNoteFilter();
-    updateNoteStat();
-    renderWizard();
+    refreshAll();
   }
 
   // Live count for the note checklist, across all valid systems.
   function updateNoteStat() {
     const el = document.getElementById('noteStat');
     if (!el) return;
-    const valid = systems.filter(s => !s.error && s.group !== 'factual');
+    const valid = validSystems().filter(s => s.group !== 'factual');
     if (valid.length === 0 || noteChecked.size === 0) { el.textContent = ''; return; }
     const keep = checkedNoteSet();
     let noted = 0, matched = 0, blank = 0;
@@ -1171,6 +1123,41 @@
     el.textContent = keep.size === noteChecked.size
       ? `All notes kept — ${noted + blank} rows (${blank} without a note).`
       : `Matches ${matched} of ${noted} noted rows; ${blank} blank-note rows always kept.`;
+  }
+
+  // Shared forwarder / note checklist; isChecked(name) seeds a row, onToggle(name, checked) applies a change.
+  function renderChecklist(host, placeholder, items, isChecked, onToggle, onChange) {
+    const tools = document.createElement('div');
+    tools.className = 'fwd-tools';
+    tools.innerHTML = `
+      <input class="fwd-search" type="text" placeholder="${placeholder}" />
+      <button class="fwd-mini" data-act="all">Select all</button>
+      <button class="fwd-mini" data-act="none">Clear</button>`;
+    host.appendChild(tools);
+
+    const list = document.createElement('div');
+    list.className = 'fwd-list';
+    items.forEach(it => {
+      const row = document.createElement('label');
+      row.className = 'fwd-row';
+      row.innerHTML = `<input type="checkbox" ${isChecked(it.name) ? 'checked' : ''} /><span class="fwd-nm" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}</span><span class="fwd-ct">${it.count}</span>`;
+      row.querySelector('input').addEventListener('change', e => { onToggle(it.name, e.target.checked); if (onChange) onChange(); });
+      list.appendChild(row);
+    });
+    host.appendChild(list);
+
+    tools.querySelector('.fwd-search').addEventListener('input', e => {
+      const q = e.target.value.toLowerCase();
+      list.querySelectorAll('.fwd-row').forEach((r, i) => {
+        r.classList.toggle('hide', q && !items[i].name.toLowerCase().includes(q));
+      });
+    });
+    tools.querySelectorAll('.fwd-mini').forEach(btn => btn.addEventListener('click', () => {
+      const val = btn.dataset.act === 'all';
+      items.forEach(it => onToggle(it.name, val));
+      list.querySelectorAll('.fwd-row input').forEach(cb => cb.checked = val);
+      if (onChange) onChange();
+    }));
   }
 
   function renderSystems() {
@@ -1201,36 +1188,9 @@
 
       // Factual work is never forwarder-filtered — no checklist on those cards.
       if (sys.group !== 'factual') {
-        const tools = document.createElement('div');
-        tools.className = 'fwd-tools';
-        tools.innerHTML = `
-          <input class="fwd-search" type="text" placeholder="Filter forwarders…" />
-          <button class="fwd-mini" data-act="all">Select all</button>
-          <button class="fwd-mini" data-act="none">Clear</button>`;
-        card.appendChild(tools);
-
-        const list = document.createElement('div');
-        list.className = 'fwd-list';
-        sys.forwarders.forEach(f => {
-          const row = document.createElement('label');
-          row.className = 'fwd-row';
-          row.innerHTML = `<input type="checkbox" ${f.checked ? 'checked' : ''} /><span class="fwd-nm">${escapeHtml(f.name)}</span><span class="fwd-ct">${f.count}</span>`;
-          row.querySelector('input').addEventListener('change', e => { f.checked = e.target.checked; });
-          list.appendChild(row);
-        });
-        card.appendChild(list);
-
-        tools.querySelector('.fwd-search').addEventListener('input', e => {
-          const q = e.target.value.toLowerCase();
-          list.querySelectorAll('.fwd-row').forEach((r, i) => {
-            r.classList.toggle('hide', q && !sys.forwarders[i].name.toLowerCase().includes(q));
-          });
-        });
-        tools.querySelectorAll('.fwd-mini').forEach(btn => btn.addEventListener('click', () => {
-          const val = btn.dataset.act === 'all';
-          sys.forwarders.forEach(f => f.checked = val);
-          list.querySelectorAll('.fwd-row input').forEach(cb => cb.checked = val);
-        }));
+        renderChecklist(card, 'Filter forwarders…', sys.forwarders,
+          name => sys.forwarders.find(f => f.name === name).checked,
+          (name, checked) => { sys.forwarders.find(f => f.name === name).checked = checked; });
       }
 
       el.appendChild(card);
@@ -1241,7 +1201,7 @@
   // keyed by the note string so it survives adding/removing files; notes first
   // seen default to checked. Stale entries drop out.
   function rebuildNoteFilter() {
-    const valid = systems.filter(s => !s.error && s.group !== 'factual');
+    const valid = validSystems().filter(s => s.group !== 'factual');
     const tally = tallyNotes(valid.flatMap(s => s.rows));
     const next = new Map();
     for (const t of tally) next.set(t.name, noteChecked.has(t.name) ? noteChecked.get(t.name) : true);
@@ -1260,37 +1220,10 @@
       body.innerHTML = '<div class="note-empty">No Note values found in your files — nothing to filter here. Continue to the next step.</div>';
       return;
     }
-    const tools = document.createElement('div');
-    tools.className = 'fwd-tools';
-    tools.innerHTML = `
-      <input class="fwd-search" type="text" placeholder="Filter notes…" />
-      <button class="fwd-mini" data-act="all">Select all</button>
-      <button class="fwd-mini" data-act="none">Clear</button>`;
-    body.appendChild(tools);
-
-    const list = document.createElement('div');
-    list.className = 'fwd-list';
-    tally.forEach(t => {
-      const row = document.createElement('label');
-      row.className = 'fwd-row';
-      row.innerHTML = `<input type="checkbox" ${noteChecked.get(t.name) ? 'checked' : ''} /><span class="fwd-nm" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span><span class="fwd-ct">${t.count}</span>`;
-      row.querySelector('input').addEventListener('change', e => { noteChecked.set(t.name, e.target.checked); updateNoteStat(); });
-      list.appendChild(row);
-    });
-    body.appendChild(list);
-
-    tools.querySelector('.fwd-search').addEventListener('input', e => {
-      const q = e.target.value.toLowerCase();
-      list.querySelectorAll('.fwd-row').forEach((r, i) => {
-        r.classList.toggle('hide', q && !tally[i].name.toLowerCase().includes(q));
-      });
-    });
-    tools.querySelectorAll('.fwd-mini').forEach(btn => btn.addEventListener('click', () => {
-      const val = btn.dataset.act === 'all';
-      for (const k of noteChecked.keys()) noteChecked.set(k, val);
-      list.querySelectorAll('.fwd-row input').forEach(cb => cb.checked = val);
-      updateNoteStat();
-    }));
+    renderChecklist(body, 'Filter notes…', tally,
+      name => noteChecked.get(name),
+      (name, checked) => { noteChecked.set(name, checked); },
+      updateNoteStat);
   }
 
   function saveNames() {
@@ -1396,12 +1329,6 @@
     return cuts.map((e, k) => [k === 0 ? 0 : cuts[k - 1], e]);
   }
 
-  // Split one system's filtered rows into `parts` shares. PRIO rows and the
-  // rest split as two independent pools so urgent work lands evenly (±1 per
-  // share); each pool runs through the doc-band machinery — doc-sorted,
-  // balanced contiguous bands, cuts nudged off equal-doc runs, band→person
-  // assignment shuffled per pool (shuffle ON) or in-order slices (OFF).
-  // With no PRIO rows this is exactly the single-pool split.
   // Split one system's filtered rows into `weights.length` shares.
   // PRIO rows and the rest split as two independent pools so urgent work
   // lands evenly (±1 per share); each pool runs through the doc-band
@@ -1410,7 +1337,6 @@
   // or in-order slices (OFF). With no PRIO rows this is exactly the
   // single-pool split. A weight of 0.5 = half-day → half a full share.
   function systemShares(rows, weights, doShuffle, isPrioRow) {
-    if (typeof weights === 'number') weights = Array(weights).fill(1); // bare count = all full-day
     const pools = [[], []];
     for (const r of rows) pools[isPrioRow(r) ? 0 : 1].push(r);
     const shares = Array.from({ length: weights.length }, () => []);
@@ -1424,16 +1350,9 @@
     return shares;
   }
 
-  // Per-person split weight: half-day people carry 0.5, everyone else 1.
-  // names is the current people list (strings), halfNames the subset marked
-  // half-day.
-  function weightsForNames(names, halfNames) {
-    return names.map(n => halfNames.has(n) ? 0.5 : 1);
-  }
-
   async function splitFile() {
     hideError();
-    const valid = systems.filter(s => !s.error);
+    const valid = validSystems();
     if (valid.length === 0) { showError('Please upload at least one system file with the required columns.'); return; }
 
     // One job per work type in use: its own systems and its own people list.
@@ -1476,9 +1395,11 @@
         // pools, so urgent work lands evenly instead of clustering in one
         // person's doc band.
         const isPrioRow = prioOn ? (r => isPrio(r, prio && prio.docs, today)) : (() => false);
+        const halves = currentHalf(job.group);
+        const weights = job.names.map(n => halves.has(n) ? 0.5 : 1);
         const shares = {};
         for (const sys of job.systems) {
-          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)), weightsForNames(job.names, currentHalf(job.group)), doShuffle, isPrioRow);
+          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)), weights, doShuffle, isPrioRow);
         }
 
         const usedNames = {}; // per job — the Tariff/Factual filename token separates jobs
@@ -1526,7 +1447,7 @@
           usedNames[base] = (usedNames[base] || 0) + 1;
           if (usedNames[base] > 1) base += `_${usedNames[base]}`;
           const fileName = `${base}_${job.label}_${dateStr}.xlsx`;
-          generatedFiles.push({ name, group: job.group, label: job.label, fileName, url, blob, sheetSummary });
+          generatedFiles.push({ name, group: job.group, fileName, url, blob, sheetSummary });
         }
       }
 
@@ -1572,12 +1493,13 @@
       ).join('');
 
       const hasEmpty = Object.values(f.sheetSummary).some(r => r === 0);
+      const label = GROUPS.find(([g]) => g === f.group)[1];
 
       const card = document.createElement('div');
       card.className = 'result-card';
       card.innerHTML = `
         <div class="result-info">
-          <div class="result-name">${escapeHtml(f.name)} <span class="type-badge ${f.group}">${f.label.toUpperCase()}</span> ${hasEmpty ? '<span class="warn-badge">some sheets empty</span>' : ''}</div>
+          <div class="result-name">${escapeHtml(f.name)} <span class="type-badge ${f.group}">${label.toUpperCase()}</span> ${hasEmpty ? '<span class="warn-badge">some sheets empty</span>' : ''}</div>
           <div class="result-pills">${sheetPills}</div>
         </div>
         <div class="result-count" title="${totalRows} data rows total">
