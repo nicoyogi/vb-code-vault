@@ -249,6 +249,7 @@ const PHRASES={
   // Wackler
   fremdnummer:                'Fremdnummer xxx bereits berechnet in RExxx, ok?',
   nlFix:                      'NL-FIX',
+  nightfix:                   'NIGHTFIX',
   nl12Ok:                     'NL-12, ok?',
   nlSpezOk:                   'NL-SPEZ, ok?',
   terminzustellung:           'Terminzustellung',
@@ -1199,7 +1200,17 @@ const WACKLER_SNK_CODES=[
      (AI-bundle 2026-07-16 rows b9ca0d3c: SNK=49 → NL-12 and 41e2524b / f914abff: SNK=113 →
      NL-SPEZ, all DE Waghäusel; AVIS codes stay additive: f914abff = "Avis, ok? // NL-SPEZ, ok?"). */
   {abs:49,   tol:0.5,  label:'NL-12, ok?'},
-  {abs:113,  tol:0.5,  label:'NL-SPEZ, ok?'}
+  {abs:113,  tol:0.5,  label:'NL-SPEZ, ok?'},
+  /* SNK≈16 is the Wackler "Nightfix" (fixed-price night-delivery) fee — same product family and the
+     same evidence shape as NL-FIX / NL-12 / NL-SPEZ: a bare SNK gap on an otherwise clean row.
+     Audit row 10365132 / ref 2544445352 (DE national, 13 Colli, 2536 kg): SNK Kosten DL 17.26 vs
+     SNK Kosten lt. Tarif 1.26 → Differenz 16.00, no FR/MT/TZ delta, and the auditor's Anmerkung
+     cell names the product ("NIGHTFIX") instead of the generic "SNK Differenz". The 0.5 window is
+     the book's convention for fee amounts (NL-FIX itself reads 37.97–38.00 in the wild) and it
+     cannot poach an existing reading: no row in any Wackler workbook carries an SNK gap between
+     7.12 and 16.00, and the neighbouring entries are at 11.5 ± 0.1 and 22 ± 0.5.
+     ponytail: pinned by ONE audit row — widen the evidence before trusting the 16 window. */
+  {abs:16,   tol:0.5,  label:P.nightfix}
 ];
 function wacklerSnkCode(snk){const a=Math.abs(snk);for(const c of WACKLER_SNK_CODES)if(Math.abs(a-c.abs)<=c.tol)return c.label;return null;}
 /* Wackler AVIS surcharge codes — sign-insensitive (a credit AVIS=-6.5 is the same code as 6.5).

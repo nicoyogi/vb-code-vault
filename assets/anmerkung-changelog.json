@@ -1,6 +1,13 @@
 {
-  "version": "1.41.1",
+  "version": "1.42.0",
   "entries": [
+    {
+      "ver": "1.42.0",
+      "date": "2026-09-15",
+      "items": [
+        "Wackler — new SNK code |SNK| ≈ 16 (± 0.5) → \"NIGHTFIX\", the fixed-price night-delivery fee in the same product family as NL-FIX / NL-12 / NL-SPEZ. Derived from AI bundle v3 2026-09-15 row 35ad49ba (workbook 10365132, ref 2544445352): the row's only cost signal is the SNK gap (Kosten DL 17.26 vs Kosten lt. Tarif 1.26 → Differenz 16.00) and the auditor names the product instead of the generic \"SNK Differenz\". All 159 solved rows of that workbook replay unchanged."
+      ]
+    },
     {
       "ver": "1.41.1",
       "date": "2026-09-04",
