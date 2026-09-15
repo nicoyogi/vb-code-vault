@@ -530,6 +530,32 @@ test('processWackler: blank tariff + code-less SNK still falls through to the La
   assert.equal(e.processWackler(ws, R, W_COLS), 'Lagergeld, ok?');
 });
 
+test('processWackler: SNK=16 on a clean tariffed row -> NIGHTFIX (not the generic SNK Differenz)', () => {
+  // AI-bundle 2026-09-15 row 35ad49ba (workbook 10365132, ref 2544445352): DE national, 13 Colli,
+  // 2536 kg, SNK Kosten DL 17.26 vs SNK Kosten lt. Tarif 1.26 → Differenz 16.00 and no FR/MT/TZ
+  // delta. The auditor's cell names the billed Wackler product ("NIGHTFIX") instead of the generic
+  // SNK gap, the same way SNK≈38 reads NL-FIX — the fee amount the row shows is the only signal.
+  const ws = makeRow(R, {
+    51: 10, 52: '396.58', 54: '16', 58: '2544445352', 59: '2536', 60: '2536',
+    61: '28307', 62: 'Bremen', 63: '211FO011', 64: '612100', 66: 'DE', 67: 'DE', 68: '89160',
+    69: '315.51', 70: '315.51', 71: '13', 72: '2536',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'NIGHTFIX');
+});
+
+test('processWackler: an SNK gap outside the Nightfix window keeps the generic SNK Differenz', () => {
+  // Negative constraint for the new code-book entry: only |SNK| ≈ 16 is the published Nightfix
+  // fee. 14 and 17.1 are unrecognised gaps on an otherwise identical row, and must keep the
+  // generic wording — they must not be absorbed by the 11.5 ± 0.1 or 22 ± 0.5 neighbours either.
+  const row = (snk) => makeRow(R, {
+    51: 10, 52: '396.58', 54: snk, 59: '2536', 60: '2536',
+    61: '28307', 62: 'Bremen', 63: '211FO011', 64: '612100', 66: 'DE', 67: 'DE', 68: '89160',
+    69: '315.51', 70: '315.51', 71: '13', 72: '2536',
+  });
+  assert.equal(e.processWackler(row('14'), R, W_COLS), 'SNK Differenz');
+  assert.equal(e.processWackler(row('17.1'), R, W_COLS), 'SNK Differenz');
+});
+
 test('processWackler: same-tier multi-ref near-equal weights -> billed-tier from FR delta (MT additive)', () => {
   // Bundle row e40698ee (was f04300d4): 2 refs, VKG 6840 / VKG_DL 6862 (~0.3% apart) weigh into
   // the 7000 kg tier, but FR=-59.34 is EXACTLY rate(7500,TR)-rate(7000,TR) -> Wackler billed the

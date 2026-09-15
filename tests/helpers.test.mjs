@@ -79,6 +79,10 @@ test('wacklerSnkCode: sign-insensitive code book with tolerance', () => {
   assert.equal(e.wacklerSnkCode(22), '2. Zustellung ok?');
   assert.equal(e.wacklerSnkCode(180), 'Terminzustellung, ok?');
   assert.equal(e.wacklerSnkCode(100), null, 'unknown value -> no code');
+  assert.equal(e.wacklerSnkCode(16), 'NIGHTFIX', 'fixed-price Nightfix fee');
+  assert.equal(e.wacklerSnkCode(-16.4), 'NIGHTFIX', 'sign-insensitive, within the ±0.5 fee window');
+  assert.equal(e.wacklerSnkCode(14.4), null, 'below the Nightfix window (and 11.5 ± 0.1)');
+  assert.equal(e.wacklerSnkCode(17.1), null, 'above the Nightfix window (and 22 ± 0.5)');
 });
 
 test('isWacklerAvisCode / wacklerAvisLabel', () => {
