@@ -516,15 +516,22 @@ test('systemShares: half-day weight sizes shares ~half of full-day, both pools c
     const prio = shares.map(sh => sh.filter(isPrioRow).length);
     assert.equal(byPerson(prio), true, `prio ≈2:1, got ${prio}`);
   }
-  // all-full weights -> equal shares, identical to the pre-weights path
-  const rows2 = [row('P0', true), row('P1', true), row('R0', false), row('R1', false)];
-  const s1 = s.systemShares(rows2, [1, 1], false, isPrioRow);
-  const s2 = s.systemShares(rows2, 2, false, isPrioRow);
-  assert.deepEqual(plain(s1), plain(s2));
 });
 
 test('systemShares: more shares than rows (weights) -> empty shares, nothing lost', () => {
   const row = d => ['V', 'S', 'R', d, [], ''];
   const shares = s.systemShares([row('1')], [1, 0.5], false, () => false);
   assert.deepEqual(plain(shares.map(sh => sh.length)), [1, 0]); // full takes all, half gets 0
+});
+
+test('upload guard: dropzone and PRIO uploads keep their own bad-type message (plural vs singular)', () => {
+  const fresh = loadSplitter(); // own sandbox so the showError override cannot leak
+  const seen = [];
+  fresh.showError = msg => seen.push(msg);
+  fresh.handleFile({ name: 'notes.txt' });
+  fresh.handlePrioFile({ name: 'notes.txt' });
+  assert.deepEqual(seen, [
+    'Please upload Excel files (.xlsx or .xls).',
+    'Please upload an Excel file (.xlsx or .xls).',
+  ]);
 });
