@@ -95,10 +95,20 @@ diff.txt
 .gemini/
 .claude/
 .opencode/
+.commandcode/
 session-*.md
 apply_redesign.py
 redesign.py
 redesign.js
+
+# Multi-agent pipeline scratch state (see .commandcode/AGENTS.md). Holds the live
+# task.json, history.jsonl and artifacts/ for the current run — working files, not
+# deliverable source.
+.agent/
+
+# The Office runtime. The hook spool holds real command text and file paths from
+# local sessions, so it must never be committed.
+office/.runtime/
 
 # graphify knowledge-graph output — generated artifact, local only
 graphify-out/
