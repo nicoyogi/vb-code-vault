@@ -103,23 +103,10 @@ apply_redesign.py
 redesign.py
 redesign.js
 
-# The upstream pixel-art reference, fetched for study only. It is a third-party
-# project (W17ANT/Claude-Office, MIT) whose art the office teardown concluded must
-# not be vendored, and at 313 MB it would dominate the repo. The rebuilt office is
-# office/ and shares no code with it.
-claude-office/
-
 # Multi-agent pipeline scratch state (see .commandcode/AGENTS.md). Holds the live
 # task.json, history.jsonl and artifacts/ for the current run — working files, not
 # deliverable source.
 .agent/
-
-# The Office dashboard. Local-only tooling: it reads this machine's pi session
-# store and its roster, so it is deliberately kept out of version control. Left on
-# disk, untracked. It was committed once and has since been removed from the index;
-# the files themselves were never deleted. This also covers office/.runtime/, whose
-# hook spool holds real command text and file paths from local sessions.
-office/
 
 # graphify knowledge-graph output — generated artifact, local only
 graphify-out/

@@ -6,7 +6,6 @@
   "scripts": {
     "test": "node --test",
     "verify:anmerkung": "node scripts/anmerkung/verify.mjs",
-    "test:anmerkung": "node --test tests/processors.test.mjs tests/diff.test.mjs tests/anmerkung-v5.test.mjs",
-    "office": "node office/server.mjs"
+    "test:anmerkung": "node --test tests/processors.test.mjs tests/diff.test.mjs tests/anmerkung-v5.test.mjs"
   }
 }
