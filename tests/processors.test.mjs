@@ -76,9 +76,80 @@ test('processDachser: SACH=X with TARIF + FR delta does not emit VORHOLUNG', () 
   assert.equal(e.processDachser(ws, R, cols), 'Differenz aufgrund abweichender Gewichte');
 });
 
+test('processDachser: SNK_DL=135 K1AV -> admin fee stripped, 2h waiting time', () => {
+  // Bundle 2026-09-18 row 8c7714fd: Amazon-DTM1 rows bundle the flat 5 EUR
+  // admin/fenster line into SNK_DL. 135 − 5 = 130 = 2 × 65 EUR.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '717.2', 52: '135', 53: '64.48', 54: '70.52', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 2h á 65 EUR, ok?');
+});
+
+test('processDachser: SNK_DL=936.15 K1AV -> admin fee stripped, itemised 2.Zustellung amount', () => {
+  // Bundle 2026-09-18 row 7d6db19e: 936.15 − 5 = 931.15 (cents-residual).
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '700.92', 52: '936.15', 53: '865.38', 54: '70.77', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), '931,15 Kosten für 2.Zustellung etc. ok?');
+});
+
+test('processDachser: SNK_DL=265 K1AV -> waiting time scales with the hour count', () => {
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '500', 52: '265', 53: '260', 54: '5', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 4h á 65 EUR, ok?');
+});
+
+test('processDachser: SNK_DL=195 K1AV -> integer residual that is no 65-multiple stays Laderaumkostenentwicklung', () => {
+  // 20260903 row 218: 195 − 5 = 190, integer and 190/65 is not whole ->
+  // the waiting-time / itemised branches must not grab it.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '666.43', 52: '195', 53: '134.87', 54: '60.13', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung');
+});
+
+test('processDachser: SNK_DL=75 K1AV stays Speditionskosten gem. Text', () => {
+  // The 75-code branch returns before the residual logic; a bundled residual of
+  // 70 must not be mistaken for waiting time.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '200', 52: '75', 53: '75', 54: '', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Speditionskosten gem. Text');
+});
+
+test('phraseToKey: computed Dachser SNK phrases resolve to their template keys', () => {
+  assert.equal(e.phraseToKey('Wartezeit 2h á 65 EUR, ok?'), 'tpl_wartezeit');
+  assert.equal(e.phraseToKey('Wartezeit 12h á 65 EUR, ok?'), 'tpl_wartezeit');
+  assert.equal(e.phraseToKey('931,15 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
+  assert.equal(e.phraseToKey('1200,50 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
+});
+
 test('processDachser: equal weights with positive FR above 0.08 and no other triggers -> Frachtdifferenz', () => {
   const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54 };
   const ws = makeRow(R, { 50: 10, 51: '914.23', 52: '0.1', 53: '9550', 54: '9550' });
+  assert.equal(e.processDachser(ws, R, cols), 'Frachtdifferenz');
+});
+
+test('processDachser: equal weights + positive FR on an international lane -> bisherigen Tarif note', () => {
+  // Bundle 2026-09-18 rows 57b40b11…7fc66527 (RS/CH→DE imports and DE→PL exports):
+  // when the origin or destination is non-DE, a positive FR delta at equal weights
+  // is the auditor's "Dachser bills at the previous tariff" note, not a weight miscalc.
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, abg_land: 55, empf_land: 56 };
+  let ws = makeRow(R, { 50: 10, 51: '538.1', 52: '17.05', 53: '566', 54: '566', 55: 'RS', 56: 'DE' });
+  assert.equal(
+    e.processDachser(ws, R, cols),
+    'Dachser berechnet die Kosten nach dem bisherigen Tarif',
+    'RS→DE import, equal weights',
+  );
+  ws = makeRow(R, { 50: 10, 51: '207.51', 52: '1.93', 53: '148', 54: '148', 55: 'DE', 56: 'PL' });
+  assert.equal(
+    e.processDachser(ws, R, cols),
+    'Dachser berechnet die Kosten nach dem bisherigen Tarif',
+    'DE→PL export, equal weights',
+  );
+});
+
+test('processDachser: equal weights + positive FR stays Frachtdifferenz on a domestic lane', () => {
+  // The 2026-09-04 workbook regressed ~44 domestic equal-weight rows as
+  // "Frachtdifferenz"; the intl-lane gate must not touch those.
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, abg_land: 55, empf_land: 56 };
+  const ws = makeRow(R, { 50: 10, 51: '914.23', 52: '0.1', 53: '9550', 54: '9550', 55: 'DE', 56: 'DE' });
   assert.equal(e.processDachser(ws, R, cols), 'Frachtdifferenz');
 });
 
@@ -105,6 +176,15 @@ test('processDachser: blank TARIF + FR on inbound shipment from foreign Abg.-Lan
   const cols = { stat: 50, tarif: 51, fr: 52, maut: 53, tz: 54, abg_land: 55 };
   const ws = makeRow(R, { 50: 10, 52: '958.8', 53: '64.89', 54: '91.71', 55: 'PT' });
   assert.equal(e.processDachser(ws, R, cols), 'kein Tarif für PT');
+});
+
+test('processDachser: blank TARIF + FR on outbound shipment to foreign Empf.-Land -> kein Tarif für <Land>', () => {
+  // Bundle 2026-09-18 row 646ef434 (DE→RO, TARIF blank, FR=1783.7, SACH+SERV set):
+  // the missing tarif is the destination country's, so the note names RO instead
+  // of falling through to the Fremdnummer literal.
+  const cols = { stat: 50, tarif: 51, fr: 52, maut: 53, tz: 54, abg_land: 55, empf_land: 56, sachkonto: 57, serv_art: 58 };
+  const ws = makeRow(R, { 50: 10, 52: '1783.7', 53: '47.47', 54: '276.47', 55: 'DE', 56: 'RO', 57: '612110', 58: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'kein Tarif für RO');
 });
 
 test('processDachser: blank TARIF + FR with SERV/SACH -> Fremdnummer already-billed note', () => {

@@ -1,6 +1,15 @@
 {
-  "version": "1.42.0",
+  "version": "1.43.0",
   "entries": [
+    {
+      "ver": "1.43.0",
+      "date": "2026-09-18",
+      "items": [
+        "Dachser — positive FR delta at equal/same-tier weights on an international lane (RS/CH import or PL export) now emits \"Dachser berechnet die Kosten nach dem bisherigen Tarif\" instead of \"Frachtdifferenz\". Derived from AI bundle v3 2026-09-18 rows 57b40b11…4c0d0dfd (15 rows): on non-DE lanes the auditor reads the freight gap as the previous rate-card version, not a weight miscalc. Domestic equal-weight rows keep \"Frachtdifferenz\" (2026-09-04 regression, 44 rows). All 158 solved rows of the 20260917 workbook replay unchanged.",
+        "Dachser — blank-TARIF note \"kein Tarif für <Land>\" now also fires on outbound international lanes (Empf.-Land ≠ DE). Resolves bundle 2026-09-18 row 646ef434 (DE→RO, TARIF blank, FR=1783.7, SACH+SERV present): previously fell through to the Fremdnummer literal, truth expects \"kein Tarif für RO\".",
+        "Dachser — K1AV rows whose SNK_DL bundles the flat 5 EUR admin fee now strip it and name the residual: a whole multiple of 65 EUR is waiting time (\"Wartezeit 2h á 65 EUR, ok?\"), any other cents-bearing residual is the itemised second-delivery charge with its amount (\"931,15 Kosten für 2.Zustellung etc. ok?\"). Resolves bundle 2026-09-18 rows 8c7714fd (SNK_DL 135 → 130 = 2×65) and 7d6db19e (SNK_DL 936.15 → 931.15). Integer residuals that are no 65-multiple (e.g. 190 on 20260903 row 218) and the SNK_DL=75 Speditionskosten branch are untouched; all 158 solved rows of the 20260917 workbook replay unchanged. New `tpl_wartezeit` / `tpl_zustellungKosten` phrase templates keep the interpolated phrases key-mappable for Diff Mode."
+      ]
+    },
     {
       "ver": "1.42.0",
       "date": "2026-09-15",

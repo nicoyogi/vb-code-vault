@@ -209,6 +209,7 @@ const PHRASES={
   abweichGewicht:             'Differenz aufgrund von abweichendem Gewicht',
   frachtzuAbschlag:           'Differenz Frachtzu/ abschlag',
   frachtDifferenz:            'Fracht Differenz',
+  daBisherigerTarif:          'Dachser berechnet die Kosten nach dem bisherigen Tarif',
   zoneKorrekt:                'Zone korrekt berechnet?',
   einfuhrzoll:                'Einfuhrzollabfertigung',
   abholtermin:                'Abholterminvereinbarung',
@@ -338,6 +339,12 @@ const PHRASE_TEMPLATES=[
   {key:'tpl_wacklerRechnet',regex:/^wackler rechnet frachtrate/i,
    example:'Wackler rechnet Frachtrate für 10000kg ab',
    processor:'processWackler'},
+  {key:'tpl_wartezeit',    regex:/^wartezeit \d+h á 65 eur, ok\?$/i,
+   example:'Wartezeit 2h á 65 EUR, ok?',
+   processor:'processDachser'},
+  {key:'tpl_zustellungKosten',regex:/^[\d.]+,\d{2} kosten f\u00fcr 2\.zustellung etc\. ok\?$/i,
+   example:'931,15 Kosten für 2.Zustellung etc. ok?',
+   processor:'processDachser'},
 ];
 
 /* Resolve a single phrase string to a stable key. Returns null when
@@ -627,6 +634,16 @@ function daIsNonInteger(n){return n!==Math.floor(n);}
    AND the difference is within 0.05 of a known surcharge code — a very narrow window
    so we don't accidentally grab real Laderaum rows. */
 const DA_SNK_SURCHARGE_CODES=[5,9,11,14];
+/* Amazon-DTM1 rows bundle the flat 5 EUR admin/fenster line (the SNK_DL=5 rows
+   that classify as "Admin Zeitfensterbuchung Handel") into the same SNK_DL cell
+   as a residual fee. The auditor's finding is therefore the residual
+   SNK_DL − DA_SNK_ADMIN_FEE. Bundle 2026-09-18 rows 8c7714fd (135 → 130 = 2×65,
+   "Wartezeit 2h á 65 EUR") and 7d6db19e (936.15 → 931.15, "931,15 Kosten für
+   2.Zustellung etc."). */
+const DA_SNK_ADMIN_FEE=5;
+/* German decimal rendering for phrases that embed a computed amount
+   (the auditor writes "931,15", not "931.15"). */
+function daFormatDe(n){const s=Math.abs(n).toFixed(2);return(n<0?'-':'')+s.replace('.',',');}
 function daDetectSurchargeFromDiff(snkDl,snkDiff){
   if(!daIsNonInteger(snkDl))return 0;
   const rounded=Math.round(snkDiff);
@@ -694,7 +711,20 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
          this catches the integer-only K1AV cases that previously fell through to
          "Differenz Automatische Zustellterminvereinbarung — Laderaumzuschlag".
          K1AV's standard codes (5/14) are still handled higher up in the switch. */
-      if(servArt.toUpperCase()==='K1AV')return'Differenz Laderaumkostenentwicklung';
+      if(servArt.toUpperCase()==='K1AV'){
+        /* Residual after the bundled admin fee. A whole multiple of 65 EUR is
+           waiting time the auditor bills by the hour (130 → 2h); any other
+           cents-bearing residual is the itemised second-delivery charge, named
+           with its amount. Integer residuals that are not a 65-multiple (e.g.
+           190 on 20260903 row 218) keep the Laderaumkostenentwicklung wording. */
+        const residual=snkDl-DA_SNK_ADMIN_FEE;
+        if(residual>=65){
+          const hrs=residual/65;
+          if(Math.abs(hrs-Math.round(hrs))<0.005)return'Wartezeit '+Math.round(hrs)+'h á 65 EUR, ok?';
+          if(daIsNonInteger(residual))return daFormatDe(residual)+' Kosten für 2.Zustellung etc. ok?';
+        }
+        return'Differenz Laderaumkostenentwicklung';
+      }
       if(daIsNonInteger(snkDl)&&daIsNonInteger(snkDiff)){
         return'Differenz Laderaumkostenentwicklung';
       }
@@ -741,6 +771,7 @@ function processDachser(ws,r,cols){
          empfPlz=cellStr(ws,r,empfPlzCol),
          empfOrt=cellStr(ws,r,empfOrtCol).toUpperCase(),
          abgLand=cols.abg_land>=0?cellStr(ws,r,cols.abg_land).toUpperCase().trim():'',
+         empfLand=cols.empf_land>=0?cellStr(ws,r,cols.empf_land).toUpperCase().trim():'',
          isTarifZero=daIsTarifZero(ws,r,cols.tarif);
 
   /* Blank-TARIF + significant FR pattern. When the TARIF cell is completely empty
@@ -758,7 +789,15 @@ function processDachser(ws,r,cols){
   if(cols.tarif>=0&&cols.fr>=0){
     const tarifRaw=cellStr(ws,r,cols.tarif);
     if(tarifRaw===''&&hasErr(cellNum(ws,r,cols.fr),T)){
+      /* No tariff backing on an international lane: name the non-DE country. The
+         origin side (Abg.-Land) drives imports (PT→DE row fa228f83 → "kein Tarif
+         für PT"); the destination side (Empf.-Land) drives exports — bundle
+         2026-09-18 row 646ef434 (DE→RO, TARIF blank, FR=1783.7) expects
+         "kein Tarif für RO", not the Fremdnummer literal the SACH+SERV branch
+         would otherwise emit. The Fremdnummer / VORHOLUNG fallbacks below stay
+         reachable for domestic blank-tarif rows. */
       if(abgLand&&abgLand!=='DE')return 'kein Tarif für '+abgLand;
+      if(empfLand&&empfLand!=='DE')return 'kein Tarif für '+empfLand;
       const hasOtherDiff=
         (cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T))||
         (cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))||
@@ -834,8 +873,16 @@ function processDachser(ws,r,cols){
       const zzVal=cols.zz>=0?cellNum(ws,r,cols.zz):0;
       const sameWeight=bothKnown&&(v1===v2||(Math.abs(v1-v2)<1.0&&Math.abs(frVal)<=1.0));
       const sameTier=bothKnown&&(dachserGetTier(v1)===dachserGetTier(v2));
+      /* International lane (non-DE origin or destination) with a positive FR delta
+         at equal/same-tier weights: the auditor reads this as Dachser billing at
+         the PREVIOUS rate-card version, not a weight miscalc — bundle 2026-09-18
+         rows 57b40b11…4c0d0dfd (RS/CH→DE imports, DE→PL exports, 15 rows) expect
+         "Dachser berechnet die Kosten nach dem bisherigen Tarif" instead of
+         "Frachtdifferenz". Domestic equal-weight rows keep "Frachtdifferenz"
+         (old-bundle regression). */
+      const intlLane=(abgLand&&abgLand!=='DE')||(empfLand&&empfLand!=='DE');
       if(sameWeight||sameTier){
-        if(frVal>1||(frVal>=0.05&&!res))res=join(res,zzVal===35?P.frachtDifferenz:P.frachtDiff);
+        if(frVal>1||(frVal>=0.05&&!res))res=join(res,intlLane?P.daBisherigerTarif:(zzVal===35?P.frachtDifferenz:P.frachtDiff));
         else if(frVal<-1.0&&!res)res=join(res,'Differenz aufgrund abweichender Gewichte');
       }else if(bothKnown){
         if(frVal>0&&frVal<1.0)res=join(res,zzVal===35?P.frachtDifferenz:P.frachtDiff);
