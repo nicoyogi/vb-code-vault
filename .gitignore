@@ -114,9 +114,12 @@ claude-office/
 # deliverable source.
 .agent/
 
-# The Office runtime. The hook spool holds real command text and file paths from
-# local sessions, so it must never be committed.
-office/.runtime/
+# The Office dashboard. Local-only tooling: it reads this machine's pi session
+# store and its roster, so it is deliberately kept out of version control. Left on
+# disk, untracked. It was committed once and has since been removed from the index;
+# the files themselves were never deleted. This also covers office/.runtime/, whose
+# hook spool holds real command text and file paths from local sessions.
+office/
 
 # graphify knowledge-graph output — generated artifact, local only
 graphify-out/
