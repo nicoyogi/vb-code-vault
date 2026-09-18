@@ -96,10 +96,18 @@ diff.txt
 .claude/
 .opencode/
 .commandcode/
+.pi/
+.agents/
 session-*.md
 apply_redesign.py
 redesign.py
 redesign.js
+
+# The upstream pixel-art reference, fetched for study only. It is a third-party
+# project (W17ANT/Claude-Office, MIT) whose art the office teardown concluded must
+# not be vendored, and at 313 MB it would dominate the repo. The rebuilt office is
+# office/ and shares no code with it.
+claude-office/
 
 # Multi-agent pipeline scratch state (see .commandcode/AGENTS.md). Holds the live
 # task.json, history.jsonl and artifacts/ for the current run — working files, not
