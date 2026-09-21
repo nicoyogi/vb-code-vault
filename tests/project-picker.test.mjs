@@ -44,3 +44,14 @@ test('project picker uses a native accessible modal and opens during page initia
 test('project selection stays separate from forwarder selection', () => {
   assert.doesNotMatch(SOURCE.match(/function chooseProject\(id\)\{[^}]+\}/)?.[0] || '', /selectedFW/);
 });
+
+test('project picker exposes a persistent workspace switcher', () => {
+  assert.match(PAGE, /id="projectSwitch"/);
+  assert.match(PAGE, /id="projectSwitchLabel"/);
+  assert.match(PAGE, /id="projectSwitchMeta"/);
+  assert.match(PAGE, /onclick="openProjectDialog\(\)"/);
+  assert.match(SOURCE, /function openProjectDialog\(\)/);
+  assert.match(SOURCE, /function updateProjectSwitch\(id\)/);
+  assert.match(SOURCE, /project-option-icon/);
+  assert.match(SOURCE, /project-option-badge/);
+});

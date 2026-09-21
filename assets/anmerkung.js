@@ -63,30 +63,56 @@ function toggleAdv(){const t=document.getElementById('advToggle'),p=document.get
 /* Add future projects here. A project selection is intentionally separate from the
    forwarder/rule-engine choice: WMF currently uses the existing workflow unchanged. */
 const PROJECT_KEY='anmerkung.project.v1';
-const PROJECTS=[{id:'wmf',label:'WMF',description:'Current Anmerkung workflow'}];
+const PROJECTS=[{id:'wmf',label:'WMF',description:'Current Anmerkung workflow',meta:'Invoice annotation · forwarder rules',badge:'Active'}];
 let selectedProject=null;
 function isProjectId(id){return PROJECTS.some(project=>project.id===id);}
 function projectId(){try{const id=localStorage.getItem(PROJECT_KEY);return isProjectId(id)?id:null;}catch(_){return null;}}
 function chooseProject(id){if(!isProjectId(id))return false;selectedProject=id;try{localStorage.setItem(PROJECT_KEY,id);}catch(_){}return true;}
+function updateProjectSwitch(id){
+  const project=PROJECTS.find(p=>p.id===id);
+  const label=document.getElementById('projectSwitchLabel'),meta=document.getElementById('projectSwitchMeta');
+  if(label)label.textContent=project?project.label:'Select project';
+  if(meta)meta.textContent=project?(project.meta||project.description):'Choose the project ruleset used by this page';
+}
+function updateProjectCurrentNote(){
+  const note=document.getElementById('projectCurrentNote');
+  if(!note)return;
+  const project=PROJECTS.find(p=>p.id===selectedProject);
+  if(project)note.innerHTML='<span class="project-current-dot" aria-hidden="true"></span><span><strong>Selected:</strong> '+project.label+'</span>';
+}
 function renderProjectOptions(){
   const wrap=document.getElementById('projectOptions');if(!wrap)return;
   const current=selectedProject||projectId()||PROJECTS[0].id;
   selectedProject=current;
-  wrap.innerHTML=PROJECTS.map(project=>`<button type="button" class="project-option${project.id===current?' selected':''}" role="radio" aria-checked="${project.id===current}" tabindex="${project.id===current?0:-1}" data-project="${project.id}" onclick="selectProject(this)" onkeydown="projectKeydown(event)"><span class="project-name">${project.label}</span><span class="project-desc">${project.description}</span></button>`).join('');
+  const count=document.getElementById('projectCount');
+  if(count)count.textContent=PROJECTS.length+' '+(PROJECTS.length===1?'project':'projects');
+  wrap.innerHTML=PROJECTS.map(project=>`<button type="button" class="project-option${project.id===current?' selected':''}" role="radio" aria-checked="${project.id===current}" tabindex="${project.id===current?0:-1}" data-project="${project.id}" onclick="selectProject(this)" onkeydown="projectKeydown(event)">
+    <span class="project-option-icon" aria-hidden="true">${project.id===current?'✓':'◇'}</span>
+    <span class="project-option-main"><span class="project-name">${project.label}</span><span class="project-desc">${project.description}</span><span class="project-meta">${project.meta||''}</span></span>
+    <span class="project-option-badge">${project.badge||'Available'}</span>
+  </button>`).join('');
+  updateProjectSwitch(current);
+}
+function openProjectDialog(){
+  const dialog=document.getElementById('dlgProject');if(!dialog||typeof dialog.showModal!=='function')return;
+  renderProjectOptions();updateProjectCurrentNote();
+  dialog.returnValue='';dialog.showModal();
+  const option=dialog.querySelector('[aria-checked="true"]');if(option)option.focus();
 }
 function openProjectDialogIfNeeded(){
-  if(projectId())return;
-  const dialog=document.getElementById('dlgProject');
-  if(!dialog||typeof dialog.showModal!=='function')return;
-  renderProjectOptions();
-  dialog.returnValue='';
-  dialog.showModal();
-  const option=dialog.querySelector('[aria-checked="true"]');if(option)option.focus();
+  const current=projectId();
+  if(current){selectedProject=current;updateProjectSwitch(current);return;}
+  openProjectDialog();
 }
 function selectProject(button){
   const id=button&&button.dataset.project;if(!isProjectId(id))return;
   selectedProject=id;
-  document.querySelectorAll('#projectOptions .project-option').forEach(option=>{const selected=option===button;option.classList.toggle('selected',selected);option.setAttribute('aria-checked',selected?'true':'false');option.tabIndex=selected?0:-1;});
+  document.querySelectorAll('#projectOptions .project-option').forEach(option=>{
+    const selected=option===button;
+    option.classList.toggle('selected',selected);option.setAttribute('aria-checked',selected?'true':'false');option.tabIndex=selected?0:-1;
+    const icon=option.querySelector('.project-option-icon');if(icon)icon.textContent=selected?'✓':'◇';
+  });
+  updateProjectCurrentNote();updateProjectSwitch(id);
 }
 function projectKeydown(event){
   const options=[...document.querySelectorAll('#projectOptions .project-option')];
@@ -106,25 +132,6 @@ function confirmProject(){
 document.addEventListener('DOMContentLoaded',()=>{
   syncThFields();
   openProjectDialogIfNeeded();
-  [['thDachser','dachser'],['thKN','kn'],['thDHL','dhl'],['thWackler','wackler']].forEach(([id,key])=>{
-    const el=document.getElementById(id);
-    el.addEventListener('input',()=>onThInput(key,el));
-    el.addEventListener('change',()=>onThInput(key,el));
-    const hint=el.parentElement.querySelector('.default-hint');
-    if(hint)hint.textContent='default '+TH_DEFAULTS[key];
-  });
-  setVersionBadge();
-  loadChangelog();
-});
-
-/* Changelog Escape key handling (separate because theme modal uses same key). */
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){
-    const cl=document.getElementById('cl-overlay');
-    if(cl&&cl.classList.contains('open'))closeChangelog();
-  }
-});
-
 /* ══════════════════════════════════════════════════════════
    VERSION + CHANGELOG (#24)
    Data lives in assets/anmerkung-changelog.json so the release
