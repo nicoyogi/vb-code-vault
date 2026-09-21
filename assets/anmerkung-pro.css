@@ -834,7 +834,8 @@ body.theme-pro .footer a:hover {
   color: #60a5fa;
 }
 
-body.theme-pro .nd-dialog {
+body.theme-pro .nd-dialog,
+body.theme-pro .ds-dialog {
   box-shadow: 0 24px 64px rgba(0,0,0,.28);
 }
 
