@@ -27,6 +27,7 @@ const CORE = [
   './assets/grimoire-core.css',
   './assets/grimoire-core.js',
   './assets/anmerkung.css',
+  './assets/anmerkung-pro.css',
   './assets/anmerkung.js',
   './assets/wackler-ratecard-loader.js',
   './assets/wackler-ratecards.enc.json',
