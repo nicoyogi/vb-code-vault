@@ -133,6 +133,26 @@ document.addEventListener('DOMContentLoaded',()=>{
   setupWorkbookDropZone();
   syncThFields();
   openProjectDialogIfNeeded();
+  [['thDachser','dachser'],['thKN','kn'],['thDHL','dhl'],['thWackler','wackler']].forEach(([id,key])=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.addEventListener('input',()=>onThInput(key,el));
+    el.addEventListener('change',()=>onThInput(key,el));
+    const hint=el.parentElement&&el.parentElement.querySelector('.default-hint');
+    if(hint)hint.textContent='default '+TH_DEFAULTS[key];
+  });
+  setVersionBadge();
+  loadChangelog();
+});
+
+/* Changelog Escape key handling (separate because theme modal uses same key). */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    const cl=document.getElementById('cl-overlay');
+    if(cl&&cl.classList.contains('open'))closeChangelog();
+  }
+});
+
 /* ══════════════════════════════════════════════════════════
    VERSION + CHANGELOG (#24)
    Data lives in assets/anmerkung-changelog.json so the release
