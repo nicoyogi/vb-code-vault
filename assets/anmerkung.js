@@ -2037,10 +2037,19 @@ function renderStats(rep){
   if(!entries.length){list.innerHTML='<div class="trig-empty">No triggers fired — all clean.</div>';}
   else{
     const max=entries[0][1];
+    const totalFilled=rep.filled||entries.reduce((s,[,c])=>s+c,0);
     const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     list.innerHTML=entries.map(([name,count])=>{
-      const pct=Math.max(4,Math.round(count/max*100));
-      return `<div class="trig-row"><div class="trig-label" title="${esc(name)}">${esc(name)}</div><div class="trig-count">${count}</div><div class="trig-bar-bg"><div class="trig-bar-fill" style="width:${pct}%"></div></div></div>`;
+      const barPct=Math.max(6,Math.round((count/max)*100));
+      const sharePct=totalFilled>0?Math.round((count/totalFilled)*100):0;
+      return `<div class="trig-row">`+
+        `<div class="trig-label" title="${esc(name)}">${esc(name)}</div>`+
+        `<div class="trig-bar-bg"><div class="trig-bar-fill" style="width:${barPct}%"></div></div>`+
+        `<div class="trig-meta">`+
+          `<span class="trig-count">${count} <span class="trig-unit">${count===1?'row':'rows'}</span></span>`+
+          `<span class="trig-pct">${sharePct}%</span>`+
+        `</div>`+
+      `</div>`;
     }).join('');
   }
   document.getElementById('stats-wrap').style.display=document.body.classList.contains('theme-pro')?'grid':'block';

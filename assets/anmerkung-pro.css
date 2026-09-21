@@ -604,6 +604,44 @@ body.theme-pro #stats-wrap {
   grid-template-columns: repeat(4, minmax(0,1fr));
 }
 
+body.theme-pro #stats-wrap .trig-wrap {
+  grid-column: 1 / -1;
+}
+
+body.theme-pro .trig-row {
+  background: var(--surface2);
+  border-color: var(--border);
+}
+
+body.theme-pro .trig-row:hover {
+  background: rgba(59,130,246,0.05);
+  border-color: #93c5fd;
+}
+
+body.theme-pro.theme-dark .trig-row:hover {
+  border-color: rgba(59,130,246,0.4);
+}
+
+body.theme-pro .trig-bar-bg {
+  background: #e2e8f0;
+}
+
+body.theme-pro.theme-dark .trig-bar-bg {
+  background: #334155;
+}
+
+body.theme-pro .trig-pct {
+  background: #eff6ff;
+  color: var(--accent);
+  border-color: #bfdbfe;
+}
+
+body.theme-pro.theme-dark .trig-pct {
+  background: rgba(59,130,246,0.15);
+  color: #93c5fd;
+  border-color: rgba(59,130,246,0.3);
+}
+
 body.theme-pro #stats-wrap .stats-grid,
 body.theme-pro #stats-wrap .stats-grid-ext {
   display: contents;

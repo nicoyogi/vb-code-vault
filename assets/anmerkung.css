@@ -276,15 +276,23 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 .pr-reason { max-width: 260px; word-break: break-word; font-size: 9.5px; color: var(--text3); }
 
 /* TRIGGER BREAKDOWN */
-.trig-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
-.trig-title { font-family: var(--cinzel); font-size: 10px; color: var(--text3); letter-spacing: .22em; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
-.trig-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(216,181,110,.1), transparent); }
-.trig-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-bottom: 6px; font-family: var(--mono); font-size: 10.5px; }
-.trig-label { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.trig-count { color: var(--text3); font-size: 10px; min-width: 28px; text-align: right; }
-.trig-bar-bg { grid-column: 1 / -1; height: 3px; background: rgba(255,255,255,0.04); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
-.trig-bar-fill { height: 100%; background: linear-gradient(90deg, #34d399, #5b9cf6); border-radius: 2px; }
-.trig-empty { font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: center; padding: 10px 0; }
+.trig-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.3rem; margin-bottom: 1rem; grid-column: 1 / -1; }
+.trig-title { font-family: var(--cinzel); font-size: 11px; color: var(--text2); letter-spacing: .16em; text-transform: uppercase; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 12px; }
+.trig-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(216,181,110,.25), transparent); }
+#trigList { display: flex; flex-direction: column; gap: 6px; }
+.trig-row { display: grid; grid-template-columns: minmax(180px, 1fr) 140px auto; gap: 16px; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; font-family: var(--font, system-ui, -apple-system, sans-serif); font-size: 12.5px; transition: background 0.15s ease, border-color 0.15s ease; }
+.trig-row:hover { background: rgba(255,255,255,0.04); border-color: var(--border2); }
+body.theme-light .trig-row { background: rgba(0,0,0,0.02); }
+body.theme-light .trig-row:hover { background: rgba(0,0,0,0.04); }
+.trig-label { color: var(--text); font-weight: 500; line-height: 1.4; word-break: break-word; }
+.trig-bar-bg { height: 6px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; }
+body.theme-light .trig-bar-bg { background: rgba(0,0,0,0.08); }
+.trig-bar-fill { height: 100%; background: linear-gradient(90deg, #34d399, #5b9cf6); border-radius: 99px; transition: width 0.3s ease; }
+.trig-meta { display: flex; align-items: center; gap: 8px; justify-content: flex-end; min-width: 110px; }
+.trig-count { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.trig-unit { font-size: 10px; font-weight: 400; color: var(--text3); }
+.trig-pct { font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: var(--accent); background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25); border-radius: 6px; padding: 1px 6px; min-width: 38px; text-align: center; }
+.trig-empty { font-family: var(--mono); font-size: 12px; color: var(--text3); text-align: center; padding: 18px 0; }
 .stat.mini { padding: .75rem 1rem; }
 .stat.mini .stat-n { font-size: 20px; }
 .stats-grid-ext { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
@@ -968,6 +976,11 @@ body.theme-pro .log::-webkit-scrollbar-thumb, body.theme-pro .cl-list::-webkit-s
 .bulk-upload-area.drag, .diff-bulk-slot.drag { animation: drag-pulse-violet 1.2s ease-in-out infinite; }
 
 /* Small screens: stack side-by-side grids that get cramped */
+@media (max-width: 640px) {
+  .trig-row { grid-template-columns: 1fr; gap: 8px; }
+  .trig-row .trig-bar-bg { width: 100%; }
+  .trig-meta { justify-content: space-between; }
+}
 @media (max-width: 520px) {
   .diff-slots, .diff-bulk-slots, .adv-grid { grid-template-columns: 1fr; }
   .ds-grid { grid-template-columns: 1fr; }
