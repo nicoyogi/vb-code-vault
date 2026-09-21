@@ -216,6 +216,7 @@ export function loadEngine() {
     // generic helpers
     'join', 'hasErr', 'cellNum', 'cellStr', 'findCol',
     'findAnmerkungCol', 'ensureAnmerkungCol', 'patchSheet', 'setAnmerkungColumnWidth',
+    'addDiffStyleXf', 'columnStyleIdxs', 'recolourColumn', 'diffColsOf', 'themeFontName', 'pickDonor', 'cellXfAt',
     'normPhrase', 'samePhraseSet', 'splitTriggers',
     'idxToCol', 'colToIdx',
     'phraseToKey', 'phraseKeysFor',

@@ -1,6 +1,13 @@
 {
-  "version": "1.43.0",
+  "version": "1.44.0",
   "entries": [
+    {
+      "ver": "1.44.0",
+      "date": "2026-09-21",
+      "items": [
+        "New — \"Invoke the Ritual\" and \"Transmute All Scrolls\" now ask how the group Differenz columns of the result should be coloured: Normal / Bad / Good / Neutral, in a popup with colour swatches and arrow-key navigation. The columns coloured are AVIS / FR / MT / SNK / TZ-Differenz; Total · Differenz is left untouched. Normal writes nothing (the workbook keeps its look); Bad / Good / Neutral set the fill and the text colour to Excel's own Bad / Good / Neutral cell styles (Bad #FFC7CE with #9C0006 text, Good #C6EFCE with #006100, Neutral #FFEB9C with #9C6500) directly in xl/styles.xml, on the workbook's own theme font. Text cells keep their @ format and numeric cells their #,##0.00, exactly as the reference workbook has it. If a sheet has no such column or no styled cell in it, that sheet is passed through without a style. The choice is stored as anmerkung.diffstyle.v1 in the browser and pre-selected on the next run."
+      ]
+    },
     {
       "ver": "1.43.0",
       "date": "2026-09-18",
