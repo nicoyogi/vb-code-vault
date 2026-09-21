@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#02020a">
+<meta name="theme-color" content="#0b1220">
 <title>Anmerkung Processor · The Alchemist</title>
 <meta name="description" content="Transmute forwarder invoices (Dachser, K+N, DHL Express, Wackler) with dynamic Anmerkung rules — entirely in your browser. No upload, no server.">
 <meta property="og:type" content="website">
@@ -25,9 +25,10 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 <link rel="stylesheet" href="assets/grimoire-theme.css">
+<link rel="stylesheet" href="assets/anmerkung-pro.css">
 <script src="assets/grimoire-theme.js" defer></script>
 </head>
-<body>
+<body class="theme-pro">
 <a class="skip-link" href="#main">Skip to content</a>
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
@@ -43,25 +44,25 @@
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" id="themeIcon"><path d="M6 1v1M6 10v1M1 6h1M10 6h1M2.5 2.5l.7.7M8.8 8.8l.7.7M2.5 9.5l.7-.7M8.8 3.2l.7-.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="6" cy="6" r="2.3" stroke="currentColor" stroke-width="1.1"/></svg>
     <span id="themeLabel">Dark</span>
   </button>
-  <button type="button" class="hdr-btn" id="btnStyle" onclick="toggleStyle()" title="Switch to professional style" aria-label="Toggle professional / mystic style" aria-pressed="false">
+  <button type="button" class="hdr-btn" id="btnStyle" onclick="toggleStyle()" title="Switch to mystic style" aria-label="Toggle professional / mystic style" aria-pressed="true">
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><rect x="1.5" y="2.5" width="9" height="7" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M3.3 5h5.4M3.3 7h3.4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-    <span id="styleLabel">Mystic</span>
+    <span id="styleLabel">Pro</span>
   </button>
   <button type="button" class="hdr-btn" id="btnOffline" title="Download all Grimoire pages for offline use" aria-label="Download for offline use">
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.5v6.3M3.3 5.3L6 8l2.7-2.7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.8 9.2v.6c0 .4.3.7.7.7h7c.4 0 .7-.3.7-.7v-.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
     <span data-offline-label>Download for offline</span>
     <span data-offline-progress style="opacity:.7;font-size:9.5px"></span>
   </button>
-  <span class="nav-badge">The Alchemist</span>
+  <span class="nav-badge">Anmerkung Processor</span>
 </header>
 
 <main class="container" id="main">
-  <div class="page-eyebrow">// Tome III · The Alchemist</div>
+  <div class="page-eyebrow">ANMERKUNG AUTOMATION</div>
   <h1 class="page-title">Anmerkung <span class="grad">Processor</span></h1>
-  <div class="page-sub">Upload · select forwarder · transmute · download</div>
+  <div class="page-sub">Excel workflow · forwarder rules · preview · export</div>
   <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᚦ ✦</div><div class="page-orn-line"></div></div>
 
-  <h2 class="section-label" id="fwLabel">I — Select Forwarder</h2>
+  <h2 class="section-label" id="fwLabel">1 — Select forwarder</h2>
   <div class="fw-grid" role="radiogroup" aria-labelledby="fwLabel" id="fwGroup">
     <button class="fw-btn" data-fw="dachser" role="radio" aria-checked="false" tabindex="0" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">Dachser</div>
@@ -81,7 +82,7 @@
     </button>
   </div>
 
-  <h2 class="section-label">II — Upload Scroll</h2>
+  <h2 class="section-label">2 — Upload workbook</h2>
   <div class="upload-area" id="dropArea" role="button" tabindex="0"
     aria-label="Upload an .xlsx file: activate to browse, or drag and drop"
     onclick="document.getElementById('fileInput').click()"
@@ -93,7 +94,7 @@
   </div>
   <input type="file" id="fileInput" accept=".xlsx" style="display:none" onchange="onFileSelect(event)">
 
-  <h2 class="section-label">III — Transmute &amp; Download</h2>
+  <h2 class="section-label">3 — Process &amp; export</h2>
 
   <div class="opt-wrap">
     <label class="opt-row" for="optReason">
@@ -134,8 +135,8 @@
 
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
   <button class="btn-preview" id="btnPreview" disabled onclick="runPreview()">Preview — dry-run without writing</button>
-  <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Invoke the Ritual</button>
-  <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Transmuted Scroll ↓</button>
+  <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Run Anmerkung</button>
+  <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download processed workbook ↓</button>
 
   <div class="preview-wrap" id="previewWrap" role="region" aria-label="Preview of proposed annotations">
     <div class="preview-head">
@@ -172,7 +173,7 @@
   <!-- ═══════════ BULK PROCESSING ═══════════ -->
   <div class="bulk-wrap">
     <button type="button" class="bonus-toggle" id="bulkToggle" onclick="toggleBonus('bulk')" aria-expanded="false" aria-controls="bulkPanel">
-      <span>IV — Bulk Process</span>
+      <span>4 — Bulk process</span>
       <span class="bonus-tag">Multi-file</span>
       <span class="chev">›</span>
     </button>
@@ -193,7 +194,7 @@
       <ul class="bulk-list" id="bulkList"></ul>
 
       <div class="bulk-progress" id="bulkProgress"><div class="bulk-progress-fill" id="bulkProgressFill"></div></div>
-      <button class="btn-bulk-run" id="btnBulkRun" disabled onclick="runBulkProcess()">Transmute All Scrolls</button>
+      <button class="btn-bulk-run" id="btnBulkRun" disabled onclick="runBulkProcess()">Process all workbooks</button>
       <button class="btn-bulk-dl-all" id="btnBulkDlAll" onclick="downloadAllBulk()">Download All as ZIP ↓</button>
     </div>
   </div>
@@ -201,7 +202,7 @@
   <!-- ═══════════ BONUS: RULE TESTER (#18) ═══════════ -->
   <div class="bonus-wrap">
     <button type="button" class="bonus-toggle" id="testerToggle" onclick="toggleBonus('tester')" aria-expanded="false" aria-controls="testerPanel">
-      <span>V — Rule Tester</span>
+      <span>5 — Rule tester</span>
       <span class="bonus-tag">Playground</span>
       <span class="chev">›</span>
     </button>
@@ -228,7 +229,7 @@
   <!-- ═══════════ BONUS: DIFF MODE (#19) ═══════════ -->
   <div class="bonus-wrap">
     <button type="button" class="bonus-toggle" id="diffToggle" onclick="toggleBonus('diff')" aria-expanded="false" aria-controls="diffPanel">
-      <span>VI — Diff Mode</span>
+      <span>6 — Diff &amp; training</span>
       <span class="bonus-tag">Compare before/after</span>
       <span class="chev">›</span>
     </button>
