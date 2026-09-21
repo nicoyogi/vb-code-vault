@@ -24,10 +24,10 @@
 <script src="assets/grimoire-core.js" defer></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
-<link rel="stylesheet" href="assets/grimoire-theme.css">
+<link rel="stylesheet" href="assets/grimoire-theme.css">\n<link rel="stylesheet" href="assets/anmerkung-pro.css">
 <script src="assets/grimoire-theme.js" defer></script>
 </head>
-<body>
+<body class="theme-pro">
 <a class="skip-link" href="#main">Skip to content</a>
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
@@ -52,16 +52,16 @@
     <span data-offline-label>Download for offline</span>
     <span data-offline-progress style="opacity:.7;font-size:9.5px"></span>
   </button>
-  <span class="nav-badge">The Alchemist</span>
+  <span class="nav-badge">Anmerkung Processor</span>
 </header>
 
 <main class="container" id="main">
-  <div class="page-eyebrow">// Tome III · The Alchemist</div>
+  <div class="page-eyebrow">ANMERKUNG AUTOMATION</div>
   <h1 class="page-title">Anmerkung <span class="grad">Processor</span></h1>
-  <div class="page-sub">Upload · select forwarder · transmute · download</div>
+  <div class="page-sub">Excel workflow · forwarder rules · preview · export</div>
   <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᚦ ✦</div><div class="page-orn-line"></div></div>
 
-  <h2 class="section-label" id="fwLabel">I — Select Forwarder</h2>
+  <h2 class="section-label" id="fwLabel">1 — Select forwarder</h2>
   <div class="fw-grid" role="radiogroup" aria-labelledby="fwLabel" id="fwGroup">
     <button class="fw-btn" data-fw="dachser" role="radio" aria-checked="false" tabindex="0" onclick="selectFW(this)" onkeydown="fwKeydown(event)">
       <div class="fw-name">Dachser</div>
@@ -81,7 +81,7 @@
     </button>
   </div>
 
-  <h2 class="section-label">II — Upload Scroll</h2>
+  <h2 class="section-label">2 — Upload workbook</h2>
   <div class="upload-area" id="dropArea" role="button" tabindex="0"
     aria-label="Upload an .xlsx file: activate to browse, or drag and drop"
     onclick="document.getElementById('fileInput').click()"
@@ -93,7 +93,7 @@
   </div>
   <input type="file" id="fileInput" accept=".xlsx" style="display:none" onchange="onFileSelect(event)">
 
-  <h2 class="section-label">III — Transmute &amp; Download</h2>
+  <h2 class="section-label">3 — Process &amp; export</h2>
 
   <div class="opt-wrap">
     <label class="opt-row" for="optReason">
@@ -134,8 +134,8 @@
 
   <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
   <button class="btn-preview" id="btnPreview" disabled onclick="runPreview()">Preview — dry-run without writing</button>
-  <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Invoke the Ritual</button>
-  <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Transmuted Scroll ↓</button>
+  <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Run Anmerkung</button>
+  <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download processed workbook ↓</button>
 
   <div class="preview-wrap" id="previewWrap" role="region" aria-label="Preview of proposed annotations">
     <div class="preview-head">
@@ -172,7 +172,7 @@
   <!-- ═══════════ BULK PROCESSING ═══════════ -->
   <div class="bulk-wrap">
     <button type="button" class="bonus-toggle" id="bulkToggle" onclick="toggleBonus('bulk')" aria-expanded="false" aria-controls="bulkPanel">
-      <span>IV — Bulk Process</span>
+      <span>4 — Bulk process</span>
       <span class="bonus-tag">Multi-file</span>
       <span class="chev">›</span>
     </button>
@@ -193,7 +193,7 @@
       <ul class="bulk-list" id="bulkList"></ul>
 
       <div class="bulk-progress" id="bulkProgress"><div class="bulk-progress-fill" id="bulkProgressFill"></div></div>
-      <button class="btn-bulk-run" id="btnBulkRun" disabled onclick="runBulkProcess()">Transmute All Scrolls</button>
+      <button class="btn-bulk-run" id="btnBulkRun" disabled onclick="runBulkProcess()">Process all workbooks</button>
       <button class="btn-bulk-dl-all" id="btnBulkDlAll" onclick="downloadAllBulk()">Download All as ZIP ↓</button>
     </div>
   </div>
@@ -201,7 +201,7 @@
   <!-- ═══════════ BONUS: RULE TESTER (#18) ═══════════ -->
   <div class="bonus-wrap">
     <button type="button" class="bonus-toggle" id="testerToggle" onclick="toggleBonus('tester')" aria-expanded="false" aria-controls="testerPanel">
-      <span>V — Rule Tester</span>
+      <span>5 — Rule tester</span>
       <span class="bonus-tag">Playground</span>
       <span class="chev">›</span>
     </button>
@@ -228,7 +228,7 @@
   <!-- ═══════════ BONUS: DIFF MODE (#19) ═══════════ -->
   <div class="bonus-wrap">
     <button type="button" class="bonus-toggle" id="diffToggle" onclick="toggleBonus('diff')" aria-expanded="false" aria-controls="diffPanel">
-      <span>VI — Diff Mode</span>
+      <span>6 — Diff &amp; training</span>
       <span class="bonus-tag">Compare before/after</span>
       <span class="chev">›</span>
     </button>
