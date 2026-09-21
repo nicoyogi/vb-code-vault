@@ -873,9 +873,25 @@ body.theme-pro .footer a:hover {
 }
 
 body.theme-pro .nd-dialog,
-body.theme-pro .ds-dialog {
+body.theme-pro .ds-dialog,
+body.theme-pro .project-dialog {
   box-shadow: 0 24px 64px rgba(0,0,0,.28);
 }
+
+body.theme-pro .project-option {
+  background: var(--surface);
+  border-radius: 8px;
+  font-family: var(--syne);
+}
+body.theme-pro .project-option.selected {
+  background: #eff6ff;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+body.theme-pro .project-desc { font-family: var(--mono); }
+body.theme-pro .tester-btn.primary-soft.project-confirm { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+body.theme-pro .tester-btn.primary-soft.project-confirm:hover { background: #1e40af; border-color: #1e40af; color: #fff; }
+body.theme-pro.theme-light .project-option.selected { background: #eff6ff; }
 
 body.theme-pro :focus-visible {
   outline: 2px solid var(--accent);
