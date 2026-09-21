@@ -169,7 +169,7 @@ function toggleStyle(){
   applyStyle(next);
   try{localStorage.setItem(STYLE_KEY,next);}catch(_){}
 }
-(function loadStyle(){try{const saved=localStorage.getItem(STYLE_KEY);if(saved==='pro'||saved==='mystic')applyStyle(saved);}catch(_){}})();
+(function loadStyle(){try{const saved=localStorage.getItem(STYLE_KEY);if(saved==='pro'||saved==='mystic')applyStyle(saved);else applyStyle('pro');}catch(_){applyStyle('pro');}})();
 
 /* ══════════════════════════════════════════════════════════
    PHRASE CATALOG (#11 partial) — single source of truth for all
@@ -1891,7 +1891,7 @@ function renderStats(rep){
       return `<div class="trig-row"><div class="trig-label" title="${esc(name)}">${esc(name)}</div><div class="trig-count">${count}</div><div class="trig-bar-bg"><div class="trig-bar-fill" style="width:${pct}%"></div></div></div>`;
     }).join('');
   }
-  document.getElementById('stats-wrap').style.display='block';
+  document.getElementById('stats-wrap').style.display=document.body.classList.contains('theme-pro')?'grid':'block';
 }
 
 async function runProcess(){
