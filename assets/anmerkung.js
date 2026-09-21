@@ -543,8 +543,10 @@ function toggleBonus(which){
 /* ── UI HELPERS ── */
 function selectFW(btn){document.querySelectorAll('.fw-btn').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-checked','false');b.tabIndex=-1;});btn.classList.add('selected');btn.setAttribute('aria-checked','true');btn.tabIndex=0;selectedFW=btn.dataset.fw;checkReady();renderTesterFields();}
 function isXlsxFile(file){
-  return !!file && /\\.xlsx$/i.test(String(file.name||'')) &&
-    (file.type==='' || file.type==='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  /* File.type is inconsistent across drag sources and desktop browsers.
+     The extension is the reliable signal here because the parser itself
+     validates the workbook contents. */
+  return !!file && /\\.xlsx$/i.test(String(file.name||''));
 }
 function onDrag(e,over){
   e.preventDefault();
