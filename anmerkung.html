@@ -137,6 +137,21 @@
   <button class="btn-run" id="btnRun" disabled onclick="runProcess()">Invoke the Ritual</button>
   <button class="btn-dl" id="btnDl" onclick="downloadResult()">Download Transmuted Scroll ↓</button>
 
+  <dialog id="dlgDiffStyle" class="ds-dialog" aria-labelledby="dlgDiffStyleTitle">
+    <h3 id="dlgDiffStyleTitle">Colour the Differenz columns</h3>
+    <p class="nd-hint">Applies to the group Differenz columns (AVIS / FR / MT / SNK / TZ). Total &middot; Differenz is left as it is. Cell values and number formats stay unchanged.</p>
+    <div class="ds-grid" role="radiogroup" aria-label="Differenz column style">
+      <button type="button" class="ds-btn" role="radio" aria-checked="true" tabindex="0" data-style="normal" onclick="selectDiffStyle(this)" onkeydown="dsKeydown(event)"><span class="ds-swatch none"></span>Normal <span class="ds-sub">leave unchanged</span></button>
+      <button type="button" class="ds-btn" role="radio" aria-checked="false" tabindex="-1" data-style="good" onclick="selectDiffStyle(this)" onkeydown="dsKeydown(event)"><span class="ds-swatch"></span>Good <span class="ds-sub"></span></button>
+      <button type="button" class="ds-btn" role="radio" aria-checked="false" tabindex="-1" data-style="bad" onclick="selectDiffStyle(this)" onkeydown="dsKeydown(event)"><span class="ds-swatch"></span>Bad <span class="ds-sub"></span></button>
+      <button type="button" class="ds-btn" role="radio" aria-checked="false" tabindex="-1" data-style="neutral" onclick="selectDiffStyle(this)" onkeydown="dsKeydown(event)"><span class="ds-swatch"></span>Neutral <span class="ds-sub"></span></button>
+    </div>
+    <div class="nd-actions">
+      <button type="button" class="tester-btn primary-soft" onclick="confirmDiffStyle()">Start the ritual</button>
+      <button type="button" class="tester-btn" onclick="document.getElementById('dlgDiffStyle').close()">Cancel</button>
+    </div>
+  </dialog>
+
   <div class="preview-wrap" id="previewWrap" role="region" aria-label="Preview of proposed annotations">
     <div class="preview-head">
       <div>

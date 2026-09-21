@@ -1713,6 +1713,158 @@ function rebuildSharedStrings(strings){const n=strings.length,sis=strings.map(s=
 function ensureSharedStringsContentType(ctXml){const ssType='application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml';if(ctXml.includes(ssType))return ctXml;return ctXml.replace('</Types>',`<Override PartName="/xl/sharedStrings.xml" ContentType="${ssType}"/></Types>`);}
 function ensureSharedStringsRel(relXml){if(relXml.includes('sharedStrings'))return relXml;const ssType='http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings';return relXml.replace('</Relationships>',`<Relationship Id="rIdSS" Type="${ssType}" Target="sharedStrings.xml"/></Relationships>`);}
 
+/* ── DIFFERENZ COLUMN STYLE ── */
+const DIFF_STYLE_KEY='anmerkung.diffstyle.v1';   /* STYLE_KEY (line 158) is the Mystic/Pro UI chrome toggle — a different thing entirely */
+const DIFF_STYLE_LABELS={normal:'Normal (unchanged)',bad:'Bad',good:'Good',neutral:'Neutral'};
+/* Whole-column presets: every cell in the column gets the fill, zero rows included.
+   Target is the GROUP Differenz columns (AVIS/FR/MT/SNK/TZ); Total/Differenz is excluded —
+   across the 33-file corpus it always carries FFFFF4D8 and the operator's reference leaves it
+   alone. Font colour rides along because the reference applies Excel's whole Bad/Good/Neutral
+   cell style, not a bare fill. */
+const DIFF_STYLE_FILLS={bad:'FFFFC7CE',good:'FFC6EFCE',neutral:'FFFFEB9C'};  /* Excel's built-in Bad/Good/Neutral fills. normal is absent on purpose: no fill is written. */
+/* The matching font colour of the same built-ins. The operator's reference file
+   (D:\TESTER\Wackler\10365132 … vs its Before/ twin) shows the highlight is the whole
+   "Schlecht" cell style, not a bare fill: the group Differenz cells also take
+   FF9C0006 dark-red text. Fill-only would look visibly unfinished next to it. */
+const DIFF_STYLE_FONTS={bad:'FF9C0006',good:'FF006100',neutral:'FF9C6500'};
+let diffStyle='normal';
+(function(){try{const s=localStorage.getItem(DIFF_STYLE_KEY);if(s&&DIFF_STYLE_FILLS[s]||s==='normal')diffStyle=s;}catch(_){}})();
+function saveDiffStyle(v){try{localStorage.setItem(DIFF_STYLE_KEY,v);}catch(_){}}
+/* The workbook's theme font name, so a preset's text colour rides on the sheet's own
+   typeface instead of injecting one. Excel's built-in style fonts use scheme="minor".
+   Returns null when there is no theme or no minorFont — the caller then writes a
+   typeface-less font, which inherits whatever the cell already had. */
+function themeFontName(themeXml){
+  if(!themeXml)return null;
+  const m=/<a:minorFont>[\s\S]*?<a:latin\b[^>]*\btypeface="([^"]*)"/.exec(themeXml);
+  return m&&m[1]?m[1]:null;
+}
+/* Append one <fill> + one <font> + one clone of the column's own <xf> to xl/styles.xml and return the new cellXfs index. The clone keeps numFmtId/applyNumberFormat — the only reason #,##0.00 survives — and swaps fillId + fontId (strip-then-append, because a duplicated attribute makes Excel demand a repair). Counts are never hard-coded (corpus: cellXfs 5..26, fills 5..7); a missing/malformed count falls back to the number of children. Reusing identical entries keeps repeat and multi-sheet calls idempotent. */
+function addDiffStyleXf(stylesXml,preset,donorIdx,themeFontName){
+  const input=stylesXml;  /* every -1 exit must hand back exactly this string — the <fill> append below runs before the <cellXfs>/donor checks, and a skipped style must not leak an orphan fill */
+  if(!stylesXml||preset==='normal'||!DIFF_STYLE_FILLS[preset])return{xml:input,styleIdx:-1};
+  const newFill='<fill><patternFill patternType="solid"><fgColor rgb="'+DIFF_STYLE_FILLS[preset]+'"/></patternFill></fill>';
+  const fillsMatch=/<fills\b[^>]*>[\s\S]*?<\/fills>/.exec(stylesXml);
+  if(!fillsMatch)return{xml:input,styleIdx:-1};
+  let block=fillsMatch[0],fillIdx=-1,fillCount=0;
+  for(const m of block.matchAll(/<fill\b/g)){if(block.slice(m.index,m.index+newFill.length)===newFill){fillIdx=fillCount;break;}fillCount++;}
+  if(fillIdx<0){
+    fillIdx=fillCount;
+    const openTag=block.slice(0,block.indexOf('>')+1),cMatch=/\bcount="([^"]*)"/.exec(openTag);
+    const n=cMatch?Number(cMatch[1])||fillCount:fillCount;
+    const newOpen=cMatch?openTag.replace(/\bcount="[^"]*"/,'count="'+(n+1)+'"'):openTag.replace(/>$/,' count="'+(n+1)+'">');
+    block=newOpen+block.slice(openTag.length,block.length-'</fills>'.length)+newFill+'</fills>';
+    stylesXml=stylesXml.slice(0,fillsMatch.index)+block+stylesXml.slice(fillsMatch.index+fillsMatch[0].length);
+  }
+  /* Font: the style's text colour, inheriting the workbook's theme font so we never
+     inject a hard-coded typeface into someone else's sheet. Omitted when the workbook
+     declares no theme font (themeFontName undefined) — the fill alone is still valid. */
+  let fontIdx=-1;
+  const newFont=themeFontName?'<font><sz val="11"/><color rgb="'+DIFF_STYLE_FONTS[preset]+'"/><name val="'+escXml(themeFontName)+'"/><family val="2"/><scheme val="minor"/></font>':'<font><sz val="11"/><color rgb="'+DIFF_STYLE_FONTS[preset]+'"/></font>';
+  const fontsMatch=/<fonts\b[^>]*>[\s\S]*?<\/fonts>/.exec(stylesXml);
+  if(fontsMatch){
+    let fblock=fontsMatch[0],fCount=0;
+    for(const m of fblock.matchAll(/<font\b/g)){if(fblock.slice(m.index,m.index+newFont.length)===newFont){fontIdx=fCount;break;}fCount++;}
+    if(fontIdx<0){
+      fontIdx=fCount;
+      const openTag=fblock.slice(0,fblock.indexOf('>')+1),cMatch=/\bcount="([^"]*)"/.exec(openTag);
+      const n=cMatch?Number(cMatch[1])||fCount:fCount;
+      const newOpen=cMatch?openTag.replace(/\bcount="[^"]*"/,'count="'+(n+1)+'"'):openTag.replace(/>$/,' count="'+(n+1)+'">');
+      fblock=newOpen+fblock.slice(openTag.length,fblock.length-'</fonts>'.length)+newFont+'</fonts>';
+      stylesXml=stylesXml.slice(0,fontsMatch.index)+fblock+stylesXml.slice(fontsMatch.index+fontsMatch[0].length);
+    }
+  }
+  const xfsMatch=/<cellXfs\b[^>]*>[\s\S]*?<\/cellXfs>/.exec(stylesXml);
+  if(!xfsMatch)return{xml:input,styleIdx:-1};
+  const xfList=[...xfsMatch[0].matchAll(/<xf\b[^>]*\/>|<xf\b[^>]*>[\s\S]*?<\/xf>/g)].map(m=>m[0]);
+  if(donorIdx<0||donorIdx>=xfList.length)return{xml:input,styleIdx:-1};
+  let clone=xfList[donorIdx].replace(/\s+(?:fillId|applyFill|fontId|applyFont)="[^"]*"/g,'');
+  const extra=' fillId="'+fillIdx+'" applyFill="1"'+(fontIdx>=0?' fontId="'+fontIdx+'" applyFont="1"':'');
+  clone=clone.endsWith('/>')?clone.slice(0,-2)+extra+'/>':clone.replace(/>/,extra+'>');
+  let styleIdx=xfList.indexOf(clone);
+  if(styleIdx<0){
+    const block=xfsMatch[0],openTag=block.slice(0,block.indexOf('>')+1),cMatch=/\bcount="([^"]*)"/.exec(openTag);
+    const n=cMatch?Number(cMatch[1])||xfList.length:xfList.length;
+    styleIdx=n;
+    const newOpen=cMatch?openTag.replace(/\bcount="[^"]*"/,'count="'+(n+1)+'"'):openTag.replace(/>$/,' count="'+(n+1)+'">');
+    const newBlock=newOpen+block.slice(openTag.length,block.length-'</cellXfs>'.length)+clone+'</cellXfs>';
+    stylesXml=stylesXml.slice(0,xfsMatch.index)+newBlock+stylesXml.slice(xfsMatch.index+xfsMatch[0].length);
+  }
+  return{xml:stylesXml,styleIdx};
+}
+/* Every <group>/Differenz column, EXCLUDING Total/Differenz. The corpus is
+   unambiguous (33 files): the group columns (AVIS/FR/MT/SNK/TZ/…) carry the
+   highlight colour, Total/Differenz always carries FFFFF4D8 and must be left alone.
+   Takes a decoded range so the harness can pass one it built itself. */
+function diffColsOf(ws,range){
+  if(!ws)return[];
+  const {row2,row3,lastCol}=_getHeaders(ws,range),out=[];
+  for(let c=0;c<=lastCol;c++){
+    if(!row3[c]||!row3[c].includes('differenz'))continue;
+    if(row2[c]&&row2[c].includes('total'))continue;
+    out.push(c);
+  }
+  return out;
+}
+/* The distinct s= values used by a column's cells, split into the two styles the
+   operator's reference ends up with: a TEXT twin (cells carrying t="s", which keep the
+   "@" format) and a NUMERIC twin (everything else, which takes #,##0.00). Rows 1-3 are
+   the header block and are text; data rows are numeric unless the cell is a shared string.
+   The Before file splits data rows across two xfs — filled rows on numFmtId 4, blank rows
+   on numFmtId 49 — and the reference collapses only the NUMERIC ones, so the split must
+   follow the cell's own type, not its source format. Returns {text:[srcIdx…], num:[srcIdx…]}. */
+function columnStyleIdxs(sheetXml,col){
+  const res={text:[],num:[]};
+  if(!sheetXml||!col)return res;
+  const set={text:{},num:{}};
+  for(const m of sheetXml.matchAll(new RegExp('<c\\b[^>]*\\br="'+col+'(\\d+)"[^>]*>','g'))){
+    const s=/\bs="(\d+)"/.exec(m[0]);
+    if(!s)continue;
+    const zone=/\bt="s"/.test(m[0])?'text':'num';
+    if(!set[zone][s[1]]){set[zone][s[1]]=1;res[zone].push(Number(s[1]));}
+  }
+  return res;
+}
+/* One <xf> out of xl/styles.xml's cellXfs, by index. */
+function cellXfAt(stylesXml,idx){
+  const m=/<cellXfs\b[^>]*>[\s\S]*?<\/cellXfs>/.exec(stylesXml);
+  if(!m)return null;
+  const list=[...m[0].matchAll(/<xf\b[^>]*\/>|<xf\b[^>]*>[\s\S]*?<\/xf>/g)].map(x=>x[0]);
+  return list[idx]||null;
+}
+/* Pick the donor xf for a zone: prefer the NUMERIC one (#,##0.00, numFmtId 4), falling
+   back to the first available. The Before file splits a group column's data rows across
+   two xfs — filled rows on numFmtId 4, blank rows on numFmtId 49 ("@") — and the
+   operator's reference normalises every data row onto #,##0.00, so first-seen order would
+   hand the blanks the text format. */
+function pickDonor(stylesXml,srcs){
+  if(!srcs||!srcs.length)return -1;
+  for(const s of srcs){
+    const xf=cellXfAt(stylesXml,s);
+    const nf=xf?/\bnumFmtId="(\d+)"/.exec(xf):null;
+    if(nf&&(nf[1]==='4'||nf[1]==='2'||nf[1]==='3'))return s;
+  }
+  return srcs[0];
+}
+/* Recolour one column: text cells (t="s") take the text twin, everything else the numeric
+   twin — exactly the two styles the operator's reference ends up with. Runs after
+   patchSheet, which reads the untouched cell types. */
+function recolourColumn(sheetXml,col,textIdx,numIdx){
+  if(!sheetXml||textIdx===undefined||numIdx===undefined)return{xml:sheetXml,cells:0};
+  if(textIdx<0&&numIdx<0)return{xml:sheetXml,cells:0};
+  let cells=0;
+  const re=new RegExp('<c\\b[^>]*\\br="'+col+'(\\d+)"[^>]*>','g');
+  const out=sheetXml.replace(re,(tag)=>{
+    const to=/\bt="s"/.test(tag)?textIdx:numIdx;
+    if(to===undefined||to<0)return tag;
+    const s=/\bs="(\d+)"/.exec(tag);
+    if(!s)return tag;   /* leave a cell that carries no style alone rather than guess one */
+    cells++;
+    return tag.replace(/\bs="\d+"/,'s="'+to+'"');
+  });
+  return{xml:out,cells};
+}
+
 /* ── SHEET XML PATCHER ── */
 function patchSheet(sheetXml,targetCol,rowResults,strings,styleSourceOffset=0){const tIdx=colToIdx(targetCol);for(const[rowNum,value]of rowResults){if(value===null)continue;const cellRef=targetCol+rowNum,ssIdx=getOrAdd(strings,value);const existRe=new RegExp(`<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`);const existMatch=existRe.exec(sheetXml);if(existMatch){const rawAttrs=(existMatch[1]+' '+(existMatch[2]||'')).replace(/\s*\bt="[^"]*"/g,'').replace(/\s+/g,' ').trim();const attrStr=rawAttrs?' '+rawAttrs:'';sheetXml=sheetXml.slice(0,existMatch.index)+`<c r="${cellRef}"${attrStr} t="s"><v>${ssIdx}</v></c>`+sheetXml.slice(existMatch.index+existMatch[0].length);continue;}const rowOpenRe=new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^>]*(?<!/)>`);const rowOpenMatch=rowOpenRe.exec(sheetXml);if(!rowOpenMatch)continue;const afterOpen=rowOpenMatch.index+rowOpenMatch[0].length;const closeTag='</row>';const closeIdx=sheetXml.indexOf(closeTag,afterOpen);if(closeIdx<0)continue;const rowContent=sheetXml.slice(afterOpen,closeIdx);const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);const freq={};sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});const sourceRef=idxToCol(tIdx+styleSourceOffset)+rowNum,sourceMatch=styleSourceOffset?new RegExp(`<c\\b(?=[^>]*\\br="${sourceRef}")(?=[^>]*\\bs="(\\d+)")[^>]*>`).exec(rowContent):null;const styleIdx=sourceMatch?sourceMatch[1]:(sVals.length?Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]:'0');const newCell=`<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;let insertAt=rowContent.length;for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)){if(colToIdx(m[1])>tIdx){insertAt=m.index;break;}}const newContent=rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);sheetXml=sheetXml.slice(0,afterOpen)+newContent+sheetXml.slice(closeIdx);}return sheetXml;}
 function setAnmerkungColumnWidth(sheetXml,targetIdx){const n=targetIdx+1,targetCol=idxToCol(targetIdx),col=`<col min="${n}" max="${n}" width="75.7109375" bestFit="1" customWidth="1"/>`;const exact=new RegExp(`<col\\b(?=[^>]*\\bmin="${n}")(?=[^>]*\\bmax="${n}")[^>]*/>`);if(exact.test(sheetXml))sheetXml=sheetXml.replace(exact,col);else if(sheetXml.includes('</cols>'))sheetXml=sheetXml.replace('</cols>',col+'</cols>');else sheetXml=sheetXml.replace(/<sheetData\b/,`<cols>${col}</cols><sheetData`);sheetXml=sheetXml.replace(/(<dimension\b[^>]*\bref="[A-Z]+\d+:)[A-Z]+(\d+")/,`$1${targetCol}$2`);sheetXml=sheetXml.replace(/(<row\b[^>]*\bspans="\d+:)\d+("[^>]*>)/g,`$1${n}$2`);return sheetXml;}
@@ -1896,6 +2048,11 @@ function renderStats(rep){
 
 async function runProcess(){
   const btn=document.getElementById('btnRun');btn.disabled=true;btn.textContent='Invoking ritual...';
+  let diffSel;
+  try{diffSel=await askDiffStyle();}
+  catch(err){showLog('Could not open the Differenz style dialog: '+err.message,'err');btn.disabled=false;btn.textContent='Invoke the Ritual';return;}
+  if(!diffSel){showLog('Ritual aborted — no Differenz column style chosen.','err');btn.disabled=false;btn.textContent='Invoke the Ritual';return;}
+  const diffPreset=diffSel;
   document.getElementById('btnDl').style.display='none';document.getElementById('stats-wrap').style.display='none';setProgress(5);
   try{
     const rep=runRules();
@@ -1907,6 +2064,12 @@ async function runProcess(){
     const wbXml=await zip.file('xl/workbook.xml').async('string'),wbRelXml=await zip.file('xl/_rels/workbook.xml.rels').async('string');
     const sheetRids={};for(const m of wbXml.matchAll(/<sheet\b[^>]+\bname="([^"]+)"[^>]+\br:id="(rId\d+)"/g))sheetRids[m[1]]=m[2];
     const ridPaths={};for(const m of wbRelXml.matchAll(/\bId="(rId\d+)"[^>]+\bTarget="([^"]+)"/g))ridPaths[m[1]]=m[2];
+    let stylesXml=null,diffFont=null,diffCells=0;
+    if(diffPreset!=='normal'){
+      const sf=zip.file('xl/styles.xml');stylesXml=sf?await sf.async('string'):null;
+      if(!stylesXml)showLog('Differenz style — xl/styles.xml missing, style skipped.','err');
+      else{const tf=zip.file('xl/theme/theme1.xml');diffFont=tf?themeFontName(await tf.async('string')):null;}
+    }
     const sheetNames=Object.keys(allResults);
     for(let si=0;si<sheetNames.length;si++){
       const name=sheetNames[si],{targetCol,rowMap,reasonMap,targetIdx,created}=allResults[name];
@@ -1926,10 +2089,28 @@ async function runProcess(){
         sheetXml=patchSheet(sheetXml,reasonCol,headerMap,strings);
         sheetXml=patchSheet(sheetXml,reasonCol,reasonMap,strings);
       }
+      if(stylesXml){
+        const ws0=workbook&&workbook.Sheets?workbook.Sheets[name]:null;
+        const dCols=ws0?diffColsOf(ws0,XLSX.utils.decode_range(ws0['!ref']||'A1:A1')):[];
+        if(!dCols.length)showLog('Sheet "'+name+'": no group Differenz column — style skipped.');
+        else for(const dCol of dCols){
+          const letter=idxToCol(dCol),zones=columnStyleIdxs(sheetXml,letter);
+          if(!zones.text.length&&!zones.num.length){showLog('Sheet "'+name+'": no styled cell in '+letter+' — style skipped.','err');continue;}
+          /* Append in turn, updating stylesXml each time: a style index only exists after its
+             own append, so the numeric donor is looked up against the already-grown cellXfs. */
+          const mk=srcs=>{const d=pickDonor(stylesXml,srcs);if(d<0)return -1;const r=addDiffStyleXf(stylesXml,diffPreset,d,diffFont);stylesXml=r.xml;return r.styleIdx;};
+          const pair=[mk(zones.text),mk(zones.num)];
+          if(pair[0]<0&&pair[1]<0){showLog('Sheet "'+name+'": cellXfs in xl/styles.xml unusable — style skipped.','err');continue;}
+          const t=recolourColumn(sheetXml,letter,pair[0],pair[1]);sheetXml=t.xml;diffCells+=t.cells;
+          showLog('Differenz '+letter+': '+t.cells+' cells → '+DIFF_STYLE_LABELS[diffPreset]+'.','ok');
+        }
+      }
       zip.file(rel,sheetXml);
       setProgress(40+Math.round(40*(si+1)/sheetNames.length));
     }
     zip.file('xl/sharedStrings.xml',rebuildSharedStrings(strings));
+    if(stylesXml)zip.file('xl/styles.xml',stylesXml);
+    showLog(diffPreset==='normal'?'Differenz columns: Normal — xl/styles.xml left unchanged.':(diffCells?'Differenz style '+DIFF_STYLE_LABELS[diffPreset]+' — '+diffCells+' cell(s) coloured.':'Differenz style '+DIFF_STYLE_LABELS[diffPreset]+' — 0 cells coloured (sheets without data rows were skipped; see the log above for details).'),'ok');
     const ctFile=zip.file('[Content_Types].xml');if(ctFile){let ctXml=await ctFile.async('string');ctXml=ensureSharedStringsContentType(ctXml);zip.file('[Content_Types].xml',ctXml);}
     const wbRelFile=zip.file('xl/_rels/workbook.xml.rels');if(wbRelFile){let wbRel=await wbRelFile.async('string');wbRel=ensureSharedStringsRel(wbRel);zip.file('xl/_rels/workbook.xml.rels',wbRel);}
     setProgress(85);
@@ -4361,6 +4542,34 @@ function saveNotDerivableDialog(){
   showLog('Not-derivable ledger — '+Object.keys(m).length+' row(s).','ok');
 }
 
+/* ── DIFFERENZ STYLE DIALOG ── */
+function openDiffStyleDialog(){
+  const d=document.getElementById('dlgDiffStyle');
+  d.querySelectorAll('.ds-swatch').forEach(sw=>{const btn=sw.closest('.ds-btn'),preset=btn&&btn.dataset.style;if(DIFF_STYLE_FILLS[preset])sw.style.background='#'+DIFF_STYLE_FILLS[preset].slice(2);});
+  d.querySelectorAll('.ds-btn').forEach(b=>{const sel=b.dataset.style===diffStyle;b.classList.toggle('selected',sel);b.setAttribute('aria-checked',sel?'true':'false');b.tabIndex=sel?0:-1;});
+  d.returnValue='';
+  d.showModal();
+}
+function selectDiffStyle(btn){diffStyle=btn.dataset.style;document.querySelectorAll('#dlgDiffStyle .ds-btn').forEach(b=>{const sel=b===btn;b.classList.toggle('selected',sel);b.setAttribute('aria-checked',sel?'true':'false');b.tabIndex=sel?0:-1;});}
+function dsKeydown(e){
+  const btns=[...document.querySelectorAll('#dlgDiffStyle .ds-btn')];
+  const i=btns.indexOf(e.currentTarget);if(i<0)return;
+  let next=null;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')next=btns[(i+1)%btns.length];
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp')next=btns[(i-1+btns.length)%btns.length];
+  else if(e.key==='Home')next=btns[0];
+  else if(e.key==='End')next=btns[btns.length-1];
+  else if(e.key===' '||e.key==='Enter'){e.preventDefault();e.currentTarget.click();return;}
+  if(next){e.preventDefault();btns.forEach(b=>b.tabIndex=-1);next.tabIndex=0;next.focus();next.click();}
+}
+function confirmDiffStyle(){saveDiffStyle(diffStyle);const d=document.getElementById('dlgDiffStyle');d.returnValue=diffStyle;d.close();}
+function askDiffStyle(){
+  const d=document.getElementById('dlgDiffStyle');
+  if(!d||typeof d.showModal!=='function')return Promise.resolve(diffStyle);   /* no <dialog> support: use the persisted choice, behave exactly like today */
+  openDiffStyleDialog();
+  return new Promise(res=>d.addEventListener('close',()=>{const v=d.returnValue;res((v==='normal'||DIFF_STYLE_FILLS[v])?v:'');},{once:true}));
+}
+
 /* The symbols an AI rule fix edits or reasons about. Shared by
    buildEngineSourceDoc (ships their source) and buildPhraseEmitterIndex
    (maps phrase keys to the functions that emit them). ENUMERATED from
@@ -4607,6 +4816,11 @@ async function runBulkProcess() {
   setBulkProgress(2);
 
   const wantReason = document.getElementById('optReason').checked;
+  let diffSel;
+  try { diffSel = await askDiffStyle(); }
+  catch (err) { showLog('Could not open the Differenz style dialog: ' + err.message, 'err'); btn.disabled = false; btn.textContent = 'Transmute All Scrolls'; return; }
+  if (!diffSel) { showLog('Ritual aborted — no Differenz column style chosen.', 'err'); btn.disabled = false; btn.textContent = 'Transmute All Scrolls'; return; }
+  const diffPreset = diffSel;
   let doneCount = 0;
 
   for (let i = 0; i < bulkFiles.length; i++) {
@@ -4629,6 +4843,12 @@ async function runBulkProcess() {
 
       const allResults = rep.allResults;
       const zip = await JSZip.loadAsync(entry.rawBytes);
+      let stylesXml = null, diffFont = null, diffCells = 0;
+      if (diffPreset !== 'normal') {
+        const sf = zip.file('xl/styles.xml'); stylesXml = sf ? await sf.async('string') : null;
+        if (!stylesXml) showLog('Differenz style — xl/styles.xml missing, style skipped.', 'err');
+        else { const tf = zip.file('xl/theme/theme1.xml'); diffFont = tf ? themeFontName(await tf.async('string')) : null; }
+      }
       const ssFile = zip.file('xl/sharedStrings.xml');
       let ssXml = ssFile ? await ssFile.async('string') : '';
       const strings = ssXml ? parseSharedStrings(ssXml) : [];
@@ -4658,10 +4878,28 @@ async function runBulkProcess() {
           sheetXml = patchSheet(sheetXml, reasonCol, headerMap, strings);
           sheetXml = patchSheet(sheetXml, reasonCol, reasonMap, strings);
         }
+        if (stylesXml) {
+          const ws0 = entry.workbook && entry.workbook.Sheets ? entry.workbook.Sheets[name] : null;
+          const dCols = ws0 ? diffColsOf(ws0, XLSX.utils.decode_range(ws0['!ref'] || 'A1:A1')) : [];
+          if (!dCols.length) showLog('Sheet "' + name + '": no group Differenz column — style skipped.');
+          else for (const dCol of dCols) {
+            const letter = idxToCol(dCol), zones = columnStyleIdxs(sheetXml, letter);
+            if (!zones.text.length && !zones.num.length) { showLog('Sheet "' + name + '": no styled cell in ' + letter + ' — style skipped.', 'err'); continue; }
+            /* Append in turn, updating stylesXml each time: a style index only exists after its
+               own append, so the numeric donor is looked up against the already-grown cellXfs. */
+            const mk = srcs => { const d = pickDonor(stylesXml, srcs); if (d < 0) return -1; const r = addDiffStyleXf(stylesXml, diffPreset, d, diffFont); stylesXml = r.xml; return r.styleIdx; };
+            const pair = [mk(zones.text), mk(zones.num)];
+            if (pair[0] < 0 && pair[1] < 0) { showLog('Sheet "' + name + '": cellXfs in xl/styles.xml unusable — style skipped.', 'err'); continue; }
+            const t = recolourColumn(sheetXml, letter, pair[0], pair[1]); sheetXml = t.xml; diffCells += t.cells;
+            showLog('Differenz ' + letter + ': ' + t.cells + ' cells → ' + DIFF_STYLE_LABELS[diffPreset] + '.', 'ok');
+          }
+        }
         zip.file(rel, sheetXml);
       }
 
       zip.file('xl/sharedStrings.xml', rebuildSharedStrings(strings));
+      if (stylesXml) zip.file('xl/styles.xml', stylesXml);
+      showLog('Differenz — ' + (diffPreset === 'normal' ? 'Normal, xl/styles.xml unchanged.' : (diffCells ? DIFF_STYLE_LABELS[diffPreset] + ', ' + diffCells + ' cell(s) coloured.' : DIFF_STYLE_LABELS[diffPreset] + ', 0 cells coloured (sheets without data rows were skipped; see the log above for details).')), 'ok');
       const ctFile = zip.file('[Content_Types].xml');
       if (ctFile) { let ctXml = await ctFile.async('string'); ctXml = ensureSharedStringsContentType(ctXml); zip.file('[Content_Types].xml', ctXml); }
       const wbRelFile = zip.file('xl/_rels/workbook.xml.rels');
