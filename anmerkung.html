@@ -60,6 +60,17 @@
   <div class="page-eyebrow">ANMERKUNG AUTOMATION</div>
   <h1 class="page-title">Anmerkung <span class="grad">Processor</span></h1>
   <div class="page-sub">Excel workflow · forwarder rules · preview · export</div>
+  <div class="project-switch-wrap">
+    <div class="project-switch-label">Workspace</div>
+    <button type="button" class="project-switch" id="projectSwitch" onclick="openProjectDialog()" aria-haspopup="dialog" aria-controls="dlgProject">
+      <span class="project-switch-mark" aria-hidden="true">◇</span>
+      <span class="project-switch-copy">
+        <span class="project-switch-name" id="projectSwitchLabel">Select project</span>
+        <span class="project-switch-meta" id="projectSwitchMeta">Choose the project ruleset used by this page</span>
+      </span>
+      <span class="project-switch-action">Change</span>
+    </button>
+  </div>
   <div class="page-orn"><div class="page-orn-line"></div><div class="page-orn-sym">✦ ᚦ ✦</div><div class="page-orn-line"></div></div>
 
   <h2 class="section-label" id="fwLabel">1 — Select forwarder</h2>
@@ -154,10 +165,24 @@
   </dialog>
 
   <dialog id="dlgProject" class="project-dialog" aria-labelledby="dlgProjectTitle">
-    <h3 id="dlgProjectTitle">Choose project</h3>
-    <p class="project-hint">Your choice is saved in this browser.</p>
+    <div class="project-kicker">WORKSPACE SELECTOR</div>
+    <div class="project-dialog-heading">
+      <div>
+        <h3 id="dlgProjectTitle">Choose your project</h3>
+        <p class="project-hint">The selected project controls the Anmerkung workspace. Your choice is saved only in this browser.</p>
+      </div>
+      <span class="project-count" id="projectCount">1 project</span>
+    </div>
+
+    <div class="project-current" id="projectCurrentNote" role="status" aria-live="polite">
+      <span class="project-current-dot" aria-hidden="true"></span>
+      <span><strong>Ready:</strong> select a workspace below.</span>
+    </div>
+
     <div class="project-options" id="projectOptions" role="radiogroup" aria-label="Project"></div>
-    <div class="nd-actions">
+
+    <div class="nd-actions project-actions">
+      <span class="project-save-note">Stored locally · no account sync</span>
       <button type="button" class="tester-btn primary-soft project-confirm" onclick="confirmProject()">Continue</button>
     </div>
   </dialog>
