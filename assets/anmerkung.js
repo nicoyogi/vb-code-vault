@@ -546,7 +546,7 @@ function isXlsxFile(file){
   /* File.type is inconsistent across drag sources and desktop browsers.
      The extension is the reliable signal here because the parser itself
      validates the workbook contents. */
-  return !!file && /\\.xlsx$/i.test(String(file.name||''));
+  return !!file && /\.xlsx$/i.test(String(file.name||''));
 }
 function onDrag(e,over){
   e.preventDefault();
