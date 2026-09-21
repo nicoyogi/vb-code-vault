@@ -117,11 +117,11 @@ Most pages work by opening the HTML file directly in a browser. For anything tha
 
 ```bash
 # from the repo root
-python3 -m http.server 8000
-# then browse to http://localhost:8000/
+npm run dev           # http://127.0.0.1:8080
+PORT=8081 npm run dev # if 8080 is taken
 ```
 
-Any static server works — `npx serve`, `http-server`, or VS Code Live Server are fine alternatives.
+`scripts/dev-server.mjs` is a small zero-dependency static server (Node builtins only, no install step). It sends `no-store`, so an edit to a rule file shows on the next reload instead of a stale asset looking like a bug in your change. Any static server works too — `python3 -m http.server 8000`, `npx serve`, or VS Code Live Server are fine alternatives.
 
 > **Tip:** Service workers are only active when the site is served over `http(s)://` (or `file://` on a few browsers with flags). Use a local server to exercise offline mode.
 
