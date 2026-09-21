@@ -153,6 +153,15 @@
     </div>
   </dialog>
 
+  <dialog id="dlgProject" class="project-dialog" aria-labelledby="dlgProjectTitle">
+    <h3 id="dlgProjectTitle">Choose project</h3>
+    <p class="project-hint">Your choice is saved in this browser.</p>
+    <div class="project-options" id="projectOptions" role="radiogroup" aria-label="Project"></div>
+    <div class="nd-actions">
+      <button type="button" class="tester-btn primary-soft project-confirm" onclick="confirmProject()">Continue</button>
+    </div>
+  </dialog>
+
   <div class="preview-wrap" id="previewWrap" role="region" aria-label="Preview of proposed annotations">
     <div class="preview-head">
       <div>

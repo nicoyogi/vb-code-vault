@@ -58,8 +58,54 @@ function syncThFields(){document.getElementById('thDachser').value=TH.dachser;do
 function onThInput(key,el){const n=parseFloat(el.value);if(!isNaN(n)&&n>=0){TH[key]=n;applyThresholds();saveThresholds();}}
 function resetThresholds(){TH={...TH_DEFAULTS};applyThresholds();saveThresholds();syncThFields();}
 function toggleAdv(){const t=document.getElementById('advToggle'),p=document.getElementById('advPanel');const open=!p.classList.contains('open');p.classList.toggle('open',open);t.classList.toggle('open',open);t.setAttribute('aria-expanded',open?'true':'false');}
+
+/* ── PROJECT PICKER ── */
+/* Add future projects here. A project selection is intentionally separate from the
+   forwarder/rule-engine choice: WMF currently uses the existing workflow unchanged. */
+const PROJECT_KEY='anmerkung.project.v1';
+const PROJECTS=[{id:'wmf',label:'WMF',description:'Current Anmerkung workflow'}];
+let selectedProject=null;
+function isProjectId(id){return PROJECTS.some(project=>project.id===id);}
+function projectId(){try{const id=localStorage.getItem(PROJECT_KEY);return isProjectId(id)?id:null;}catch(_){return null;}}
+function chooseProject(id){if(!isProjectId(id))return false;selectedProject=id;try{localStorage.setItem(PROJECT_KEY,id);}catch(_){}return true;}
+function renderProjectOptions(){
+  const wrap=document.getElementById('projectOptions');if(!wrap)return;
+  const current=selectedProject||projectId()||PROJECTS[0].id;
+  selectedProject=current;
+  wrap.innerHTML=PROJECTS.map(project=>`<button type="button" class="project-option${project.id===current?' selected':''}" role="radio" aria-checked="${project.id===current}" tabindex="${project.id===current?0:-1}" data-project="${project.id}" onclick="selectProject(this)" onkeydown="projectKeydown(event)"><span class="project-name">${project.label}</span><span class="project-desc">${project.description}</span></button>`).join('');
+}
+function openProjectDialogIfNeeded(){
+  if(projectId())return;
+  const dialog=document.getElementById('dlgProject');
+  if(!dialog||typeof dialog.showModal!=='function')return;
+  renderProjectOptions();
+  dialog.returnValue='';
+  dialog.showModal();
+  const option=dialog.querySelector('[aria-checked="true"]');if(option)option.focus();
+}
+function selectProject(button){
+  const id=button&&button.dataset.project;if(!isProjectId(id))return;
+  selectedProject=id;
+  document.querySelectorAll('#projectOptions .project-option').forEach(option=>{const selected=option===button;option.classList.toggle('selected',selected);option.setAttribute('aria-checked',selected?'true':'false');option.tabIndex=selected?0:-1;});
+}
+function projectKeydown(event){
+  const options=[...document.querySelectorAll('#projectOptions .project-option')];
+  const index=options.indexOf(event.currentTarget);if(index<0)return;
+  let next=null;
+  if(event.key==='ArrowRight'||event.key==='ArrowDown')next=options[(index+1)%options.length];
+  else if(event.key==='ArrowLeft'||event.key==='ArrowUp')next=options[(index-1+options.length)%options.length];
+  else if(event.key==='Home')next=options[0];
+  else if(event.key==='End')next=options[options.length-1];
+  else if(event.key===' '||event.key==='Enter'){event.preventDefault();event.currentTarget.click();return;}
+  if(next){event.preventDefault();next.focus();next.click();}
+}
+function confirmProject(){
+  if(!chooseProject(selectedProject||PROJECTS[0].id))return;
+  const dialog=document.getElementById('dlgProject');if(dialog){dialog.returnValue=selectedProject;dialog.close();}
+}
 document.addEventListener('DOMContentLoaded',()=>{
   syncThFields();
+  openProjectDialogIfNeeded();
   [['thDachser','dachser'],['thKN','kn'],['thDHL','dhl'],['thWackler','wackler']].forEach(([id,key])=>{
     const el=document.getElementById(id);
     el.addEventListener('input',()=>onThInput(key,el));

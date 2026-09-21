@@ -224,6 +224,8 @@ export function loadEngine() {
     'classifyDiff', 'computePhraseDiff', 'granularLabel', 'rowUid', 'phraseCellParts',
     'buildTrainingSummary', 'buildRegressionSet', 'collectInputsForRow', 'buildEngineSourceDoc',
     'buildPhraseEmitterIndex', 'parseLocaleNumber',
+    // persisted project-picker primitives
+    'isProjectId', 'projectId', 'chooseProject',
   ];
   const engine = {};
   const missing = [];
@@ -236,6 +238,7 @@ export function loadEngine() {
   }
 
   engine.encode_cell = encode_cell;
+  engine.localStorage = sandbox.localStorage;
   engine.WACKLER_RATECARD = sandbox.WACKLER_RATECARD || null;
   engine.WACKLER_NATIONAL_RATECARD = sandbox.WACKLER_NATIONAL_RATECARD || null;
   /* The phrase catalog itself, so tests can guard catalog-wide invariants
