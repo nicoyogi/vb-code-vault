@@ -130,6 +130,7 @@ function confirmProject(){
   const dialog=document.getElementById('dlgProject');if(dialog){dialog.returnValue=selectedProject;dialog.close();}
 }
 document.addEventListener('DOMContentLoaded',()=>{
+  setupWorkbookDropZone();
   syncThFields();
   openProjectDialogIfNeeded();
 /* ══════════════════════════════════════════════════════════
@@ -521,10 +522,63 @@ function toggleBonus(which){
 
 /* ── UI HELPERS ── */
 function selectFW(btn){document.querySelectorAll('.fw-btn').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-checked','false');b.tabIndex=-1;});btn.classList.add('selected');btn.setAttribute('aria-checked','true');btn.tabIndex=0;selectedFW=btn.dataset.fw;checkReady();renderTesterFields();}
-function onDrag(e,over){e.preventDefault();document.getElementById('dropArea').classList.toggle('drag',over);}
-function onDrop(e){e.preventDefault();onDrag(e,false);if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);}
-function onFileSelect(e){if(e.target.files[0])loadFile(e.target.files[0]);}
-function loadFile(file){originalFileName=file.name;const reader=new FileReader();reader.onload=ev=>{try{rawFileBytes=ev.target.result;workbook=XLSX.read(rawFileBytes,{type:'array',cellNF:true});const fn=document.getElementById('fileName');fn.textContent=file.name+' — '+workbook.SheetNames.length+' sheet(s)';fn.style.display='block';showLog('Scroll loaded: '+file.name,'ok');checkReady();}catch(err){showLog('Could not read scroll: '+err.message,'err');}};reader.readAsArrayBuffer(file);}
+function isXlsxFile(file){
+  return !!file && /\\.xlsx$/i.test(String(file.name||'')) &&
+    (file.type==='' || file.type==='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+function onDrag(e,over){
+  e.preventDefault();
+  e.stopPropagation();
+  const area=document.getElementById('dropArea');
+  if(area)area.classList.toggle('drag',over);
+  if(e.dataTransfer)e.dataTransfer.dropEffect='copy';
+}
+function onDrop(e){
+  e.preventDefault();
+  e.stopPropagation();
+  onDrag(e,false);
+  const files=e.dataTransfer&&e.dataTransfer.files;
+  if(!files||!files.length)return;
+  const file=files[0];
+  if(!isXlsxFile(file)){showLog('Only .xlsx workbooks are supported.','err');return;}
+  loadFile(file);
+}
+function onFileSelect(e){
+  const file=e.target.files&&e.target.files[0];
+  if(file)loadFile(file);
+  /* Allow choosing the same workbook again after a failed/changed run. */
+  if(e.target)e.target.value='';
+}
+function loadFile(file){
+  if(!file)return;
+  if(!isXlsxFile(file)){showLog('Only .xlsx workbooks are supported.','err');return;}
+  originalFileName=file.name;
+  const reader=new FileReader();
+  reader.onload=ev=>{try{
+    rawFileBytes=ev.target.result;
+    workbook=XLSX.read(rawFileBytes,{type:'array',cellNF:true});
+    const fn=document.getElementById('fileName');
+    fn.textContent=file.name+' — '+workbook.SheetNames.length+' sheet(s)';
+    fn.style.display='block';
+    showLog('Scroll loaded: '+file.name,'ok');
+    checkReady();
+  }catch(err){showLog('Could not read scroll: '+err.message,'err');}};
+  reader.onerror=()=>showLog('Could not read scroll: '+file.name,'err');
+  reader.readAsArrayBuffer(file);
+}
+function setupWorkbookDropZone(){
+  const area=document.getElementById('dropArea');
+  if(!area)return;
+  ['dragenter','dragover'].forEach(type=>area.addEventListener(type,e=>onDrag(e,true)));
+  ['dragleave','drop'].forEach(type=>area.addEventListener(type,e=>{
+    if(type==='drop')onDrop(e);else{e.preventDefault();e.stopPropagation();area.classList.remove('drag');}
+  }));
+  /* Prevent Chrome from navigating to the workbook when it is dropped just outside the zone. */
+  ['dragover','drop'].forEach(type=>document.addEventListener(type,e=>{
+    if(type==='dragover')e.preventDefault();
+    else e.preventDefault();
+  }));
+}
 function checkReady(){const ok=!!(selectedFW&&workbook);document.getElementById('btnRun').disabled=!ok;document.getElementById('btnPreview').disabled=!ok;}
 function setProgress(pct){document.getElementById('progressWrap').style.display='block';document.getElementById('progressFill').style.width=pct+'%';}
 
