@@ -988,18 +988,19 @@ body.theme-pro .log::-webkit-scrollbar-thumb, body.theme-pro .cl-list::-webkit-s
 }
 
 /* Not-derivable ledger dialog */
-.nd-dialog { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 18px; width: min(640px, 92vw); }
+.nd-dialog { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 18px; width: min(640px, 92vw); position: fixed; inset: 0; margin: auto; }
 .nd-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 .nd-dialog h3 { margin: 0 0 8px; }
 .nd-hint { color: var(--text2); font-size: 0.85em; margin: 0 0 10px; }
 #ndText { width: 100%; box-sizing: border-box; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: monospace; font-size: 0.85em; padding: 8px; }
 .nd-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
 
-/* Differenz-column style dialog — same visual language as .nd-dialog; the swatch
-   colours are painted by JS from DIFF_STYLE_FILLS so the hex exists exactly once. */
-.ds-dialog { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 18px; width: min(640px, 92vw); }
+/* Differenz-column style dialog — centered in viewport (fixed + inset: 0 + margin: auto);
+   the swatch colours are painted by JS from DIFF_STYLE_FILLS so the hex exists exactly once. */
+.ds-dialog { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 18px; width: min(640px, 92vw); position: fixed; inset: 0; margin: auto; }
 .ds-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
-.ds-dialog h3 { margin: 0 0 8px; }
+.ds-dialog h3 { margin: 0 0 8px; text-align: center; }
+.ds-dialog .nd-hint { text-align: center; }
 .ds-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 0 0 10px; }
 .ds-btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px 12px; cursor: pointer; text-align: left; font-family: var(--mono); font-size: 11px; display: flex; align-items: center; transition: border-color var(--duration-normal) var(--ease-out); }
 .ds-btn:hover { border-color: var(--border2); }
@@ -1008,3 +1009,4 @@ body.theme-pro .log::-webkit-scrollbar-thumb, body.theme-pro .cl-list::-webkit-s
 .ds-swatch { width: 22px; height: 14px; border: 1px solid var(--border2); border-radius: 3px; display: inline-block; vertical-align: middle; flex: none; }
 .ds-swatch.none { border-style: dashed; }
 .ds-sub { color: var(--text3); font-size: 9.5px; margin-left: 6px; }
+.ds-dialog .nd-actions { justify-content: center; }
