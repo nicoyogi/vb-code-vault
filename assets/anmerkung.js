@@ -193,9 +193,57 @@ function renderChangelog(){
     `<ul class="cl-items">${(e.items||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`
   ).join('');
 }
-function openChangelog(){document.getElementById('cl-overlay').classList.add('open');}
-function closeChangelog(){document.getElementById('cl-overlay').classList.remove('open');}
+/* The changelog is a plain div overlay with role="dialog" aria-modal="true", not a
+   native <dialog> like dlgProject / dlgDiffStyle, so it gets none of the browser's
+   modal behaviour for free: Escape did nothing, focus stayed on the page behind it,
+   and Tab walked that page. All three are restored here. */
+let clReturnFocus=null;
+function openChangelog(){
+  const overlay=document.getElementById('cl-overlay');
+  /* Only remember a real trigger. Reading document.activeElement here can catch BODY
+     when the overlay was opened programmatically or after showChangelogOnUpdate ran,
+     and focusing BODY on close is how the keyboard user's place got lost. Fall back to
+     the header button, which is the only thing that opens this overlay. */
+  const active=document.activeElement;
+  clReturnFocus=(active&&active!==document.body&&document.contains(active))
+    ?active
+    :document.getElementById('btnChangelog');
+  overlay.classList.add('open');
+  /* The overlay is display:none until .open lands, and focusing a display:none
+     element is a no-op, so move focus on the next frame rather than inline. */
+  requestAnimationFrame(()=>{
+    const close=overlay.querySelector('.cl-close');
+    if(close)close.focus();
+  });
+}
+function closeChangelog(){
+  const overlay=document.getElementById('cl-overlay');
+  const returnTo=clReturnFocus;
+  clReturnFocus=null;
+  /* Focus first, then hide. Moving focus out of an element that is inside a
+     just-hidden subtree (or relying on it afterwards) is what dropped focus to
+     <body> and lost the keyboard user's place. */
+  if(returnTo&&typeof returnTo.focus==='function'&&document.contains(returnTo))returnTo.focus();
+  overlay.classList.remove('open');
+}
 function handleClBgClick(e){if(e.target===document.getElementById('cl-overlay'))closeChangelog();}
+/* Escape closes, and Tab cycles within the overlay instead of walking the page
+   behind a modal. Both listeners are document-level and no-op when it is closed. */
+document.addEventListener('keydown',e=>{
+  const overlay=document.getElementById('cl-overlay');
+  if(!overlay.classList.contains('open'))return;
+  if(e.key==='Escape'){e.preventDefault();closeChangelog();return;}
+  if(e.key!=='Tab')return;
+  const focusables=[...overlay.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')]
+    .filter(el=>el.offsetParent!==null||el===document.activeElement);
+  if(!focusables.length){e.preventDefault();return;}
+  const first=focusables[0],last=focusables[focusables.length-1];
+  /* If focus is still outside the overlay (opened programmatically, or the user
+     tabbed out), pull it back in rather than letting Tab walk the page behind. */
+  if(!overlay.contains(document.activeElement)){e.preventDefault();first.focus();return;}
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+  else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+});
 function showChangelogOnUpdate(){
   if(VERSION==='0.0.0'||!CHANGELOG.length)return;
   try{
@@ -2151,10 +2199,24 @@ function renderPreview(rep){
     const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return `<tr class="${cls}"><td>${esc(r.sheet)}</td><td>${r.row}</td><td>${dot}${label}</td><td class="pr-value">${esc(r.value)}</td><td class="pr-reason">${esc(r.reason)}</td></tr>`;
   }).join('');
-  document.getElementById('previewMeta').textContent=`showing ${rows.length} of ${rep.previewRows.length} rows · ${rep.filled} filled · ${rep.empty} empty · ${rep.skipped} skipped`;
+  /* Say when the table is a window rather than the whole result. The cap is a render
+     guard, but silently dropping rows made a large sheet look fully previewed while
+     the stats above counted rows that were never shown. The trigger breakdown still
+     covers every row, so point there when the cap bites. */
+  const capped=rep.previewRows.length>rows.length;
+  document.getElementById('previewMeta').textContent=
+    (capped?`showing first ${rows.length} of ${rep.previewRows.length} rows (table capped) — the stats below cover all of them · `:`showing ${rows.length} of ${rep.previewRows.length} rows · `)+
+    `${rep.filled} filled · ${rep.empty} empty · ${rep.skipped} skipped`;
   wrap.style.display='block';
 }
-function closePreview(){document.getElementById('previewWrap').style.display='none';}
+function closePreview(){
+  document.getElementById('previewWrap').style.display='none';
+  /* The close button is inside the panel being hidden, so focus would fall to
+     <body> and a keyboard user would lose their place. Hand it back to the button
+     that opened the preview. */
+  const trigger=document.getElementById('btnPreview');
+  if(trigger)trigger.focus();
+}
 
 /* ── STATS + TRIGGER BREAKDOWN (#12) ── */
 function renderStats(rep){

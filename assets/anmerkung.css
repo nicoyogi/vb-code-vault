@@ -448,7 +448,7 @@ body.theme-light .diff-table td { border-bottom-color: rgba(80,55,20,0.05); }
 .diff-bulk { margin-top: 14px; padding: 12px 14px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
 .diff-bulk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .diff-bulk-title { font-family: var(--cinzel); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--text2); }
-.diff-bulk-tag { font-family: var(--mono); font-size: 9px; letter-spacing: .06em; color: rgba(91,156,246,0.85); background: rgba(91,156,246,0.1); border: 1px solid rgba(91,156,246,0.3); padding: 2px 8px; border-radius: 10px; }
+.diff-bulk-tag { font-family: var(--mono); font-size: 9px; letter-spacing: .06em; color: rgba(140,180,255,0.95); background: rgba(91,156,246,0.1); border: 1px solid rgba(91,156,246,0.3); padding: 2px 8px; border-radius: 10px; }
 .diff-bulk-intro { font-family: var(--mono); font-size: 10px; color: var(--text3); line-height: 1.6; margin-bottom: 10px; }
 .diff-bulk-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .diff-bulk-slot { background: var(--surface2); border: 1.5px dashed var(--border); border-radius: 12px; padding: .9rem 1rem; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
@@ -842,7 +842,10 @@ body.theme-pro .bonus-tag { background: #eff6ff; color: var(--accent); border: 1
 
 /* RULE TESTER */
 body.theme-pro .tester-field input,
-body.theme-pro .tester-output { border-radius: 6px; background: #ffffff; }
+/* #ffffff here was a light-theme value applied to the dark theme as well, which
+   painted a white box on a #0b1220 page and dragged the small .to-label inside it to
+   2.12:1. The token keeps each theme on its own surface. */
+body.theme-pro .tester-output { border-radius: 6px; background: var(--surface3); }
 body.theme-pro .tester-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
 body.theme-pro .tester-btn { border-radius: 6px; }
 body.theme-pro .tester-btn:hover { color: var(--accent); border-color: var(--accent); background: #eff6ff; }
@@ -1037,3 +1040,32 @@ body.theme-pro .log::-webkit-scrollbar-thumb, body.theme-pro .cl-list::-webkit-s
 .project-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .project-name { font-family: var(--cinzel); font-size: 13px; font-weight: 600; }
 .project-desc { color: var(--text2); font-family: var(--mono); font-size: 10px; }
+
+/* ── WACKLER RATE UNLOCK ── */
+/* Launched by wackler-ratecard-loader.js when no passphrase is stored. It has no
+   natural home in the page flow (it appears only while Wackler costing is off), so
+   it floats. Styles live here so it follows the theme like every other control;
+   position is the only thing kept on the element itself. 44px min target. */
+.wackler-unlock-btn {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 999;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  transition: color .2s, border-color .2s, background .2s;
+}
+.wackler-unlock-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--surface3);
+}

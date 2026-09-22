@@ -11,13 +11,22 @@ body.theme-pro {
   --border2: #334155;
   --text: #e5e7eb;
   --text2: #a7b3c4;
-  --text3: #718096;
-  /* --text3 is 4.42:1 on --surface: under AA for body text, so small type uses
-     --text-muted (6.06:1, 5.5:1 on --surface3) instead of raising --text3 and
-     repainting every other page that reads it. */
+  --text3: #8b98ab;
+  /* --text3 was #718096: 4.42:1 on --surface and 4.05:1 on --surface3, under AA for the
+     small type that reads it (section labels, .adv-intro, the "Why?" hint, .stat-l).
+     Raised to the old --text-muted value, which passes on every surface here. Safe to
+     raise: anmerkung.css and anmerkung-pro.css are loaded only by anmerkung.html --
+     grimoire-theme.css defines --text3 separately for the other pages, and this
+     theme-pro block wins on this one. */
   --text-muted: #8b98ab;
   --accent: #3b82f6;
+  /* Fill colour of primary buttons. --accent itself is only 3.68:1 under white text
+     (13px/700 needs 4.5:1), so the fills use --accent-strong (5.17:1) instead and
+     --accent stays the border/text tint. */
   --accent-strong: #2563eb;
+  --accent-fill: #2563eb;
+  /* On-accent text for filled controls. White fails on --accent-fill? No: 5.17:1. */
+  --on-accent: #ffffff;
   --danger: #ef4444;
   --success: #10b981;
   --warning: #f59e0b;
@@ -38,11 +47,12 @@ body.theme-pro.theme-light {
   --border2: #cbd5e1;
   --text: #0f172a;
   --text2: #475569;
-  --text3: #64748b;
-  /* 5.93:1 on white and 4.89:1 on the selected #eff6ff, where --text3 falls to 4.37:1. */
+  --text3: #55657d;
+  /* 5.93:1 on white and 4.89:1 on the selected #eff6ff. */
   --text-muted: #55657d;
   --accent: #2563eb;
   --accent-strong: #1d4ed8;
+  --accent-fill: #2563eb;
   --danger: #dc2626;
   --success: #059669;
   --warning: #d97706;
@@ -138,8 +148,8 @@ body.theme-pro .hdr-btn:hover {
 
 body.theme-pro .hdr-btn[aria-pressed="true"] {
   color: #fff;
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
 }
 
 body.theme-pro .nav-badge {
@@ -472,7 +482,11 @@ body.theme-pro #main > .btn-run {
 }
 
 body.theme-pro #main > .btn-preview {
-  color: var(--accent);
+  /* The background below is a translucent accent wash over --bg, which composites to
+     about #0d1830, not #111827. --accent-strong is only 3.40:1 on that wash. --text
+     is 14.19:1 there and still reads as the secondary of the pair, because the solid
+     Run button beside it is the primary. */
+  color: var(--text);
   border: 1px solid rgba(59,130,246,.48);
   background: rgba(37,99,235,.08);
 }
@@ -486,8 +500,8 @@ body.theme-pro #main > .btn-preview:hover:not(:disabled) {
 
 body.theme-pro #main > .btn-run {
   color: #fff;
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--accent-fill);
+  background: var(--accent-fill);
 }
 
 body.theme-pro #main > .btn-run:hover:not(:disabled) {
@@ -739,8 +753,8 @@ body.theme-pro .tester-btn {
 body.theme-pro .tester-btn.primary,
 body.theme-pro .tester-btn.primary-soft {
   color: #fff;
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
 }
 
 body.theme-pro .tester-btn.primary:hover,
@@ -1089,6 +1103,20 @@ body.theme-pro.theme-light :focus-visible {
   outline-color: var(--accent);
 }
 
+/* Light-theme corrections for colours the dark theme sets as light-on-dark tints.
+   Reusing them unchanged made the light theme the LESS readable of the two:
+   .project-switch-action measured 1.80:1 (dark 9.84:1) and .bonus-tag 2.21:1
+   (dark 6.40:1). Both are text a user reads, so each gets its own light value. */
+body.theme-pro.theme-light .project-switch-action { color: #1d4ed8; }
+body.theme-pro.theme-light .bonus-tag { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+/* .diff-bulk-tag is the dark theme's accent tint on a light translucent fill; over a
+   white surface that is 2.54:1. Same treatment as .bonus-tag. */
+body.theme-pro.theme-light .diff-bulk-tag { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+/* The outline preview button sits on a translucent accent wash over white, which lifts
+   the background enough that --accent-strong (4.36:1 there) no longer clears AA. The
+   solid accent is 5.17:1 on white, so the light theme keeps the darker text. */
+body.theme-pro.theme-light #main > .btn-preview { color: #1e40af; }
+
 @media (max-width: 920px) {
   body.theme-pro .fw-grid {
     grid-template-columns: repeat(2, minmax(0,1fr));
@@ -1146,4 +1174,30 @@ body.theme-pro.theme-light :focus-visible {
     transition-duration: .01ms !important;
     animation-duration: .01ms !important;
   }
+}
+
+/* ── WACKLER RATE UNLOCK ── */
+/* Same control under the pro skin: matches .tester-btn / .preview-close, which are
+   this page's small-button language (7px radius, Inter, --surface3) rather than the
+   mystic pill. */
+body.theme-pro .wackler-unlock-btn {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 7px;
+  border: 1px solid var(--border2);
+  background: var(--surface3);
+  color: var(--text2);
+  font-family: var(--syne);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  box-shadow: 0 6px 18px rgba(0,0,0,.22);
+}
+body.theme-pro .wackler-unlock-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--surface2);
+}
+body.theme-pro.theme-light .wackler-unlock-btn {
+  box-shadow: 0 6px 18px rgba(15,23,42,.12);
 }
