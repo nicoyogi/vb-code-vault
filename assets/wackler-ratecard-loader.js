@@ -45,11 +45,20 @@
     var btn = document.createElement('button');
     btn.id = 'wacklerUnlockBtn';
     btn.type = 'button';
-    btn.textContent = '🔒 Wackler-Kosten entsperren';
-    btn.style.cssText = 'position:fixed;bottom:14px;right:14px;z-index:999;padding:8px 14px;' +
-      'border-radius:8px;border:1px solid #8884;background:#1b1b2add;color:#eee;cursor:pointer;font:inherit';
+    /* The lock is the affordance, so it stays in the label as a role marker rather
+       than being decorative. The passphrase dialog is a prompt for now; see
+       docs/anmerkung for the planned in-page form. */
+    btn.textContent = '🔒 Unlock Wackler rates';
+    btn.title = 'Enter the team passphrase to enable Wackler costing';
+    btn.setAttribute('aria-label', 'Unlock Wackler rates with the team passphrase');
+    /* Styling lives in anmerkung.css / anmerkung-pro.css, next to the rest of the
+       page's controls. Building it here with inline cssText put this one control
+       outside the design system: it kept its own radius and font under the pro
+       skin and could not follow the theme. Only the fixed placement is inline,
+       because the page has no other launcher for it. */
+    btn.className = 'wackler-unlock-btn';
     btn.onclick = function () {
-      var p = prompt('Wackler-Passwort:');
+      var p = prompt('Wackler passphrase:');
       if (!p) return;
       try { localStorage.setItem(LS_KEY, p); } catch (e) {}
       location.reload();
