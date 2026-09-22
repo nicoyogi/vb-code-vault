@@ -163,7 +163,7 @@ story.append(section_table([
     ("SAM Differenz over threshold", "Samstagzustellung"),
     ("DGR Differenz over threshold (skipped when TARIF is zero)", "Gefahrgut-Zuschlag"),
     ("SBFU Differenz over threshold", "SBfU-Bescheinigung f. Umsatzsteuerzwecke"),
-    ("C38L Differenz over threshold", "Maut NL"),
+    ("C38L Differenz over threshold", "Maut von/bis NL"),
 ]))
 story.append(P("1.2 SNK — switch on billed SNK_DL", h3))
 story.append(section_table([
@@ -306,6 +306,7 @@ story.append(section_table([
     ("SNK ≈ 49", "NL-12, ok?"),
     ("SNK ≈ 113", "NL-SPEZ, ok?"),
     ("Empf. = 88499 RIEDLINGEN", "Return, ok?"),
+    ("SNK ≈ 16", "NIGHTFIX"),
 ]))
 story.append(P("Gewichte / bundling decision tree (FR + both weights real)", h3))
 story.append(section_table([
@@ -327,10 +328,10 @@ story.append(section_table([
     ("FR over T, no Gewichte/bundling/return fired", "Frachtdifferenz"),
     ("MT over T", "Mautdifferenz"),
     ("|SNK| ≥ 5.0, unrecognised code, not bundled", "SNK Differenz"),
-    ("SNK ≈ −150 (±2)", "Hebebühne (liftgate credit)"),
-    ("|TZ| ≥ 2.0, not on same-tier 'Wackler rechnet' row, not an FR credit", "DifferenzEnergiezuschlag / Dieselzuschlag ok? (on Hebebühne rows)"),
-    ("NL-FIX + FR + blank KOST/SACH — 'Zone korrekt berechnet?' prepended, Frachtdifferenz stripped", "Zone korrekt berechnet? // …"),
-    ("only rule left is TZ over T", "DifferenzEnergiezuschlag"),
+    ("SNK ≈ −150 (±2)", "hätte Hebebühne abrechnen dürfen"),
+    ("|TZ| ≥ 2.0, not on same-tier 'Wackler rechnet' row, not an FR credit — on a Hebebühne credit row the fuel gate queries the surcharge instead of flagging it", "Differenz Energiezuschlag // Dieselzuschlag ok?"),
+    ("NL-FIX + FR + blank KOST/SACH — 'Zone korrekt?' prepended, Frachtdifferenz stripped", "Zone korrekt? // …"),
+    ("only rule left is TZ over T", "Differenz Energiezuschlag"),
     ("KOST &amp; SACH both blank/X (disabled)", "Kontierung?"),
 ]))
 
