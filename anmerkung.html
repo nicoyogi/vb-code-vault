@@ -63,7 +63,7 @@
   <div class="project-switch-wrap">
     <div class="project-switch-label">Workspace</div>
     <button type="button" class="project-switch" id="projectSwitch" onclick="openProjectDialog()" aria-haspopup="dialog" aria-controls="dlgProject">
-      <span class="project-switch-mark" aria-hidden="true">◇</span>
+      <span class="project-switch-mark" id="projectSwitchMark" aria-hidden="true">WMF</span>
       <span class="project-switch-copy">
         <span class="project-switch-name" id="projectSwitchLabel">Select project</span>
         <span class="project-switch-meta" id="projectSwitchMeta">Choose the project ruleset used by this page</span>
@@ -165,24 +165,22 @@
   </dialog>
 
   <dialog id="dlgProject" class="project-dialog" aria-labelledby="dlgProjectTitle">
-    <div class="project-kicker">WORKSPACE SELECTOR</div>
     <div class="project-dialog-heading">
       <div>
-        <h3 id="dlgProjectTitle">Choose your project</h3>
-        <p class="project-hint">The selected project controls the Anmerkung workspace. Your choice is saved only in this browser.</p>
+        <h3 id="dlgProjectTitle">Workspace</h3>
+        <p class="project-hint">Choose the project this page works on. The choice is stored in this browser only, so a different machine or browser asks again.</p>
       </div>
       <span class="project-count" id="projectCount">1 project</span>
     </div>
 
-    <div class="project-current" id="projectCurrentNote" role="status" aria-live="polite">
-      <span class="project-current-dot" aria-hidden="true"></span>
-      <span><strong>Ready:</strong> select a workspace below.</span>
+    <div class="project-summary" id="projectCurrentNote" role="status" aria-live="polite">
+      <span><strong>Workspace:</strong> no project selected yet.</span>
     </div>
 
     <div class="project-options" id="projectOptions" role="radiogroup" aria-label="Project"></div>
 
     <div class="nd-actions project-actions">
-      <span class="project-save-note">Stored locally · no account sync</span>
+      <span class="sr-only" id="projectStoredNote">Stored in this browser only.</span>
       <button type="button" class="tester-btn primary-soft project-confirm" onclick="confirmProject()">Continue</button>
     </div>
   </dialog>

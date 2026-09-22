@@ -1029,11 +1029,11 @@ body.theme-pro .log::-webkit-scrollbar-thumb, body.theme-pro .cl-list::-webkit-s
 .project-dialog { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 18px; width: min(440px, 92vw); position: fixed; inset: 0; margin: auto; }
 .project-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 .project-dialog h3 { margin: 0 0 6px; }
-.project-hint { color: var(--text2); font-family: var(--mono); font-size: 11px; line-height: 1.5; margin: 0 0 14px; }
+.project-hint { color: var(--text2); font-family: var(--mono); font-size: 12px; line-height: 1.55; margin: 0 0 14px; }
 .project-options { display: grid; gap: 8px; }
 .project-option { align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text); cursor: pointer; display: grid; gap: 2px; min-height: 44px; padding: 11px 13px; text-align: left; }
 .project-option:hover { border-color: var(--border2); }
-.project-option.selected { background: rgba(52,211,153,.08); border-color: rgba(52,211,153,.5); }
+.project-option.selected { background: rgba(52,211,153,.12); border-color: rgba(52,211,153,.55); }
 .project-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .project-name { font-family: var(--cinzel); font-size: 13px; font-weight: 600; }
 .project-desc { color: var(--text2); font-family: var(--mono); font-size: 10px; }

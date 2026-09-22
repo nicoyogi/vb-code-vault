@@ -12,6 +12,10 @@ body.theme-pro {
   --text: #e5e7eb;
   --text2: #a7b3c4;
   --text3: #718096;
+  /* --text3 is 4.42:1 on --surface: under AA for body text, so small type uses
+     --text-muted (6.06:1, 5.5:1 on --surface3) instead of raising --text3 and
+     repainting every other page that reads it. */
+  --text-muted: #8b98ab;
   --accent: #3b82f6;
   --accent-strong: #2563eb;
   --danger: #ef4444;
@@ -35,6 +39,8 @@ body.theme-pro.theme-light {
   --text: #0f172a;
   --text2: #475569;
   --text3: #64748b;
+  /* 5.93:1 on white and 4.89:1 on the selected #eff6ff, where --text3 falls to 4.37:1. */
+  --text-muted: #55657d;
   --accent: #2563eb;
   --accent-strong: #1d4ed8;
   --danger: #dc2626;
@@ -888,11 +894,11 @@ body.theme-pro .project-switch-wrap {
 }
 body.theme-pro .project-switch-label {
   flex: 0 0 auto;
-  color: var(--text3);
+  color: var(--text-muted);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 500;
-  letter-spacing: .12em;
+  letter-spacing: .1em;
   text-transform: uppercase;
 }
 body.theme-pro .project-switch {
@@ -914,28 +920,31 @@ body.theme-pro .project-switch:hover {
   background: var(--surface3);
 }
 body.theme-pro .project-switch-mark {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
-  flex: 0 0 28px;
+  flex: 0 0 30px;
   border: 1px solid rgba(59,130,246,.28);
   border-radius: 7px;
-  color: #60a5fa;
+  color: #93c5fd;
   background: rgba(37,99,235,.10);
-  font-size: 15px;
+  font-family: var(--syne);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .04em;
 }
 body.theme-pro .project-switch-copy { min-width: 0; display: grid; gap: 2px; }
 body.theme-pro .project-switch-name {
   font-family: var(--syne);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 750;
 }
 body.theme-pro .project-switch-meta {
   overflow: hidden;
-  color: var(--text3);
+  color: var(--text-muted);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -943,23 +952,15 @@ body.theme-pro .project-switch-action {
   margin-left: auto;
   color: #93c5fd;
   font-family: var(--syne);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 body.theme-pro .project-dialog {
   width: min(560px, 94vw);
-  padding: 22px;
+  padding: 24px;
   border-radius: 14px;
   background: var(--surface);
-}
-body.theme-pro .project-kicker {
-  margin-bottom: 8px;
-  color: #60a5fa;
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: .12em;
 }
 body.theme-pro .project-dialog-heading {
   display: flex;
@@ -968,145 +969,116 @@ body.theme-pro .project-dialog-heading {
   margin-bottom: 14px;
 }
 body.theme-pro .project-dialog h3 {
-  margin: 0 0 5px;
+  margin: 0 0 6px;
   font-family: var(--syne);
   font-size: 20px;
   font-weight: 750;
   letter-spacing: -.025em;
 }
+/* 12px, not 11px: the old size landed at 4.42:1 on --surface, under AA. */
 body.theme-pro .project-hint {
-  max-width: 440px;
+  max-width: 44ch;
   margin: 0;
-  color: var(--text3);
+  color: var(--text2);
   font-family: var(--syne);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.55;
 }
 body.theme-pro .project-count {
   flex: 0 0 auto;
   margin-left: auto;
-  padding: 4px 7px;
-  color: var(--text3);
+  padding: 5px 9px;
+  color: var(--text-muted);
   background: var(--surface3);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 11px;
 }
-body.theme-pro .project-current {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding: 8px 10px;
+/* One status line, not two: this replaces the old "Selected: WMF" line, so the dialog
+   never says the same thing in two places, and the card stays the only selected cue. */
+body.theme-pro .project-summary {
+  margin: 0 0 12px;
   color: var(--text2);
-  background: rgba(37,99,235,.06);
-  border: 1px solid rgba(59,130,246,.18);
-  border-radius: 7px;
   font-family: var(--syne);
-  font-size: 10px;
+  font-size: 12px;
 }
-body.theme-pro .project-current-dot {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 7px;
-  border-radius: 50%;
-  background: #60a5fa;
-  box-shadow: 0 0 0 3px rgba(96,165,250,.12);
-}
-body.theme-pro .project-options { gap: 7px; }
+body.theme-pro .project-summary strong { color: var(--text); font-weight: 750; }
+body.theme-pro .project-options { gap: 8px; }
 body.theme-pro .project-option {
-  min-height: 62px;
-  grid-template-columns: 30px minmax(0,1fr) auto;
-  gap: 10px;
-  padding: 11px;
+  min-height: 68px;
+  grid-template-columns: 36px minmax(0,1fr);
+  gap: 12px;
+  padding: 13px 14px;
   background: var(--surface2);
   border-color: var(--border);
-  border-radius: 9px;
+  border-radius: 10px;
 }
 body.theme-pro .project-option:hover {
   border-color: #47627e;
   background: var(--surface3);
 }
+/* Selected state tints the panel's own surface and names itself with the border and
+   the check; the old #eff6ff fill turned the card into a light hole in the dark theme
+   (name 1.14:1, description 1.95:1, badge 1.49:1). */
 body.theme-pro .project-option.selected {
-  background: rgba(37,99,235,.10);
+  background: rgba(37,99,235,.14);
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(59,130,246,.14) inset;
 }
 body.theme-pro .project-option-icon {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   align-self: center;
   border: 1px solid var(--border);
-  border-radius: 7px;
-  color: var(--text3);
+  border-radius: 8px;
+  color: var(--text2);
   background: var(--surface);
-  font-size: 13px;
+  font-family: var(--syne);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .04em;
 }
 body.theme-pro .project-option.selected .project-option-icon {
   color: #93c5fd;
   border-color: rgba(59,130,246,.32);
   background: rgba(37,99,235,.12);
 }
-body.theme-pro .project-option-main { min-width: 0; display: grid; gap: 2px; }
-body.theme-pro .project-name { font-family: var(--syne); font-size: 12px; font-weight: 750; }
-body.theme-pro .project-desc { color: var(--text2); font-family: var(--syne); font-size: 10px; }
-body.theme-pro .project-meta { color: var(--text3); font-family: var(--mono); font-size: 8.5px; }
-body.theme-pro .project-option-badge {
-  align-self: center;
-  padding: 4px 7px;
-  color: var(--text3);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  font-family: var(--mono);
-  font-size: 8px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-body.theme-pro .project-option.selected .project-option-badge {
-  color: #93c5fd;
-  border-color: rgba(59,130,246,.25);
-  background: rgba(37,99,235,.08);
-}
+body.theme-pro .project-option-main { min-width: 0; display: grid; gap: 4px; }
+body.theme-pro .project-name { font-family: var(--syne); font-size: 14px; font-weight: 750; }
+/* Description: 12px sans. It was 10px monospace, the smallest line carrying the most meaning. */
+body.theme-pro .project-desc { color: var(--text2); font-family: var(--syne); font-size: 12px; line-height: 1.4; }
+body.theme-pro .project-meta { color: var(--text-muted); font-family: var(--mono); font-size: 11px; line-height: 1.4; }
 body.theme-pro .project-actions {
   align-items: center;
-  margin-top: 14px;
+  margin-top: 16px;
 }
-body.theme-pro .project-save-note {
-  margin-right: auto;
-  color: var(--text3);
-  font-family: var(--mono);
-  font-size: 8.5px;
+body.theme-pro .project-confirm {
+  min-width: 104px;
+  font-size: 12px;
+  padding: 9px 16px;
 }
-body.theme-pro .project-confirm { min-width: 96px; }
+body.theme-pro .project-option:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+}
 
 @media (max-width: 640px) {
   body.theme-pro .project-switch-wrap { align-items: flex-start; flex-direction: column; gap: 5px; }
   body.theme-pro .project-switch { width: 100%; min-width: 0; }
   body.theme-pro .project-dialog-heading { flex-direction: column; gap: 8px; }
   body.theme-pro .project-count { margin-left: 0; }
-  body.theme-pro .project-option { grid-template-columns: 28px minmax(0,1fr); }
-  body.theme-pro .project-option-badge { display: none; }
-  body.theme-pro .project-save-note { display: none; }
+  body.theme-pro .project-option { grid-template-columns: 32px minmax(0,1fr); gap: 10px; }
+  body.theme-pro .project-option-icon { width: 32px; height: 32px; }
   body.theme-pro .project-actions { justify-content: flex-end; }
 }
 
-body.theme-pro .project-option {
-  background: var(--surface);
-  border-radius: 8px;
-  font-family: var(--syne);
-}
-body.theme-pro .project-option.selected {
-  background: #eff6ff;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent) inset;
-}
-body.theme-pro .project-desc { font-family: var(--mono); }
 body.theme-pro .tester-btn.primary-soft.project-confirm { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
 body.theme-pro .tester-btn.primary-soft.project-confirm:hover { background: #1e40af; border-color: #1e40af; color: #fff; }
 body.theme-pro.theme-light .project-option.selected { background: #eff6ff; }
+body.theme-pro.theme-light .project-option.selected .project-option-icon { color: #1d4ed8; }
+body.theme-pro.theme-light .project-option:focus-visible { outline-color: #1d4ed8; }
 
 body.theme-pro :focus-visible {
   outline: 2px solid var(--accent);

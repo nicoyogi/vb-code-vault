@@ -50,9 +50,22 @@ test('project picker exposes a persistent workspace switcher', () => {
   assert.match(PAGE, /id="projectSwitch"/);
   assert.match(PAGE, /id="projectSwitchLabel"/);
   assert.match(PAGE, /id="projectSwitchMeta"/);
+  assert.match(PAGE, /id="projectSwitchMark"/);
   assert.match(PAGE, /onclick="openProjectDialog\(\)"/);
   assert.match(SOURCE, /function openProjectDialog\(\)/);
   assert.match(SOURCE, /function updateProjectSwitch\(id\)/);
   assert.match(SOURCE, /project-option-icon/);
-  assert.match(SOURCE, /project-option-badge/);
+  assert.doesNotMatch(SOURCE, /project-option-check/);
+});
+
+/* The card already carries its state in aria-checked and the selected class; a second label
+   repeating it (the old "Active" badge) said nothing new, and a check glyph beside a
+   selected radio is the same redundancy in glyph form. The id box names the project
+   instead of decorating it. */
+test('project card marks state once and names the project instead of decorating it', () => {
+  assert.doesNotMatch(SOURCE, /project-option-badge/);
+  assert.doesNotMatch(PAGE, /project-option-badge/);
+  assert.match(SOURCE, /project-option-icon" aria-hidden="true">\$\{project\.id\.toUpperCase\(\)\}/);
+  const PROJECTS = SOURCE.match(/const PROJECTS=\[[\s\S]*?\];/)?.[0] || '';
+  assert.doesNotMatch(PROJECTS, /badge:/);
 });
