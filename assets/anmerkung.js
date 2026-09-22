@@ -63,22 +63,25 @@ function toggleAdv(){const t=document.getElementById('advToggle'),p=document.get
 /* Add future projects here. A project selection is intentionally separate from the
    forwarder/rule-engine choice: WMF currently uses the existing workflow unchanged. */
 const PROJECT_KEY='anmerkung.project.v1';
-const PROJECTS=[{id:'wmf',label:'WMF',description:'Current Anmerkung workflow',meta:'Invoice annotation · forwarder rules',badge:'Active'}];
+const PROJECTS=[{id:'wmf',label:'WMF',description:'Current Anmerkung workflow',meta:'Invoice annotation · forwarder rules'}];
 let selectedProject=null;
 function isProjectId(id){return PROJECTS.some(project=>project.id===id);}
 function projectId(){try{const id=localStorage.getItem(PROJECT_KEY);return isProjectId(id)?id:null;}catch(_){return null;}}
 function chooseProject(id){if(!isProjectId(id))return false;selectedProject=id;try{localStorage.setItem(PROJECT_KEY,id);}catch(_){}return true;}
 function updateProjectSwitch(id){
   const project=PROJECTS.find(p=>p.id===id);
-  const label=document.getElementById('projectSwitchLabel'),meta=document.getElementById('projectSwitchMeta');
+  const label=document.getElementById('projectSwitchLabel'),meta=document.getElementById('projectSwitchMeta'),mark=document.getElementById('projectSwitchMark');
   if(label)label.textContent=project?project.label:'Select project';
   if(meta)meta.textContent=project?(project.meta||project.description):'Choose the project ruleset used by this page';
+  /* The mark is the project id, not a glyph: the switch has to say which workspace is
+     live when the dialog is closed, and an ornament cannot. */
+  if(mark)mark.textContent=project?project.id.toUpperCase():'?';
 }
 function updateProjectCurrentNote(){
   const note=document.getElementById('projectCurrentNote');
   if(!note)return;
   const project=PROJECTS.find(p=>p.id===selectedProject);
-  if(project)note.innerHTML='<span class="project-current-dot" aria-hidden="true"></span><span><strong>Selected:</strong> '+project.label+'</span>';
+  if(project)note.innerHTML='<span><strong>Workspace:</strong> '+project.label+' selected</span>';
 }
 function renderProjectOptions(){
   const wrap=document.getElementById('projectOptions');if(!wrap)return;
@@ -87,9 +90,8 @@ function renderProjectOptions(){
   const count=document.getElementById('projectCount');
   if(count)count.textContent=PROJECTS.length+' '+(PROJECTS.length===1?'project':'projects');
   wrap.innerHTML=PROJECTS.map(project=>`<button type="button" class="project-option${project.id===current?' selected':''}" role="radio" aria-checked="${project.id===current}" tabindex="${project.id===current?0:-1}" data-project="${project.id}" onclick="selectProject(this)" onkeydown="projectKeydown(event)">
-    <span class="project-option-icon" aria-hidden="true">${project.id===current?'✓':'◇'}</span>
+    <span class="project-option-icon" aria-hidden="true">${project.id.toUpperCase()}</span>
     <span class="project-option-main"><span class="project-name">${project.label}</span><span class="project-desc">${project.description}</span><span class="project-meta">${project.meta||''}</span></span>
-    <span class="project-option-badge">${project.badge||'Available'}</span>
   </button>`).join('');
   updateProjectSwitch(current);
 }
@@ -110,7 +112,6 @@ function selectProject(button){
   document.querySelectorAll('#projectOptions .project-option').forEach(option=>{
     const selected=option===button;
     option.classList.toggle('selected',selected);option.setAttribute('aria-checked',selected?'true':'false');option.tabIndex=selected?0:-1;
-    const icon=option.querySelector('.project-option-icon');if(icon)icon.textContent=selected?'✓':'◇';
   });
   updateProjectCurrentNote();updateProjectSwitch(id);
 }
