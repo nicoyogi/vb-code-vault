@@ -36,7 +36,8 @@ test('project picker uses a native accessible modal and opens during page initia
   assert.match(PAGE, /Continue/);
   assert.match(SOURCE, /const PROJECTS=\[\{id:'wmf',label:'WMF'/);
   assert.match(SOURCE, /project-option\$\{project\.id===current\?' selected':''\}/);
-  assert.match(SOURCE, /function openProjectDialogIfNeeded\(\)[\s\S]*?dialog\.showModal\(\)/);
+  assert.match(SOURCE, /function openProjectDialogIfNeeded\(\)[\s\S]*?openProjectDialog\(\)/);
+  assert.match(SOURCE, /function openProjectDialog\(\)[\s\S]*?dialog\.showModal\(\)/);
   assert.match(SOURCE, /DOMContentLoaded[\s\S]*?openProjectDialogIfNeeded\(\)/);
   assert.match(SOURCE, /function projectKeydown\(event\)[\s\S]*?ArrowDown/);
 });
