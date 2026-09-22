@@ -1,0 +1,22 @@
+# Normalize text to LF in the repository, so a checkout on any platform
+# produces the same committed bytes.
+* text=auto eol=lf
+
+# Binary formats must never be normalized. Git's autocrlf rewrites every
+# 0x0A byte to 0x0D 0x0A on checkout and corrupts these files; -text tells
+# Git to leave them alone, -diff keeps them out of text diffs.
+*.pdf   -text -diff
+*.png   -text -diff
+*.jpg   -text -diff
+*.jpeg  -text -diff
+*.gif   -text -diff
+*.ico   -text -diff
+*.webp  -text -diff
+*.woff  -text -diff
+*.woff2 -text -diff
+*.ttf   -text -diff
+*.eot   -text -diff
+*.zip   -text -diff
+*.xlsx  -text -diff
+*.xls   -text -diff
+*.docx  -text -diff
