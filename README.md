@@ -1,6 +1,6 @@
 # The Grimoire
 
-> *"The Malignant Grimoire — a codex of VB/VBA spells, forwarder rituals and arcane workspace tools."*
+> *"The Malignant Grimoire: a codex of VB/VBA spells, forwarder rituals and arcane workspace tools."*
 
 A small, static collection of tools and reference pages for day-to-day VB/VBA work, QA, forwarder invoice processing, and other workspace rituals. The HTML files are static, loading scripts and styles from `assets/`; there is no build step and no bundler. Pages that fetch data need a local server (see [Running locally](#running-locally)); the rest open straight from disk. Nine of the pages sync through Google Firebase Firestore, and two scheduled GitHub Actions post Teams reminders from `scripts/`.
 
@@ -19,7 +19,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 
 - [At a glance](#at-a-glance)
 - [Pages](#pages)
-- [The Alchemist — Anmerkung Processor](#the-alchemist--anmerkung-processor)
+- [The Alchemist: Anmerkung Processor](#the-alchemist-anmerkung-processor)
 - [Assets](#assets)
 - [Tech stack](#tech-stack)
 - [Running locally](#running-locally)
@@ -62,16 +62,16 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 | [`qa-siemens.html`](qa-siemens.html) | **Siemens GP Knowledge Base** | Project-specific QA reference (Cinzel / Syne / DM Mono styling, light/dark). | [↗](https://codingkuh.my.id/qa-siemens.html) |
 | [`standard-wording.html`](standard-wording.html) | **Siemens GP Standard Wording** | Reusable phrasing and copy templates. | [↗](https://codingkuh.my.id/standard-wording.html) |
 | [`File_splitter.html`](File_splitter.html) | **The Splitter** | Six steps to split vendor work per system: upload one file per system (or a single workbook with a sheet per system), filter by note, exclude Kreditors and Referenz, check totals, weight people by half-day, download the split. Syncs saved lists via Firestore. | [↗](https://codingkuh.my.id/File_splitter.html) |
-| [`alokasi-project.html`](alokasi-project.html) | **Siemens GP Project Allocation** | Three tabs: **Plan** — an allocation cockpit that fuses open backlog, availability (from the Holiday Tracker), per-person throughput and project due dates to decide who works what each day/week; **Records** — daily per-project entries (staff, quantity, status) with Excel/PDF export and import from `ALOKASI PROJECT.xlsx`; **Analyze** — Quantity/Personnel pivots, **per-person scorecards** (the former Task Reviewer, derived from the records), backlog aging and the analyzer. Per-user sign-in, syncs via Firebase. Due dates live in `sgp_alokasi_projects` — publish its Firestore rules in the console before they save. | [↗](https://codingkuh.my.id/alokasi-project.html) |
+| [`alokasi-project.html`](alokasi-project.html) | **Siemens GP Project Allocation** | Three tabs. **Plan:** an allocation cockpit that fuses open backlog, availability (from the Holiday Tracker), per-person throughput and project due dates to decide who works what each day/week; **Records:** daily per-project entries (staff, quantity, status) with Excel/PDF export and import from `ALOKASI PROJECT.xlsx`; **Analyze:** Quantity/Personnel pivots, **per-person scorecards** (the former Task Reviewer, derived from the records), backlog aging and the analyzer. Per-user sign-in, syncs via Firebase. Due dates live in `sgp_alokasi_projects`, so publish its Firestore rules in the console before they save. | [↗](https://codingkuh.my.id/alokasi-project.html) |
 | [`task-reviewer-siemens.html`](task-reviewer-siemens.html) | **Task Reviewer (redirect)** | Merged into Project Allocation → People. Redirects to `alokasi-project.html#people`; kept for old links. | [↗](https://codingkuh.my.id/task-reviewer-siemens.html) |
-| [`anmerkung.html`](anmerkung.html) | **The Alchemist** | In-browser processor for forwarder invoice annotations (Dachser / K+N / DHL Express / Wackler). See [below](#the-alchemist--anmerkung-processor). | [↗](https://codingkuh.my.id/anmerkung.html) |
+| [`anmerkung.html`](anmerkung.html) | **The Alchemist** | In-browser processor for forwarder invoice annotations (Dachser / K+N / DHL Express / Wackler). See [below](#the-alchemist-anmerkung-processor). | [↗](https://codingkuh.my.id/anmerkung.html) |
 | [`operation-report.html`](operation-report.html) | **The Tally** | Daily tarif and faktual checking with per-user sign-in (shared `assets/grimoire-auth.js`): you fill your own row, the team sees a live dashboard, plus categories and admin targets. Firestore-backed. | [↗](https://codingkuh.my.id/operation-report.html) |
 | [`timesheet_app.html`](timesheet_app.html) | **The Timekeeper** | Upload a timesheet workbook, pick the month, and get an overtime report with totals. Client-side only (loads `xlsx` 0.18.5 from jsDelivr); no Firestore. | [↗](https://codingkuh.my.id/timesheet_app.html) |
 | [`anmerkung-presentation.html`](anmerkung-presentation.html) | **Alchemist deck** | Slide deck explaining the Anmerkung Processor. Not linked from the hub. | [↗](https://codingkuh.my.id/anmerkung-presentation.html) |
 | [`todo.html`](todo.html) | **The Ledger** | Task tracker with filters, groups, and a light/dark toggle. | [↗](https://codingkuh.my.id/todo.html) |
 | [`holiday-tracker.html`](holiday-tracker.html) | **Holiday Tracker** | Team vacation, sick, WFH, and half-day tracking with calendar + Gantt views, vacation balances, public holidays, department filters, and an activity log. Syncs via Firebase Firestore. | [↗](https://codingkuh.my.id/holiday-tracker.html) |
 
-## The Alchemist — Anmerkung Processor
+## The Alchemist: Anmerkung Processor
 
 [`anmerkung.html`](anmerkung.html) is the most substantial page in the Grimoire. It parses forwarder invoice spreadsheets (`.xlsx`) entirely client-side and writes a per-row `Anmerkung` column based on forwarder-specific rules.
 
@@ -79,19 +79,19 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 
 ### Feature highlights
 
-- **Four forwarder engines:** Dachser, K+N, DHL Express, Wackler — each with its own column resolver and rule set.
-- **Preview / dry-run** — see every proposed annotation before writing to the file, with color-coded per-row status and a trigger-breakdown bar chart.
-- **Bulk processing** — drop many `.xlsx` files at once; each gets an individual download, plus a "Download all as ZIP" option.
-- **Rule Tester** — play with hypothetical values without uploading a file; useful for pinning down exactly when a rule fires.
-- **Diff Mode / Rule Training** — compare a predicted vs. expected workbook, get rows labeled `wrong` / `missed` / `overfired` / `drift` / `correct`, filter by forwarder / sheet / free text, and export a CSV diff or a training set (CSV / JSONL) with predicted vs. expected plus the input cells the rules read. Every row has a one-click **Send to Tester** to open that exact scenario in the Rule Tester. A **Bulk** sub-panel compares many predicted/expected file pairs at once (auto-paired by filename) and merges every row into one wider training corpus, tagging each exported row with its `source_file`.
-- **Opt-in "Why?" reason column** — writes an extra `Anmerkung_Reason` column so the trigger trace is auditable.
+- **Four forwarder engines:** Dachser, K+N, DHL Express and Wackler, each with its own column resolver and rule set.
+- **Preview / dry-run:** see every proposed annotation before writing to the file, with color-coded per-row status and a trigger-breakdown bar chart.
+- **Bulk processing:** drop many `.xlsx` files at once; each gets an individual download, plus a "Download all as ZIP" option.
+- **Rule Tester:** play with hypothetical values without uploading a file; useful for pinning down exactly when a rule fires.
+- **Diff Mode / Rule Training:** compare a predicted vs. expected workbook, get rows labeled `wrong` / `missed` / `overfired` / `drift` / `correct`, filter by forwarder / sheet / free text, and export a CSV diff or a training set (CSV / JSONL) with predicted vs. expected plus the input cells the rules read. Every row has a one-click **Send to Tester** to open that exact scenario in the Rule Tester. A **Bulk** sub-panel compares many predicted/expected file pairs at once (auto-paired by filename) and merges every row into one wider training corpus, tagging each exported row with its `source_file`.
+- **Opt-in "Why?" reason column:** writes an extra `Anmerkung_Reason` column so the trigger trace is auditable.
 - **Configurable tolerance thresholds** per forwarder, persisted in `localStorage`.
 - **Two skins and a light / dark theme.** The pro skin ([`assets/anmerkung-pro.css`](assets/anmerkung-pro.css)) is the default; the header style button switches to the mystic skin, and the theme button switches light / dark independently of it. Forwarder tiles are a keyboard-navigable ARIA radiogroup, and the log is timestamped.
 - **Installable as a PWA** (see [Offline / PWA](#offline--pwa)); the service worker is [`sw.js`](sw.js) and the manifest is [`manifest.webmanifest`](manifest.webmanifest).
-- **Always-fresh deploys** — same-origin assets are served network-first, so content/rule edits reach users on their next online load with no cache-bust step required. The cache acts purely as an offline fallback.
-- **Data-driven changelog** — [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) drives both the version badge and the in-app "What's new" modal, so prepending an entry there is the canonical way to publish release notes.
+- **Always-fresh deploys:** same-origin assets are served network-first, so content/rule edits reach users on their next online load with no cache-bust step required. The cache acts purely as an offline fallback.
+- **Data-driven changelog:** [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) drives both the version badge and the in-app "What's new" modal, so prepending an entry there is the canonical way to publish release notes.
 
-XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.20.3, loaded from the official `cdn.sheetjs.com` with an SRI hash) and [JSZip](https://stuk.github.io/jszip/); the XLSX is patched in-place — only the `Anmerkung` column (and optionally `Anmerkung_Reason`) is rewritten, leaving styles, merged cells, formulas, and drawings untouched.
+XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.20.3, loaded from the official `cdn.sheetjs.com` with an SRI hash) and [JSZip](https://stuk.github.io/jszip/); the XLSX is patched in-place: only the `Anmerkung` column (and optionally `Anmerkung_Reason`) is rewritten, leaving styles, merged cells, formulas, and drawings untouched.
 
 ## Assets
 
@@ -153,12 +153,12 @@ The condition-report PDF is generated separately and needs Python: `python scrip
 
 ## Offline / PWA
 
-The Alchemist (`anmerkung.html`) is installable and fully offline-capable, but it's also **always-fresh** when online — the cache is treated as an offline fallback, not a content gate.
+The Alchemist (`anmerkung.html`) is installable and fully offline-capable, but it's also **always-fresh** when online: the cache is treated as an offline fallback, not a content gate.
 
 - Click **"Download for offline"** in the header to precache every Grimoire page and asset. A progress indicator reports each URL as it's fetched.
 - **Online behavior:** every same-origin request (HTML, JS, CSS, JSON, manifest) goes network-first, so the latest deployed version of each file always wins. Cross-origin CDN libraries (SheetJS, JSZip, fonts) are cache-first because they're immutable per URL.
 - **Offline behavior:** if the network fails, the SW falls back to whatever it last cached. Navigation requests with no cached entry fall back to the cached `./anmerkung.html` shell so the app still boots.
-- **No version bumps required for content updates.** Editing `anmerkung.js`, `anmerkung.css`, the changelog JSON, or any other same-origin asset and pushing to `main` is enough — users get it on their next online load. Bump `VERSION` in [`sw.js`](sw.js) only when the SW logic itself changes (rare).
+- **No version bumps required for content updates.** Editing `anmerkung.js`, `anmerkung.css`, the changelog JSON, or any other same-origin asset and pushing to `main` is enough; users get it on their next online load. Bump `VERSION` in [`sw.js`](sw.js) only when the SW logic itself changes (rare).
 
 ## Privacy & data handling
 
@@ -258,7 +258,7 @@ The HTML files load their specific scripts and styles from the `assets/` folder.
 - Reuse [`Grimoire.Offline`](assets/grimoire-core.js) rather than wiring a service worker per page.
 - The `PHRASES` catalog in [`assets/anmerkung.js`](assets/anmerkung.js) is the single source of truth for Anmerkung output strings. `PHRASE_LITERALS` and `PHRASE_TEMPLATES` below it are the fallback for wording that has not been promoted into the catalog yet.
 - When changing the Anmerkung rule engine, bump the version in [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) and add a release note so users see what changed in the in-app "What's new" modal. If the rule cascade changed, rebuild [`docs/anmerkung/conditions-report.pdf`](docs/anmerkung/conditions-report.pdf) with `python scripts/anmerkung/report_conditions.py`.
-- **You generally do not need to bump `VERSION` in [`sw.js`](sw.js).** Same-origin assets are served network-first, so content/rule edits ship to users on their next online load with no cache invalidation step. Bump `VERSION` only when the SW logic itself changes (e.g., new caching strategy, new message types) — that rotates the cache name and forces a fresh re-install of `CORE`.
+- **You generally do not need to bump `VERSION` in [`sw.js`](sw.js).** Same-origin assets are served network-first, so content/rule edits ship to users on their next online load with no cache invalidation step. Bump `VERSION` only when the SW logic itself changes (e.g., new caching strategy, new message types); that rotates the cache name and forces a fresh re-install of `CORE`.
 
 Pull requests welcome.
 
@@ -266,12 +266,12 @@ Pull requests welcome.
 
 Third-party libraries and services that make the Grimoire possible:
 
-- [SheetJS (`xlsx`)](https://sheetjs.com/) — client-side XLSX reading/writing.
-- [JSZip](https://stuk.github.io/jszip/) — ZIP manipulation used to patch `.xlsx` files without re-encoding styles.
-- [Firebase](https://firebase.google.com/) — Firestore sync for nine pages, plus the Admin SDK behind the Teams notifiers.
-- [Google Fonts](https://fonts.google.com/) — Cinzel, Syne, DM Sans, DM Mono, DM Serif Display, Outfit, Inter, JetBrains Mono.
-- [GitHub Pages](https://pages.github.com/) — static hosting.
-- [Shields.io](https://shields.io/) — the badges at the top of this README.
+- [SheetJS (`xlsx`)](https://sheetjs.com/): client-side XLSX reading/writing.
+- [JSZip](https://stuk.github.io/jszip/): ZIP manipulation used to patch `.xlsx` files without re-encoding styles.
+- [Firebase](https://firebase.google.com/): Firestore sync for nine pages, plus the Admin SDK behind the Teams notifiers.
+- [Google Fonts](https://fonts.google.com/): Cinzel, Syne, DM Sans, DM Mono, DM Serif Display, Outfit, Inter, JetBrains Mono.
+- [GitHub Pages](https://pages.github.com/): static hosting.
+- [Shields.io](https://shields.io/): the badges at the top of this README.
 
 ## License
 
