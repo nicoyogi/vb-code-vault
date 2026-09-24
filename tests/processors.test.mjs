@@ -188,13 +188,28 @@ test('processDachser: blank TARIF + FR on outbound shipment to foreign Empf.-Lan
 });
 
 test('processDachser: blank TARIF + FR with SERV/SACH -> Fremdnummer already-billed note', () => {
-  const cols = { stat: 50, tarif: 51, fr: 52 };
+  const cols = { stat: 50, tarif: 51, fr: 52, referenz: 53 };
   // SERV_ART=16, SACHKONTO=35 populated => the "already billed in another Beleg" branch.
-  // The document numbers are a placeholder template (5034xxx / RE00123xxx): the real
-  // Fremdnummer + the Beleg it was already charged in are cross-document and not
-  // derivable from a single row's inputs (bundle 2026-06-29 rows 76aca1f8 / 33def378).
-  const ws = makeRow(R, { 50: 10, 52: '47.2', 16: 'DA01', 35: '612100' });
+  // The auditor names the row's OWN ReferenzNr, so the branch interpolates it (bundle v3
+  // row 510cb3ab / ground-truth row 193, ReferenzNr=2544567001).
+  const ws = makeRow(R, { 50: 10, 51: '', 52: '47.2', 16: 'DA01', 35: '612100', 53: '2544567001' });
+  assert.equal(e.processDachser(ws, R, cols), 'Fremdnummer 2544567001 bereits berechnet in RE00123xxx, ok?');
+});
+
+test('processDachser: Fremdnummer note keeps the placeholder when the row has no ReferenzNr', () => {
+  // The Beleg the row was "already billed in" names a document that is not in this
+  // workbook, so it stays a placeholder either way. The Fremdnummer end is the row's own
+  // cell: with that cell empty there is nothing to interpolate, and the note must still
+  // carry the original template wording rather than an empty slot.
+  const cols = { stat: 50, tarif: 51, fr: 52, referenz: 53 };
+  const ws = makeRow(R, { 50: 10, 51: '', 52: '47.2', 16: 'DA01', 35: '612100' });
   assert.equal(e.processDachser(ws, R, cols), 'Fremdnummer 5034xxx bereits berechnet in RE00123xxx, ok?');
+});
+
+test('processDachser: Fremdnummer note trims the ReferenzNr cell', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, referenz: 53 };
+  const ws = makeRow(R, { 50: 10, 51: '', 52: '75', 16: 'K1AV', 35: '612100', 53: '  2544567001  ' });
+  assert.equal(e.processDachser(ws, R, cols), 'Fremdnummer 2544567001 bereits berechnet in RE00123xxx, ok?');
 });
 
 test('processDachser: EXP_DL=95 -> Terminzuschlag (no hyphen, matches auditor truth)', () => {

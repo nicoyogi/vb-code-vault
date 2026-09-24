@@ -453,6 +453,12 @@ const PHRASE_LITERALS={
    template family; the example shows the shape so an AI knows what
    varies. Order matters — first regex that matches wins. */
 const PHRASE_TEMPLATES=[
+  /* The already-billed note interpolates the row's own ReferenzNr, so the
+     catalog's 'xxx' placeholders never match the real digits. The leading RE
+     is optional: 1 of the 6 ground-truth notes carries it, 5 do not. */
+  {key:'fremdnummerInterpolated',regex:/^fremdnummer \S+ bereits berechnet in (?:re)?[a-z0-9]+, ok\?\.?$/i,
+   example:'Fremdnummer 2544567001 bereits berechnet in RE0101165619, ok?',
+   processor:'processDachser'},
   {key:'tpl_keinTarifLand',regex:/^kein tarif f[uü]r/i,
    example:'kein Tarif für PT',
    processor:'processDachser'},
@@ -757,6 +763,8 @@ function resolveDachser(ws,range){
     brutto:   fc('','Brutto kg'),
     vkg:      fc('','Volumen kg'),
     vkg_dl:   fc('','Volumen kg DL'),
+    /* The row's own reference number; the already-billed note quotes it. */
+    referenz: fc('','ReferenzNr'),
     /* Header-resolved versions of the DA_COL_* positional constants above.
        Kept alongside them (rather than replacing DA_COL_* outright) so
        processDachser/collectInputsForRow can prefer the resolved column and
@@ -989,7 +997,15 @@ function processDachser(ws,r,cols){
         (cols.sbfu>=0&&hasErr(cellNum(ws,r,cols.sbfu),T))||
         (cols.c38l_diff>=0&&hasErr(cellNum(ws,r,cols.c38l_diff),T));
       if(!sachkonto&&!servArt&&!hasOtherDiff)return PHRASES.vorholung;
-      if(sachkonto&&servArt)return'Fremdnummer 5034xxx bereits berechnet in RE00123xxx, ok?';
+      if(sachkonto&&servArt){
+        /* The Fremdnummer is the row's own ReferenzNr. The Beleg it was charged
+           in is not: it names a document outside this workbook, so it stays a
+           placeholder. Evidence: .agent/artifacts/dachser-fremdnummer.md. */
+        const rowRef=cols.referenz>=0?cellStr(ws,r,cols.referenz):'';
+        return rowRef
+          ? 'Fremdnummer '+rowRef+' bereits berechnet in RE00123xxx, ok?'
+          : 'Fremdnummer 5034xxx bereits berechnet in RE00123xxx, ok?';
+      }
     }
   }
 
@@ -2346,7 +2362,7 @@ const TESTER_FIELDS={
     ['c38l_diff','38L Differenz','num'],
     ['lg_diff','LG Differenz','num'],['av_diff','AV Differenz','num'],
     ['c502_dl','502 Kosten DL','str'],['c503_dl','503 Kosten DL','str'],
-    ['_referenz3','ReferenzNr3','str'],['_serv','Serv.-Art','str'],['_sach','Sachkonto','str'],
+    ['_referenz3','ReferenzNr3','str'],['referenz','ReferenzNr','str'],['_serv','Serv.-Art','str'],['_sach','Sachkonto','str'],
     ['_plz','Empf.-PLZ','str'],['_ort','Empf.-Ort','str'],['_anzSdg','Anz.Sdg','str'],
     ['_zwPlz','KI_ZW_PLZ','str'],['_zwOrt','KI_ZW_ORT','str'],
   ],
@@ -2390,6 +2406,7 @@ const TESTER_PRESETS={
     {name:'SNK non-int → 9 (Tel. ZTV)',values:{stat:10,snk_dl:14.72,snk_diff:9.01,snk_tar:5.71,tarif:'156,88',maut:-6.23,_serv:'DA01',_sach:'612100'}},
     {name:'SNK non-int → 5 (Auto ZTV)',values:{stat:10,snk_dl:7.57,snk_diff:5.01,snk_tar:2.56,tarif:'73,21',tz:0.01}},
     {name:'Negative FR (Frachtzu/abschlag)',values:{stat:10,fr:-28.58,snk_dl:5,snk_diff:-4.52,tarif:'277,48',_anzSdg:'1',tz:-0.01}},
+    {name:'Fremdnummer already billed',values:{stat:10,tarif:'',fr:'75',_serv:'K1AV',_sach:'612100',referenz:'2544567001'}},
   ],
   kn:[
     {name:'Bundled, should be',values:{stat:10,fr:15,referenz:'123,456',tarif:'200,00'}},
@@ -2495,7 +2512,7 @@ function buildSyntheticWs(fw,userVals){
   }
   /* Fill missing cols with -1 so processors know the field is absent. */
   const allKeys={
-    dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','c502_dl','c503_dl','lg_diff','av_diff'],
+    dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','referenz','c502_dl','c503_dl','lg_diff','av_diff'],
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
     wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','colli','brutto','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
@@ -2822,11 +2839,17 @@ function granularLabel(beforeRaw,afterRaw,pd){
    cell would silently re-key every row that carries it. Add every future
    collectInputsForRow key here too; the frozen seed is the v1.29 set. */
 const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort','anz_colli','brutto_kg','c38l_diff']);
+/* Same rule, but only for the forwarder that gained the key later. `referenz`
+   is the case that needs this: K+N and Wackler have always fed it into the seed,
+   so excluding it globally would re-key every historical K+N/Wackler bundle row.
+   Only Dachser's export is new. */
+const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz'])};
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
+  const fwExcluded=UID_EXCLUDED_INPUT_KEYS_BY_FW[forwarder];
   const keys=Object.keys(inputs||{}).sort();
-  for(const k of keys){if(UID_EXCLUDED_INPUT_KEYS.has(k)||inputs[k]==null||inputs[k]==='')continue;seedParts.push(k+'='+inputs[k]);}
+  for(const k of keys){if(UID_EXCLUDED_INPUT_KEYS.has(k)||(fwExcluded&&fwExcluded.has(k))||inputs[k]==null||inputs[k]==='')continue;seedParts.push(k+'='+inputs[k]);}
   const seed=seedParts.join('|');
   let h=2166136261>>>0;
   for(let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
@@ -2846,7 +2869,10 @@ const CANONICAL_INPUT_ORDER={
            'exp_diff','exp_dl','maut_diff','sbfu_diff','tz_diff',
            'c38l_diff',
            'lg_diff','av_diff','c502_dl','c503_dl',
-           'referenz3','empf_plz','empf_ort','ki_zw_plz','ki_zw_ort','anz_sdg','serv_art','sachkonto'],
+           'referenz3','empf_plz','empf_ort','ki_zw_plz','ki_zw_ort','anz_sdg','serv_art','sachkonto',
+           /* Last on purpose: appending keeps every existing CSV column in
+              place, which is where the fallback already put this key. */
+           'referenz'],
   kn:['stat','tarif','fr_diff','exp_diff','mt_diff','tz_diff',
       'snk_dl','snk_diff',
       'referenz','recip','vkg','vkg_dl',
@@ -3249,6 +3275,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('c38l_diff',cols.c38l_diff);
     get('lg_diff',cols.lg_diff);get('av_diff',cols.av_diff);
     get('c502_dl',cols.c502_dl);get('c503_dl',cols.c503_dl);
+    get('referenz',cols.referenz);
     const placeIf=(k,idx)=>{if(idx===undefined||idx<0)return;o[k]=cellStr(ws,r,idx);};
     placeIf('referenz3',cols.referenz3>=0?cols.referenz3:DA_COL_REFERENZ3);
     placeIf('empf_plz',cols.empf_plz>=0?cols.empf_plz:DA_COL_EMPF_PLZ);
@@ -4401,7 +4428,7 @@ const INPUT_GLOSSARY={
   anz_colli         :'Anz. Colli — package count. For Wackler rows with at least 7 Colli, chargeable weight is max(Anz. Colli × 285, Volumen kg, Brutto kg).',
   brutto_kg          :'Brutto kg — gross weight used in Wackler chargeable-weight calculation when Anz. Colli is at least 7.',
   anz_sdg           :'Anz.Sdg — number of shipments on the row (Dachser).',
-  referenz          :'ReferenzNr — Sendungs-Referenznummer. A "," in the value is the bundling signal.',
+  referenz          :'ReferenzNr — Sendungs-Referenznummer. A "," in the value is the bundling signal (K+N / Wackler). On Dachser it is the shipment\'s own "Fremdnummer", interpolated verbatim into the already-billed note ("Fremdnummer <value> bereits berechnet in RE00123xxx, ok?").',
   referenz3         :'ReferenzNr3 — Dachser-specific tertiary reference column (used in trigger trace).',
   recip             :'Empf.-Name — recipient name. "amazon" substring triggers Amazon-tier branches in K+N.',
   empf_plz          :'Empf.-PLZ — recipient ZIP code. 88499 is the Wackler return hub. On a Wackler international export lane it disambiguates multi-zone countries (CH/FR/ES/PL…).',

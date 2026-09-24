@@ -153,6 +153,24 @@ test('phraseToKey: catalog / literal / template resolution', () => {
     e.phraseToKey('Differenz aufgrund abweichender Zwischenempfänger 12345 Berlin'),
     'zwPrefix',
   );
+  /* 3b. Interpolated Dachser Fremdnummer note. The catalog value carries "xxx"/"RExxx"
+     placeholders, so the auditor's real digits never hit the exact/folded layers and
+     every already-billed note exported as a ?: sentinel. Both suffix shapes occur in
+     the ground truth: 1 of the 6 notes carries the leading RE, 5 do not. */
+  assert.equal(
+    e.phraseToKey('Fremdnummer 2544567001 bereits berechnet in RE0101165619, ok?'),
+    'fremdnummerInterpolated',
+  );
+  assert.equal(
+    e.phraseToKey('Fremdnummer 1060324319 bereits berechnet in 0101151691, ok?'),
+    'fremdnummerInterpolated',
+    'the leading RE is optional: 5 of the 6 ground-truth notes omit it',
+  );
+  assert.equal(
+    e.phraseToKey('Fremdnummer 5034xxx bereits berechnet in RE00123xxx, ok?'),
+    'fremdnummerInterpolated',
+    'the engine-emitted placeholder form must map too, not just resolved truth',
+  );
   // unmapped
   assert.equal(e.phraseToKey('totally unknown phrase'), null);
   assert.equal(e.phraseToKey(''), null);

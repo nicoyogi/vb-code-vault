@@ -150,7 +150,8 @@ story.append(P("1.0 Blank-Tarif accounting rows (early return)", h3))
 story.append(section_table([
     ("TARIF cell empty AND |FR| &gt; T; no SACH, no SERV_ART, no other diff (MT/TZ/EXP/SNK/ZZ/DGR/LG/AV/SAM/SBFU/C38L)",
      "VORHOLUNG"),
-    ("same empty-TARIF but SACH + SERV_ART are set", "Fremdnummer 5034xxx bereits berechnet in RE00123xxx, ok?"),
+    ("same empty-TARIF but SACH + SERV_ART are set",
+     "Fremdnummer &lt;row's ReferenzNr&gt; bereits berechnet in RE00123xxx, ok? (falls back to the 5034xxx placeholder when ReferenzNr is empty; the Beleg it was charged in stays a placeholder, it names a document outside this workbook)"),
     ("empty TARIF + FR trigger + departure country non-DE", "kein Tarif für &lt;Land&gt;"),
 ]))
 story.append(P("1.1 Direct-cost labels (each fires independently)", h3))
