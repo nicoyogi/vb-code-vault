@@ -1,22 +1,22 @@
 {
   "schema": "vb-code-vault/anmerkung-integration/v1",
-  "source": "user-uploaded vb-code-vault archive",
+  "source": "current repository tree",
   "anmerkung_hardening": "v5",
   "regression": {
-    "tests": 215,
-    "passed": 215,
+    "tests": 266,
+    "passed": 266,
     "failed": 0
   },
   "files": [
     {
       "path": "assets/anmerkung.js",
-      "bytes": 306346,
-      "sha256": "521e7b8ba738fe7398be6dffb2309072114c48d2e0a7a72a6bf3c976154867da"
+      "bytes": 339588,
+      "sha256": "56b3a60aeda057c1070a409830aa4949b1bed38995965846c95385f9b99414a4"
     },
     {
       "path": "tests/harness/load-engine.mjs",
-      "bytes": 10419,
-      "sha256": "a05ded4413df6ac3b4519a1c79df1fc0a4ca7451c19387b513c9c7aedb0e3c20"
+      "bytes": 10672,
+      "sha256": "b24d7a3de7a8a7a3301e238972f3af1081036e4bf1814d08d760c708fe5ba0f5"
     },
     {
       "path": "tests/anmerkung-v5.test.mjs",
@@ -30,8 +30,8 @@
     },
     {
       "path": "docs/anmerkung/INTEGRATION_v5.md",
-      "bytes": 1053,
-      "sha256": "598715b503c9acbbfca8d80ba53af0a44db19bbb1b6756c7d0b7a051cd093527"
+      "bytes": 1128,
+      "sha256": "1ca06566432462b5cf1777f6d01b11dff7c70fd5d9486dfbf5bd5b3be7ba9c17"
     }
   ]
 }

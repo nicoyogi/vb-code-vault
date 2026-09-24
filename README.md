@@ -118,7 +118,7 @@ XLSX parsing is done with [SheetJS](https://sheetjs.com/) (`xlsx` 0.20.3, loaded
 - **HTML / CSS / vanilla JavaScript** with no build step and no bundler. Pages that `fetch` (the changelog, the Wackler rate cards, the public-holidays API) or use Firestore need an HTTP server; the rest open straight from disk.
 - **Service Worker + PWA** for offline caching across the Grimoire, installable on Chrome / Edge. The precache list covers the Alchemist and the shared assets; other pages are cached as you browse them.
 - **Firebase Firestore** (`firebase-app-compat` + `firebase-firestore-compat` 10.12.2, plus `firebase-storage-compat` on the two knowledge bases) is the sync layer for nine pages: `code.html`, `qa.html`, `qa-siemens.html`, `standard-wording.html`, `alokasi-project.html`, `File_splitter.html`, `operation-report.html`, `todo.html` and `holiday-tracker.html`. CDN scripts are pinned with Subresource Integrity (SRI) hashes.
-- **Firebase Admin** in `scripts/`, used by the two scheduled notifiers to read Firestore server-side.
+- **Firebase Admin** in `scripts/`, used by the two scheduled notifiers to read Firestore server-side. The notifier package requires Node.js 22 or newer.
 - **SheetJS** (`xlsx` 0.20.3, from `cdn.sheetjs.com`) and **JSZip** for client-side XLSX parsing and writing in `anmerkung.html`; `timesheet_app.html` uses `xlsx` 0.18.5 from jsDelivr.
 - **Fonts (Google Fonts):** Cinzel, Syne, DM Sans, DM Mono, DM Serif Display, Outfit, Inter, JetBrains Mono. The `IBM Plex` / `Space Grotesk` entries further down the CSS are fallback families with no webfont behind them.
 - **Hosting:** GitHub Pages with a `CNAME` pointing to `codingkuh.my.id`.
@@ -142,7 +142,7 @@ PORT=8081 npm run dev # if 8080 is taken
 The unit tests use the Node built-in test runner; there is no test framework to install.
 
 ```bash
-npm test                  # everything: 263 tests across the rule engine, diff mode, splitter and allocation
+npm test                  # everything: 266 tests across the rule engine, diff mode, splitter and allocation
 npm run test:anmerkung    # the Anmerkung suites only
 npm run verify:anmerkung  # syntax gate, required-engine symbols, SHA-256 of assets/anmerkung.js, then the full suite
 ```
