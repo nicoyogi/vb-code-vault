@@ -1,6 +1,16 @@
 {
-  "version": "1.44.0",
+  "version": "1.45.0",
   "entries": [
+    {
+      "ver": "1.45.0",
+      "date": "2026-09-23",
+      "items": [
+        "Dachser — the “bereits berechnet” note now names the row’s own ReferenzNr instead of the generic 5034xxx placeholder: ReferenzNr 2544567001 yields “Fremdnummer 2544567001 bereits berechnet in RE00123xxx, ok?”. The Beleg the shipment was already charged in stays a placeholder — it is cross-document, and every occurrence in the audit workbooks names a document that is not a row of the workbook it appears in, so it cannot be derived from row inputs.",
+        "Anmerkung — phrase identification no longer emits a ?: sentinel for an interpolated Dachser Fremdnummer note. The catalog value carries xxx / RExxx placeholders, so the auditor’s real digits could never match it; a new template family resolves both hand-written suffix shapes (with and without the leading RE) plus the placeholder form. Diff Mode quality now reports 2 unknown-phrase rows instead of 3, and the AI Bundle can group the affected rows on a real phrase key.",
+        "Train & Export — Dachser ReferenzNr is now exported as an inputs.referenz cell, so the Diff table, the CSV/JSONL training set, and the Rule Spec all carry the value the already-billed note interpolates. The frozen row_uid seed is unchanged: referenz is kept out of the Dachser uid seed like every other key added after uids started circulating. The exclusion is scoped to Dachser, because K+N and Wackler have always hashed their own referenz into the seed and excluding it globally would have re-keyed every historical row of theirs. The new column is also appended last, so existing training CSVs keep their column positions.",
+        "Rule Tester — Dachser gains a ReferenzNr field and a “Fremdnummer already billed” preset so the branch is reproducible by hand. The stale dachser copy of the “Fremdnummer empty tarif” preset (which carried K+N/Wackler-only keys and did nothing when applied) is dropped."
+      ]
+    },
     {
       "ver": "1.44.0",
       "date": "2026-09-21",

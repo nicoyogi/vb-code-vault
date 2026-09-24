@@ -142,6 +142,23 @@ test('rowUid: v1.30 input keys are excluded from the seed — uids stay joinable
   assert.notEqual(changedLegacyKey, legacy, 'v1.29 seed keys still differentiate rows');
 });
 
+test('rowUid: a key added for one forwarder does not re-key that key for the others', () => {
+  /* Dachser gained referenz in its export after uids started circulating, so it is
+     excluded from Dachser's seed. K+N and Wackler have always fed referenz into
+     theirs, so excluding it globally would silently re-key every historical
+     K+N/Wackler training row and break cross-version joins. */
+  for (const fw of ['kn', 'wackler']) {
+    const withoutRef = e.rowUid(fw, 'Sheet1', 5, { stat: '10', tarif: '200,00' });
+    const withRef = e.rowUid(fw, 'Sheet1', 5, { stat: '10', tarif: '200,00', referenz: '777888' });
+    assert.notEqual(withRef, withoutRef,
+      `${fw} has always hashed referenz, so the value must still differentiate rows`);
+  }
+  const dachserLegacy = e.rowUid('dachser', 'Sheet1', 5, { stat: '10', tarif: '' });
+  const dachserEnriched = e.rowUid('dachser', 'Sheet1', 5, { stat: '10', tarif: '', referenz: '2544567001' });
+  assert.equal(dachserEnriched, dachserLegacy,
+    'Dachser referenz is a later export and must stay out of the uid seed');
+});
+
 /* ── collectInputsForRow — the export must carry every cell the engine gates on ── */
 
 test('collectInputsForRow: wackler exports weight/lane signals, dachser the 502/503 storage cells', () => {
