@@ -8,8 +8,8 @@ This is the practical ceiling for a browser-first rule-engine bundle without a f
 - Transaction-safe bulk execution with `finally` restoration of global workbook state.
 - `window.AnmerkungV5` diagnostics facade with health, stable fingerprints, phrase inspection, numeric parsing, and transactional execution helpers.
 - V4 diagnostics retained for backward compatibility.
-- Strict JavaScript syntax gate, security lint, performance lint, invariant checks, and patch applicability checks.
-- SHA-256 source provenance and machine-readable artifact manifest.
+- Automated verification: source syntax, required engine symbols, SHA-256 fingerprinting, and the full repository test suite.
+- Machine-readable artifact manifest for the tracked integration files.
 - AI workflow remains evidence-first: no fabricated A/B rows, no patch without replay evidence.
 
 ## Important boundary
@@ -18,4 +18,7 @@ No new A/B Excel pair was supplied in this turn, so this bundle cannot truthfull
 
 ## Recommended gate before production
 
-`syntax -> invariant -> security -> performance review -> A/B replay -> zero unintended regressions -> strict patch apply -> release fingerprint`
+1. Run `npm run verify:anmerkung`.
+2. Review the exact diff and run the available local regression corpus.
+3. Compare classifications and inspect new phrase keys or unmapped emissions.
+4. Record the evidence before promoting the patch.

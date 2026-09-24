@@ -1,13 +1,12 @@
-# Patch Protocol v4
+# Patch Protocol
 
 ## Guarded sequence
 
-1. `verify_bundle_v4.js`
-2. `patch_guard.js <patch> <source>`
-3. run invariant smoke
-4. replay full regression corpus
-5. compare pre/post counts for `wrong`, `missed`, `overfired`, `correct`, and `drift`
-6. inspect newly introduced phrase keys / unmapped emissions
-7. only then promote the patch
+1. Run `npm run verify:anmerkung`.
+2. Review the exact diff and confirm the changed branch has evidence behind it.
+3. Replay the available regression corpus, if it is present locally.
+4. Compare pre/post counts for `wrong`, `missed`, `overfired`, `correct`, and `drift`.
+5. Inspect newly introduced phrase keys and unmapped emissions.
+6. Only then promote the patch.
 
-A patch that cannot be cleanly applied to the exact source fingerprint is rejected instead of being partially or fuzzily applied.
+The private workbooks are not shipped, so a fresh clone can run the repository checks but cannot claim an A/B business-rule replay. Infrastructure changes must not be presented as new business-rule accuracy.

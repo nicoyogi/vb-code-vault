@@ -29,7 +29,8 @@
  * ────────────────────────────────────────────────────────────────────────────
  */
 
-import admin from 'firebase-admin';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const TIMEZONE      = process.env.TIMEZONE || 'Asia/Bangkok';
 const WEBHOOK_URL   = process.env.TEAMS_TASKS_WEBHOOK_URL || process.env.TEAMS_WEBHOOK_URL;
@@ -55,8 +56,8 @@ try {
   console.error('FIREBASE_SERVICE_ACCOUNT is not valid JSON:', err.message);
   process.exit(1);
 }
-admin.initializeApp({ credential: admin.credential.cert(creds) });
-const db = admin.firestore();
+initializeApp({ credential: cert(creds) });
+const db = getFirestore();
 
 /* ── Date helpers (mirrors notify-tomorrow.mjs) ────────────────────────── */
 function isoInTz(date, tz) {

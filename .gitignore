@@ -96,6 +96,7 @@ diff.txt
 .claude/
 .opencode/
 .commandcode/
+.superpowers/
 .pi/
 .agents/
 session-*.md
