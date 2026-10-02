@@ -1,6 +1,17 @@
 {
-  "version": "1.45.0",
+  "version": "1.46.0",
   "entries": [
+    {
+      "ver": "1.46.0",
+      "date": "2026-10-02",
+      "items": [
+        "DHL - an extended-liability delta (the EL cost block) now emits \"EXTENDED LIABILITY, ok?\", and SNK code 5 emits \"DIRECT SIGNATURE , ok?\" instead of the generic \"SNK Differenz\". Derived from AI bundle v3 2026-10-02 rows 36c5deda/cf557f1b (EL=2, SNK=5, truth names both) and 316d111c (EL=5, truth names only the liability). resolveDHL gains the EL column, read under the same hasErr() guard as the other surcharges.",
+        "DHL - an overweight delta now reads \"Differenz overweight, ok?\" instead of \"overweight ok?\". Derived from rows f0c1a051/1f20e6ce (OW=30, truth rewrites the wording). The old catalog key is retired as an emitter but kept so historical bundles still resolve it.",
+        "Train & Export - DHL exports inputs.el_diff so Diff Mode, the CSV/JSONL training set and the Rule Spec carry the cell the new branch gates on. The value stays out of the DHL row_uid seed, like Dachser referenz, so every historical DHL uid is unchanged; the column is appended last so existing training CSVs keep their positions.",
+        "DHL - two audit rows stay unmatched by design: row 6b3bf54d needs the other Beleg in \"Fremdnummer 1060336861 bereits berechnet in STRR000824970, ok?\" (that Beleg is not a row of the workbook), and row bc796a06 needs the duplicate count in \"Referenz wird 6x abgerechnet\" (cross-row). Both are Not-derivable ledger candidates, not rule gaps.",
+        "Rule Tester - DHL gains an EL field and \"Extended liability + direct signature\" / \"Overweight difference\" presets."
+      ]
+    },
     {
       "ver": "1.45.0",
       "date": "2026-09-23",

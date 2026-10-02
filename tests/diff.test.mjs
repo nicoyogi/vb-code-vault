@@ -157,6 +157,10 @@ test('rowUid: a key added for one forwarder does not re-key that key for the oth
   const dachserEnriched = e.rowUid('dachser', 'Sheet1', 5, { stat: '10', tarif: '', referenz: '2544567001' });
   assert.equal(dachserEnriched, dachserLegacy,
     'Dachser referenz is a later export and must stay out of the uid seed');
+  const dhlLegacy = e.rowUid('dhl', 'Sheet1', 5, { stat: '10', tarif: '12,74' });
+  const dhlEnriched = e.rowUid('dhl', 'Sheet1', 5, { stat: '10', tarif: '12,74', el_diff: '2' });
+  assert.equal(dhlEnriched, dhlLegacy,
+    'DHL el_diff is a later export and must stay out of the uid seed');
 });
 
 /* ── collectInputsForRow — the export must carry every cell the engine gates on ── */
@@ -176,6 +180,12 @@ test('collectInputsForRow: wackler exports weight/lane signals, dachser the 502/
   const d = e.collectInputsForRow('dachser', dRow, 4, dCols);
   assert.equal(d.c502_dl, '12', 'Einlagern gate cell reaches the training export');
   assert.equal(d.c503_dl, '7', 'Auslagern gate cell reaches the training export');
+});
+
+test('collectInputsForRow: dhl exports the EL delta the extended-liability branch gates on', () => {
+  const row = makeRow(4, { 0: '10', 1: '2' });
+  const inputs = e.collectInputsForRow('dhl', row, 4, { stat: 0, el: 1 });
+  assert.equal(inputs.el_diff, '2');
 });
 
 test('collectInputsForRow: resolved blank columns remain present and unresolved columns stay absent', () => {
@@ -498,7 +508,10 @@ test('buildPhraseEmitterIndex: maps phrase keys to emitting functions, covers th
      branch (kept so historical bundle phrases still resolve to a catalog key).
      A new entry here means either such a label (fine, add it with a reason)
      or a scan gap (bug). */
-  const TRUTH_ONLY = ['gutschriftErhalten']; // retired as an emitter in the ZZ fix (commit 1ea8f26)
+  const TRUTH_ONLY = [
+    'gutschriftErhalten', // retired as an emitter in the ZZ fix (commit 1ea8f26)
+    'overweight',         // OW delta now reads "Differenz overweight, ok?" (2026-10-02 DHL bundle)
+  ];
   assert.deepStrictEqual(unemitted, TRUTH_ONLY,
     'every catalog key resolves to an emitter today — a new unemitted key means either a truth-only label (fine, update this list) or a scan gap (bug)');
 });

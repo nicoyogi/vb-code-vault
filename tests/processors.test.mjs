@@ -342,7 +342,7 @@ test('processKN: blank cost-centre / account stays silent while KONTIERUNG_ENABL
 ─────────────────────────────────────────────────────────── */
 const DHL_COLS = {
   stat: 50, tarif: 51, sach: 52, kost: 53, addr: 54, stack: 55, weight: 56,
-  conv: 57, irr: 58, neut: 59, sign: 60, snk: 61, diff: 62, maut: 63, surc: 64, over: 65, tz: 66,
+  conv: 57, irr: 58, neut: 59, sign: 60, snk: 61, diff: 62, maut: 63, surc: 64, over: 65, tz: 66, el: 67,
 };
 
 test('processDHL: STAT != 10 returns null', () => {
@@ -382,6 +382,28 @@ test('processDHL: no block triggers, AC=11 -> "Addres Correction, ok?"', () => {
 test('processDHL: only a fuel delta -> "Differenz treibstof"', () => {
   const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 66: '5' });
   assert.equal(e.processDHL(ws, R, DHL_COLS), 'Differenz treibstof');
+});
+
+test('processDHL: EL delta -> "EXTENDED LIABILITY, ok?"', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 67: '5' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'EXTENDED LIABILITY, ok?');
+});
+
+test('processDHL: EL + SNK 5 -> extended liability then direct signature', () => {
+  // 2026-10-02 bundle rows 36c5deda/cf557f1b: EL=2 and SNK=5 together, truth names both.
+  const ws = makeRow(R, { 50: 10, 51: '12.74', 52: 'S', 53: 'K', 61: '5', 67: '2' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'EXTENDED LIABILITY, ok? // DIRECT SIGNATURE , ok?');
+});
+
+test('processDHL: SNK 5 alone -> "DIRECT SIGNATURE , ok?" (not a generic SNK gap)', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 61: '5' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'DIRECT SIGNATURE , ok?');
+});
+
+test('processDHL: OW delta -> "Differenz overweight, ok?" (not the retired "overweight ok?")', () => {
+  // 2026-10-02 bundle rows f0c1a051/1f20e6ce.
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 56: '30' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'Differenz overweight, ok?');
 });
 
 /* ──────────────────────────────────────────────────────────

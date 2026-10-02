@@ -247,19 +247,21 @@ story.append(PageBreak())
 # ════════ DHL ════════
 story.append(P("3. DHL Express — processDHL", h2))
 story.append(P(
-    "Gate: Stat = 10. Uses a <b>blocking chain</b>: the first group (FR/PAL/OW/YO/YL/ND/SF + SNK) sets "
+    "Gate: Stat = 10. Uses a <b>blocking chain</b>: the first group (EL/FR/PAL/OW/YO/YL/ND/SF + SNK) sets "
     "<code>block</code>, and only when nothing blocked does the AC/MT/NX/OS group fire."
 ))
 story.append(section_table([
     ("TARIF present but value 0 (raw contains '0' or is '-')", "Fremdnummer xxx bereits berechnet in RExxx, ok?."),
+    ("EL Differenz over T", "EXTENDED LIABILITY, ok?"),
     ("FR Differenz over T", "Differenz aufgrund von abweichendem Gewicht/Volumen"),
     ("PAL Differenz over T", "nicht stapelbar ok?"),
-    ("OW Differenz over T", "overweight ok?"),
+    ("OW Differenz over T", "Differenz overweight, ok?"),
     ("YO positive and divisible by 15", "Non conveyable piece-weight ok?"),
     ("YO over T (not a 15-multiple)", "non conveyable piece ok?"),
     ("YL over T", "Non-conveyable piece irregular ok?"),
     ("ND over T", "Neutral delivery ok?"),
     ("SF over T", "Direct signature ok?"),
+    ("SNK = 5", "DIRECT SIGNATURE , ok?"),
     ("SNK = 25", "Limited quantities ok?"),
     ("SNK = 30", "Elevated Risk, ok?"),
     ("SNK = 60", "Eelevated risk ok? // Restricted destination ok?"),

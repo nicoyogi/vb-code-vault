@@ -358,6 +358,11 @@ const PHRASES={
   abweichGewichtVolumen:      'Differenz aufgrund von abweichendem Gewicht/Volumen',
   nichtStapelbar:             'nicht stapelbar ok?',
   overweight:                 'overweight ok?',
+  /* Retired as an emitter: an OW delta reads as "Differenz overweight, ok?"
+     in the audit (2026-10-02 DHL bundle, rows 126/148). */
+  differenzOverweight:        'Differenz overweight, ok?',
+  extendedLiability:          'EXTENDED LIABILITY, ok?',
+  directSignatureUpper:       'DIRECT SIGNATURE , ok?',
   nonConvWeight:              'Non conveyable piece-weight ok?',
   nonConvPiece:               'non conveyable piece ok?',
   nonConvIrregular:           'Non-conveyable piece irregular ok?',
@@ -1161,8 +1166,8 @@ function processKN(ws,r,cols){
 }
 
 /* ── DHL Express ── */
-function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),addr:fc('FR','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz')};}
-function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer xxx bereits berechnet in RExxx, ok?.';}let res='';if(KONTIERUNG_ENABLED&&cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(KONTIERUNG_ENABLED&&cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'overweight ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
+function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),addr:fc('FR','Differenz'),el:fc('EL','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz')};}
+function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer xxx bereits berechnet in RExxx, ok?.';}let res='';if(KONTIERUNG_ENABLED&&cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(KONTIERUNG_ENABLED&&cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.el,'EXTENDED LIABILITY, ok?'],[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'Differenz overweight, ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===5){res=join(res,'DIRECT SIGNATURE , ok?');block=true;}else if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
 
 /* ── Wackler ── */
 /* Weight tier breakpoints (kg "bis" upper bounds) — taken DIRECTLY from the supplied
@@ -2376,7 +2381,7 @@ const TESTER_FIELDS={
   ],
   dhl:[
     ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],
-    ['addr','FR Differenz','num'],['stack','PAL Differenz','num'],['weight','OW Differenz','num'],
+    ['addr','FR Differenz','num'],['el','EL Differenz','num'],['stack','PAL Differenz','num'],['weight','OW Differenz','num'],
     ['conv','YO Differenz','num'],['irr','YL Differenz','num'],['neut','ND Differenz','num'],['sign','SF Differenz','num'],
     ['snk','SNK Differenz','num'],['diff','AC Differenz','num'],['maut','MT Differenz','num'],
     ['surc','NX Differenz','num'],['over','OS Differenz','num'],['tz','TZ Differenz','num'],
@@ -2421,7 +2426,8 @@ const TESTER_PRESETS={
     {name:'Clean row',values:{stat:10,kost:'1234',sach:'5678'}},
   ],
   dhl:[
-    {name:'Overweight trigger',values:{stat:10,weight:20,tarif:'120,00'}},
+    {name:'Overweight difference',values:{stat:10,weight:30,tarif:'120,00'}},
+    {name:'Extended liability + direct signature',values:{stat:10,el:2,snk:5,tarif:'12,74'}},
     {name:'Non-conv ×15',values:{stat:10,conv:30,tarif:'100,00'}},
     {name:'Elevated risk 60',values:{stat:10,snk:60,tarif:'80,00'}},
     {name:'Fremdnummer dup',values:{stat:10,tarif:'0'}},
@@ -2839,11 +2845,10 @@ function granularLabel(beforeRaw,afterRaw,pd){
    cell would silently re-key every row that carries it. Add every future
    collectInputsForRow key here too; the frozen seed is the v1.29 set. */
 const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort','anz_colli','brutto_kg','c38l_diff']);
-/* Same rule, but only for the forwarder that gained the key later. `referenz`
-   is the case that needs this: K+N and Wackler have always fed it into the seed,
-   so excluding it globally would re-key every historical K+N/Wackler bundle row.
-   Only Dachser's export is new. */
-const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz'])};
+/* Same rule, but only for the forwarder that gained the key later: excluding
+   referenz globally would re-key every historical K+N/Wackler row, and el_diff
+   is new to DHL. */
+const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz']),dhl:new Set(['el_diff'])};
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
@@ -2880,7 +2885,9 @@ const CANONICAL_INPUT_ORDER={
   dhl:['stat','tarif','fr_diff','pal_diff','ow_diff',
        'yo_diff','yl_diff','nd_diff','sf_diff',
        'snk_diff','ac_diff','mt_diff','nx_diff','os_diff','tz_diff',
-       'kostenstelle','sachkonto'],
+       'kostenstelle','sachkonto',
+       /* Last on purpose, like dachser's referenz: existing CSV columns stay put. */
+       'el_diff'],
   wackler:['stat','tarif','existing_anmerkung',
            'avis_diff','snk_diff','fr_diff','fr_tarif','fr_dl','mt_diff','tz_diff',
             'referenz','anz_colli','brutto_kg','vkg','vkg_dl',
@@ -3301,7 +3308,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('kostenstelle',cols.kost);get('sachkonto',cols.sach);
   } else if(fw==='dhl'){
     get('stat',cols.stat);get('tarif',cols.tarif);
-    get('fr_diff',cols.addr);get('pal_diff',cols.stack);get('ow_diff',cols.weight);
+    get('fr_diff',cols.addr);get('el_diff',cols.el);get('pal_diff',cols.stack);get('ow_diff',cols.weight);
     get('yo_diff',cols.conv);get('yl_diff',cols.irr);get('nd_diff',cols.neut);get('sf_diff',cols.sign);
     get('snk_diff',cols.snk);get('ac_diff',cols.diff);get('mt_diff',cols.maut);
     get('nx_diff',cols.surc);get('os_diff',cols.over);get('tz_diff',cols.tz);
@@ -3622,7 +3629,7 @@ function sendDiffToTester(i){
       kostenstelle:'kost',sachkonto:'sach',
     },
     dhl:{
-      fr_diff:'addr',pal_diff:'stack',ow_diff:'weight',
+      fr_diff:'addr',el_diff:'el',pal_diff:'stack',ow_diff:'weight',
       yo_diff:'conv',yl_diff:'irr',nd_diff:'neut',sf_diff:'sign',
       snk_diff:'snk',ac_diff:'diff',mt_diff:'maut',
       nx_diff:'surc',os_diff:'over',tz_diff:'tz',
@@ -4413,6 +4420,7 @@ const INPUT_GLOSSARY={
   sbfu_diff         :'SBFU Differenz — SBfU certificate delta (Dachser).',
   lg_diff           :'LG Differenz — storage-fee delta (Dachser).',
   av_diff           :'AV Differenz — failed-pickup-attempt delta (Dachser).',
+  el_diff           :'EL Differenz — extended-liability surcharge delta (DHL).',
   pal_diff          :'PAL Differenz — non-stackable surcharge (DHL).',
   ow_diff           :'OW Differenz — overweight surcharge (DHL).',
   yo_diff           :'YO Differenz — non-conveyable piece surcharge (DHL). Multiples of 15 are the piece-weight variant.',
@@ -4466,7 +4474,7 @@ const FORWARDER_SPEC={
     processor:'processDHL',
     resolver :'resolveDHL',
     gate     :'Stat_Freigabe == 10',
-    notes    :'Fremdnummer dup early-return. Blocker set (FR/PAL/OW/YO/YL/ND/SF/SNK) suppresses the secondary set (AC/MT/NX/OS).',
+    notes    :'Fremdnummer dup early-return. Blocker set (EL/FR/PAL/OW/YO/YL/ND/SF/SNK) suppresses the secondary set (AC/MT/NX/OS).',
   },
   wackler:{
     processor:'processWackler',
