@@ -1143,6 +1143,39 @@ test('processWackler: SNK=113 + AVIS code -> "Avis, ok? // NL-SPEZ, ok?"', () =>
   assert.equal(e.processWackler(ws, R, W_COLS), 'Avis, ok? // NL-SPEZ, ok?');
 });
 
+test('processWackler: SNK=250 -> \'"Zusatzkosten 250 €", ok?\' (not SNK Differenz)', () => {
+  // Bundle row a75a84e6 (10367543 r=30; e87fecfb r=222 is the same 250.00 gap at tarif 562.74).
+  // The straight double quotes are part of the auditor's cell, not a quoting artefact.
+  const ws = makeRow(R, {
+    51: 10, 52: '618.73', 54: '250', 58: '2544673051,2544576995', 59: '3625', 60: '5369',
+    61: '63505', 62: 'Langenselbold', 63: '211FO011', 64: '612100', 66: 'DE', 67: 'DE',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), '"Zusatzkosten 250 €", ok?');
+});
+
+test('processWackler: SNK=81 -> "NL-10, ok?" (not Pauschalfracht, ok?)', () => {
+  // Bundle row a7a1c653 (10367543 r=80): SNK DL 81.14 vs lt. Tarif 0.14 -> 81.00, tarif 52.19,
+  // weights present, no FR/MT/TZ. Without the 81 code-book entry rule 2 read 81 ≥ 1.0 × 52.19
+  // as a flat-rate "Pauschalfracht, ok?".
+  const ws = makeRow(R, {
+    51: 10, 52: '52.19', 54: '81', 58: '2544760100', 59: '157', 60: '157',
+    61: '76135', 62: 'Karlsruhe', 63: '211FO011', 64: '612100', 66: 'DE', 67: 'DE',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'NL-10, ok?');
+});
+
+test('processWackler: SNK=80.5 on a weighed shipment -> Terminzustellung', () => {
+  // Boundary guard between the two windows: the weight-gated Terminzustellung 80 window
+  // (80 ± 0.5) and the NL-10 code-book window (81 ± 0.49) touch at 80.50, and the 80 boundary
+  // is inclusive. The code book is queried first, so a tol of 0.5 there would read 80.50 as
+  // NL-10 and the termin80 fallback below it in rule 4 would never fire.
+  const ws = makeRow(R, {
+    51: 10, 52: '81.7', 54: '80.5', 59: '152', 60: '152',
+    61: '50031', 62: 'BARBERINO DI MUGELLO', 63: '211FO011', 64: '612100', 66: 'DE', 67: 'DE',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Terminzustellung');
+});
+
 test('processWackler: partial-billing bundle (FR credit) -> terminal "hätte gebündelt werden müssen"', () => {
   // Bundle row 81dd411f: 2 refs, VKG=3540 / VKG_DL=94 (2.7%), FR=-15.39, AVIS=8.7, MT=-3.67.
   // The DL billed one consignment of the bundle; AVIS and Maut are artefacts and stay suppressed.

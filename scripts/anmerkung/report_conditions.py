@@ -310,6 +310,8 @@ story.append(section_table([
     ("SNK ≈ 113", "NL-SPEZ, ok?"),
     ("Empf. = 88499 RIEDLINGEN", "Return, ok?"),
     ("SNK ≈ 16", "NIGHTFIX"),
+    ("SNK ≈ 81", "NL-10, ok?"),
+    ("SNK ≈ 250", '"Zusatzkosten 250 €", ok?'),
 ]))
 story.append(P("Gewichte / bundling decision tree (FR + both weights real)", h3))
 story.append(section_table([

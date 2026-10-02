@@ -1,6 +1,15 @@
 {
-  "version": "1.46.0",
+  "version": "1.47.0",
   "entries": [
+    {
+      "ver": "1.47.0",
+      "date": "2026-10-02",
+      "items": [
+        "Wackler - an SNK gap of 81 now reads \"NL-10, ok?\" instead of \"Pauschalfracht, ok?\". Derived from AI bundle v3 2026-10-02 row a7a1c653 (SNK DL 81.14 vs lt. Tarif 0.14 -> 81.00 on a tarif 52.19 row, weights present, no FR/MT/TZ). The Pauschalfracht reading was the \"SNK 81 >= tariff\" fallback firing on a published Nachlauf surcharge; the new code-book entry pre-empts it, and the weight-gated Terminzustellung 80 path keeps its own reading.",
+        "Wackler - an SNK gap of 250 now reads '\"Zusatzkosten 250 €\", ok?' (straight double quotes included, they are part of the auditor's cell) instead of the generic \"SNK Differenz\". Derived from AI bundle v3 2026-10-02 rows a75a84e6 (SNK DL 251.93 vs 1.93, tarif 618.73) and e87fecfb (251.76 vs 1.76, tarif 562.74) - both a bare 250.00 surcharge on a tariffed row with no FR/MT/TZ delta.",
+        "Wackler - row f9fb4fad of the same bundle stays a Not-derivable ledger entry: the truth names Fremdnummer 2544818983 \"berechnet in\" Beleg 10367544, and neither value occurs anywhere in the workbook (its own ReferenzNr is 2544828688). The note points at another document, so it is not derivable from row inputs."
+      ]
+    },
     {
       "ver": "1.46.0",
       "date": "2026-10-02",

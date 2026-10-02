@@ -3,15 +3,15 @@
   "source": "current repository tree",
   "anmerkung_hardening": "v5",
   "regression": {
-    "tests": 271,
-    "passed": 271,
+    "tests": 274,
+    "passed": 274,
     "failed": 0
   },
   "files": [
     {
       "path": "assets/anmerkung.js",
-      "bytes": 340312,
-      "sha256": "7b970abd04c111aca987763177ebf516e1e35a977eaf0540139e33465227beaf"
+      "bytes": 342219,
+      "sha256": "2f94b1da4cc027404179aba9344f2b204782e09b7c436c3a6e65eef0586deda4"
     },
     {
       "path": "tests/harness/load-engine.mjs",
@@ -31,7 +31,7 @@
     {
       "path": "docs/anmerkung/INTEGRATION_v5.md",
       "bytes": 1128,
-      "sha256": "b999760e9077798bdb377e252597bd3ac106432796ba2faaaae77f8ce74ab47e"
+      "sha256": "966f48175598989e0842f541386d246eb46f76bf74ec4f128ab00866ad0a039c"
     }
   ]
 }

@@ -381,6 +381,8 @@ const PHRASES={
   nightfix:                   'NIGHTFIX',
   nl12Ok:                     'NL-12, ok?',
   nlSpezOk:                   'NL-SPEZ, ok?',
+  nl10Ok:                     'NL-10, ok?',
+  zusatzkosten250:            '"Zusatzkosten 250 €", ok?',
   terminzustellung:           'Terminzustellung',
   b2cLine:                    'hätte B2C-Line abrechnen dürfen',
   buendelMuessen:             'hätte gebündelt werden müssen',
@@ -1456,7 +1458,25 @@ const WACKLER_SNK_CODES=[
      cannot poach an existing reading: no row in any Wackler workbook carries an SNK gap between
      7.12 and 16.00, and the neighbouring entries are at 11.5 ± 0.1 and 22 ± 0.5.
      ponytail: pinned by ONE audit row — widen the evidence before trusting the 16 window. */
-  {abs:16,   tol:0.5,  label:P.nightfix}
+  {abs:16,   tol:0.5,  label:P.nightfix},
+  /* SNK≈81 is the published NL-10 Nachlauf surcharge, same evidence shape as NL-FIX 38 / NL-12 49 /
+     NL-SPEZ 113: a bare SNK gap, no FR/MT/TZ delta (AI-bundle 2026-10-02 row a7a1c653: SNK DL
+     81.14 vs lt. Tarif 0.14 -> 81.00 on a tarif 52.19 row, weights present). The book hit also
+     pre-empts rule 2, which used to read that row as "Pauschalfracht, ok?" (81 ≥ 1.0 × 52.19).
+     tol 0.49 (not the book's usual 0.5) keeps the window [80.51, 81.49] clear of the weight-gated
+     Terminzustellung 80 window [79.5, 80.5]: the 80 boundary is INCLUSIVE, so at exactly 80.50
+     wacklerSnkCode must return null and the termin80 / "Pauschalfracht, ok?" reading wins. Under
+     tol 0.5 the book wins that boundary first and reads 80.50 as NL-10. The audited gap is exactly
+     81.00, so the narrower window still pins it. ponytail: pinned by ONE audit row — widen the
+     evidence before trusting 81. */
+  {abs:81,   tol:0.49, label:P.nl10Ok},
+  /* SNK≈250 is Wackler's flat "Zusatzkosten 250 €" surcharge, queried verbatim by the auditor
+     (straight double quotes are part of the cell). Two rows carry it as a bare SNK gap with no
+     FR/MT/TZ delta on a tariffed row — AI-bundle 2026-10-02 rows a75a84e6 (SNK DL 251.93 vs 1.93)
+     and e87fecfb (251.76 vs 1.76), both 250.00 — and used to fall through to rule 10's generic
+     "SNK Differenz". The 0.5 window cannot poach an existing reading: the neighbouring entries sit
+     at 180 ± 0.5 and 289 ± 0.5. */
+  {abs:250,  tol:0.5,  label:P.zusatzkosten250}
 ];
 function wacklerSnkCode(snk){const a=Math.abs(snk);for(const c of WACKLER_SNK_CODES)if(Math.abs(a-c.abs)<=c.tol)return c.label;return null;}
 /* Wackler AVIS surcharge codes — sign-insensitive (a credit AVIS=-6.5 is the same code as 6.5).
@@ -4858,7 +4878,10 @@ function buildPhraseEmitterIndex(){
     for(const m of src.matchAll(/\bP\.([A-Za-z0-9_]+)/g))add(m[1],fn.name);
     scanStrings(src.toLowerCase(),fn.name);
   }
-  scanStrings(JSON.stringify(WACKLER_SNK_CODES).toLowerCase(),'wacklerSnkCode');
+  /* Scan the code-book LABELS, not their JSON dump: a label carrying literal quotes
+     ("Zusatzkosten 250 €", ok?) comes back from JSON.stringify with those quotes escaped,
+     so the phrase would never be found in the serialised text. */
+  for(const c of WACKLER_SNK_CODES)scanStrings(String(c.label).toLowerCase(),'wacklerSnkCode');
   for(const t of PHRASE_TEMPLATES)if(t.processor)add(t.key,t.processor);
   return idx;
 }
