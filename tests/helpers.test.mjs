@@ -83,6 +83,13 @@ test('wacklerSnkCode: sign-insensitive code book with tolerance', () => {
   assert.equal(e.wacklerSnkCode(-16.4), 'NIGHTFIX', 'sign-insensitive, within the ±0.5 fee window');
   assert.equal(e.wacklerSnkCode(14.4), null, 'below the Nightfix window (and 11.5 ± 0.1)');
   assert.equal(e.wacklerSnkCode(17.1), null, 'above the Nightfix window (and 22 ± 0.5)');
+  assert.equal(e.wacklerSnkCode(81), 'NL-10, ok?');
+  assert.equal(e.wacklerSnkCode(80), null, '80 stays out of the code book — the Terminzustellung 80 path is weight-gated in processWackler');
+  assert.equal(e.wacklerSnkCode(82), null, 'above the NL-10 window');
+  assert.equal(e.wacklerSnkCode(80.5), null, 'the 81 window stops below the Terminzustellung 80 boundary');
+  assert.equal(e.wacklerSnkCode(80.51), 'NL-10, ok?', 'just inside the NL-10 window');
+  assert.equal(e.wacklerSnkCode(-250), '"Zusatzkosten 250 €", ok?', 'sign-insensitive; the label carries the auditor\'s straight quotes');
+  assert.equal(e.wacklerSnkCode(240), null, 'below the Zusatzkosten window (and 180 ± 0.5)');
 });
 
 test('isWacklerAvisCode / wacklerAvisLabel', () => {
