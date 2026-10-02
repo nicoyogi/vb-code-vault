@@ -257,8 +257,44 @@ The HTML files load their specific scripts and styles from the `assets/` folder.
 - Keep shared visual tokens (colors, fonts, spacing, focus-ring rules) in [`assets/grimoire-core.css`](assets/grimoire-core.css) so the pages stay visually consistent.
 - Reuse [`Grimoire.Offline`](assets/grimoire-core.js) rather than wiring a service worker per page.
 - The `PHRASES` catalog in [`assets/anmerkung.js`](assets/anmerkung.js) is the single source of truth for Anmerkung output strings. `PHRASE_LITERALS` and `PHRASE_TEMPLATES` below it are the fallback for wording that has not been promoted into the catalog yet.
-- When changing the Anmerkung rule engine, bump the version in [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) and add a release note so users see what changed in the in-app "What's new" modal. If the rule cascade changed, rebuild [`docs/anmerkung/conditions-report.pdf`](docs/anmerkung/conditions-report.pdf) with `python scripts/anmerkung/report_conditions.py`.
+- When changing the Anmerkung rule engine, bump the version in [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) and add a release note so users see what changed in the in-app "What's new" modal - see [Version policy](#version-policy) for which slot to use and what does not earn a bump. If the rule cascade changed, rebuild [`docs/anmerkung/conditions-report.pdf`](docs/anmerkung/conditions-report.pdf) with `python scripts/anmerkung/report_conditions.py`.
 - **You generally do not need to bump `VERSION` in [`sw.js`](sw.js).** Same-origin assets are served network-first, so content/rule edits ship to users on their next online load with no cache invalidation step. Bump `VERSION` only when the SW logic itself changes (e.g., new caching strategy, new message types); that rotates the cache name and forces a fresh re-install of `CORE`.
+
+### Version policy
+
+Only The Alchemist is versioned, and [`assets/anmerkung-changelog.json`](assets/anmerkung-changelog.json) is the only place the version lives. The top-level `version` is what code reads for behaviour: it drives the header badge, the modal subtitle and the "What's new" trigger. `entries[0]` is the release the modal lists first, and [`renderChangelog()`](assets/anmerkung.js) prints every entry's own `ver` label, so a drift puts a version next to a badge carrying a different one. That is why the two have to match.
+
+Other version-looking fields are not releases. For example:
+
+| File | Field | What it actually is |
+| --- | --- | --- |
+| [`package.json`](package.json) | `version` | Never read at runtime. Do not bump. |
+| [`sw.js`](sw.js) | `VERSION` | A cache name, not a release. Bump only when SW logic changes. |
+| `scripts/notify-*.mjs` | `version` | An Adaptive Card schema version in the Teams webhook payload. Unrelated. |
+| `assets/operation-report.js`, `assets/holiday-tracker.js` | `version` / `VERSION:2.0` | A backup schema and an iCal property. Unrelated. |
+
+**Bump when the tool behaves differently for the user:** the engine emits different Anmerkung phrases, or the tool writes or exports something different. **Do not bump for** docs, tests, refactors, repo hygiene, dependencies, or the way the app looks, reads, or is wired - layout, readability, styling defaults, accessibility, and service-worker plumbing are all free. A commit that touches `anmerkung.js` without changing what the tool produces or offers does not earn a version.
+
+The edges of that test are judgement, and the history is not uniform on them. On 2026-09-21, `18e35d6` (choose the Differenz-column cell style written into the workbook) took 1.44.0 while `f127a48` (first-visit project picker, app flow only) took nothing. The deciding question is whether an auditor would get a different result or a new thing to do, not whether the change is visible.
+
+Which slot, in order:
+
+| Slot | Condition | Precedent |
+| --- | --- | --- |
+| `x.y.Z+1` | Amends the release at the top of the changelog: often the same forwarder or subsystem, days rather than weeks later, no new surface. | 1.11.1 follows 1.11.0 (6 days); 1.41.1 follows 1.41.0 (1 day) |
+| `x.Y+1.0` | A new work unit: a fresh bundle triage, a new SNK code, a new panel or export, a new forwarder branch. | 1.42.0 (NIGHTFIX), 1.44.0 (cell-style popup), 1.46.0 (DHL bundle) |
+| major | Never. There is no API, no consumer, and no breaking-change axis to protect. | 0.9.0 → 1.0.0 is the only graduation |
+
+The split is *amendment vs new unit*, not feature vs bugfix - a new SNK code arrives in a `fix(anmerkung):` commit and still takes a minor. Of 64 entries, 15 are patches, and every one lands on or within six days of the release it corrects, with no new surface. The patch often stays in the same forwarder, but not always: 1.8.7 (Wackler) follows the Diff Mode 1.8.6, 1.8.3 (Dachser) follows the Wackler 1.8.2, and 1.7.1 (service worker and docs) follows the Dachser 1.7.0.
+
+A bump is not free: [`showChangelogOnUpdate()`](assets/anmerkung.js) keys off the version string, so every bump pops the "What's new" modal for every returning user. Patch-bumping trivia spends that interruption on nothing.
+
+When you do bump, in one commit:
+
+1. Set `version` and `entries[0].ver` in the changelog, and prepend the entry with `ver`, `date`, and `items` - one item per rule or branch, prefixed with the forwarder name (`"Wackler - …"`).
+2. Rebuild [`docs/anmerkung/conditions-report.pdf`](docs/anmerkung/conditions-report.pdf) with `python scripts/anmerkung/report_conditions.py` if the cascade changed.
+3. Refresh the test counts and file hashes in [`docs/anmerkung/integration-manifest.json`](docs/anmerkung/integration-manifest.json), the test counts in [`docs/anmerkung/INTEGRATION_v5.md`](docs/anmerkung/INTEGRATION_v5.md) and [`README.md`](README.md#tests). Nothing generates these; it is a manual step.
+4. Leave `sw.js`'s `VERSION` alone. Edit its `CORE` precache array only if the set of cached assets genuinely changed.
 
 Pull requests welcome.
 
