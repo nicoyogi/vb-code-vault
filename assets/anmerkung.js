@@ -2170,7 +2170,7 @@ function buildReason(fw,ws,r,cols){
     push('KOST',cellStr(ws,r,cols.kostenstelle));push('SACH',cellStr(ws,r,cols.sachkonto));
   } else if(fw==='honold'){
     push('STAT',num(cols.stat));push('FR_DL',num(cols.fr_dl));
-    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
+    push('VKG',num(cols.vkg));
     const land=cellStr(ws,r,cols.empf_land);if(land)parts.push('LAND='+land);
   }
   return parts.join(' | ');
@@ -2195,18 +2195,21 @@ function honoldTierIdx(kg){
   for(let i=0;i<tiers.length;i++)if(kg<=tiers[i])return i;
   return tiers.length-1;
 }
-/* "FR Kosten DL has value in the OLD tariff": the amount appears somewhere in
-   the destination country's zone column(s), independent of the bracket. */
-function honoldFrInTariff(land,fr){
-  const t=honoldTariff();if(!t||!land||!(Math.abs(fr)>0))return false;
+/* Bracket indices in the destination country's OLD-tariff column(s) whose rate
+   equals fr; empty when fr is not an old-tariff amount there. */
+function honoldFrTiers(land,fr){
+  const t=honoldTariff(),out=[];
+  if(!t||!land||!(Math.abs(fr)>0))return out;
   const cols=(t.codes&&t.codes[String(land).toUpperCase()])||[];
-  if(!cols.length)return false;
   for(const z of cols){
     const rates=t.zones&&t.zones[z];
     if(!Array.isArray(rates))continue;
-    for(const v of rates)if(v!=null&&Math.abs(Number(v)-fr)<=HONOLD_RATE_TOL)return true;
+    for(let i=0;i<rates.length;i++){
+      const v=rates[i];
+      if(v!=null&&Math.abs(Number(v)-fr)<=HONOLD_RATE_TOL&&out.indexOf(i)<0)out.push(i);
+    }
   }
-  return false;
+  return out;
 }
 function resolveHonold(ws,range){
   const fc=(h2,h3)=>findCol(ws,range,h2,h3);
@@ -2215,26 +2218,25 @@ function resolveHonold(ws,range){
     stat:     fc('','Stat_Freigabe'),
     fr_dl:    fc('FR','Kosten DL'),
     vkg:      fc('','Volumen kg'),
-    vkg_dl:   fc('','Volumen kg DL'),
     empf_land:fc('','Empf.-Land'),
     empf_plz: fc('','Empf.-PLZ'),
   };
 }
-/* One rule: the FR charge is an OLD-tariff value AND both volumes sit in the
-   same weight bracket -> the previous tariff is still being billed; otherwise
-   the gap is a weight difference. A blank / 0 FR is never an old-tariff value,
-   so it takes the same weight-difference branch. Without the decrypted tariff
-   the row is SKIPPED (null), never blanked: the engine must not overwrite an
+/* One rule: FR Kosten DL names the OLD-tariff bracket it belongs to in the
+   destination country's column; when Volumen kg sits in one of those brackets
+   the previous tariff is still being billed, otherwise the gap is a weight
+   difference. A blank / 0 FR never names a bracket, as do a missing / 0
+   Volumen kg, an unknown destination country, or an FR that matches no rate, so
+   they all take the weight-difference branch. Without the decrypted tariff the
+   row is SKIPPED (null), never blanked: the engine must not overwrite an
    existing note it cannot re-derive. */
 function processHonold(ws,r,cols){
   if(!honoldTariff())return null;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
   const fr=cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0;
   const iAE=honoldTierIdx(cols.vkg>=0?cellNum(ws,r,cols.vkg):0);
-  const iAF=honoldTierIdx(cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0);
-  const sameTier=(iAF===null||iAE===iAF);
   const land=cols.empf_land>=0?cellStr(ws,r,cols.empf_land):'';
-  return (honoldFrInTariff(land,fr)&&sameTier)?P.honoldBisherigerTarif:P.abweichGewichte;
+  return (iAE!==null&&honoldFrTiers(land,fr).indexOf(iAE)>=0)?P.honoldBisherigerTarif:P.abweichGewichte;
 }
 
 /* Run rules across the workbook without mutating files. Returns in-memory results + stats. */
@@ -2489,7 +2491,7 @@ const TESTER_FIELDS={
   ],
   honold:[
     ['stat','Stat_Freigabe','num'],['fr_dl','FR Kosten DL','num'],
-    ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
+    ['vkg','Volumen kg','num'],
     ['empf_land','Empf.-Land','str'],
   ],
 };
@@ -2535,8 +2537,8 @@ const TESTER_PRESETS={
     {name:'Fremdnummer empty tarif',values:{stat:10,tarif:'',fr:29.5,maut:2.6,tz:2.51,vkg:120,vkg_dl:120}},
   ],
   honold:[
-    {name:'Same tier (old tariff)',values:{stat:10,fr_dl:127.25,vkg:588,vkg_dl:588,empf_land:'AT'}},
-    {name:'Cross-tier weights',values:{stat:10,fr_dl:127.25,vkg:588,vkg_dl:493,empf_land:'AT'}},
+    {name:'FR is the rate at the Volumen kg bracket',values:{stat:10,fr_dl:127.25,vkg:588,empf_land:'AT'}},
+    {name:'FR is a rate at another bracket',values:{stat:10,fr_dl:127.25,vkg:250,empf_land:'AT'}},
   ],
 };
 
@@ -2620,7 +2622,7 @@ function buildSyntheticWs(fw,userVals){
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
     wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','colli','brutto','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
-    honold:['target','stat','fr_dl','vkg','vkg_dl','empf_land','empf_plz'],
+    honold:['target','stat','fr_dl','vkg','empf_land','empf_plz'],
   }[fw]||[];
   for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
   return{ws,cols};
@@ -2999,7 +3001,7 @@ const CANONICAL_INPUT_ORDER={
             'referenz','anz_colli','brutto_kg','vkg','vkg_dl',
            'abg_land','abg_plz','empf_land','empf_plz','empf_ort','zone',
            'kostenstelle','sachkonto'],
-  honold:['stat','fr_dl','vkg','vkg_dl','empf_land','empf_plz'],
+  honold:['stat','fr_dl','vkg','empf_land','empf_plz'],
 };
 
 /* Build the ordered key list for a CSV: union of (canonical for each
@@ -3438,7 +3440,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('kostenstelle',cols.kostenstelle);get('sachkonto',cols.sachkonto);
   } else if(fw==='honold'){
     get('stat',cols.stat);get('fr_dl',cols.fr_dl);
-    get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
+    get('vkg',cols.vkg);
     get('empf_land',cols.empf_land);get('empf_plz',cols.empf_plz);
   }
   return o;
@@ -4516,7 +4518,7 @@ const INPUT_GLOSSARY={
   tarif             :'Total Kosten lt. Tarif — booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
   fr_diff           :'FR Differenz — freight-charge delta vs tariff (numeric, signed).',
   fr_tarif          :'FR Kosten lt. Tarif — the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier.',
-  fr_dl             :'FR Kosten DL — the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it is matched against the encrypted OLD tariff (assets/honold-tariff.enc.json) to decide the previous-tariff vs weight-difference note.',
+  fr_dl             :'FR Kosten DL — the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it is looked up in the destination country column of the encrypted OLD tariff (assets/honold-tariff.enc.json) to find the weight bracket that rate belongs to; the Volumen kg bracket is then compared against those brackets to decide the previous-tariff vs weight-difference note.',
   exp_diff          :'EXP Differenz — express/priority surcharge delta (numeric, signed).',
   exp_dl            :'EXP Kosten DL — DL-side express cost (Dachser-only signal).',
   mt_diff           :'MT/Maut Differenz — toll delta (numeric, signed).',
@@ -4597,7 +4599,7 @@ const FORWARDER_SPEC={
     processor:'processHonold',
     resolver :'resolveHonold',
     gate     :'Stat_Freigabe == 10 (and the OLD tariff must be unlocked — rows are skipped, not blanked, without it)',
-    notes    :'One rule. FR Kosten DL must appear in the destination country column of the encrypted OLD tariff (assets/honold-tariff.enc.json) and Volumen kg must fall in the same weight bracket as Volumen kg DL; an empty/0 DL volume counts as the same bracket.',
+    notes    :'One rule. FR Kosten DL is looked up in the destination country column of the encrypted OLD tariff (assets/honold-tariff.enc.json) to find the weight bracket(s) whose rate equals it; when the Volumen kg bracket is one of them the previous tariff is still being billed. Otherwise (blank / 0 FR, missing / 0 Volumen kg, unknown country, or FR matching no rate) it is a weight difference.',
   },
 };
 

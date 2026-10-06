@@ -20,9 +20,12 @@ import build_tariff  # noqa: E402
 OLD_NOTE = "Honold berechnet die Kosten nach dem bisherigen Tarif"
 DIFF_NOTE = "Differenz aufgrund abweichender Gewichte"
 RATE_TOL = 0.005
-# Excel rows where the rule disagrees with the workbook and the disagreement is
-# accepted. Pinned so the 121/124 evidence cannot shift silently.
-KNOWN_OUTLIERS = {4, 44, 117}
+# The workbook's Anmerkung column is no longer the oracle. The domain owner
+# confirmed rows 5, 7, 18, 32, 57, 58, 98, 104, 107, 121 and 125 are labelled
+# "Differenz" but should read "bisherigen Tarif", and row 90 is a real
+# rule-vs-workbook disagreement. Pinned so the 112/124 evidence cannot shift
+# silently.
+KNOWN_OUTLIERS = {5, 7, 18, 32, 57, 58, 90, 98, 104, 107, 121, 125}
 
 
 def num(v):
@@ -43,15 +46,16 @@ def tier_idx(tiers, kg):
     return len(tiers) - 1
 
 
-def fr_in_tariff(tariff, land, fr):
-    if fr is None or not land:
-        return False
-    cols = tariff["codes"].get(str(land).upper(), [])
-    for z in cols:
-        for v in tariff["zones"].get(z, []):
-            if v is not None and abs(float(v) - fr) <= RATE_TOL:
-                return True
-    return False
+def fr_tiers(tariff, land, fr):
+    """Bracket indices in the country's column(s) whose rate equals fr."""
+    if fr is None or not land or abs(fr) <= RATE_TOL:
+        return []
+    out = []
+    for z in tariff["codes"].get(str(land).upper(), []):
+        for i, v in enumerate(tariff["zones"].get(z, [])):
+            if v is not None and abs(float(v) - fr) <= RATE_TOL and i not in out:
+                out.append(i)
+    return out
 
 
 def main():
@@ -70,22 +74,20 @@ def main():
         land = ws.cell(r, 15).value
         fr = num(ws.cell(r, 45).value)
         vkg = num(ws.cell(r, 31).value)
-        vkg_dl = num(ws.cell(r, 32).value)
         if stat != 10:
-            pred = ""
+            # The engine returns null and writes nothing on a gate skip.
+            continue
         elif fr is None or abs(fr) <= RATE_TOL:
-            # Blank / 0 FR is never an old-tariff value: same branch as the engine.
+            # Blank / 0 FR never names a bracket: same branch as the engine.
             pred = DIFF_NOTE
         else:
             i_ae = tier_idx(tariff["tiers"], vkg)
-            i_af = tier_idx(tariff["tiers"], vkg_dl)
-            same = i_af is None or i_ae == i_af
-            pred = OLD_NOTE if (fr_in_tariff(tariff, land, fr) and same) else DIFF_NOTE
+            pred = OLD_NOTE if (i_ae is not None and i_ae in fr_tiers(tariff, land, fr)) else DIFF_NOTE
         if pred != truth:
             wrong += 1
             mismatches.append(r)
-            print("row %d: truth=%r pred=%r (land=%s fr=%s vkg=%s vkg_dl=%s)"
-                  % (r, truth, pred, land, fr, vkg, vkg_dl))
+            print("row %d: truth=%r pred=%r (land=%s fr=%s vkg=%s)"
+                  % (r, truth, pred, land, fr, vkg))
     unexpected = sorted(set(mismatches) - KNOWN_OUTLIERS)
     print("%d rows, %d mismatches (pinned outliers %s%s)"
           % (total, wrong, sorted(KNOWN_OUTLIERS),

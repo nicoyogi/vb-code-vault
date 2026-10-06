@@ -3,20 +3,20 @@
   "source": "current repository tree",
   "anmerkung_hardening": "v5",
   "regression": {
-    "tests": 293,
-    "passed": 293,
+    "tests": 294,
+    "passed": 294,
     "failed": 0
   },
   "files": [
     {
       "path": "assets/anmerkung.js",
-      "bytes": 347560,
-      "sha256": "74e5820b0fba1d80b6ea6b0466602777a153881d2819bb95e7cca284095c0f9d"
+      "bytes": 347777,
+      "sha256": "19f5349e1d7c2f2cb39d2744eeb169c6a97a7eebed94e7ffd59e2379c658d45a"
     },
     {
       "path": "tests/harness/load-engine.mjs",
-      "bytes": 11966,
-      "sha256": "0c29c2f18415ca66316028021b14c5a30fb852e827f5bc072e45b68eda872c6a"
+      "bytes": 11963,
+      "sha256": "269d59f706dc200e3dcbb4739faa268ed592d27d9eafc7440525eb8e7dd1e402"
     },
     {
       "path": "tests/anmerkung-v5.test.mjs",
@@ -31,7 +31,7 @@
     {
       "path": "docs/anmerkung/INTEGRATION_v5.md",
       "bytes": 1128,
-      "sha256": "2900e520720dba082d94cc0f4f11cf69afd832366e420ca2ebc719a8963800d2"
+      "sha256": "670f1cb520a59989cb4ac4790c0320d4c2abe6e61927f1b9c0ad480fde287e67"
     }
   ]
 }
