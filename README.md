@@ -79,7 +79,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 
 ### Feature highlights
 
-- **Four forwarder engines:** Dachser, K+N, DHL Express and Wackler, each with its own column resolver and rule set.
+- **Five forwarder engines:** Dachser, K+N, DHL Express, Wackler and Honold, each with its own column resolver and rule set.
 - **Preview / dry-run:** see every proposed annotation before writing to the file, with color-coded per-row status and a trigger-breakdown bar chart.
 - **Bulk processing:** drop many `.xlsx` files at once; each gets an individual download, plus a "Download all as ZIP" option.
 - **Rule Tester:** play with hypothetical values without uploading a file; useful for pinning down exactly when a rule fires.
@@ -142,12 +142,12 @@ PORT=8081 npm run dev # if 8080 is taken
 The unit tests use the Node built-in test runner; there is no test framework to install.
 
 ```bash
-npm test                  # everything: 274 tests across the rule engine, diff mode, splitter and allocation
+npm test                  # everything: 293 tests across the rule engine, diff mode, splitter and allocation
 npm run test:anmerkung    # the Anmerkung suites only
 npm run verify:anmerkung  # syntax gate, required-engine symbols, SHA-256 of assets/anmerkung.js, then the full suite
 ```
 
-Tests live in `tests/`. Three harnesses in `tests/harness/` load the browser code into `node:vm` with stubs: `load-engine.mjs` for `assets/anmerkung.js`, `load-alokasi.mjs` for the script inside `alokasi-project.html`, and `load-splitter.mjs` for `File_splitter.html`. They pull the plaintext Wackler rate cards out of git history when those gitignored files are absent locally, so the suite passes on a fresh clone without the business data.
+Tests live in `tests/`. Three harnesses in `tests/harness/` load the browser code into `node:vm` with stubs: `load-engine.mjs` for `assets/anmerkung.js`, `load-alokasi.mjs` for the script inside `alokasi-project.html`, and `load-splitter.mjs` for `File_splitter.html`. They pull the plaintext Wackler rate cards out of git history when those gitignored files are absent locally, so the suite passes on a fresh clone without the business data. The Honold OLD tariff is business data too: the harness reads the gitignored `assets/honold-tariff.js` when it is present and otherwise the Honold tests inject a synthetic tariff.
 
 The condition-report PDF is generated separately and needs Python: `python scripts/anmerkung/report_conditions.py` writes `docs/anmerkung/conditions-report.pdf` from `assets/anmerkung.js`.
 

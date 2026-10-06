@@ -13,7 +13,7 @@ add('source exists', fs.existsSync(source));
 if (fs.existsSync(source)) {
   const js = fs.readFileSync(source, 'utf8');
   add('syntax', spawnSync(process.execPath, ['--check', source], { encoding: 'utf8' }).status === 0);
-  for (const token of ['function processDachser', 'function processKN', 'function processDHL', 'function processWackler', 'function parseLocaleNumber', 'window.AnmerkungV5']) {
+  for (const token of ['function processDachser', 'function processKN', 'function processDHL', 'function processWackler', 'function processHonold', 'function parseLocaleNumber', 'window.AnmerkungV5']) {
     add(`contains ${token}`, js.includes(token));
   }
   const sha256 = crypto.createHash('sha256').update(js).digest('hex');

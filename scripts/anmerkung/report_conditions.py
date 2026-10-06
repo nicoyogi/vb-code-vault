@@ -36,6 +36,7 @@ for name in [
     "WACKLER_XTIER_NEAR_BAND", "WACKLER_BUENDEL_PARTIAL",
     "WACKLER_COLLI_KG", "WACKLER_SAME_WEIGHT_BAND",
     "WACKLER_BUENDEL_NEAR_BAND", "WACKLER_BUENDEL_MIN_REFS",
+    "HONOLD_RATE_TOL",
 ]:
     m = re.search(rf"const\s+{name}\s*=\s*([^;]+);", src)
     if m:
@@ -106,7 +107,7 @@ story = []
 # ── header ──
 story.append(P(TITLE, h1))
 story.append(P(
-    f"Rule engine covering Dachser, K+N, DHL Express, Wackler &nbsp;·&nbsp; "
+    f"Rule engine covering Dachser, K+N, DHL Express, Wackler &amp; Honold &nbsp;·&nbsp; "
     f"source: assets/anmerkung.js &nbsp;·&nbsp; generated {__import__('datetime').date.today().isoformat()}",
     sub,
 ))
@@ -115,7 +116,7 @@ story.append(HRFlowable(width="100%", thickness=0.8, color=BB, spaceAfter=8))
 # ── how it works ──
 story.append(P("How a row is classified", h2))
 story.append(P(
-    "Each worksheet row is read column-wise into the four <i>process*</i> functions. A row is only "
+    "Each worksheet row is read column-wise into the five <i>process*</i> functions. A row is only "
     "classifiable when its <b>Stat_Freigabe</b> cell equals <b>10</b> (released); otherwise the row is "
     "skipped (Wackler still runs its Kontierung check). Each forwarder compares its forwarder-specific "
     "<b>Differenz</b> columns (FR, MT, SNK, EXP, TZ, …) against a <b>firing threshold</b>:"
@@ -359,6 +360,25 @@ story.append(const_table([
 
 story.append(PageBreak())
 
+# ════════ HONOLD ════════
+story.append(P("5. Honold — processHonold", h2))
+story.append(P(
+    "Gate: Stat = 10, plus the OLD tariff must be unlocked. The tariff matrix is business data and "
+    "ships encrypted (<code>assets/honold-tariff.enc.json</code>); until it is decrypted the engine "
+    "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. One rule:"
+))
+story.append(section_table([
+    ("FR Kosten DL appears in the destination country column of the OLD tariff AND Volumen kg sits in the same weight bracket as Volumen kg DL (empty / 0 DL volume counts as the same bracket)", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
+    ("otherwise", "Differenz aufgrund abweichender Gewichte"),
+]))
+story.append(P("Honold constants", h3))
+story.append(const_table([
+    ("FR ↔ OLD-tariff match tolerance", k("HONOLD_RATE_TOL")),
+    ("Weight brackets", "Bis column of the OLD tariff (50 … 10 000, last row open above)"),
+]))
+
+story.append(PageBreak())
+
 # ════════ OUTPUT/VALIDATION ════════
 story.append(P("How the output is consumed", h2))
 story.append(P(
@@ -371,7 +391,7 @@ story.append(P(
     "accepted when it re-validates against the git-ignored Soll-Ist workbooks."
 ))
 story.append(P(
-    "Control surface: <code>scripts/anmerkung/verify.mjs</code> smoke-tests that the four process* "
+    "Control surface: <code>scripts/anmerkung/verify.mjs</code> smoke-tests that the five process* "
     "functions and <code>window.AnmerkungV5</code> exist; the same periods feed the diagnostics facade. "
     "Firing thresholds and the Wackler constants above are read live out of assets/anmerkung.js at "
     "build time, so this report tracks the engine — but the cascade descriptions are maintained by hand "

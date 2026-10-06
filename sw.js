@@ -31,6 +31,8 @@ const CORE = [
   './assets/anmerkung.js',
   './assets/wackler-ratecard-loader.js',
   './assets/wackler-ratecards.enc.json',
+  './assets/honold-tariff-loader.js',
+  './assets/honold-tariff.enc.json',
   './assets/anmerkung-changelog.json',
   './manifest.webmanifest',
 ];
