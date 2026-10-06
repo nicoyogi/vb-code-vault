@@ -142,7 +142,7 @@ PORT=8081 npm run dev # if 8080 is taken
 The unit tests use the Node built-in test runner; there is no test framework to install.
 
 ```bash
-npm test                  # everything: 293 tests across the rule engine, diff mode, splitter and allocation
+npm test                  # everything: 294 tests across the rule engine, diff mode, splitter and allocation
 npm run test:anmerkung    # the Anmerkung suites only
 npm run verify:anmerkung  # syntax gate, required-engine symbols, SHA-256 of assets/anmerkung.js, then the full suite
 ```

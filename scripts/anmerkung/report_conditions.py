@@ -368,8 +368,8 @@ story.append(P(
     "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. One rule:"
 ))
 story.append(section_table([
-    ("FR Kosten DL appears in the destination country column of the OLD tariff AND Volumen kg sits in the same weight bracket as Volumen kg DL (empty / 0 DL volume counts as the same bracket)", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
-    ("otherwise", "Differenz aufgrund abweichender Gewichte"),
+    ("FR Kosten DL is looked up in the destination country column of the OLD tariff to find the weight bracket(s) whose rate equals it; Volumen kg sits in one of those brackets", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
+    ("otherwise (blank / 0 FR, missing / 0 Volumen kg, unknown country, or FR matching no rate)", "Differenz aufgrund abweichender Gewichte"),
 ]))
 story.append(P("Honold constants", h3))
 story.append(const_table([
