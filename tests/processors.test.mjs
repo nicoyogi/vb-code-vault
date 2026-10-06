@@ -1227,3 +1227,91 @@ test('processWackler: 2026-08-31 bundle — pallet volume boundary gate (4c4576a
     'Wackler rechnet Frachtrate für 9000kg ab // Differenz Energiezuschlag'
   );
 });
+
+/* ──────────────────────────────────────────────────────────
+   HONOLD — one rule against the encrypted OLD-tariff matrix.
+   The synthetic tariff below stands in for
+   assets/honold-tariff.enc.json, which never ships in plaintext.
+─────────────────────────────────────────────────────────── */
+const HONOLD_COLS = { stat: 50, fr_dl: 51, vkg: 52, vkg_dl: 53, empf_land: 54 };
+const HONOLD_SYNTH = {
+  tiers: [50, 100, 150, 200, 250, 300],
+  zones: { 'AT1': [10, 20, 30, 40, 50, 60], 'CH1': [11, 21, 31, 41, 51, 61] },
+  codes: { AT: ['AT1'], CH: ['CH1'] },
+};
+e.setHonoldTariff(HONOLD_SYNTH);
+
+test('processHonold: without the decrypted tariff the row is skipped (null), never blanked', () => {
+  e.setHonoldTariff(null);
+  try {
+    const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 53: '150', 54: 'AT' });
+    assert.equal(e.processHonold(ws, R, HONOLD_COLS), null);
+  } finally {
+    e.setHonoldTariff(HONOLD_SYNTH);
+  }
+});
+
+test('processHonold: Stat_Freigabe != 10 returns null', () => {
+  const ws = makeRow(R, { 50: 5, 51: '30', 52: '150', 53: '150', 54: 'AT' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS), null);
+});
+
+test('processHonold: blank FR Kosten DL -> weight-difference note', () => {
+  const ws = makeRow(R, { 50: 10, 52: '150', 53: '150', 54: 'AT' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS),
+    'Differenz aufgrund abweichender Gewichte');
+});
+
+test('processHonold: FR in OLD tariff + same weight tier -> previous-tariff note', () => {
+  // 150 and 140 both fall in the 101..150 bracket, FR 30 = AT1[150].
+  const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 53: '140', 54: 'AT' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS),
+    'Honold berechnet die Kosten nach dem bisherigen Tarif');
+});
+
+test('processHonold: same tier does not require equal kilograms', () => {
+  const ws = makeRow(R, { 50: 10, 51: '30', 52: '101', 53: '150', 54: 'AT' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS),
+    'Honold berechnet die Kosten nach dem bisherigen Tarif');
+});
+
+test('processHonold: tier boundary (100 vs 101) -> weight-difference note', () => {
+  const ws = makeRow(R, { 50: 10, 51: '30', 52: '100', 53: '101', 54: 'AT' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS),
+    'Differenz aufgrund abweichender Gewichte');
+});
+
+test('processHonold: empty / 0 Volumen kg DL counts as the same tier', () => {
+  const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 53: '0', 54: 'AT' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS),
+    'Honold berechnet die Kosten nach dem bisherigen Tarif');
+});
+
+test('processHonold: FR not present in the destination country column -> weight-difference note', () => {
+  const ws = makeRow(R, { 50: 10, 51: '999', 52: '150', 53: '150', 54: 'AT' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS),
+    'Differenz aufgrund abweichender Gewichte');
+});
+
+test('processHonold: destination country absent from the tariff -> weight-difference note', () => {
+  const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 53: '150', 54: 'XX' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS),
+    'Differenz aufgrund abweichender Gewichte');
+});
+
+test('processHonold: tariff match scans every bracket, not just the volume tier', () => {
+  // FR 50 sits at AT1[250]; the row weighs 150, so the brackets differ but the
+  // "has value in the OLD tariff" guard is satisfied and the DL volume matches.
+  const ws = makeRow(R, { 50: 10, 51: '50', 52: '150', 53: '150', 54: 'AT' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS),
+    'Honold berechnet die Kosten nach dem bisherigen Tarif');
+});
+
+test('phrase catalog: both Honold phrases resolve to stable keys', () => {
+  assert.equal(e.phraseToKey('Honold berechnet die Kosten nach dem bisherigen Tarif'),
+    'honoldBisherigerTarif');
+  /* The weight-difference wording already exists for Dachser/K+N, so Honold
+     reuses that catalog key instead of adding a duplicate value. */
+  assert.equal(e.phraseToKey('Differenz aufgrund abweichender Gewichte'),
+    'abweichGewichte');
+});

@@ -24,6 +24,7 @@ const REPO_ROOT = join(__dirname, '..', '..');
 const SRC = join(REPO_ROOT, 'assets', 'anmerkung.js');
 const SRC_RATECARD = join(REPO_ROOT, 'assets', 'wackler-ratecard.js');
 const SRC_NAT_RATECARD = join(REPO_ROOT, 'assets', 'wackler-national-ratecard.js');
+const SRC_HONOLD_TARIFF = join(REPO_ROOT, 'assets', 'honold-tariff.js');
 
 /* The two Wackler ratecard .js files are business data and live local-only since
    b7f3c57 (only assets/wackler-ratecards.enc.json ships, decryptable with the team
@@ -60,6 +61,14 @@ function readRatecardSource(relPath) {
 }
 const RATECARD_SRC = readRatecardSource('assets/wackler-ratecard.js');
 const NAT_RATECARD_SRC = readRatecardSource('assets/wackler-national-ratecard.js');
+
+/* The Honold OLD tariff plaintext is local-only too, but unlike the Wackler cards
+   it has never been committed, so there is no history to fall back to. Read it
+   from disk when present; otherwise the Honold tests inject a synthetic tariff. */
+function readHonoldTariffSource() {
+  try { return readFileSync(SRC_HONOLD_TARIFF, 'utf8'); } catch { return null; }
+}
+const HONOLD_TARIFF_SRC = readHonoldTariffSource();
 
 /* XLSX cell address encoding, matching XLSX.utils.encode_cell({r,c})
    (0-based r/c -> e.g. {r:0,c:0} => "A1", {r:1,c:2} => "C2"). */
@@ -192,6 +201,14 @@ export function loadEngine() {
     /* Non-fatal: the engine degrades gracefully without the national rate card. */
   }
 
+  /* The Honold OLD tariff, mirroring the loader's <script>. Optional: without the
+     local plaintext, processHonold returns null (skip) until a test injects one. */
+  try {
+    if (HONOLD_TARIFF_SRC) vm.runInContext(HONOLD_TARIFF_SRC, ctx, { filename: 'honold-tariff.js' });
+  } catch (err) {
+    /* Non-fatal: the Honold rule simply has no tariff to consult. */
+  }
+
   try {
     vm.runInContext(code, ctx, { filename: 'anmerkung.js' });
   } catch (err) {
@@ -205,7 +222,9 @@ export function loadEngine() {
 
   const need = [
     // processors
-    'processDachser', 'processKN', 'processDHL', 'processWackler',
+    'processDachser', 'processKN', 'processDHL', 'processWackler', 'processHonold',
+    // honold tariff helpers
+    'resolveHonold', 'honoldTariff', 'honoldTierIdx', 'honoldFrInTariff',
     // tier helpers
     'dachserGetTier', 'knGetTier', 'wacklerGetTier', 'wacklerGetTierIdx', 'wacklerTierLabel',
     'wacklerRechnetNote',
@@ -241,6 +260,10 @@ export function loadEngine() {
   engine.localStorage = sandbox.localStorage;
   engine.WACKLER_RATECARD = sandbox.WACKLER_RATECARD || null;
   engine.WACKLER_NATIONAL_RATECARD = sandbox.WACKLER_NATIONAL_RATECARD || null;
+  /* Honold tariff is read lazily by processHonold, so a test can swap it in (or
+     clear it to exercise the locked/no-tariff skip) after the engine has loaded. */
+  engine.HONOLD_TARIFF = sandbox.HONOLD_TARIFF || null;
+  engine.setHonoldTariff = (tariff) => { sandbox.HONOLD_TARIFF = tariff || undefined; };
   /* The phrase catalog itself, so tests can guard catalog-wide invariants
      (e.g. no two entries may normPhrase-fold onto each other). PHRASES is a
      top-level `const`, which — unlike function declarations — does NOT land

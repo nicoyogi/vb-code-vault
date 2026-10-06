@@ -393,6 +393,8 @@ const PHRASES={
   dieselzuschlag:             'Dieselzuschlag ok?',
   returnOk:                   'Return, ok?',
   frachtDiff:                 'Frachtdifferenz',
+  // Honold
+  honoldBisherigerTarif:      'Honold berechnet die Kosten nach dem bisherigen Tarif',
 };
 /* Expose under shorter alias for compactness inside processors. */
 const P=PHRASES;
@@ -2166,8 +2168,73 @@ function buildReason(fw,ws,r,cols){
     const plz=cellStr(ws,r,cols.empf_plz),ort=cellStr(ws,r,cols.empf_ort);
     if(plz||ort)parts.push('DEST='+[plz,ort].filter(Boolean).join(' '));
     push('KOST',cellStr(ws,r,cols.kostenstelle));push('SACH',cellStr(ws,r,cols.sachkonto));
+  } else if(fw==='honold'){
+    push('STAT',num(cols.stat));push('FR_DL',num(cols.fr_dl));
+    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
+    const land=cellStr(ws,r,cols.empf_land);if(land)parts.push('LAND='+land);
   }
   return parts.join(' | ');
+}
+
+/* ── HONOLD ── */
+/* Old-tariff guard tolerance: the FR amount must appear in the destination
+   country's column of the OLD tariff within this many EUR. */
+const HONOLD_RATE_TOL=0.005;
+/* The tariff matrix is business data. It ships encrypted as
+   assets/honold-tariff.enc.json and is decrypted in-page by
+   assets/honold-tariff-loader.js. Read the global lazily so a passphrase
+   unlocked after page load is picked up without reloading the engine. */
+function honoldTariff(){
+  return (typeof HONOLD_TARIFF!=='undefined'&&HONOLD_TARIFF&&Array.isArray(HONOLD_TARIFF.tiers))?HONOLD_TARIFF:null;
+}
+/* Index of the "Bis" bracket a weight falls into: first tier >= kg, last
+   tier for anything above the table. null for missing / non-positive weights. */
+function honoldTierIdx(kg){
+  const t=honoldTariff();if(!t||!(kg>0))return null;
+  const tiers=t.tiers;
+  for(let i=0;i<tiers.length;i++)if(kg<=tiers[i])return i;
+  return tiers.length-1;
+}
+/* "FR Kosten DL has value in the OLD tariff": the amount appears somewhere in
+   the destination country's zone column(s), independent of the bracket. */
+function honoldFrInTariff(land,fr){
+  const t=honoldTariff();if(!t||!land||!(Math.abs(fr)>0))return false;
+  const cols=(t.codes&&t.codes[String(land).toUpperCase()])||[];
+  if(!cols.length)return false;
+  for(const z of cols){
+    const rates=t.zones&&t.zones[z];
+    if(!Array.isArray(rates))continue;
+    for(const v of rates)if(v!=null&&Math.abs(Number(v)-fr)<=HONOLD_RATE_TOL)return true;
+  }
+  return false;
+}
+function resolveHonold(ws,range){
+  const fc=(h2,h3)=>findCol(ws,range,h2,h3);
+  return{
+    target:   fc('','Anmerkung'),
+    stat:     fc('','Stat_Freigabe'),
+    fr_dl:    fc('FR','Kosten DL'),
+    vkg:      fc('','Volumen kg'),
+    vkg_dl:   fc('','Volumen kg DL'),
+    empf_land:fc('','Empf.-Land'),
+    empf_plz: fc('','Empf.-PLZ'),
+  };
+}
+/* One rule: the FR charge is an OLD-tariff value AND both volumes sit in the
+   same weight bracket -> the previous tariff is still being billed; otherwise
+   the gap is a weight difference. A blank / 0 FR is never an old-tariff value,
+   so it takes the same weight-difference branch. Without the decrypted tariff
+   the row is SKIPPED (null), never blanked: the engine must not overwrite an
+   existing note it cannot re-derive. */
+function processHonold(ws,r,cols){
+  if(!honoldTariff())return null;
+  if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
+  const fr=cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0;
+  const iAE=honoldTierIdx(cols.vkg>=0?cellNum(ws,r,cols.vkg):0);
+  const iAF=honoldTierIdx(cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0);
+  const sameTier=(iAF===null||iAE===iAF);
+  const land=cols.empf_land>=0?cellStr(ws,r,cols.empf_land):'';
+  return (honoldFrInTariff(land,fr)&&sameTier)?P.honoldBisherigerTarif:P.abweichGewichte;
 }
 
 /* Run rules across the workbook without mutating files. Returns in-memory results + stats. */
@@ -2182,6 +2249,7 @@ function runRules(){
     if(selectedFW==='dachser'){cols=resolveDachser(ws,range);fn=processDachser;}
     else if(selectedFW==='kn'){cols=resolveKN(ws,range);fn=processKN;}
     else if(selectedFW==='dhl'){cols=resolveDHL(ws,range);fn=processDHL;}
+    else if(selectedFW==='honold'){cols=resolveHonold(ws,range);fn=processHonold;}
     else{cols=resolveWackler(ws,range);fn=processWackler;}
     let created=false;
     if(cols.target<0){
@@ -2359,7 +2427,8 @@ async function runProcess(){
     resultBlob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE',compressionOptions:{level:6}});
     setProgress(100);
     renderStats(rep);
-    showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (Stat_Freigabe ≠ 10)${wantReason?' · reason column written':''}.`,'ok');
+    const skipMsg=(selectedFW==='honold'&&!honoldTariff())?'Honold tariff not unlocked (passphrase needed)':'Stat_Freigabe ≠ 10';
+    showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (${skipMsg})${wantReason?' · reason column written':''}.`,'ok');
     document.getElementById('btnDl').style.display='block';
   }catch(e){showLog('Ritual failed: '+e.message+'\n'+e.stack,'err');console.error(e);}
   btn.disabled=false;btn.textContent='Invoke the Ritual';
@@ -2418,6 +2487,11 @@ const TESTER_FIELDS={
     ['empf_plz','Empf.-PLZ','str'],['empf_ort','Empf.-Ort','str'],
     ['kostenstelle','KOSTENSTELLE','str'],['sachkonto','SACHKONTO','str'],
   ],
+  honold:[
+    ['stat','Stat_Freigabe','num'],['fr_dl','FR Kosten DL','num'],
+    ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
+    ['empf_land','Empf.-Land','str'],
+  ],
 };
 
 /* Presets that exercise common rule branches — great smoke tests. */
@@ -2459,6 +2533,10 @@ const TESTER_PRESETS={
     {name:'NL-FIX SNK 38',values:{stat:10,snk_diff:38,tarif:'80,00'}},
     {name:'TZ-only Treibstof',values:{stat:10,tarif:'40,04',tz:'-1.32',vkg:214,vkg_dl:214,kostenstelle:'211FO998',sachkonto:'612100'}},
     {name:'Fremdnummer empty tarif',values:{stat:10,tarif:'',fr:29.5,maut:2.6,tz:2.51,vkg:120,vkg_dl:120}},
+  ],
+  honold:[
+    {name:'Same tier (old tariff)',values:{stat:10,fr_dl:127.25,vkg:588,vkg_dl:588,empf_land:'AT'}},
+    {name:'Cross-tier weights',values:{stat:10,fr_dl:127.25,vkg:588,vkg_dl:493,empf_land:'AT'}},
   ],
 };
 
@@ -2542,6 +2620,7 @@ function buildSyntheticWs(fw,userVals){
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
     wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','colli','brutto','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
+    honold:['target','stat','fr_dl','vkg','vkg_dl','empf_land','empf_plz'],
   }[fw]||[];
   for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
   return{ws,cols};
@@ -2560,6 +2639,7 @@ function runTester(){
     if(fw==='dachser')result=processDachser(ws,3,cols);
     else if(fw==='kn')result=processKN(ws,3,cols);
     else if(fw==='dhl')result=processDHL(ws,3,cols);
+    else if(fw==='honold')result=processHonold(ws,3,cols);
     else result=processWackler(ws,3,cols);
   }catch(e){
     out.innerHTML='<div class="to-label">Error</div><div class="to-null">'+String(e.message||e)+'</div>';
@@ -2569,7 +2649,8 @@ function runTester(){
   const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   let body;
   if(result===null){
-    body='<div class="to-null">null — row would be skipped (Stat_Freigabe ≠ 10).</div>';
+    const why=(fw==='honold'&&!honoldTariff())?'the Honold tariff is not unlocked (passphrase needed)':'Stat_Freigabe ≠ 10';
+    body='<div class="to-null">null — row would be skipped ('+why+').</div>';
   } else if(result===''){
     body='<div class="to-empty">empty — no trigger fired, row would be filled with blank.</div>';
   } else {
@@ -2683,6 +2764,7 @@ function _resolverFor(fw){
   if(fw==='kn')return resolveKN;
   if(fw==='dhl')return resolveDHL;
   if(fw==='wackler')return resolveWackler;
+  if(fw==='honold')return resolveHonold;
   return null;
 }
 function _processorFor(fw){
@@ -2690,6 +2772,7 @@ function _processorFor(fw){
   if(fw==='kn')return processKN;
   if(fw==='dhl')return processDHL;
   if(fw==='wackler')return processWackler;
+  if(fw==='honold')return processHonold;
   return null;
 }
 /* Pick the forwarder whose resolver finds the most known columns on
@@ -2704,7 +2787,10 @@ function _processorFor(fw){
    the K+N score can edge ahead and silently override the user's
    click — tracked by the "diff mode shows wrong forwarder" report. */
 function detectForwarderForSheet(ws,range){
-  const order=['dachser','kn','dhl','wackler'];
+  /* Honold's resolver columns are a subset of Wackler's, so on the Honold
+     sheet Wackler scores higher and auto-detect resolves to Wackler.
+     Honold therefore needs an explicit forwarder selection. */
+  const order=['dachser','kn','dhl','wackler','honold'];
   /* Honor the user's explicit forwarder pick when its resolver finds
      the Anmerkung target column on this sheet. Auto-detect still kicks
      in when the selected forwarder simply doesn't fit the sheet, so
@@ -2913,6 +2999,7 @@ const CANONICAL_INPUT_ORDER={
             'referenz','anz_colli','brutto_kg','vkg','vkg_dl',
            'abg_land','abg_plz','empf_land','empf_plz','empf_ort','zone',
            'kostenstelle','sachkonto'],
+  honold:['stat','fr_dl','vkg','vkg_dl','empf_land','empf_plz'],
 };
 
 /* Build the ordered key list for a CSV: union of (canonical for each
@@ -2929,7 +3016,7 @@ function orderedInputKeys(rows){
   const add=k=>{if(observed.has(k)&&!ordered.includes(k))ordered.push(k);};
   /* Emit canonical order for each forwarder we actually saw, in a
      stable forwarder order — dachser → kn → dhl → wackler. */
-  ['dachser','kn','dhl','wackler'].forEach(fw=>{
+  ['dachser','kn','dhl','wackler','honold'].forEach(fw=>{
     if(!fwSeen.has(fw))return;
     (CANONICAL_INPUT_ORDER[fw]||[]).forEach(add);
   });
@@ -3349,6 +3436,10 @@ function collectInputsForRow(fw,ws,r,cols){
     get('abg_land',cols.abg_land);get('empf_land',cols.empf_land);
     get('abg_plz',cols.abg_plz);get('zone',cols.zone);
     get('kostenstelle',cols.kostenstelle);get('sachkonto',cols.sachkonto);
+  } else if(fw==='honold'){
+    get('stat',cols.stat);get('fr_dl',cols.fr_dl);
+    get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
+    get('empf_land',cols.empf_land);get('empf_plz',cols.empf_plz);
   }
   return o;
 }
@@ -4425,7 +4516,7 @@ const INPUT_GLOSSARY={
   tarif             :'Total Kosten lt. Tarif — booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
   fr_diff           :'FR Differenz — freight-charge delta vs tariff (numeric, signed).',
   fr_tarif          :'FR Kosten lt. Tarif — the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier.',
-  fr_dl             :'FR Kosten DL — the freight Wackler actually billed (numeric) = rate(billedTier, zone) = fr_tarif + fr_diff. Differs from fr_tarif on an over/undercharge (fr_diff = Kosten DL − Kosten lt. Tarif); used to derive fr_tarif when the Kosten lt. Tarif column is absent.',
+  fr_dl             :'FR Kosten DL — the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it is matched against the encrypted OLD tariff (assets/honold-tariff.enc.json) to decide the previous-tariff vs weight-difference note.',
   exp_diff          :'EXP Differenz — express/priority surcharge delta (numeric, signed).',
   exp_dl            :'EXP Kosten DL — DL-side express cost (Dachser-only signal).',
   mt_diff           :'MT/Maut Differenz — toll delta (numeric, signed).',
@@ -4502,14 +4593,20 @@ const FORWARDER_SPEC={
     gate     :'Stat_Freigabe == 10 (partial: Kontierung still emitted on stat≠10 if KOST/SACH blank)',
     notes    :'Fully deterministic — the existing Anmerkung cell is never read back (no protected-phrase preservation since v1.15.0). AVIS/SNK code-book is sign-insensitive with rounding tolerance.',
   },
+  honold:{
+    processor:'processHonold',
+    resolver :'resolveHonold',
+    gate     :'Stat_Freigabe == 10 (and the OLD tariff must be unlocked — rows are skipped, not blanked, without it)',
+    notes    :'One rule. FR Kosten DL must appear in the destination country column of the encrypted OLD tariff (assets/honold-tariff.enc.json) and Volumen kg must fall in the same weight bracket as Volumen kg DL; an empty/0 DL volume counts as the same bracket.',
+  },
 };
 
 /* Build the Rule Spec object. Pure — no DOM, no I/O. Caller decides
    whether to download as JSON or include in the bundle ZIP. */
 function buildRuleSpec(){
-  const fwsSeen=(diffState.results&&diffState.results.forwarders)||['dachser','kn','dhl','wackler'];
+  const fwsSeen=(diffState.results&&diffState.results.forwarders)||['dachser','kn','dhl','wackler','honold'];
   const forwarders={};
-  for(const fw of ['dachser','kn','dhl','wackler']){
+  for(const fw of ['dachser','kn','dhl','wackler','honold']){
     const spec=FORWARDER_SPEC[fw]||{};
     const inputKeys=CANONICAL_INPUT_ORDER[fw]||[];
     const glossary={};
@@ -4694,7 +4791,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('');
   lines.push('### 1. Read `rule_spec.json`');
   lines.push('It tells you:');
-  lines.push('- The exact source file (`assets/anmerkung.js`) and the four processor symbols to edit (`processDachser`, `processKN`, `processDHL`, `processWackler`).');
+  lines.push('- The exact source file (`assets/anmerkung.js`) and the five processor symbols to edit (`processDachser`, `processKN`, `processDHL`, `processWackler`, `processHonold`).');
   lines.push('- The `PHRASES` catalog: every key you can emit and the German string it produces.');
   lines.push('- The threshold per forwarder for the `hasErr()` numeric guard.');
   lines.push('- The English glossary for every input field on every forwarder.');
@@ -4706,7 +4803,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('');
   lines.push('| field | meaning |');
   lines.push('| --- | --- |');
-  lines.push('| `forwarder` | one of `dachser` / `kn` / `dhl` / `wackler` |');
+  lines.push('| `forwarder` | one of `dachser` / `kn` / `dhl` / `wackler` / `honold` |');
   lines.push('| `processor` | exact JS symbol to edit, e.g. `processWackler` |');
   lines.push('| `applicable_threshold` | the `hasErr()` tolerance for this forwarder |');
   lines.push('| `label` | `wrong` / `missed` / `overfired` / `correct` |');
@@ -4843,6 +4940,7 @@ function engineSourceSections(){
     ['K+N',bucket(/^(processKN$|resolveKN$|kn[A-Z])/)],
     ['DHL',bucket(/^(processDHL$|resolveDHL$|dhl[A-Z])/)],
     ['Wackler',bucket(/^(processWackler$|resolveWackler$|wackler|isWackler)/)],
+    ['Honold',bucket(/^(processHonold$|resolveHonold$|honold|HONOLD)/)],
   ];
 }
 
@@ -4900,6 +4998,7 @@ function buildEngineSourceDoc(){
     WACKLER_TZ_ADDITIVE,WACKLER_HEBEBUEHNE_ABS,WACKLER_HEBEBUEHNE_TOL,WACKLER_BUENDEL_MAX_KG,
     WACKLER_XTIER_NEAR_BAND,WACKLER_BUENDEL_PARTIAL,WACKLER_COLLI_KG,WACKLER_SAME_WEIGHT_BAND,
     WACKLER_BUENDEL_NEAR_BAND,WACKLER_BUENDEL_MIN_REFS,
+    HONOLD_RATE_TOL,
   };
   const lines=['# Engine source — v'+VERSION,'',
     '> Extracted live via `Function.prototype.toString()` at export time — this IS the running engine, not a copy.',
@@ -5264,7 +5363,7 @@ selectFW = function(btn) { _origSelectFW(btn); checkBulkReady(); };
     return {keys:entries.length,duplicate_normalized_values:[...folded.entries()].filter(([,ks])=>ks.length>1).map(([value,keys])=>({value,keys}))};
   }
   function processorHealth(){
-    return ['processDachser','processKN','processDHL','processWackler'].map(name=>({name,ok:typeof window[name]==='function'||typeof globalThis[name]==='function'}));
+    return ['processDachser','processKN','processDHL','processWackler','processHonold'].map(name=>({name,ok:typeof window[name]==='function'||typeof globalThis[name]==='function'}));
   }
   function withWorkbookTransaction(nextWorkbook,fn){
     const previous=workbook;
@@ -5339,7 +5438,7 @@ selectFW = function(btn) { _origSelectFW(btn); checkBulkReady(); };
     return {
       diagnostics_schema:'anmerkung.engine-diagnostics/v4',
       page_version:VERSION,
-      processors:['processDachser','processKN','processDHL','processWackler'],
+      processors:['processDachser','processKN','processDHL','processWackler','processHonold'],
       threshold_source:TH_KEY,
       thresholds:thresholdSnapshot(),
       kontierung_enabled:!!KONTIERUNG_ENABLED,

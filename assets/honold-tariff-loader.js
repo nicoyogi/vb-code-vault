@@ -1,23 +1,22 @@
 /* ══════════════════════════════════════════════════════════════
-   WACKLER RATECARD LOADER — decrypts the tariff data client-side
+   HONOLD TARIFF LOADER - decrypts the OLD tariff client-side
    ──────────────────────────────────────────────────────────────
-   The Wackler rate matrices are business data and no longer ship in
-   the public repo. assets/wackler-ratecards.enc.json carries them as
-   an AES-256-GCM ciphertext (built by scripts/encrypt-ratecards.mjs);
+   The Honold OLD tariff matrix is business data and does not ship in
+   the public repo. assets/honold-tariff.enc.json carries it as an
+   AES-256-GCM ciphertext (built by scripts/encrypt-honold-tariff.mjs);
    this loader decrypts it with a team passphrase (asked once, kept in
-   localStorage) and defines WACKLER_RATECARD / WACKLER_NATIONAL_RATECARD
-   on the page, then tells the engine via wacklerRatecardsReady().
-   The passphrase is shared with the Honold tariff loader, so one unlock
+   localStorage) and defines HONOLD_TARIFF on the page.
+   The passphrase is shared with the Wackler ratecard loader, so one unlock
    control covers both.
-   Without the passphrase the engine runs normally — Wackler costing
-   simply stays off (its existing graceful no-op).
+
+   Without the passphrase the engine runs normally - Honold rows are
+   skipped, never blanked, because the note cannot be re-derived.
    ══════════════════════════════════════════════════════════════ */
 (function (root) {
   'use strict';
 
   var LS_KEY = 'anmerkung_tariff_pass';
-  var LEGACY_KEY = 'wackler_rc_pass';
-  var ENC_URL = 'assets/wackler-ratecards.enc.json';
+  var ENC_URL = 'assets/honold-tariff.enc.json';
 
   function b64ToBytes(s) {
     var bin = atob(s), a = new Uint8Array(bin.length);
@@ -26,7 +25,7 @@
   }
 
   /* {v,iter,salt,iv,data} + passphrase → plaintext JS. Throws on a wrong
-     passphrase (AES-GCM authentication failure) — that is the only oracle. */
+     passphrase (AES-GCM authentication failure) - that is the only oracle. */
   async function decryptBundle(enc, passphrase) {
     var subtle = root.crypto.subtle;
     var keyMat = await subtle.importKey(
@@ -38,28 +37,22 @@
     return new TextDecoder().decode(plain);
   }
 
-  root.WacklerRCLoader = { decryptBundle: decryptBundle };
+  root.HonoldTariffLoader = { decryptBundle: decryptBundle };
 
   /* Node test context: export the crypto core only, no DOM bootstrap. */
   if (typeof document === 'undefined') return;
 
   function showUnlockButton() {
+    /* Same single control as the Wackler loader. When both scripts ship,
+       wackler-ratecard-loader.js runs first and this finds its button and
+       returns; this copy is for a page that loads only the Honold loader. */
     if (document.getElementById('tariffUnlockBtn')) return;
     var btn = document.createElement('button');
     btn.id = 'tariffUnlockBtn';
     btn.type = 'button';
-    /* The lock is the affordance, so it stays in the label as a role marker rather
-       than being decorative. One control unlocks Wackler rates and Honold notes,
-       which share a passphrase. The dialog is a prompt for now; see
-       docs/anmerkung for the planned in-page form. */
     btn.textContent = '🔒 Unlock tariff data';
     btn.title = 'Enter the team passphrase to enable Wackler costing and Honold notes';
     btn.setAttribute('aria-label', 'Unlock tariff data with the team passphrase');
-    /* Styling lives in anmerkung.css / anmerkung-pro.css, next to the rest of the
-       page's controls. Building it here with inline cssText put this one control
-       outside the design system: it kept its own radius and font under the pro
-       skin and could not follow the theme. Only the fixed placement is inline,
-       because the page has no other launcher for it. */
     btn.className = 'wackler-unlock-btn';
     btn.onclick = function () {
       var p = prompt('Tariff passphrase:');
@@ -72,19 +65,7 @@
 
   async function boot() {
     var pass = null;
-    try {
-      pass = localStorage.getItem(LS_KEY);
-      if (!pass) {
-        /* Adopt the old Wackler-only key once, so existing users are not
-           re-prompted for the passphrase the Honold loader now shares. */
-        var legacy = localStorage.getItem(LEGACY_KEY);
-        if (legacy) {
-          localStorage.setItem(LS_KEY, legacy);
-          localStorage.removeItem(LEGACY_KEY);
-          pass = legacy;
-        }
-      }
-    } catch (e) {}
+    try { pass = localStorage.getItem(LS_KEY); } catch (e) {}
     if (!pass) { showUnlockButton(); return; }
     /* An insecure origin has no crypto.subtle, so decryption cannot run. That is
        not a passphrase problem: keep the key and stay quiet. */
@@ -97,7 +78,8 @@
     } catch (e) {
       /* Fetch, HTTP, or JSON-parse failure: the stored passphrase may still be
          valid, so keep it and stay quiet. A prompt cannot fix an unavailable
-         artifact, and the engine runs with Wackler costing off. */
+         artifact, and the engine runs with the tariff off (Honold rows
+         skipped). */
       return;
     }
     var code;
@@ -115,8 +97,8 @@
       return;
     }
     try {
-      (0, eval)(code); // both ratecard IIFEs target globalThis, so this defines the two globals
-      if (typeof root.wacklerRatecardsReady === 'function') root.wacklerRatecardsReady();
+      (0, eval)(code); // the generated IIFE body targets globalThis
+      if (typeof root.honoldTariffReady === 'function') root.honoldTariffReady();
     } catch (e) {
       /* Decrypt succeeded, so the passphrase is fine; a bad bundle is not a
          passphrase problem. Keep the key and stay quiet. */

@@ -1,6 +1,13 @@
 {
-  "version": "1.47.0",
+  "version": "1.48.0",
   "entries": [
+    {
+      "ver": "1.48.0",
+      "date": "2026-10-05",
+      "items": [
+        "New forwarder Honold, one note rule on the Soll-Ist-Vergleich workbook. FR Kosten DL must appear in the destination country's column of the OLD tariff and Volumen kg must sit in the same weight bracket as Volumen kg DL; an empty or 0 Volumen kg DL counts as the same bracket. Both hold -> 'Honold berechnet die Kosten nach dem bisherigen Tarif', otherwise 'Differenz aufgrund abweichender Gewichte'. Gated on Stat_Freigabe 10. The OLD tariff ships encrypted (assets/honold-tariff.enc.json); Honold rows are skipped, never blanked, until it is unlocked. Validated against 20379045 Soll-Ist-Vergleich: 121 of 124 rows, with rows 4, 44 and 117 labelled 'bisherigen Tarif' in the workbook despite a lower DL weight bracket."
+      ]
+    },
     {
       "ver": "1.47.0",
       "date": "2026-10-02",
