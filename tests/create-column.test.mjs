@@ -84,6 +84,31 @@ test('created Anmerkung column replaces an existing exact column definition', ()
   assert.match(out, /<col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/>/);
 });
 
+/* The width must also fire on a sheet that already carries an Anmerkung column
+   (the Honold 20379045 workbook has one at BK with width 8.71), not just on the
+   auto-created one, or narrow source columns stay unreadable. */
+test('an existing narrow Anmerkung column is widened to the reference', () => {
+  const xml = '<dimension ref="A1:D4"/><cols><col min="4" max="4" width="8.7109375" bestFit="1" customWidth="1"/></cols><sheetData><row r="3" spans="1:4"></row></sheetData>';
+  const out = e.setAnmerkungColumnWidth(xml, 3);
+  assert.match(out, /<col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/>/);
+  assert.equal((out.match(/<col\b/g) || []).length, 1, 'still exactly one definition');
+  assert.match(out, /<dimension ref="A1:D4"\/>/, 'an existing end column is not rewritten');
+  assert.match(out, /<row r="3" spans="1:4">/, 'spans already at the column are not rewritten');
+});
+
+test('an existing wider Anmerkung column keeps its width', () => {
+  const xml = '<dimension ref="A1:D4"/><cols><col min="4" max="4" width="129.5703125" bestFit="1" customWidth="1"/></cols><sheetData></sheetData>';
+  assert.equal(e.setAnmerkungColumnWidth(xml, 3), xml);
+});
+
+test('widening an interior column never shrinks the dimension or spans', () => {
+  const xml = '<dimension ref="A1:Z4"/><cols><col min="4" max="4" width="8" customWidth="1"/></cols><sheetData><row r="3" spans="1:12"></row></sheetData>';
+  const out = e.setAnmerkungColumnWidth(xml, 3); // D, not the last column
+  assert.match(out, /<dimension ref="A1:Z4"\/>/);
+  assert.match(out, /<row r="3" spans="1:12">/);
+  assert.match(out, /<col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/>/);
+});
+
 /* The source Soll-Ist sheets carry their AutoFilter on the row-3 header row
    (e.g. <autoFilter ref="A3:BC55"/>). A created Anmerkung column sits past the
    old last header, so the filter must grow to include it or it has no dropdown;
