@@ -1284,12 +1284,33 @@
     return a;
   }
 
-  // Spread n rows across `parts` people (each weight: 1 full day, 0.5 half day)
-  // as evenly as the weights allow. e.g. balancedSizes(9, [1, 0.5]) -> [6, 3].
-  // Largest-remainder rounding keeps every share within ±1 of exact
-  // proportion; a weight list that sums to 0 is not valid here.
+  // Randomise which person gets which band by swapping bands of equal length
+  // only, so every person's row count is unchanged. A half-day person's band
+  // is never longer than a full-day one (it can tie in tiny systems), so a
+  // full-size band can never move to the half-day person; people due the same
+  // count still trade contiguous doc ranges.
+  function shuffleBoundsEven(bounds) {
+    const out = bounds.slice();
+    const groups = new Map();
+    bounds.forEach(([s, e], i) => {
+      const len = e - s;
+      if (!groups.has(len)) groups.set(len, []);
+      groups.get(len).push(i);
+    });
+    for (const idx of groups.values()) {
+      const picked = shuffleArray(idx.map(i => bounds[i]));
+      idx.forEach((slot, k) => { out[slot] = picked[k]; });
+    }
+    return out;
+  }
+
+  // Spread n rows across `weights.length` people in proportion to their
+  // weights, as evenly as the weights allow. e.g. balancedSizes(9, [1, 0.5])
+  // -> [6, 3]. Largest-remainder rounding keeps every share within ±1 of
+  // exact proportion; a weight list that sums to 0 yields all-zero sizes.
   function balancedSizes(n, weights) {
     const total = weights.reduce((a, b) => a + b, 0);
+    if (total === 0) return weights.map(() => 0); // nothing left to hand out
     const ideal = w => (n * w) / total;
     let floor = weights.map(w => Math.floor(ideal(w)));
     let rem = n - floor.reduce((a, b) => a + b, 0);
@@ -1299,13 +1320,33 @@
     return floor;
   }
 
-  // Cut n rows into `parts` contiguous [start, end) slices sized by each
-  // person's weight. e.g. sliceBounds(6, [1, 0.5]) -> [[0, 4], [4, 6]].
-  function sliceBounds(n, weights) {
+  // Contiguous [start, end) bands from explicit per-person sizes.
+  function sliceBoundsFromSizes(sizes) {
     const b = [];
     let off = 0;
-    for (const size of balancedSizes(n, weights)) { b.push([off, off + size]); off += size; }
+    for (const size of sizes) { b.push([off, off + size]); off += size; }
     return b;
+  }
+
+  // Cut n rows into contiguous [start, end) slices sized by each person's
+  // weight. e.g. sliceBounds(6, [1, 0.5]) -> [[0, 4], [4, 6]].
+  function sliceBounds(n, weights) {
+    return sliceBoundsFromSizes(balancedSizes(n, weights));
+  }
+
+  // Per-system per-person row counts for one job. balancedSizes(total,
+  // weights) gives each person's whole-job target; every system is then split
+  // in proportion to what its people still need, so the per-system rounding
+  // cannot pile onto one person. Row sums are the system's row counts, column
+  // sums are the targets. e.g. three systems of 8 rows over weights [1,1,1,0.5]
+  // -> [[3,2,2,1],[2,3,2,1],[2,2,3,1]] (totals 7,7,7,3).
+  function allocateJobShares(counts, weights) {
+    const left = balancedSizes(counts.reduce((a, b) => a + b, 0), weights);
+    return counts.map((n, s) => {
+      const sizes = s === counts.length - 1 ? [...left] : balancedSizes(n, left);
+      sizes.forEach((c, i) => { left[i] -= c; });
+      return sizes;
+    });
   }
 
   // Nudge each interior band cut off a run of equal (non-blank) document
@@ -1329,22 +1370,37 @@
     return cuts.map((e, k) => [k === 0 ? 0 : cuts[k - 1], e]);
   }
 
+  // Per-person split weight: a half-day person carries 0.5, everyone else 1,
+  // so a half-day person's whole-job total is half of a full-day person's.
+  // The sizes come from allocateJobShares, which plans the whole job (every
+  // system together) so equal-weight people end up even instead of one person
+  // collecting the per-system rounding remainder. A cut can still drift to
+  // keep a document whole (snapBoundsToDocRuns), which moves the counts off
+  // the plan.
+  function weightsForNames(names, halfNames) {
+    return names.map(n => halfNames.has(n) ? 0.5 : 1);
+  }
+
   // Split one system's filtered rows into `weights.length` shares.
   // PRIO rows and the rest split as two independent pools so urgent work
   // lands evenly (±1 per share); each pool runs through the doc-band
-  // machinery — doc-sorted, weighted contiguous bands, cuts nudged off
-  // equal-doc runs, band→person assignment shuffled per pool (shuffle ON)
-  // or in-order slices (OFF). With no PRIO rows this is exactly the
-  // single-pool split. A weight of 0.5 = half-day → half a full share.
-  function systemShares(rows, weights, doShuffle, isPrioRow) {
+  // machinery — doc-sorted, contiguous bands, cuts nudged off equal-doc
+  // runs, band→person assignment shuffled per pool (shuffle ON, swapping
+  // only equal-length bands) or in-order slices (OFF). Band sizes come
+  // from `poolPlans` ([prio sizes, rest sizes], the whole-job allocation)
+  // when given, else from the weights per pool. Weights come from
+  // weightsForNames.
+  function systemShares(rows, weights, doShuffle, isPrioRow, poolPlans) {
     const pools = [[], []];
     for (const r of rows) pools[isPrioRow(r) ? 0 : 1].push(r);
     const shares = Array.from({ length: weights.length }, () => []);
-    for (const p of pools) {
+    for (let pi = 0; pi < pools.length; pi++) {
+      const p = pools[pi];
       if (p.length === 0) continue;
+      const sizes = poolPlans ? poolPlans[pi] : balancedSizes(p.length, weights);
       const pool = doShuffle ? [...p].sort(docNumDesc) : p;
-      const b = sliceBounds(pool.length, weights);
-      const bounds = doShuffle ? shuffleArray(snapBoundsToDocRuns(b, pool)) : b;
+      const b = sliceBoundsFromSizes(sizes);
+      const bounds = doShuffle ? shuffleBoundsEven(snapBoundsToDocRuns(b, pool)) : b;
       shares.forEach((share, i) => share.push(...pool.slice(bounds[i][0], bounds[i][1])));
     }
     return shares;
@@ -1396,11 +1452,21 @@
         // person's doc band.
         const isPrioRow = prioOn ? (r => isPrio(r, prio && prio.docs, today)) : (() => false);
         const halves = currentHalf(job.group);
-        const weights = job.names.map(n => halves.has(n) ? 0.5 : 1);
+        const weights = weightsForNames(job.names, halves);
+        // Whole-job allocation: targets come from every system together, so
+        // equal-weight people stay even across systems instead of one person
+        // collecting the per-system rounding remainder. Each system's PRIO and
+        // main pool then split that system's count for each person.
+        const rowsBySys = job.systems.map(sys => splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)));
+        const sysSizes = allocateJobShares(rowsBySys.map(rows => rows.length), weights);
         const shares = {};
-        for (const sys of job.systems) {
-          shares[sys.name] = systemShares(splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)), weights, doShuffle, isPrioRow);
-        }
+        job.systems.forEach((sys, si) => {
+          const sizes = sysSizes[si];
+          const nPrio = prioOn ? rowsBySys[si].reduce((k, r) => k + (isPrioRow(r) ? 1 : 0), 0) : 0;
+          const prioSizes = nPrio > 0 ? balancedSizes(nPrio, sizes) : sizes.map(() => 0);
+          const restSizes = sizes.map((sz, i) => sz - prioSizes[i]);
+          shares[sys.name] = systemShares(rowsBySys[si], weights, doShuffle, isPrioRow, [prioSizes, restSizes]);
+        });
 
         const usedNames = {}; // per job — the Tariff/Factual filename token separates jobs
         for (let i = 0; i < job.names.length; i++) {

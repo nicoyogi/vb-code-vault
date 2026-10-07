@@ -80,8 +80,8 @@ test('balancedSizes: spreads remainder to the front (equal weights), sums to n',
 });
 
 test('balancedSizes: proportional to weights, sums to n (largest-remainder)', () => {
-  assert.deepEqual(plain(s.balancedSizes(9, [1, 0.5])), [6, 3]);          // 1 full + 1 half -> 2:1
-  assert.deepEqual(plain(s.balancedSizes(10, [1, 1, 0.5])), [4, 4, 2]);   // 2 full + 1 half -> 2:2:1
+  assert.deepEqual(plain(s.balancedSizes(9, [1, 0.5])), [6, 3]);          // weights 1:0.5 -> 2:1
+  assert.deepEqual(plain(s.balancedSizes(10, [1, 1, 0.5])), [4, 4, 2]);   // weights 1:1:0.5 -> 2:2:1
   assert.deepEqual(plain(s.balancedSizes(100, [1, 0.5, 0.5])), [50, 25, 25]);
   // edge cases
   assert.deepEqual(plain(s.balancedSizes(0, [1, 0.5])), [0, 0]);          // nothing to give
@@ -89,6 +89,28 @@ test('balancedSizes: proportional to weights, sums to n (largest-remainder)', ()
   assert.deepEqual(plain(s.balancedSizes(6, [1, 1])), [3, 3]);            // all full -> equal (old balancedSizes(6,2))
   const sizes = s.balancedSizes(79, [1, 1, 1]);
   assert.equal(sizes.reduce((a, b) => a + b, 0), 79);                     // nothing lost/duplicated
+});
+
+test('weightsForNames: a half-day person carries half a full-day weight', () => {
+  assert.deepEqual(plain(s.weightsForNames(['Ana', 'Ben'], new Set(['Ben']))), [1, 0.5]);
+  assert.deepEqual(plain(s.weightsForNames(['A', 'B', 'C', 'D'], new Set(['D']))), [1, 1, 1, 0.5]);
+  assert.deepEqual(plain(s.weightsForNames(['A', 'B'], new Set())), [1, 1]);
+  assert.deepEqual(plain(s.weightsForNames(['A', 'B'], new Set(['A', 'B']))), [0.5, 0.5]);
+});
+
+test('allocateJobShares: whole-job targets, spread evenly across systems', () => {
+  // 3 full + 1 half over one 280-row job -> exactly 80/80/80/40
+  assert.deepEqual(plain(s.allocateJobShares([280], [1, 1, 1, 0.5])), [[80, 80, 80, 40]]);
+  // Three 8-row systems: per-system rounding alone piles onto one person
+  // ([3,2,2,1] three times -> 9/6/6/3); the plan keeps the totals 7/7/7/3.
+  const plan = s.allocateJobShares([8, 8, 8], [1, 1, 1, 0.5]);
+  assert.deepEqual(plain(plan), [[3, 2, 2, 1], [2, 3, 2, 1], [2, 2, 3, 1]]);
+  plan.forEach(sizes => assert.equal(sizes.reduce((a, b) => a + b, 0), 8));
+  assert.deepEqual([0, 1, 2, 3].map(i => plan.reduce((a, sizes) => a + sizes[i], 0)), [7, 7, 7, 3]);
+  // empty systems and the running remainder still preserve the totals
+  const withEmpty = s.allocateJobShares([0, 10, 0, 5], [1, 1]);
+  assert.deepEqual(plain(withEmpty), [[0, 0], [5, 5], [0, 0], [3, 2]]);
+  assert.deepEqual(plain(s.allocateJobShares([0, 0], [1, 1])), [[0, 0], [0, 0]]);
 });
 
 test('sliceBounds: contiguous [start,end) bands proportional to weights, covers all n', () => {
@@ -494,7 +516,7 @@ test('splitRows: end-to-end exclusion with Kreditor, Referenz, and PRIO rows', (
   assert.deepEqual(plain(kept.map(r => r[3])), ['D102', 'D103', 'D105']);
 });
 
-test('systemShares: half-day weight sizes shares ~half of full-day, both pools covered once', () => {
+test('systemShares: honours the weight ratio (2:1) in both pools, all rows covered once', () => {
   const row = (doc, isP) => ['V', 'S', 'R', doc, [], isP ? new Date(2026, 6, 6) : ''];
   const rows = [];
   for (let i = 0; i < 9; i++) rows.push(row('P' + i, true));   // 9 PRIO
@@ -505,16 +527,93 @@ test('systemShares: half-day weight sizes shares ~half of full-day, both pools c
     assert.equal(shares.length, 2);
     // every row covered exactly once
     assert.deepEqual(plain(shares.flat().map(r => r[3]).sort()), plain(rows.map(r => r[3]).sort()));
-    // the full-day share (weight 1) holds ~2x the half-day share (weight 0.5),
-    // within ±1 — the dominant share is either person when shuffled
-    const byPerson = counts => {
-      const [a, b] = counts.sort((x, y) => y - x); // larger first
-      return Math.abs(a - 2 * b) <= 1;
-    };
-    const main = shares.map(sh => sh.filter(r => !isPrioRow(r)).length);
-    assert.equal(byPerson(main), true, `main ≈2:1, got ${main}`);
-    const prio = shares.map(sh => sh.filter(isPrioRow).length);
-    assert.equal(byPerson(prio), true, `prio ≈2:1, got ${prio}`);
+    // each pool splits 6 full-day + 3 half-day, so the weight-0.5 person
+    // (index 1) gets the smaller share in both shuffle states
+    assert.equal(shares[1].filter(r => !isPrioRow(r)).length, 3, `main half-day ${shares.map(sh => sh.length)}`);
+    assert.equal(shares[1].filter(isPrioRow).length, 3, `prio half-day ${shares.map(sh => sh.length)}`);
+    assert.deepEqual(plain(shares.map(sh => sh.length)), [12, 6]);
+  }
+});
+
+test('systemShares: shuffle keeps the half-day person on the half-size band', () => {
+  const row = d => ['V', 'S', 'R', d, [], ''];
+  const rows = [];
+  for (let i = 0; i < 300; i++) rows.push(row('D' + String(i).padStart(4, '0')));
+  const weights = s.weightsForNames(['A', 'B', 'C'], new Set(['C'])); // 1 / 1 / 0.5
+  assert.deepEqual(plain(weights), [1, 1, 0.5]);
+  for (let k = 0; k < 20; k++) {
+    const shares = s.systemShares(rows, weights, true, () => false);
+    // bands [120, 120, 60]: only the two equal-length full bands may swap
+    assert.equal(shares[2].length, 60, `half-day band on run ${k}: ${shares.map(sh => sh.length)}`);
+    assert.equal(shares[0].length + shares[1].length, 240);
+    assert.deepEqual(plain(shares.flat().map(r => r[3]).sort()), plain(rows.map(r => r[3]).sort()));
+  }
+});
+
+test('systemShares: half-day person gets half of the full-day share, PRIO and rest alike', () => {
+  const row = (doc, isP) => ['V', 'S', 'R', doc, [], isP ? new Date(2026, 6, 6) : ''];
+  const weights = s.weightsForNames(['Ana', 'Ben'], new Set(['Ben'])); // [1, 0.5]
+  const rows = [];
+  for (let i = 0; i < 40; i++) rows.push(row('P' + i, true));
+  for (let i = 0; i < 60; i++) rows.push(row('R' + i, false));
+  const isPrioRow = r => !!r[5];
+  // bands from the weights, and the same bands handed in as a whole-job plan
+  for (const poolPlans of [undefined, [[27, 13], [40, 20]]]) {
+    const shares = s.systemShares(rows, weights, false, isPrioRow, poolPlans);
+    assert.deepEqual(plain(shares.map(sh => sh.length)), [67, 33]);
+  }
+});
+
+test('whole-job split: totals across systems stay even and half-day stays half', () => {
+  const row = (doc, sys) => [`V${sys}`, 'S', 'R', doc, [], ''];
+  const systems = [0, 1, 2].map(k => Array.from({ length: 8 }, (_, i) => row('D' + k + i, k)));
+  const weights = s.weightsForNames(['A', 'B', 'C', 'D'], new Set(['D']));
+  const plan = s.allocateJobShares(systems.map(rows => rows.length), weights);
+  for (const doShuffle of [false, true]) {
+    const totals = [0, 0, 0, 0];
+    systems.forEach((rows, si) => {
+      const shares = s.systemShares(rows, weights, doShuffle, () => false, [plan[si].map(() => 0), plan[si]]);
+      shares.forEach((sh, i) => { totals[i] += sh.length; });
+    });
+    assert.deepEqual(totals, [7, 7, 7, 3], `doShuffle=${doShuffle}`);
+  }
+});
+
+test('whole-job split: all-full teams stay even across systems too', () => {
+  const row = (doc, sys) => [`V${sys}`, 'S', 'R', doc, [], ''];
+  const systems = [0, 1, 2].map(k => Array.from({ length: 8 }, (_, i) => row('D' + k + i, k)));
+  const weights = s.weightsForNames(['A', 'B', 'C'], new Set());
+  const plan = s.allocateJobShares(systems.map(rows => rows.length), weights);
+  const totals = [0, 0, 0];
+  systems.forEach((rows, si) => {
+    const shares = s.systemShares(rows, weights, false, () => false, [plan[si].map(() => 0), plan[si]]);
+    shares.forEach((sh, i) => { totals[i] += sh.length; });
+  });
+  assert.deepEqual(totals, [8, 8, 8]);   // per-system rounding alone gives 9/9/6
+});
+
+test('whole-job split: each system PRIO pool shares the person\'s planned count', () => {
+  const row = (doc, sys, isP) => [`V${sys}`, 'S', 'R', doc, [], isP ? new Date(2026, 6, 6) : ''];
+  const systems = [{ prio: 6, rest: 10 }, { prio: 4, rest: 6 }, { prio: 2, rest: 4 }].map((c, k) => {
+    const rows = [];
+    for (let i = 0; i < c.prio; i++) rows.push(row('P' + k + i, k, true));
+    for (let i = 0; i < c.rest; i++) rows.push(row('R' + k + i, k, false));
+    return rows;
+  });
+  const weights = s.weightsForNames(['A', 'B', 'C', 'D'], new Set(['D']));
+  const isPrioRow = r => !!r[5];
+  const plan = s.allocateJobShares(systems.map(rows => rows.length), weights);
+  for (const doShuffle of [false, true]) {
+    const totals = [0, 0, 0, 0], prioTotals = [0, 0, 0, 0];
+    systems.forEach((rows, si) => {
+      const nPrio = rows.filter(isPrioRow).length;
+      const prioSizes = nPrio > 0 ? s.balancedSizes(nPrio, plan[si]) : plan[si].map(() => 0);
+      const restSizes = plan[si].map((sz, i) => sz - prioSizes[i]);
+      const shares = s.systemShares(rows, weights, doShuffle, isPrioRow, [prioSizes, restSizes]);
+      shares.forEach((sh, i) => { totals[i] += sh.length; prioTotals[i] += sh.filter(isPrioRow).length; });
+    });
+    assert.deepEqual(totals, [9, 9, 9, 5], `doShuffle=${doShuffle}`);
+    assert.deepEqual(prioTotals, [3, 4, 3, 2], `prio doShuffle=${doShuffle}`);
   }
 });
 

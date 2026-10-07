@@ -2,6 +2,19 @@
 
 Date: 2026-09-11
 
+> **Amended 2026-10-07 — whole-job allocation.** The ratio is unchanged from
+> the body: a half-day person gets half of a full-day person's share. What
+> changed is where the rounding happens. Shares are planned over the whole job
+> (every system together) by `allocateJobShares`: the per-person targets are
+> `balancedSizes(total rows, weights)` and each system is split in proportion
+> to what its people still need. So 3 full + 1 half over a 280-row job gives
+> exactly `80 / 80 / 80 / 40`, and three 8-row systems give totals
+> `7 / 7 / 7 / 3` where per-system rounding alone gives `9 / 6 / 6 / 3`. A
+> half-day person carries weight `0.5` and full-day people `1`. Shuffle only
+> swaps bands of equal length, so no swap can change a person's row count, and
+> `snapBoundsToDocRuns` can still move a cut to keep a document whole. The
+> body below records the 2026-09-11 design.
+
 ## What
 
 Let each person in the File Splitter be marked **half-day** so their share of
