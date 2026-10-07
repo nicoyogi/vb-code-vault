@@ -2088,7 +2088,25 @@ function recolourColumn(sheetXml,col,textIdx,numIdx){
 
 /* ── SHEET XML PATCHER ── */
 function patchSheet(sheetXml,targetCol,rowResults,strings,styleSourceOffset=0){const tIdx=colToIdx(targetCol);for(const[rowNum,value]of rowResults){if(value===null)continue;const cellRef=targetCol+rowNum,ssIdx=getOrAdd(strings,value);const existRe=new RegExp(`<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`);const existMatch=existRe.exec(sheetXml);if(existMatch){const rawAttrs=(existMatch[1]+' '+(existMatch[2]||'')).replace(/\s*\bt="[^"]*"/g,'').replace(/\s+/g,' ').trim();const attrStr=rawAttrs?' '+rawAttrs:'';sheetXml=sheetXml.slice(0,existMatch.index)+`<c r="${cellRef}"${attrStr} t="s"><v>${ssIdx}</v></c>`+sheetXml.slice(existMatch.index+existMatch[0].length);continue;}const rowOpenRe=new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^>]*(?<!/)>`);const rowOpenMatch=rowOpenRe.exec(sheetXml);if(!rowOpenMatch)continue;const afterOpen=rowOpenMatch.index+rowOpenMatch[0].length;const closeTag='</row>';const closeIdx=sheetXml.indexOf(closeTag,afterOpen);if(closeIdx<0)continue;const rowContent=sheetXml.slice(afterOpen,closeIdx);const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);const freq={};sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});const sourceRef=idxToCol(tIdx+styleSourceOffset)+rowNum,sourceMatch=styleSourceOffset?new RegExp(`<c\\b(?=[^>]*\\br="${sourceRef}")(?=[^>]*\\bs="(\\d+)")[^>]*>`).exec(rowContent):null;const styleIdx=sourceMatch?sourceMatch[1]:(sVals.length?Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]:'0');const newCell=`<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;let insertAt=rowContent.length;for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)){if(colToIdx(m[1])>tIdx){insertAt=m.index;break;}}const newContent=rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);sheetXml=sheetXml.slice(0,afterOpen)+newContent+sheetXml.slice(closeIdx);}return sheetXml;}
-function setAnmerkungColumnWidth(sheetXml,targetIdx){const n=targetIdx+1,targetCol=idxToCol(targetIdx),col=`<col min="${n}" max="${n}" width="75.7109375" bestFit="1" customWidth="1"/>`;const exact=new RegExp(`<col\\b(?=[^>]*\\bmin="${n}")(?=[^>]*\\bmax="${n}")[^>]*/>`);if(exact.test(sheetXml))sheetXml=sheetXml.replace(exact,col);else if(sheetXml.includes('</cols>'))sheetXml=sheetXml.replace('</cols>',col+'</cols>');else sheetXml=sheetXml.replace(/<sheetData\b/,`<cols>${col}</cols><sheetData`);sheetXml=sheetXml.replace(/(<dimension\b[^>]*\bref="[A-Z]+\d+:)[A-Z]+(\d+")/,`$1${targetCol}$2`);sheetXml=sheetXml.replace(/(<row\b[^>]*\bspans="\d+:)\d+("[^>]*>)/g,`$1${n}$2`);return sheetXml;}
+/* Every sheet that carries an Anmerkung column gets it widened to the reference workbook's
+   75.71, whether the column was found in the sheet or freshly created: notes are invisible at
+   a source sheet's own default width. A column already at least that wide keeps its width, the
+   engine never narrows an auditor's column. Dimension and per-row spans only grow, so widening
+   an existing interior column cannot shrink them. */
+function setAnmerkungColumnWidth(sheetXml,targetIdx){
+  const n=targetIdx+1,targetCol=idxToCol(targetIdx),REF=75.7109375;
+  const exact=new RegExp(`<col\\b(?=[^>]*\\bmin="${n}")(?=[^>]*\\bmax="${n}")[^>]*/>`);
+  const cur=exact.exec(sheetXml),curW=cur?parseFloat((/\bwidth="([\d.]+)"/.exec(cur[0])||[])[1]):NaN;
+  if(!(curW>=REF)){
+    const col=`<col min="${n}" max="${n}" width="${REF}" bestFit="1" customWidth="1"/>`;
+    if(cur)sheetXml=sheetXml.replace(exact,col);
+    else if(sheetXml.includes('</cols>'))sheetXml=sheetXml.replace('</cols>',col+'</cols>');
+    else sheetXml=sheetXml.replace(/<sheetData\b/,`<cols>${col}</cols><sheetData`);
+  }
+  sheetXml=sheetXml.replace(/(<dimension\b[^>]*\bref="[A-Z]+\d+:)([A-Z]+)(\d+")/,(m,p1,c,p3)=>colToIdx(c)>=targetIdx?m:`${p1}${targetCol}${p3}`);
+  sheetXml=sheetXml.replace(/(<row\b[^>]*\bspans="\d+:)(\d+)("[^>]*>)/g,(m,p1,e,p3)=>Number(e)>=n?m:`${p1}${n}${p3}`);
+  return sheetXml;
+}
 /* Source Soll-Ist sheets filter on the row-3 header row (`<autoFilter ref="A3:BC55"/>`).
    Grow that ref to the rightmost written column, or add one over the row-3 headers when
    the sheet has no filter at all. */
@@ -2431,7 +2449,7 @@ async function runProcess(){
       const rId=sheetRids[name];if(!rId)continue;
       let rel=ridPaths[rId]||'';rel=rel.replace(/^\/+/,'');if(!rel.startsWith('xl/'))rel='xl/'+rel;
       let sheetXml=await zip.file(rel).async('string');
-      if(created)sheetXml=setAnmerkungColumnWidth(sheetXml,targetIdx);
+      sheetXml=setAnmerkungColumnWidth(sheetXml,targetIdx);
       if(created)sheetXml=patchSheet(sheetXml,targetCol,new Map([[1,''],[2,''],[3,'Anmerkung']]),strings,-1);
       sheetXml=patchSheet(sheetXml,targetCol,rowMap,strings,created?-5:0);
       if(wantReason){
@@ -5271,7 +5289,7 @@ async function runBulkProcess() {
         let rel = ridPaths[rId] || '';
         rel = rel.replace(/^\/+/, ''); if (!rel.startsWith('xl/')) rel = 'xl/' + rel;
         let sheetXml = await zip.file(rel).async('string');
-        if (created) sheetXml = setAnmerkungColumnWidth(sheetXml, targetIdx);
+        sheetXml = setAnmerkungColumnWidth(sheetXml, targetIdx);
         if (created) sheetXml = patchSheet(sheetXml, targetCol, new Map([[1, ''], [2, ''], [3, 'Anmerkung']]), strings, -1);
         sheetXml = patchSheet(sheetXml, targetCol, rowMap, strings, created ? -5 : 0);
         if (wantReason) {
