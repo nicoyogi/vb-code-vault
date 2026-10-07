@@ -234,7 +234,7 @@ export function loadEngine() {
     'wacklerSnkCode', 'isWacklerAvisCode', 'wacklerAvisLabel',
     // generic helpers
     'join', 'hasErr', 'cellNum', 'cellStr', 'findCol',
-    'findAnmerkungCol', 'ensureAnmerkungCol', 'patchSheet', 'setAnmerkungColumnWidth',
+    'findAnmerkungCol', 'ensureAnmerkungCol', 'patchSheet', 'setAnmerkungColumnWidth', 'ensureAutoFilter',
     'addDiffStyleXf', 'columnStyleIdxs', 'recolourColumn', 'diffColsOf', 'themeFontName', 'pickDonor', 'cellXfAt',
     'normPhrase', 'samePhraseSet', 'splitTriggers',
     'idxToCol', 'colToIdx',

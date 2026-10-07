@@ -83,3 +83,69 @@ test('created Anmerkung column replaces an existing exact column definition', ()
   assert.equal((out.match(/<col\b/g) || []).length, 1);
   assert.match(out, /<col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/>/);
 });
+
+/* The source Soll-Ist sheets carry their AutoFilter on the row-3 header row
+   (e.g. <autoFilter ref="A3:BC55"/>). A created Anmerkung column sits past the
+   old last header, so the filter must grow to include it or it has no dropdown;
+   a sheet with no filter at all gets one built over its row-3 headers. */
+test('ensureAutoFilter grows the row-3 filter to cover the created column', () => {
+  const xml = '<autoFilter ref="A3:BC55" xr:uid="{x}"/>';
+  const out = e.ensureAutoFilter(xml, 55); // BD
+  assert.match(out, /<autoFilter ref="A3:BD55"/);
+  assert.match(out, /xr:uid="\{x\}"/);
+});
+
+test('ensureAutoFilter keeps the filter end row and never shrinks it', () => {
+  const xml = '<autoFilter ref="A3:BC55"/>';
+  assert.equal(e.ensureAutoFilter(xml, 10), xml, 'a column left of the end is untouched');
+  assert.equal(e.ensureAutoFilter(xml, 54), xml, 'the current end column is untouched');
+});
+
+test('ensureAutoFilter creates a row-3 filter when the sheet has none', () => {
+  const xml = '<worksheet><dimension ref="A1:B4"/><sheetData>' +
+    '<row r="3"><c r="A3" s="5" t="s"><v>0</v></c><c r="B3" s="5" t="s"><v>1</v></c></row>' +
+    '<row r="4"><c r="A4"><v>10</v></c></row>' +
+    '</sheetData><mergeCells count="1"><mergeCell ref="A1:B1"/></mergeCells></worksheet>';
+  const out = e.ensureAutoFilter(xml, 2); // C
+  assert.match(out, /<autoFilter ref="A3:C4"\/>/);
+  assert.ok(out.indexOf('<autoFilter') < out.indexOf('<mergeCells'), 'autoFilter precedes mergeCells');
+  assert.ok(out.indexOf('<autoFilter') > out.indexOf('</sheetData>'), 'autoFilter follows sheetData');
+});
+
+test('ensureAutoFilter takes the first row-3 header and last row when there is no dimension', () => {
+  const xml = '<worksheet><sheetData>' +
+    '<row r="3"><c r="B3" t="s"><v>0</v></c><c r="C3" t="s"><v>1</v></c></row>' +
+    '<row r="6"><c r="B6"><v>1</v></c></row>' +
+    '</sheetData></worksheet>';
+  assert.match(e.ensureAutoFilter(xml, 3), /<autoFilter ref="B3:D6"\/>/); // D
+});
+
+test('ensureAutoFilter preserves an existing autoFilter that carries child filterColumns', () => {
+  const xml = '<autoFilter ref="A3:B5"><filterColumn colId="1"><filters><filter val="x"/></filters></filterColumn></autoFilter>';
+  const out = e.ensureAutoFilter(xml, 3); // D
+  assert.match(out, /<autoFilter ref="A3:D5">/);
+  assert.match(out, /<filter val="x"\/>/);
+});
+
+test('ensureAutoFilter covers the reason column one past the Anmerkung column', () => {
+  const xml = '<autoFilter ref="A3:D9"/>'; // ends at D (idx 3)
+  assert.match(e.ensureAutoFilter(xml, 3), /ref="A3:D9"/, 'Anmerkung column alone needs no growth');
+  assert.match(e.ensureAutoFilter(xml, 4), /ref="A3:E9"/, 'reason column is included');
+});
+
+test('ensureAutoFilter never adds a second filter and handles absolute refs', () => {
+  const cell = '<worksheet><sheetData></sheetData><autoFilter ref="A3"><filterColumn colId="0"/></autoFilter></worksheet>';
+  assert.equal(e.ensureAutoFilter(cell, 5), cell, 'an autoFilter shape we do not grow is left as the only one');
+  assert.equal(e.ensureAutoFilter('<worksheet><autoFilter/></worksheet>', 5), '<worksheet><autoFilter/></worksheet>', 'a refless autoFilter is left alone');
+  assert.match(e.ensureAutoFilter('<autoFilter ref="$A$3:$BC$55"/>', 55), /ref="A3:BD55"/);
+  assert.match(e.ensureAutoFilter("<autoFilter ref='A3:B5'/>", 3), /ref="A3:D5"/);
+  assert.match(e.ensureAutoFilter('<autoFilter ref = "A3:B5"/>', 3), /ref="A3:D5"/);
+});
+
+test('ensureAutoFilter clamps a too-short dimension and skips headerless sheets', () => {
+  const xml = '<worksheet><dimension ref="A1:B2"/><sheetData>' +
+    '<row r="3"><c r="A3"/></row></sheetData></worksheet>';
+  assert.match(e.ensureAutoFilter(xml, 1), /<autoFilter ref="A3:B3"\/>/);
+  const bare = '<worksheet><sheetData><row r="1"><c r="A1"/></row></sheetData></worksheet>';
+  assert.equal(e.ensureAutoFilter(bare, 3), bare, 'no row-3 header means no filter');
+});

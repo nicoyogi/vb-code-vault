@@ -2089,6 +2089,48 @@ function recolourColumn(sheetXml,col,textIdx,numIdx){
 /* ── SHEET XML PATCHER ── */
 function patchSheet(sheetXml,targetCol,rowResults,strings,styleSourceOffset=0){const tIdx=colToIdx(targetCol);for(const[rowNum,value]of rowResults){if(value===null)continue;const cellRef=targetCol+rowNum,ssIdx=getOrAdd(strings,value);const existRe=new RegExp(`<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`);const existMatch=existRe.exec(sheetXml);if(existMatch){const rawAttrs=(existMatch[1]+' '+(existMatch[2]||'')).replace(/\s*\bt="[^"]*"/g,'').replace(/\s+/g,' ').trim();const attrStr=rawAttrs?' '+rawAttrs:'';sheetXml=sheetXml.slice(0,existMatch.index)+`<c r="${cellRef}"${attrStr} t="s"><v>${ssIdx}</v></c>`+sheetXml.slice(existMatch.index+existMatch[0].length);continue;}const rowOpenRe=new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^>]*(?<!/)>`);const rowOpenMatch=rowOpenRe.exec(sheetXml);if(!rowOpenMatch)continue;const afterOpen=rowOpenMatch.index+rowOpenMatch[0].length;const closeTag='</row>';const closeIdx=sheetXml.indexOf(closeTag,afterOpen);if(closeIdx<0)continue;const rowContent=sheetXml.slice(afterOpen,closeIdx);const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);const freq={};sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});const sourceRef=idxToCol(tIdx+styleSourceOffset)+rowNum,sourceMatch=styleSourceOffset?new RegExp(`<c\\b(?=[^>]*\\br="${sourceRef}")(?=[^>]*\\bs="(\\d+)")[^>]*>`).exec(rowContent):null;const styleIdx=sourceMatch?sourceMatch[1]:(sVals.length?Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]:'0');const newCell=`<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;let insertAt=rowContent.length;for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)){if(colToIdx(m[1])>tIdx){insertAt=m.index;break;}}const newContent=rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);sheetXml=sheetXml.slice(0,afterOpen)+newContent+sheetXml.slice(closeIdx);}return sheetXml;}
 function setAnmerkungColumnWidth(sheetXml,targetIdx){const n=targetIdx+1,targetCol=idxToCol(targetIdx),col=`<col min="${n}" max="${n}" width="75.7109375" bestFit="1" customWidth="1"/>`;const exact=new RegExp(`<col\\b(?=[^>]*\\bmin="${n}")(?=[^>]*\\bmax="${n}")[^>]*/>`);if(exact.test(sheetXml))sheetXml=sheetXml.replace(exact,col);else if(sheetXml.includes('</cols>'))sheetXml=sheetXml.replace('</cols>',col+'</cols>');else sheetXml=sheetXml.replace(/<sheetData\b/,`<cols>${col}</cols><sheetData`);sheetXml=sheetXml.replace(/(<dimension\b[^>]*\bref="[A-Z]+\d+:)[A-Z]+(\d+")/,`$1${targetCol}$2`);sheetXml=sheetXml.replace(/(<row\b[^>]*\bspans="\d+:)\d+("[^>]*>)/g,`$1${n}$2`);return sheetXml;}
+/* Source Soll-Ist sheets filter on the row-3 header row (`<autoFilter ref="A3:BC55"/>`).
+   Grow that ref to the rightmost written column, or add one over the row-3 headers when
+   the sheet has no filter at all. */
+const AF_AFTER=['sortState','dataConsolidate','customSheetViews','mergeCells','phoneticPr','conditionalFormatting','dataValidations','hyperlinks','printOptions','pageMargins','pageSetup','headerFooter','rowBreaks','colBreaks','customProperties','cellWatches','ignoredErrors','smartTags','drawing','legacyDrawing','legacyDrawingHF','picture','oleObjects','controls','webPublishItems','tableParts','extLst'],AF_BEFORE=['sheetCalcPr','sheetProtection','protectedRanges','scenarios'];
+function insertAutoFilter(sheetXml,tag){
+  let sd=sheetXml.indexOf('</sheetData>');
+  if(sd>=0)sd+='</sheetData>'.length;
+  else{const self=/<sheetData\b[^>]*\/>/.exec(sheetXml);sd=self?self.index+self[0].length:0;}
+  let at=-1;
+  for(const t of AF_AFTER){const i=sheetXml.indexOf('<'+t,sd);if(i>=0&&(at<0||i<at))at=i;}
+  if(at<0)at=sheetXml.indexOf('</worksheet>',sd);
+  if(at<0)return sheetXml;
+  /* autoFilter must follow sheetCalcPr/sheetProtection/…, which may sit after sheetData. */
+  for(const t of AF_BEFORE){
+    const re=new RegExp('<'+t+'\\b[^>]*?/>|<'+t+'\\b[^>]*?>[\\s\\S]*?</'+t+'>','g');
+    re.lastIndex=sd;
+    let mm;while((mm=re.exec(sheetXml))&&mm.index<at)at=Math.max(at,mm.index+mm[0].length);
+  }
+  return sheetXml.slice(0,at)+tag+sheetXml.slice(at);
+}
+function ensureAutoFilter(sheetXml,lastColIdx){
+  const af=/<autoFilter\b[^>]*>/.exec(sheetXml);
+  if(af){
+    const ref=/\bref\s*=\s*["']([^"']*)["']/.exec(af[0]);
+    const r=ref&&/^\$?([A-Z]+)\$?(\d+):\$?([A-Z]+)\$?(\d+)$/.exec(ref[1]);
+    if(!r)return sheetXml; /* an autoFilter shape we do not grow; never add a second one */
+    if(lastColIdx<=colToIdx(r[3]))return sheetXml;
+    const newRef='ref="'+r[1]+r[2]+':'+idxToCol(lastColIdx)+r[4]+'"';
+    return sheetXml.replace(af[0],af[0].replace(/\bref\s*=\s*["'][^"']*["']/,newRef));
+  }
+  const row3=/<row\b[^>]*\br="3"[^>]*>([\s\S]*?)<\/row>/.exec(sheetXml);
+  const first=row3&&/<c\b[^>]*\br="([A-Z]+)3"/.exec(row3[1]);
+  if(!first)return sheetXml; /* no row-3 header to anchor a filter on */
+  const start=colToIdx(first[1]);
+  if(lastColIdx<start)return sheetXml;
+  const dm=/<dimension\b[^>]*\bref="([^"]*)"/.exec(sheetXml);
+  const dEnd=dm&&/\$?[A-Z]+\$?(\d+)$/.exec(dm[1]);
+  let lastRow=dEnd?Number(dEnd[1]):3;
+  if(!dEnd)for(const r of sheetXml.matchAll(/<row\b[^>]*\br="(\d+)"/g))lastRow=Math.max(lastRow,Number(r[1]));
+  lastRow=Math.max(3,lastRow);
+  return insertAutoFilter(sheetXml,'<autoFilter ref="'+idxToCol(start)+'3:'+idxToCol(lastColIdx)+lastRow+'"/>');
+}
 
 /* ── MAIN RUNNER ── */
 /* Split a processor result into distinct triggers (they're joined with ' // '). */
@@ -2401,6 +2443,7 @@ async function runProcess(){
         sheetXml=patchSheet(sheetXml,reasonCol,headerMap,strings);
         sheetXml=patchSheet(sheetXml,reasonCol,reasonMap,strings);
       }
+      sheetXml=ensureAutoFilter(sheetXml,wantReason?targetIdx+1:targetIdx);
       if(stylesXml){
         const ws0=workbook&&workbook.Sheets?workbook.Sheets[name]:null;
         const dCols=ws0?diffColsOf(ws0,XLSX.utils.decode_range(ws0['!ref']||'A1:A1')):[];
@@ -5238,6 +5281,7 @@ async function runBulkProcess() {
           sheetXml = patchSheet(sheetXml, reasonCol, headerMap, strings);
           sheetXml = patchSheet(sheetXml, reasonCol, reasonMap, strings);
         }
+        sheetXml = ensureAutoFilter(sheetXml, wantReason ? targetIdx + 1 : targetIdx);
         if (stylesXml) {
           const ws0 = entry.workbook && entry.workbook.Sheets ? entry.workbook.Sheets[name] : null;
           const dCols = ws0 ? diffColsOf(ws0, XLSX.utils.decode_range(ws0['!ref'] || 'A1:A1')) : [];
