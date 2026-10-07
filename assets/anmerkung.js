@@ -2093,7 +2093,7 @@ function patchSheet(sheetXml,targetCol,rowResults,strings,styleSourceOffset=0){c
    The dimension ref and row spans still expand if the column is beyond them. */
 function setAnmerkungColumnWidth(sheetXml,targetIdx){
   const n=targetIdx+1,targetCol=idxToCol(targetIdx);
-  const exact=new RegExp(`<col\b(?=[^>]*\bmin="${n}")(?=[^>]*\bmax="${n}")[^>]*/>`);
+  const exact=new RegExp(`<col\\b(?=[^>]*\\bmin="${n}")(?=[^>]*\\bmax="${n}")[^>]*/>`);
   const cur=exact.exec(sheetXml);
   const col=`<col min="${n}" max="${n}" bestFit="1" customWidth="1"/>`;
   if(cur)sheetXml=sheetXml.replace(exact,col);
