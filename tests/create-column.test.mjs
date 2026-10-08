@@ -70,43 +70,161 @@ test('patchSheet inserts value cells in column order with row style', () => {
   assert.match(row4.slice(dIdx), /^<c r="D4" s="7"/, 'data style matches row');
 });
 
-test('created Anmerkung column gets the reference workbook width', () => {
+/* No strings table: nothing to measure, so the fit floors at the 'Anmerkung'
+   header itself: 9 chars + the 0.7109375 padding. Never the old 75.71. */
+test('a column with nothing to measure gets the header fit, not the reference width', () => {
   const out = e.setAnmerkungColumnWidth('<dimension ref="A1:C4"/><sheetData><row r="3" spans="1:3"></row></sheetData>', 3);
-  assert.match(out, /<cols><col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/><\/cols><sheetData>/);
+  assert.match(out, /<cols><col min="4" max="4" width="9\.7109375" bestFit="1" customWidth="1"\/><\/cols><sheetData>/);
   assert.match(out, /<dimension ref="A1:D4"\/>/);
   assert.match(out, /<row r="3" spans="1:4">/);
 });
 
-test('created Anmerkung column replaces an existing exact column definition', () => {
-  const xml = SHEET_XML.replace('<sheetData>', '<cols><col min="4" max="4" width="12" customWidth="1"/></cols><sheetData>');
-  const out = e.setAnmerkungColumnWidth(xml, 3);
+/* The longest visible line of the column's own cells drives the width: both
+   rows carry t="s", so the shared string is what gets measured. */
+test('the width is the longest note in the column plus the cell padding', () => {
+  const strings = ['FR=+12.40', 'Honold berechnet die Kosten nach dem bisherigen Tarif'];
+  const xml = '<dimension ref="A1:D5"/><sheetData>' +
+    '<row r="4"><c r="D4" s="7" t="s"><v>0</v></c></row>' +
+    '<row r="5"><c r="D5" s="7" t="s"><v>1</v></c></row>' +
+    '</sheetData>';
+  const out = e.setAnmerkungColumnWidth(xml, 3, strings);
+  assert.match(out, /<col min="4" max="4" width="53\.7109375" bestFit="1" customWidth="1"\/>/);
+  assert.equal(e.setAnmerkungColumnWidth(out, 3, strings), out, 'idempotent: a second run changes nothing');
+});
+
+test('a shorter note does not shrink the column and a longer one still widens it', () => {
+  const long = 'Honold berechnet die Kosten nach dem bisherigen Tarif';
+  const short = ['x', long];
+  const xml = '<sheetData><row r="4"><c r="D4" t="s"><v>0</v></c></row><row r="5"><c r="D5" t="s"><v>1</v></c></row></sheetData>';
+  const out = e.setAnmerkungColumnWidth(xml, 3, short);
+  assert.match(out, /width="53\.7109375"/, 'the longest cell wins regardless of row order');
+  const longer = [...short, 'Honold berechnet die Kosten nach dem bisherigen Tarif und noch mehr'];
+  const xml2 = xml + '<row r="6"><c r="D6" t="s"><v>2</v></c></row>';
+  assert.match(e.setAnmerkungColumnWidth(xml2, 3, longer), /width="67\.7109375"/);
+});
+
+/* A wrapped note is one cell but several visible lines; the tagline says the
+   column is sized to the longest line, not to the whole string. */
+test('a multi-line note is measured on its longest line', () => {
+  const strings = ['Anmerkung\nHonold berechnet die Kosten nach dem bisherigen Tarif'];
+  const xml = '<sheetData><row r="4"><c r="D4" t="s"><v>0</v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, strings), /width="53\.7109375"/);
+});
+
+/* A bare number in the column is text Excel shows as digits, so it measures as
+   its digits (12.4 -> 4) and the header floor still wins. */
+test('a numeric Anmerkung cell contributes its digits', () => {
+  const xml = '<sheetData><row r="4"><c r="D4"><v>12.4</v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, ['ignored']), /width="9\.7109375"/);
+  const wide = '<sheetData><row r="4"><c r="D4"><v>12345678901.25</v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(wide, 3, ['ignored']), /width="14\.7109375"/);
+});
+
+/* An inline string carries its text in <is><t> runs, not in the shared-strings
+   table, so the width has to be read from those runs or the note is invisible. */
+test('an inline string is measured from its <is><t> text', () => {
+  const xml = '<sheetData><row r="4"><c r="D4" t="inlineStr"><is><t>Honold berechnet die Kosten nach dem bisherigen Tarif</t></is></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, ['x']), /width="53\.7109375"/);
+});
+
+/* Several runs make up one string, so they are joined before measuring, and the
+   longest line of the joined text wins - a run boundary is not a line break. */
+test('an inline string with several <t> runs is measured on the joined text', () => {
+  const split = '<sheetData><row r="4"><c r="D4" t="inlineStr"><is><t>Honold berechnet die Kosten</t><t> nach dem bisherigen Tarif</t></is></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(split, 3, ['x']), /width="53\.7109375"/, 'the two runs join into one 53-char line');
+  const wrapped = '<sheetData><row r="4"><c r="D4" t="inlineStr"><is><t>Anmerkung\n</t><t>' + 'y'.repeat(30) + '</t></is></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(wrapped, 3, ['x']), /width="30\.7109375"/, 'the longest line is 30, not the 40-char join');
+});
+
+/* An empty <v> is not index 0: Number('') is 0, which would measure the first
+   shared string for a cell that stores nothing. */
+test('a t="s" cell with an empty <v> is ignored', () => {
+  const xml = '<sheetData><row r="4"><c r="D4" t="s"><v></v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, ['ZZZZZZZZZZZZZZZZ']), /width="9\.7109375"/);
+});
+
+/* A \r\n note is one line break, not a line break plus a visible character; the
+   \r would otherwise widen the measured line by one. */
+test('a \r\n note is measured without counting the carriage return', () => {
+  const strings = ['x'.repeat(20) + '\r\ny'];
+  const xml = '<sheetData><row r="4"><c r="D4" t="s"><v>0</v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, strings), /width="20\.7109375"/);
+});
+
+/* Numbers and formula strings are listed as width sources, so a missing shared-
+   strings table must not skip the measurement altogether. */
+test('a numeric cell is still measured when no strings table is passed', () => {
+  const xml = '<sheetData><row r="4"><c r="D4"><v>12345678901.25</v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3), /width="14\.7109375"/);
+});
+
+/* A self-closed cell carries no text and must not be mistaken for a
+   cell whose value lives between the tags. */
+test('a self-closed cell contributes nothing and is not mis-parsed', () => {
+  const xml = '<sheetData><row r="4"><c r="D4" s="7"/><c r="D5" t="s"><v>0</v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, ['FR=+12.40']), /width="9\.7109375"/);
+});
+
+/* The attribute run must stay lazy: with a greedy run the match ran past the
+   self-closed tag's '/>' to a later cell's </c> and measured that cell's text.
+   Falsifies R1 for a styled-but-empty Anmerkung cell followed by any cell. */
+test('a self-closed target cell does not measure a sibling column', () => {
+  const xml = '<sheetData><row r="4"><c r="D4" s="7"/><c r="E4" t="s"><v>0</v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, ['1234567890']), /width="9\.7109375"/, 'E4 carries the only text and must not widen D');
+  const long = ['Honold berechnet die Kosten nach dem bisherigen Tarif'];
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, long), /width="9\.7109375"/, 'a long sibling-column note cannot widen D either');
+});
+
+/* Excel writers emit numeric character references, so an inline string that
+   holds &#65; or &#x41; is measured as the one character it decodes to, not as
+   the five literal characters of the reference. Falsifies R1 for inline text. */
+test('an inline string decodes numeric character references before measuring', () => {
+  const dec = '<sheetData><row r="4"><c r="D4" t="inlineStr"><is><t>&#65;&#66;&#67;&#68;&#69;&#70;&#71;&#72;&#73;&#74;</t></is></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(dec, 3, []), /width="10\.7109375"/, '10 decoded characters, not the 50 of the raw refs');
+  const hex = '<sheetData><row r="4"><c r="D4" t="inlineStr"><is><t>&#x41;&#x42;&#x43;&#x44;&#x45;&#x46;&#x47;&#x48;&#x49;&#x4a;</t></is></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(hex, 3, []), /width="10\.7109375"/, 'hex references decode the same as decimal');
+});
+
+/* parseSharedStrings is deliberately left alone, so a shared string keeps its
+   numeric references literal and the two paths are not symmetric by design. */
+test('a shared string keeps numeric character references literal', () => {
+  const xml = '<sheetData><row r="4"><c r="D4" t="s"><v>0</v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, ['&#65;&#65;&#65;']), /width="15\.7109375"/, '15 raw characters, matching parseSharedStrings');
+});
+
+/* An inlineStr cell can also carry a <v> beside its <is>; the inline text is
+   measured first and the <v> is then handled instead of being skipped.
+   Falsifies R1 for a cell whose value sits in <v> rather than <is>. */
+test('an inline string cell that also carries a <v> measures both', () => {
+  const xml = '<sheetData><row r="4"><c r="D4" t="inlineStr"><is><t>ab</t></is><v>12345678901234567890</v></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(xml, 3, []), /width="20\.7109375"/, 'the longer <v> wins over the 2-char inline text');
+  const plain = '<sheetData><row r="4"><c r="D4" t="inlineStr"><is><t>abcdefghij</t></is></c></row></sheetData>';
+  assert.match(e.setAnmerkungColumnWidth(plain, 3, []), /width="10\.7109375"/, 'a plain inlineStr with no <v> is unchanged');
+});
+
+test('an existing exact column definition is replaced, never duplicated', () => {
+  const xml = SHEET_XML.replace('<sheetData>', '<cols><col min="4" max="4" width="8.7109375" customWidth="1"/></cols><sheetData>');
+  const out = e.setAnmerkungColumnWidth(xml, 3, ['Alt', 'X', 'Y', 'Anmerkung']);
   assert.equal((out.match(/<col\b/g) || []).length, 1);
-  assert.match(out, /<col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/>/);
+  assert.match(out, /<col min="4" max="4" width="9\.7109375" bestFit="1" customWidth="1"\/>/);
 });
 
-/* The width must also fire on a sheet that already carries an Anmerkung column
-   (the Honold 20379045 workbook has one at BK with width 8.71), not just on the
-   auto-created one, or narrow source columns stay unreadable. */
-test('an existing narrow Anmerkung column is widened to the reference', () => {
-  const xml = '<dimension ref="A1:D4"/><cols><col min="4" max="4" width="8.7109375" bestFit="1" customWidth="1"/></cols><sheetData><row r="3" spans="1:4"></row></sheetData>';
-  const out = e.setAnmerkungColumnWidth(xml, 3);
-  assert.match(out, /<col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/>/);
+/* Deliberate behaviour change vs 1.48.1: the width is a fit, so a source column
+   wider than its content is narrowed. A column that keeps an old width is not
+   sized to its content, and an over-wide column wastes the sheet. */
+test('an existing column wider than the fit is narrowed to the fit', () => {
+  const xml = '<dimension ref="A1:D4"/><cols><col min="4" max="4" width="75.7109375" bestFit="1" customWidth="1"/></cols><sheetData><row r="4"><c r="D4" t="s"><v>0</v></c></row></sheetData>';
+  const out = e.setAnmerkungColumnWidth(xml, 3, ['FR=+12.40']);
+  assert.match(out, /<col min="4" max="4" width="9\.7109375" bestFit="1" customWidth="1"\/>/);
   assert.equal((out.match(/<col\b/g) || []).length, 1, 'still exactly one definition');
-  assert.match(out, /<dimension ref="A1:D4"\/>/, 'an existing end column is not rewritten');
-  assert.match(out, /<row r="3" spans="1:4">/, 'spans already at the column are not rewritten');
-});
-
-test('an existing wider Anmerkung column keeps its width', () => {
-  const xml = '<dimension ref="A1:D4"/><cols><col min="4" max="4" width="129.5703125" bestFit="1" customWidth="1"/></cols><sheetData></sheetData>';
-  assert.equal(e.setAnmerkungColumnWidth(xml, 3), xml);
 });
 
 test('widening an interior column never shrinks the dimension or spans', () => {
   const xml = '<dimension ref="A1:Z4"/><cols><col min="4" max="4" width="8" customWidth="1"/></cols><sheetData><row r="3" spans="1:12"></row></sheetData>';
-  const out = e.setAnmerkungColumnWidth(xml, 3); // D, not the last column
+  const out = e.setAnmerkungColumnWidth(xml, 3, ['FR=+12.40']); // D, not the last column
   assert.match(out, /<dimension ref="A1:Z4"\/>/);
   assert.match(out, /<row r="3" spans="1:12">/);
-  assert.match(out, /<col min="4" max="4" width="75\.7109375" bestFit="1" customWidth="1"\/>/);
+  assert.match(out, /<col min="4" max="4" width="9\.7109375" bestFit="1" customWidth="1"\/>/);
 });
 
 /* The source Soll-Ist sheets carry their AutoFilter on the row-3 header row
