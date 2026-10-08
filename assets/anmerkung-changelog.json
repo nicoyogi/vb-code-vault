@@ -1,6 +1,13 @@
 {
-  "version": "1.48.1",
+  "version": "1.48.2",
   "entries": [
+    {
+      "ver": "1.48.2",
+      "date": "2026-10-08",
+      "items": [
+        "Workbook output - the Anmerkung column is now sized to its own content instead of the reference workbook's fixed 75.71. Excel ignores bestFit on load and renders only the literal width the file carries, so the fit is measured from the longest line of the column's cells (shared strings, inline strings and numbers) plus Excel's 0.71 padding, floored at the 'Anmerkung' header width. A source column already wider than its content is now narrowed to the fit; previously such a column kept its old width."
+      ]
+    },
     {
       "ver": "1.48.1",
       "date": "2026-10-07",
