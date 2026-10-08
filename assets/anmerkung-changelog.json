@@ -9,6 +9,7 @@
       ]
     },
     {
+      "ver": "1.48.0",
       "date": "2026-10-05",
       "items": [
         "New forwarder Honold, one note rule on the Soll-Ist-Vergleich workbook. FR Kosten DL is looked up in the destination country's column of the OLD tariff to find the weight bracket that rate belongs to; when Volumen kg sits in one of those brackets the row reads 'Honold berechnet die Kosten nach dem bisherigen Tarif', otherwise 'Differenz aufgrund abweichender Gewichte'. A blank or 0 FR, a missing or 0 Volumen kg, an unknown destination country and an FR that matches no rate all take the weight-difference branch. Gated on Stat_Freigabe 10. The OLD tariff ships encrypted (assets/honold-tariff.enc.json); Honold rows are skipped, never blanked, until it is unlocked. Validated against 20379045 Soll-Ist-Vergleich: 112 of 124 rows. The workbook's Anmerkung column is no longer the oracle: rows 5, 7, 18, 32, 57, 58, 98, 104, 107, 121 and 125 are mislabelled 'Differenz' and should read 'bisherigen Tarif', and row 90 is a real rule-vs-workbook disagreement."
