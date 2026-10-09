@@ -57,6 +57,11 @@
       "path": "tests/fixtures/dachser-sonderfahrt-rows.json",
       "bytes": 7344,
       "sha256": "cb2307b4bf70f730cf93bfa78a48c67d74567a76b94811c7a194f423c709e6c1"
+    },
+    {
+      "path": "docs/anmerkung/dachser-sheet-audit-2026-10-09.md",
+      "bytes": 12609,
+      "sha256": "b22474f48a71d4274718f033fdc170cfe2131f8e301b36fec19b268c38ddbd63"
     }
   ]
 }

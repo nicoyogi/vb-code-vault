@@ -43,6 +43,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 | Annotate a forwarder invoice (Dachser / K+N / DHL / Wackler) | [The Alchemist](https://codingkuh.my.id/anmerkung.html) · [source](anmerkung.html) |
 | See what the Anmerkung rules actually do, per forwarder | [`docs/anmerkung/conditions-report.pdf`](docs/anmerkung/conditions-report.pdf) · [`docs/anmerkung/anmerkung_exact_condition_table.pdf`](docs/anmerkung/anmerkung_exact_condition_table.pdf) |
 | Understand the diff / AI-bundle workflow and its safety gates | [`docs/anmerkung/README-v5.md`](docs/anmerkung/README-v5.md) · [`docs/anmerkung/ai_operating_contract.md`](docs/anmerkung/ai_operating_contract.md) |
+| Check the engine against the production workbooks, row by row | [`docs/anmerkung/dachser-sheet-audit-2026-10-09.md`](docs/anmerkung/dachser-sheet-audit-2026-10-09.md) |
 | Run the test suite | [Tests](#tests) |
 | Look up a VB/VBA snippet | [The Vault](https://codingkuh.my.id/code.html) · [source](code.html) |
 | Check team absences / leave | [Holiday Tracker](https://codingkuh.my.id/holiday-tracker.html) · [source](holiday-tracker.html) |
