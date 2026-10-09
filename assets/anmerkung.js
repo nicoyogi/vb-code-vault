@@ -1019,11 +1019,16 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
       return'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag';
     default:
       /* A cents-bearing SNK_DL is a Laderaum tariff base, and its residual can
-         land exactly on the 0.08 threshold (bundle 2026-10-08 row 09ef3ff2:
-         SNK_DL=2.8, SNK_DIFF=0.08) while still being the development delta the
-         auditor names. The non-integer case therefore accepts the boundary; the
-         integer case keeps the strict > guard. */
-      if(!hasErr(snkDiff,T)&&!(daIsNonInteger(snkDl)&&Math.abs(snkDiff)>=T))return'';
+         land exactly on the 0.08 threshold, so the non-integer case is allowed to
+         reach the boundary the integer case must clear strictly.
+
+         The boundary itself does NOT qualify. All five rows sitting exactly on
+         0.08 want no leading Laderaumkostenentwicklung: 20260917 rows 124/125/
+         126, 20260923 row 295 and 20261006 row 184 (the last is a worksheet
+         error, user-confirmed). Rows at 0.10 and above (20260917 112-116) do
+         want it, so the split is at the threshold, not above it. The earlier
+         `>=` let the boundary rows through on a rounding artifact. */
+      if(!hasErr(snkDiff,T)&&!(daIsNonInteger(snkDl)&&Math.abs(snkDiff)>T))return'';
       /* K1AV with a non-standard SNK_DL value classifies as Laderaumkostenentwicklung.
          Training row 324: SNK_DL=19, SNK_DIFF=19, SERV=K1AV → expected
          "Differenz Laderaumkostenentwicklung". The non-integer fallback below
@@ -1040,7 +1045,13 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
         const residual=snkDl-DA_SNK_ADMIN_FEE;
         if(residual>=65){
           const hrs=residual/65;
-          if(Math.abs(hrs-Math.round(hrs))<0.005)return'Wartezeit '+Math.round(hrs)+'h á 65 EUR, ok?';
+          /* The Wartezeit phrase is the auditor's HEADLINE finding, not the whole
+             note: the bundled admin-fee line is still owed and the sheet appends
+             it (20260923 rows 216/230/308: "Wartezeit 2h á 65 EUR, ok? // Differenz
+             Admin Zeitfensterbuchung Handel - Laderaumzuschlag"). Returning the
+             headline alone silently dropped the second segment. */
+          if(Math.abs(hrs-Math.round(hrs))<0.005)
+            return'Wartezeit '+Math.round(hrs)+'h á 65 EUR, ok? // '+P.adminZeitfensterDiff;
           if(daIsNonInteger(residual))return daFormatDe(residual)+' Kosten für 2.Zustellung etc. ok?';
         }
         return'Differenz Laderaumkostenentwicklung';

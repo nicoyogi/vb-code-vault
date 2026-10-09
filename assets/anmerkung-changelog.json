@@ -1,6 +1,14 @@
 {
-  "version": "1.50.0",
+  "version": "1.50.1",
   "entries": [
+    {
+      "ver": "1.50.1",
+      "date": "2026-10-09",
+      "items": [
+        "Dachser - a Wartezeit row now keeps the bundled admin-fee line after the waiting-time phrase. \"Wartezeit 2h á 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag\" instead of stopping at the headline, which silently dropped the second segment. From 20260923 rows 216/230/308; 20260917 row 97 has the same inputs without the suffix and is a worksheet error.",
+        "Dachser - a cents-bearing SNK residual of exactly 0.08 no longer reads \"Differenz Laderaumkostenentwicklung\". All five rows sitting on the threshold want no leading segment (20260917 rows 124/125/126, 20260923 row 295, 20261006 row 184), while 0.10 and above do; the non-integer exemption was letting the boundary through on a rounding artifact."
+      ]
+    },
     {
       "ver": "1.50.0",
       "date": "2026-10-09",

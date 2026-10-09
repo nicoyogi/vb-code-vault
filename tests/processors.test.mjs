@@ -77,12 +77,19 @@ test('processDachser: SACH=X with TARIF + FR delta does not emit VORHOLUNG', () 
   assert.equal(e.processDachser(ws, R, cols), 'Differenz aufgrund abweichender Gewichte');
 });
 
-test('processDachser: SNK_DL=135 K1AV -> admin fee stripped, 2h waiting time', () => {
+test('processDachser: SNK_DL=135 K1AV -> admin fee stripped, 2h waiting time, then the fee line', () => {
   // Bundle 2026-09-18 row 8c7714fd: Amazon-DTM1 rows bundle the flat 5 EUR
   // admin/fenster line into SNK_DL. 135 − 5 = 130 = 2 × 65 EUR.
+  //
+  // The Wartezeit phrase is the auditor's headline, not the whole note: the
+  // bundled admin-fee line is still owed and the sheet appends it. 20260923
+  // rows 216/230/308 all read "Wartezeit 2h á 65 EUR, ok? // Differenz Admin
+  // Zeitfensterbuchung Handel - Laderaumzuschlag". 20260917 row 97 has the same
+  // inputs with the suffix missing, which the user has ruled a worksheet error.
   const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
   const ws = makeRow(R, { 50: 10, 51: '717.2', 52: '135', 53: '64.48', 54: '70.52', 55: 'K1AV' });
-  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 2h á 65 EUR, ok?');
+  assert.equal(e.processDachser(ws, R, cols),
+    'Wartezeit 2h á 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag');
 });
 
 test('processDachser: SNK_DL=936.15 K1AV -> admin fee stripped, itemised 2.Zustellung amount', () => {
@@ -95,7 +102,8 @@ test('processDachser: SNK_DL=936.15 K1AV -> admin fee stripped, itemised 2.Zuste
 test('processDachser: SNK_DL=265 K1AV -> waiting time scales with the hour count', () => {
   const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
   const ws = makeRow(R, { 50: 10, 51: '500', 52: '265', 53: '260', 54: '5', 55: 'K1AV' });
-  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 4h á 65 EUR, ok?');
+  assert.equal(e.processDachser(ws, R, cols),
+    'Wartezeit 4h á 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag');
 });
 
 test('processDachser: SNK_DL=195 K1AV -> integer residual that is no 65-multiple stays Laderaumkostenentwicklung', () => {
@@ -1391,11 +1399,26 @@ test('processDachser: SNK_DL=390 -> Standgeld (three 130 units)', () => {
   assert.equal(e.processDachser(ws, R, cols), 'Standgeld');
 });
 
-test('processDachser: cents-bearing SNK residual accepts the 0.08 boundary', () => {
-  // Row 09ef3ff2: SNK Kosten DL 2.8, SNK Differenz 0.08, no Serv.-Art. The
-  // residual 0.08 is still named Laderaumkostenentwicklung.
+test('processDachser: cents-bearing SNK residual does NOT accept the 0.08 boundary', () => {
+  // Row 09ef3ff2 / 20261006 row 184: SNK Kosten DL 2.8, SNK Differenz 0.08, no
+  // Serv.-Art. This test used to assert that 0.08 still reads
+  // Laderaumkostenentwicklung. The user has ruled that row a worksheet error.
+  //
+  // Every row sitting exactly on 0.08 wants no leading segment: 20260917 rows
+  // 124/125/126 (SNK_DL 2.72/2.64/2.64) and 20260923 row 295 (2.64). Rows at 0.10
+  // and above, 20260917 rows 112-116, do want it. The earlier `>=` exemption let
+  // the boundary rows through on a rounding artifact; the split is at the
+  // threshold, so a residual equal to it is sub-threshold.
   const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54 };
   const ws = makeRow(R, { 50: 10, 51: '72.28', 52: '2.8', 53: '0.08', 54: '2.72' });
+  assert.equal(e.processDachser(ws, R, cols), '');
+});
+
+test('processDachser: cents-bearing SNK residual above the threshold still reads Laderaumkostenentwicklung', () => {
+  // The counterexample that keeps the branch alive: 20260917 rows 112-116 carry
+  // SNK_DIFF 0.10-0.16 and the sheet wants the leading segment.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54 };
+  const ws = makeRow(R, { 50: 10, 51: '72.28', 52: '3.26', 53: '0.1', 54: '3.16' });
   assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung');
 });
 

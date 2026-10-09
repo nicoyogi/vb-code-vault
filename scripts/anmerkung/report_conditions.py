@@ -184,7 +184,9 @@ story.append(section_table([
     ("SNK_DL = 5 + SERV_ART = K1AV (SNK_TARIF&gt;0)", "Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag"),
     ("SNK_DL = 5 (+ diff over T); skipped when TARIF zero", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag"),
     ("SNK_DL = 9 (+ diff over T, TARIF not zero)", "Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag"),
-    ("other SNK_DL + SERV_ART = K1AV, or non-integer SNK_DL &amp; SNK_DIFF (SNK_DIFF &gt;= T when non-integer, else &gt; T)", "Differenz Laderaumkostenentwicklung"),
+    ("other SNK_DL + SERV_ART = K1AV, or non-integer SNK_DL &amp; SNK_DIFF (SNK_DIFF &gt; T in both cases; a residual equal to the 0.08 threshold does not qualify)", "Differenz Laderaumkostenentwicklung"),
+    ("K1AV and SNK_DL &minus; 5 &ge; 65, residual a whole 65-multiple", "Wartezeit &lt;n&gt;h &aacute; 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag (the bundled admin fee is still owed, so the phrase is not emitted alone)"),
+    ("K1AV and SNK_DL &minus; 5 &ge; 65, residual cents-bearing and not a 65-multiple", "&lt;amount&gt; Kosten f&uuml;r 2.Zustellung etc. ok?"),
     ("other SNK_DL (+ diff over T)", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag"),
     ("Non-integer SNK_DL and SNK_DIFF rounds to 5/9/11/14 (±0.05)", "code re-derived from SNK_DIFF, then the switch above"),
 ]))
