@@ -1,6 +1,25 @@
 {
-  "version": "1.48.2",
+  "version": "1.50.0",
   "entries": [
+    {
+      "ver": "1.50.0",
+      "date": "2026-10-09",
+      "items": [
+        "Dachser - the FR Sonderfahrt / \"bisherigen Tarif\" note now comes from the rate cards instead of the lane-and-EXP proxy. A surcharge on top of the new card ((FR Kosten DL - 180/150/120/90) landing on a new-card cell) reads \"Sonderfahrt\"; a tariff read off the old card (FR Kosten lt. Tarif landing on it, x1.15 on imports) reads \"Dachser berechnet die Kosten nach dem bisherigen Tarif\". Reproduces all 50 Sonderfahrt/bisherigen rows across the 20260917, 20260923 and 20261006 sheets, 13 of which the sheet itself words wrongly.",
+        "Dachser - the two rate matrices ship only as the encrypted assets/dachser-ratecards.enc.json (AES-256-GCM, shared team passphrase, same unlock control as the Wackler and Honold tariffs). Without the passphrase the note keeps its previous wording. Regenerate with scripts/dachser/build_ratecards.py then scripts/encrypt-dachser-ratecards.mjs."
+      ]
+    },
+    {
+      "ver": "1.49.0",
+      "date": "2026-10-08",
+      "items": [
+        "Dachser - Import-Zollabfertigung is now read from the ZABF columns instead of being dropped. An unbacked Zollabfertigung line on the Oslo lane reads \"Einfuhrzollabfertigung\" as a trailing note. Derived from AI bundle v3 2026-10-08 rows 5fb3bed9, fb1189c7, 15952e81, 2661a3a3, c8153c60, 7f22b752 and efc025b4, the seven rows of the 20261006 sheet that carry a ZABF Differenz of 50; resolveDachser gains the column and the value is exported (and UID-excluded) like c38l_diff.",
+        "Dachser - SNK Kosten DL 80 with Serv.-Art K1AV now reads \"Speditionskosten gem. Text\" plus \"Admin Zeitfensterbuchung Handel\", the two fee lines the 80 EUR bundles, instead of a bare \"Differenz Laderaumkostenentwicklung\". Derived from AI bundle v3 2026-10-08 rows 9c657a49 to d326e96c (23 rows, all K1AV, Sachkonto 612100, Werne).",
+        "Dachser - SNK Kosten DL 390 now reads \"Standgeld\", the three-130-EUR-units form of the existing 130 rule. Derived from AI bundle v3 2026-10-08 row e47bda75.",
+        "Dachser - an empty Tarif cell on a domestic lane above 10 t now reads \"Kein Tarif für DE >10 to, ok?\" instead of falling through to the Fremdnummer placeholder. The Dachser weight table stops at 10000 kg, so there is no tariff to compare against. Derived from AI bundle v3 2026-10-08 row f027ef05 (Brutto 11573, FR 566.52).",
+        "Dachser - a cents-bearing SNK residual now accepts the 0.08 rounding boundary for the Laderaumkostenentwicklung wording (row 09ef3ff2: SNK Kosten DL 2.8, Differenz 0.08); the integer case keeps the strict threshold."
+      ]
+    },
     {
       "ver": "1.48.2",
       "date": "2026-10-08",

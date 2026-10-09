@@ -25,6 +25,7 @@ const SRC = join(REPO_ROOT, 'assets', 'anmerkung.js');
 const SRC_RATECARD = join(REPO_ROOT, 'assets', 'wackler-ratecard.js');
 const SRC_NAT_RATECARD = join(REPO_ROOT, 'assets', 'wackler-national-ratecard.js');
 const SRC_HONOLD_TARIFF = join(REPO_ROOT, 'assets', 'honold-tariff.js');
+const SRC_DACHSER_RATECARDS = join(REPO_ROOT, 'assets', 'dachser-ratecards.js');
 
 /* The two Wackler ratecard .js files are business data and live local-only since
    b7f3c57 (only assets/wackler-ratecards.enc.json ships, decryptable with the team
@@ -69,6 +70,14 @@ function readHonoldTariffSource() {
   try { return readFileSync(SRC_HONOLD_TARIFF, 'utf8'); } catch { return null; }
 }
 const HONOLD_TARIFF_SRC = readHonoldTariffSource();
+
+/* The Dachser ratecards are local-only business data too, and have never been
+   committed. Read the generated plaintext when present; otherwise the Dachser
+   Sonderfahrt/bisherigen tests inject a minimal synthetic card instead. */
+function readDachserRatecardsSource() {
+  try { return readFileSync(SRC_DACHSER_RATECARDS, 'utf8'); } catch { return null; }
+}
+const DACHSER_RATECARDS_SRC = readDachserRatecardsSource();
 
 /* XLSX cell address encoding, matching XLSX.utils.encode_cell({r,c})
    (0-based r/c -> e.g. {r:0,c:0} => "A1", {r:1,c:2} => "C2"). */
@@ -209,6 +218,15 @@ export function loadEngine() {
     /* Non-fatal: the Honold rule simply has no tariff to consult. */
   }
 
+  /* The Dachser NEW + OLD ratecards, mirroring the loader's <script>. Optional:
+     without the local plaintext the Sonderfahrt/bisherigen branches stay off and
+     the FR note keeps its previous wording. */
+  try {
+    if (DACHSER_RATECARDS_SRC) vm.runInContext(DACHSER_RATECARDS_SRC, ctx, { filename: 'dachser-ratecards.js' });
+  } catch (err) {
+    /* Non-fatal: the ratecard branches degrade to their previous wording. */
+  }
+
   try {
     vm.runInContext(code, ctx, { filename: 'anmerkung.js' });
   } catch (err) {
@@ -264,6 +282,10 @@ export function loadEngine() {
      clear it to exercise the locked/no-tariff skip) after the engine has loaded. */
   engine.HONOLD_TARIFF = sandbox.HONOLD_TARIFF || null;
   engine.setHonoldTariff = (tariff) => { sandbox.HONOLD_TARIFF = tariff || undefined; };
+  /* Dachser ratecards, also read lazily, so a test can swap in a small synthetic
+     matrix or clear it to exercise the locked/no-card fallback. */
+  engine.DACHSER_RATECARDS = sandbox.DACHSER_RATECARDS || null;
+  engine.setDachserRatecards = (rc) => { sandbox.DACHSER_RATECARDS = rc || undefined; };
   /* The phrase catalog itself, so tests can guard catalog-wide invariants
      (e.g. no two entries may normPhrase-fold onto each other). PHRASES is a
      top-level `const`, which — unlike function declarations — does NOT land

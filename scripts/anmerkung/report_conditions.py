@@ -154,6 +154,7 @@ story.append(section_table([
     ("same empty-TARIF but SACH + SERV_ART are set",
      "Fremdnummer &lt;row's ReferenzNr&gt; bereits berechnet in RE00123xxx, ok? (falls back to the 5034xxx placeholder when ReferenzNr is empty; the Beleg it was charged in stays a placeholder, it names a document outside this workbook)"),
     ("empty TARIF + FR trigger + departure country non-DE", "kein Tarif für &lt;Land&gt;"),
+    ("empty TARIF + FR trigger + domestic lane above 10 t (Brutto kg &gt; 10000)", "Kein Tarif für DE &gt;10 to, ok?"),
 ]))
 story.append(P("1.1 Direct-cost labels (each fires independently)", h3))
 story.append(section_table([
@@ -164,23 +165,26 @@ story.append(section_table([
     ("ZZ Differenz over threshold", "2. Zustellung"),
     ("SAM Differenz over threshold", "Samstagzustellung"),
     ("DGR Differenz over threshold (skipped when TARIF is zero)", "Gefahrgut-Zuschlag"),
+    ("EXP Differenz over threshold", "Produktzuschlag, or Terminzuschlag when EXP Kosten DL = 95"),
+    ("ZABF Differenz over threshold", "Einfuhrzollabfertigung"),
     ("SBFU Differenz over threshold", "SBfU-Bescheinigung f. Umsatzsteuerzwecke"),
     ("C38L Differenz over threshold", "Maut von/bis NL"),
 ]))
 story.append(P("1.2 SNK — switch on billed SNK_DL", h3))
 story.append(section_table([
     ("SNK_DL = 190 or 95", "AUSFALLFRACHT"),
-    ("SNK_DL = 130", "Standgeld"),
+    ("SNK_DL = 130 or 390", "Standgeld"),
     ("SNK_DL = 75 + SNK_TARIF &gt; 0 + SNK diff over T", "Differenz Hebebuehnen-Zuschlag"),
     ("SNK_DL = 75 + SERV_ART = K1AV", "Speditionskosten gem. Text"),
     ("SNK_DL = 75 (no tariff backing)", "Ausfallfracht/Schadensersatz"),
+    ("SNK_DL = 80 + SERV_ART = K1AV", "Speditionskosten gem. Text // Admin Zeitfensterbuchung Handel"),
     ("SNK_DL = 11 (+ diff over T)", "Differenz Telefonische Zustellankündigung - Laderaumzuschlag"),
     ("SNK_DL = 14 (+ diff over T, TARIF not zero)", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag (K1AV → Differenz Laderaumkostenentwicklung)"),
     ("SNK_DL = 5 + SERV_ART = K1AV (SNK_TARIF=0)", "Admin Zeitfensterbuchung Handel"),
     ("SNK_DL = 5 + SERV_ART = K1AV (SNK_TARIF&gt;0)", "Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag"),
     ("SNK_DL = 5 (+ diff over T); skipped when TARIF zero", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag"),
     ("SNK_DL = 9 (+ diff over T, TARIF not zero)", "Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag"),
-    ("other SNK_DL + SERV_ART = K1AV, or non-integer SNK_DL &amp; SNK_DIFF", "Differenz Laderaumkostenentwicklung"),
+    ("other SNK_DL + SERV_ART = K1AV, or non-integer SNK_DL &amp; SNK_DIFF (SNK_DIFF &gt;= T when non-integer, else &gt; T)", "Differenz Laderaumkostenentwicklung"),
     ("other SNK_DL (+ diff over T)", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag"),
     ("Non-integer SNK_DL and SNK_DIFF rounds to 5/9/11/14 (±0.05)", "code re-derived from SNK_DIFF, then the switch above"),
 ]))
@@ -189,6 +193,7 @@ story.append(section_table([
     ("EXP diff over T and EXP_DL = 95", "Terminzuschlag"),
     ("EXP diff over T (otherwise)", "Produktzuschlag"),
     ("Empf.-Ort = LONDON, PLZ leading letter", "Zone korrekt berechnet? (+ Einfuhrzollabfertigung when EXP clean)"),
+    ("ZABF Differenz over threshold (Import-Zollabfertigung line)", "Einfuhrzollabfertigung"),
 ]))
 story.append(P("1.4 FR — weight/tier decision tree (after SNK)", h3))
 story.append(section_table([
@@ -196,6 +201,7 @@ story.append(section_table([
     ("REFERENZ3 = ZW (deviating intermediate consignee)", "Differenz aufgrund abweichender Zwischenempfänger &lt;PLZ Ort&gt;"),
     ("SERV_ART = K1AS", "Sonderfahrt"),
     ("SERV_ART = K1AU and |FR − 90| ≤ 0.1", "\"Sonderfahrt\" 90 EUR doppelt berechnet?"),
+    ("weights equal or same tier; FR &gt; 1 on an international lane (non-DE origin or destination)", "Sonderfahrt, or Dachser berechnet die Kosten nach dem bisherigen Tarif &mdash; decided by the rate cards: (FR Kosten DL &minus; S) landing on a NEW-card cell for S in 180/150/120/90 gives Sonderfahrt, otherwise FR Kosten lt. Tarif landing on an OLD-card cell (timed by 1.15 on imports) gives the bisherigen wording. Ratecards are encrypted (assets/dachser-ratecards.enc.json); without the passphrase the bisherigen wording stands."),
     ("weights equal or same tier; FR &gt; 1 (or ≥ 0.05 with no other label); ZZ diff = 35", "Fracht Differenz (ZZ=35)"),
     ("weights equal or same tier; FR &gt; 1 (or ≥ 0.05 with no other label); otherwise", "Frachtdifferenz"),
     ("weights equal or same tier; FR &lt; −1.0", "Differenz aufgrund abweichender Gewichte"),

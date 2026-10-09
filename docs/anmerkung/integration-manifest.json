@@ -3,20 +3,20 @@
   "source": "current repository tree",
   "anmerkung_hardening": "v5",
   "regression": {
-    "tests": 379,
-    "passed": 379,
+    "tests": 394,
+    "passed": 394,
     "failed": 0
   },
   "files": [
     {
       "path": "assets/anmerkung.js",
-      "bytes": 352728,
-      "sha256": "254b7c9eccfa4712f3ac63dd2e3ff146012fc250f96f36644013774cad213049"
+      "bytes": 360869,
+      "sha256": "7857a4a4e28f6b8553a3e9a49cb6c818e68b828e765075c9a18df573211a0678"
     },
     {
       "path": "tests/harness/load-engine.mjs",
-      "bytes": 11983,
-      "sha256": "213b2199980066522e8376ab7237e6a9598e681210fb1fc914c8a8b19b57555f"
+      "bytes": 13223,
+      "sha256": "65a95752d6b7b1d4908d66e2c75bf6d6faaa7e1dbe314f76dc28b964a2d97f67"
     },
     {
       "path": "tests/anmerkung-v5.test.mjs",
@@ -31,7 +31,32 @@
     {
       "path": "docs/anmerkung/INTEGRATION_v5.md",
       "bytes": 1128,
-      "sha256": "5f514e91cd29f9030811792986951069a2692e172c724fc21ca9c174bb0584c1"
+      "sha256": "c51bcf23c17428ed183b54751727e844571ae0ca9ab9023e2c814eaf0d0768a0"
+    },
+    {
+      "path": "assets/dachser-ratecard-loader.js",
+      "bytes": 4303,
+      "sha256": "8fa284d8212da831a1c9adf21652ff676e44dba4192388efe683b079800247fc"
+    },
+    {
+      "path": "scripts/dachser/build_ratecards.py",
+      "bytes": 4315,
+      "sha256": "159203d41c8990a5b9727676a4cca68401b15cf9c6df8cf1f66723f58de273a5"
+    },
+    {
+      "path": "scripts/encrypt-dachser-ratecards.mjs",
+      "bytes": 2499,
+      "sha256": "3b427fa26ad25ee0533367d38cc12a5795dd0b43c85a580ed300d2dc98d3c196"
+    },
+    {
+      "path": "tests/dachser-ratecard-enc.test.mjs",
+      "bytes": 2250,
+      "sha256": "f88fbdcc9bdbe99680e31ee614023362184a2ec01a4c076404bda53946f714f6"
+    },
+    {
+      "path": "tests/fixtures/dachser-sonderfahrt-rows.json",
+      "bytes": 7344,
+      "sha256": "cb2307b4bf70f730cf93bfa78a48c67d74567a76b94811c7a194f423c709e6c1"
     }
   ]
 }
