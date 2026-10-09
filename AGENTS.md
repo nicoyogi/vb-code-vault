@@ -1,7 +1,7 @@
 # Project conventions
 
 Repo-specific notes for agents working in this tree. The pipeline itself (roles, routing,
-gates) lives in `.commandcode/AGENTS.md` - local to this machine, gitignored - so this file is
+gates) lives in `~/.pi/agent/AGENTS.md` - local to this machine - so this file is
 only what is specific to this project.
 
 ## Versioning (The Alchemist)
@@ -39,6 +39,15 @@ you do bump, move `version`, `entries[0].ver`, and the new entry in one commit, 
 `docs/anmerkung/conditions-report.pdf` if the cascade changed, and refresh the test counts in
 `docs/anmerkung/INTEGRATION_v5.md` and `README.md` plus both the counts and the file hashes in
 `docs/anmerkung/integration-manifest.json` - nothing generates those, it is a manual step.
+
+## Vault notes
+
+Design notes for this project live in `Projects/Alchemist/` in the Obsidian vault
+(`D:\vb-code-vault\vb-code-vault`; the path and the vault rules are in `~/.pi/agent/AGENTS.md`).
+Before a non-trivial change to the anmerkung engine or a forwarder, grep that folder for related
+notes and cite the file you used. Refer to changes by commit hash, never by version: the version
+lives only in `assets/anmerkung-changelog.json`, and a note that states it goes stale at the next
+bump.
 
 ## Writing style
 

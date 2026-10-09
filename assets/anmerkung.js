@@ -762,8 +762,14 @@ function resolveDachser(ws,range){
     sbfu:     fc('SBFU','Differenz'),
     sam:      fc('SAM','Differenz'),
     fr:       fc('FR','Differenz'),
+    /* FR tariff cells — the ratecard branches compare FR_DL against the NEW
+       card and FR_Tar (lt. Tarif) against the OLD card. */
+    fr_dl:    fc('FR','Kosten DL'),
+    fr_tar:   fc('FR','Kosten lt. Tarif'),
     maut:     fc('MT','Differenz'),
     tz:       fc('TZ','Differenz'),
+    /* ZABF (Zollabfertigung) - the Import-Zollabfertigung tariff line. */
+    zabf_diff:fc('ZABF','Differenz'),
     c38l_diff:fc('38L','Differenz'),
     c502_dl:  fc('502','Kosten DL'),
     c503_dl:  fc('503','Kosten DL'),
@@ -818,6 +824,108 @@ function resolveDachser(ws,range){
 const DACHSER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
 function dachserGetTier(kg){if(kg<=0)return 0;for(const b of DACHSER_BP)if(kg<=b)return b;return 999999;}
 
+/* ── Dachser ratecard lookup ────────────────────────────────────────────────
+   The two matrices are business data and ship only as the encrypted
+   assets/dachser-ratecards.enc.json, decrypted into DACHSER_RATECARDS by
+   assets/dachser-ratecard-loader.js (same team passphrase as Wackler/Honold).
+   Without the passphrase the global is absent and the Sonderfahrt / bisherigen
+   wording simply does not fire — a graceful no-op, like Wackler costing.
+
+   Both matrices are a list of weight brackets; each bracket maps a lane label
+   ("PL1 Polen", "CH2 Schweiz", …) to a price. A lookup keys on the lane's
+   COUNTRY PREFIX plus the row's weight bracket. */
+/* Read lazily, not captured at load: the loader decrypts asynchronously, so the
+   global may appear well after this file evaluates. */
+function daDachserRatecards(){
+  return(typeof DACHSER_RATECARDS!=='undefined'&&DACHSER_RATECARDS)?DACHSER_RATECARDS:null;
+}
+/* The add-on amounts the auditor subtracts before comparing against the NEW
+   card. All four are live in the 2026-09/10 sheets: 90 (12 rows), 120 (3),
+   150 (2), 180 (2 — both on the 20260917 sheet). */
+const DA_SONDERFAHRT_S=[180,150,120,90];
+/* Increment for the import-tariff rollover (see daRatecardMatch). */
+const DA_IMPORT_MULT=1.15;
+const DA_RC_TOL=0.5;
+
+/* The lane prices of one card for a country prefix at a weight bracket.
+   Returns {} when the card is absent, the bracket is unmet, or the country has
+   no column on that card (e.g. the NEW card omits RS and DE entirely). */
+function daRatecardLanes(card,kg,cc){
+  if(!card||!cc||!Array.isArray(card.brackets))return{};
+  for(const b of card.brackets){
+    if(kg>=b.von&&kg<=b.bis){
+      const out={};
+      for(const k in b.lanes){
+        if(k.split(' ')[0].toUpperCase().startsWith(cc))out[k]=b.lanes[k];
+      }
+      return out;
+    }
+  }
+  return{};
+}
+function daRatecardCards(){
+  const rc=daDachserRatecards();
+  if(!rc)return null;
+  const nw=rc.new,od=rc.old;
+  return(nw&&od&&Array.isArray(nw.brackets)&&Array.isArray(od.brackets))?{nw:nw,od:od}:null;
+}
+function daNearly(a,b){return Math.abs(a-b)<=DA_RC_TOL;}
+function daAnyLaneNear(lanes,value){for(const k in lanes)if(daNearly(lanes[k],value))return k;return null;}
+
+/* Decide the FR wording from the rate cards, replacing the lane/EXP proxy the
+   2026-10-08 bundle shipped (DE origin + non-DE destination + EXP over
+   threshold → Sonderfahrt). That proxy matched 1 of the 5 Sonderfahrt rows on
+   the 20260923 sheet and 7 of 15 on 20260917; the mechanism below reproduces
+   all 50 Sonderfahrt/bisherigen rows across 20260917 / 20260923 / 20261006
+   (13 of which are workbook errors on the sheet itself, confirmed by the user).
+
+   Sonderfahrt — the auditor added a special-trip surcharge on top of the NEW
+   rate card. For each candidate S, (FR_DL − S) must land on a NEW-card lane:
+
+     20260923 r296  FR_DL 340.9 − 150 = 190.90   NEW PL2 @601-700 = 190.94
+     20260917 r113  FR_DL 245.1 − 180 =  65.10   NEW PL3 @101-150 =  65.07
+
+   bisherigen — no surcharge was added and the tariff was read off the OLD
+   card, so FR_Tar lands on it directly:
+
+     20260923 r5    FR_Tar  71.13                OLD FR2 @1-50    =  71.13 (exact)
+
+   On imports the OLD figure carries the import surcharge, so the comparison is
+   against the OLD lane x 1.15 — and only on imports:
+
+     20260923 r384  FR_Tar  86.77  (CH to DE)    OLD CH1 75.45 x 1.15 = 86.77
+
+   The lane is chosen by country (Empf.-Land, or Abg.-Land when that side is the
+   non-DE leg) and by the row's Volumen-kg-DL bracket. Returns null when the cards
+   are locked or neither branch matches, so the caller keeps its previous wording. */
+function daRatecardMatch(abgLand,empfLand,kg,frDl,frTar){
+  const cards=daRatecardCards();
+  if(!cards||!(kg>0))return null;
+  /* Country key: the non-DE leg carries the lane. Imports (non-DE origin into
+     DE) key on the origin; everything else keys on the destination. */
+  const cc=(empfLand&&empfLand!=='DE')?empfLand:(abgLand||'');
+  if(!cc)return null;
+  const nl=daRatecardLanes(cards.nw,kg,cc);
+  const ol=daRatecardLanes(cards.od,kg,cc);
+  const isImport=!!(abgLand&&abgLand!=='DE'&&empfLand==='DE');
+  if(frDl>0){
+    for(const S of DA_SONDERFAHRT_S){
+      const base=frDl-S;
+      if(base>0&&daAnyLaneNear(nl,base))return P.sonderfahrt;
+    }
+  }
+  if(frTar>0){
+    if(daAnyLaneNear(ol,frTar))return P.daBisherigerTarif;
+    /* The import rollover multiplies the OLD base; it applies to imports only. */
+    if(isImport){
+      for(const k in ol){
+        if(daNearly(ol[k]*DA_IMPORT_MULT,frTar))return P.daBisherigerTarif;
+      }
+    }
+  }
+  return null;
+}
+
 function daIsTarifZero(ws,r,col){if(col<0)return false;const raw=cellStr(ws,r,col);if(!raw)return false;if(raw==='-')return true;return(cellNum(ws,r,col)===0&&raw.includes('0'));}
 function daIsNonInteger(n){return n!==Math.floor(n);}
 /* When SNK_DL has a non-integer tariff component (e.g. 14.72, 7.57), the "surcharge
@@ -855,6 +963,14 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
         T=T_DACHSER;
   if(snkDl===0&&snkTar===0&&snkDiff===0)return'';
 
+  /* SNK_DL=80 bundles the two K1AV Amazon-DTM1 fee lines the auditor names
+     separately: the 75 EUR "Speditionskosten gem. Text" plus the 5 EUR "Admin
+     Zeitfensterbuchung Handel". Bundle 2026-10-08 rows 9c657a49 to d326e96c (23
+     rows, all K1AV/612100/Werne) expect both phrases; the generic K1AV residual
+     branch below read the 80 as a bare Laderaumkostenentwicklung. */
+  if(snkDl===80&&servArt.toUpperCase()==='K1AV')
+    return P.speditionskostenGemText+' // '+P.adminZeitfenster;
+
   /* Non-integer SNK_DL (tariff base with cents) — re-derive the surcharge code from
      SNK_DIFF when it rounds cleanly to 5/9/11/14. Then fall through to the same
      switch so the downstream phrase mapping stays the single source of truth. */
@@ -864,7 +980,11 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
   switch(effectiveDl){
     case 190:return'AUSFALLFRACHT';
     case 95:return'AUSFALLFRACHT';
-    case 130:return'Standgeld';
+    /* Standgeld is billed in whole 130 EUR units; 390 is three of them. Bundle
+       2026-10-08 row e47bda75 (SNK_DL=390, K1AV, domestic) expects the bare
+       "Standgeld". */
+    case 130:
+    case 390:return'Standgeld';
     case 75:
       if(servArt.toUpperCase()==='K1AV')return'Speditionskosten gem. Text';
       /* SNK_DL=75 splits along whether the surcharge has a tariff base.
@@ -898,7 +1018,17 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
       if(!hasErr(snkDiff,T)||isTarifZero)return'';
       return'Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag';
     default:
-      if(!hasErr(snkDiff,T))return'';
+      /* A cents-bearing SNK_DL is a Laderaum tariff base, and its residual can
+         land exactly on the 0.08 threshold, so the non-integer case is allowed to
+         reach the boundary the integer case must clear strictly.
+
+         The boundary itself does NOT qualify. All five rows sitting exactly on
+         0.08 want no leading Laderaumkostenentwicklung: 20260917 rows 124/125/
+         126, 20260923 row 295 and 20261006 row 184 (the last is a worksheet
+         error, user-confirmed). Rows at 0.10 and above (20260917 112-116) do
+         want it, so the split is at the threshold, not above it. The earlier
+         `>=` let the boundary rows through on a rounding artifact. */
+      if(!hasErr(snkDiff,T)&&!(daIsNonInteger(snkDl)&&Math.abs(snkDiff)>T))return'';
       /* K1AV with a non-standard SNK_DL value classifies as Laderaumkostenentwicklung.
          Training row 324: SNK_DL=19, SNK_DIFF=19, SERV=K1AV → expected
          "Differenz Laderaumkostenentwicklung". The non-integer fallback below
@@ -915,7 +1045,13 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
         const residual=snkDl-DA_SNK_ADMIN_FEE;
         if(residual>=65){
           const hrs=residual/65;
-          if(Math.abs(hrs-Math.round(hrs))<0.005)return'Wartezeit '+Math.round(hrs)+'h á 65 EUR, ok?';
+          /* The Wartezeit phrase is the auditor's HEADLINE finding, not the whole
+             note: the bundled admin-fee line is still owed and the sheet appends
+             it (20260923 rows 216/230/308: "Wartezeit 2h á 65 EUR, ok? // Differenz
+             Admin Zeitfensterbuchung Handel - Laderaumzuschlag"). Returning the
+             headline alone silently dropped the second segment. */
+          if(Math.abs(hrs-Math.round(hrs))<0.005)
+            return'Wartezeit '+Math.round(hrs)+'h á 65 EUR, ok? // '+P.adminZeitfensterDiff;
           if(daIsNonInteger(residual))return daFormatDe(residual)+' Kosten für 2.Zustellung etc. ok?';
         }
         return'Differenz Laderaumkostenentwicklung';
@@ -928,6 +1064,21 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
 }
 
 function daEvalEXP(ws,r,cols){if(cols.exp<0)return'';const expDiff=cellNum(ws,r,cols.exp);if(!hasErr(expDiff,T_DACHSER))return'';const expDl=cols.exp_dl>=0?cellNum(ws,r,cols.exp_dl):0;return(expDl===95)?P.terminZuschlag:P.produktZuschlag;}
+/* ZABF (Zollabfertigung) - the Import-Zollabfertigung tariff line. A ZABF
+   Differenz beyond threshold is the customs-clearance fee the invoice billed
+   without tariff backing, and the auditor names it "Einfuhrzollabfertigung".
+   The engine had no branch reading ZABF at all, so the note was silently
+   dropped on every row that carried one. Bundle 2026-10-08 rows 5fb3bed9 to
+   efc025b4 (the seven Oslo rows of sheet "best. Beleg") each carry
+   ZABF_DL=50 / ZABF_DIFF=50 and want the phrase as a trailing line, while the
+   rest of the row classified correctly - that one missing note was the whole
+   defect. A ZABF Differenz of 0 (e.g. the RS import row e97594be) stays
+   silent. */
+function daEvalZABF(ws,r,cols){
+  if(cols.zabf_diff<0)return'';
+  if(!hasErr(cellNum(ws,r,cols.zabf_diff),T_DACHSER))return'';
+  return P.einfuhrzoll;
+}
 /* Zwischenempfänger note location: prefer the dedicated KI_ZW_PLZ/KI_ZW_ORT
    ("Zwischenempfänger" intermediate-consignee) columns — these carry the
    actual deviating hub address (e.g. "77600 BUSSY SAINT MARTIN") that the
@@ -993,6 +1144,13 @@ function processDachser(ws,r,cols){
          reachable for domestic blank-tarif rows. */
       if(abgLand&&abgLand!=='DE')return 'kein Tarif für '+abgLand;
       if(empfLand&&empfLand!=='DE')return 'kein Tarif für '+empfLand;
+      /* Domestic lane above the rate-card ceiling: the Dachser weight table stops
+         at 10000 kg, so there is no tariff to compare against and the auditor
+         asks "Kein Tarif für DE >10 to, ok?". Bundle 2026-10-08 row f027ef05
+         (TARIF blank, Brutto 11573, FR=566.52) expects it ahead of the
+         Fremdnummer fallback below. */
+      const brutto=cols.brutto>=0?cellNum(ws,r,cols.brutto):(cols.vkg>=0?cellNum(ws,r,cols.vkg):0);
+      if(brutto>10000)return 'Kein Tarif für DE >10 to, ok?';
       const hasOtherDiff=
         (cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T))||
         (cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))||
@@ -1030,6 +1188,7 @@ function processDachser(ws,r,cols){
   if(isTarifZero)return res;
   if(cols.dgr>=0&&hasErr(cellNum(ws,r,cols.dgr),T))res=join(res,'Gefahrgut-Zuschlag');
   res=join(res,daEvalEXP(ws,r,cols));
+  res=join(res,daEvalZABF(ws,r,cols));
   if(cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T))res=join(res,'Mautdifferenz');
   if(empfOrt==='LONDON'&&/^[A-Z]/i.test(empfPlz)){
     res=join(res,P.zoneKorrekt);
@@ -1085,7 +1244,16 @@ function processDachser(ws,r,cols){
          (old-bundle regression). */
       const intlLane=(abgLand&&abgLand!=='DE')||(empfLand&&empfLand!=='DE');
       if(sameWeight||sameTier){
-        if(frVal>1||(frVal>=0.05&&!res))res=join(res,intlLane?P.daBisherigerTarif:(zzVal===35?P.frachtDifferenz:P.frachtDiff));
+        if(frVal>1||(frVal>=0.05&&!res)){
+          /* International lane with a positive FR delta at equal / same-tier
+             weights: the auditor is naming a tariff rollover or a special trip.
+             The rate cards decide which (see daRatecardMatch): FR_DL minus a
+             Sonderfahrt add-on landing on the NEW card, or FR_Tar landing on the
+             OLD card. When the cards are locked, or neither branch matches, the
+             note keeps the previous wording rather than guessing. */
+          const rcNote=intlLane?daRatecardMatch(abgLand,empfLand,v2,cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0,cols.fr_tar>=0?cellNum(ws,r,cols.fr_tar):0):null;
+          res=join(res,intlLane?(rcNote||P.daBisherigerTarif):(zzVal===35?P.frachtDifferenz:P.frachtDiff));
+        }
         else if(frVal<-1.0&&!res)res=join(res,'Differenz aufgrund abweichender Gewichte');
       }else if(bothKnown){
         if(frVal>0&&frVal<1.0)res=join(res,zzVal===35?P.frachtDifferenz:P.frachtDiff);
@@ -3017,7 +3185,7 @@ function granularLabel(beforeRaw,afterRaw,pd){
    training corpora across engine versions, and hashing a newly-exported
    cell would silently re-key every row that carries it. Add every future
    collectInputsForRow key here too; the frozen seed is the v1.29 set. */
-const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort','anz_colli','brutto_kg','c38l_diff']);
+const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort','anz_colli','brutto_kg','c38l_diff','zabf_diff']);
 /* Same rule, but only for the forwarder that gained the key later: excluding
    referenz globally would re-key every historical K+N/Wackler row, and el_diff
    is new to DHL. */
@@ -3050,7 +3218,7 @@ const CANONICAL_INPUT_ORDER={
            'referenz3','empf_plz','empf_ort','ki_zw_plz','ki_zw_ort','anz_sdg','serv_art','sachkonto',
            /* Last on purpose: appending keeps every existing CSV column in
               place, which is where the fallback already put this key. */
-           'referenz'],
+           'referenz','zabf_diff'],
   kn:['stat','tarif','fr_diff','exp_diff','mt_diff','tz_diff',
       'snk_dl','snk_diff',
       'referenz','recip','vkg','vkg_dl',
@@ -3453,7 +3621,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('zz_diff',cols.zz);get('sam_diff',cols.sam);get('dgr_diff',cols.dgr);
     get('exp_diff',cols.exp);get('exp_dl',cols.exp_dl);
     get('maut_diff',cols.maut);get('sbfu_diff',cols.sbfu);get('tz_diff',cols.tz);
-    get('c38l_diff',cols.c38l_diff);
+    get('c38l_diff',cols.c38l_diff);get('zabf_diff',cols.zabf_diff);
     get('lg_diff',cols.lg_diff);get('av_diff',cols.av_diff);
     get('c502_dl',cols.c502_dl);get('c503_dl',cols.c503_dl);
     get('referenz',cols.referenz);
