@@ -241,6 +241,8 @@ export function loadEngine() {
   const need = [
     // processors
     'processDachser', 'processKN', 'processDHL', 'processWackler', 'processHonold',
+    // column resolution, for tools that audit a real workbook (scripts/dachser/audit_workbook.mjs)
+    'resolveDachser',
     // honold tariff helpers
     'resolveHonold', 'honoldTariff', 'honoldTierIdx',
     // tier helpers

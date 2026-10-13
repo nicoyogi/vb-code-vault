@@ -56,6 +56,19 @@ py scripts/dachser/fix_workbook.py --date 20261006 --show --rows 184
 py scripts/dachser/fix_workbook.py --date 20261006 --rows 184 --set "..."
 ```
 
+Ask the engine what a row should say before editing it:
+
+```
+node scripts/dachser/audit_workbook.mjs --date 20261006 --rows 184   # the engine phrase
+node scripts/dachser/audit_workbook.mjs --date 20261006              # full-sheet diff
+```
+
+`audit_workbook.mjs` rebuilds the sheet through `py scripts/dachser/dump_sheet.py` and runs the
+real `resolveDachser` / `processDachser`, so it needs the local plaintext
+`assets/dachser-ratecards.js`: without it the Sonderfahrt / bisherigen branch is off and every FR
+row reads as `bisherigen`. It is read-only, and `--rows` prints the exact string
+`fix_workbook.py --set` wants.
+
 The script resolves the `Anmerkung` column from the header row itself, refuses a path under
 `Before\`, copies the workbook to `D:\TESTER\_backup\` before writing, and re-reads the saved
 file so a silent miss cannot be reported as success. The rewrite is openpyxl-based, so it also
