@@ -242,7 +242,7 @@ export function loadEngine() {
     // processors
     'processDachser', 'processKN', 'processDHL', 'processWackler', 'processHonold',
     // honold tariff helpers
-    'resolveHonold', 'honoldTariff', 'honoldTierIdx', 'honoldFrTiers',
+    'resolveHonold', 'honoldTariff', 'honoldTierIdx',
     // tier helpers
     'dachserGetTier', 'knGetTier', 'wacklerGetTier', 'wacklerGetTierIdx', 'wacklerTierLabel',
     'wacklerRechnetNote',

@@ -7,6 +7,10 @@ scripts/honold/build_tariff.py, and prints any row where the rule disagrees
 with the workbook's Anmerkung column.
 
     python scripts/honold/validate_rule.py [workbook.xlsx] [tariff.xlsx]
+
+Rule A (weight-tier comparison, commit 6518ffa) supersedes the FR-bracket rule
+of commit 29db412 on the 2026-10-12 domain-owner ruling: old-workbook rows 4, 44
+and 117 are workbook errors, so expected mismatches are exactly those three.
 """
 import sys
 from pathlib import Path
@@ -19,13 +23,12 @@ import build_tariff  # noqa: E402
 
 OLD_NOTE = "Honold berechnet die Kosten nach dem bisherigen Tarif"
 DIFF_NOTE = "Differenz aufgrund abweichender Gewichte"
-RATE_TOL = 0.005
-# The workbook's Anmerkung column is no longer the oracle. The domain owner
-# confirmed rows 5, 7, 18, 32, 57, 58, 98, 104, 107, 121 and 125 are labelled
-# "Differenz" but should read "bisherigen Tarif", and row 90 is a real
-# rule-vs-workbook disagreement. Pinned so the 112/124 evidence cannot shift
-# silently.
-KNOWN_OUTLIERS = {5, 7, 18, 32, 57, 58, 90, 98, 104, 107, 121, 125}
+# Domain-owner ruling 2026-10-12: rows 4, 44 and 117 of 20379045 are workbook
+# errors. They are labelled "bisherigen Tarif" while Volumen kg and Volumen kg DL
+# sit in different Bis brackets, so the note is the weight-tier comparison of
+# 6518ffa and the FR-bracket rule of 29db412 is superseded. Pinned so the 121/124
+# evidence cannot shift silently.
+KNOWN_OUTLIERS = {4, 44, 117}
 
 
 def num(v):
@@ -46,16 +49,19 @@ def tier_idx(tiers, kg):
     return len(tiers) - 1
 
 
-def fr_tiers(tariff, land, fr):
-    """Bracket indices in the country's column(s) whose rate equals fr."""
-    if fr is None or not land or abs(fr) <= RATE_TOL:
-        return []
-    out = []
-    for z in tariff["codes"].get(str(land).upper(), []):
-        for i, v in enumerate(tariff["zones"].get(z, [])):
-            if v is not None and abs(float(v) - fr) <= RATE_TOL and i not in out:
-                out.append(i)
-    return out
+def predict(tariff, fr, vkg, vkg_dl):
+    """Rule A: same Bis bracket -> previous tariff, otherwise weight difference.
+
+    Blank / 0 FR and a missing / 0 Volumen kg take the weight-difference branch.
+    The destination country is no longer consulted.
+    """
+    if fr is None or abs(fr) <= 0:
+        return DIFF_NOTE
+    tv = tier_idx(tariff["tiers"], vkg)
+    if tv is None:
+        return DIFF_NOTE
+    td = tier_idx(tariff["tiers"], vkg_dl)
+    return OLD_NOTE if (td is None or tv == td) else DIFF_NOTE
 
 
 def main():
@@ -74,20 +80,16 @@ def main():
         land = ws.cell(r, 15).value
         fr = num(ws.cell(r, 45).value)
         vkg = num(ws.cell(r, 31).value)
+        vkg_dl = num(ws.cell(r, 32).value)
         if stat != 10:
             # The engine returns null and writes nothing on a gate skip.
             continue
-        elif fr is None or abs(fr) <= RATE_TOL:
-            # Blank / 0 FR never names a bracket: same branch as the engine.
-            pred = DIFF_NOTE
-        else:
-            i_ae = tier_idx(tariff["tiers"], vkg)
-            pred = OLD_NOTE if (i_ae is not None and i_ae in fr_tiers(tariff, land, fr)) else DIFF_NOTE
+        pred = predict(tariff, fr, vkg, vkg_dl)
         if pred != truth:
             wrong += 1
             mismatches.append(r)
-            print("row %d: truth=%r pred=%r (land=%s fr=%s vkg=%s)"
-                  % (r, truth, pred, land, fr, vkg))
+            print("row %d: truth=%r pred=%r (land=%s fr=%s vkg=%s vkg_dl=%s)"
+                  % (r, truth, pred, land, fr, vkg, vkg_dl))
     unexpected = sorted(set(mismatches) - KNOWN_OUTLIERS)
     print("%d rows, %d mismatches (pinned outliers %s%s)"
           % (total, wrong, sorted(KNOWN_OUTLIERS),

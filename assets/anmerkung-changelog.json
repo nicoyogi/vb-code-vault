@@ -1,6 +1,13 @@
 {
-  "version": "1.50.1",
+  "version": "1.51.0",
   "entries": [
+    {
+      "ver": "1.51.0",
+      "date": "2026-10-12",
+      "items": [
+        "Honold - the note is now decided by the weight brackets instead of the FR amount. Volumen kg and Volumen kg DL in the same Bis bracket of the OLD tariff read 'Honold berechnet die Kosten nach dem bisherigen Tarif'; a Volumen kg DL in another bracket, a blank or 0 FR Kosten DL, or a missing / 0 Volumen kg read 'Differenz aufgrund abweichender Gewichte' (a blank or 0 Volumen kg DL counts as the same bracket). The destination country is no longer consulted. The domain owner ruled rows 4, 44 and 117 of 20379045 are workbook errors: they are labelled 'bisherigen Tarif' while their two weights sit in different brackets. Restores the tier comparison of 6518ffa and supersedes the FR-bracket rule of 29db412; 121 of 124 rows now match, the three exceptions being those workbook errors."
+      ]
+    },
     {
       "ver": "1.50.1",
       "date": "2026-10-09",
