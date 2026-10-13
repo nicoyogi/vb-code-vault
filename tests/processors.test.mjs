@@ -1242,21 +1242,19 @@ test('processWackler: 2026-08-31 bundle — pallet volume boundary gate (4c4576a
    The synthetic tariff below stands in for
    assets/honold-tariff.enc.json, which never ships in plaintext.
 ─────────────────────────────────────────────────────────── */
-const HONOLD_COLS = { stat: 50, fr_dl: 51, vkg: 52, empf_land: 53 };
+const HONOLD_COLS = { stat: 50, fr_dl: 51, vkg: 52, vkg_dl: 54, empf_land: 53 };
 const HONOLD_OLD = 'Honold berechnet die Kosten nach dem bisherigen Tarif';
 const HONOLD_DIFF = 'Differenz aufgrund abweichender Gewichte';
-/* IT1 rate 110 sits in brackets 2 and 3, so FR 110 matches two brackets. */
-const HONOLD_SYNTH = {
-  tiers: [50, 100, 150, 200, 250, 300],
-  zones: { 'AT1': [10, 20, 30, 40, 50, 60], 'CH1': [11, 21, 31, 41, 51, 61], 'IT1': [90, 100, 110, 110, 130, 120] },
-  codes: { AT: ['AT1'], CH: ['CH1'], IT: ['IT1'] },
-};
+/* The rule reads the Bis brackets only; the destination-country rate columns of the
+   real asset are not consulted. [50,100,150,200,250,300] stands in for the 44 real
+   tiers, with anything above the table in the last bracket. */
+const HONOLD_SYNTH = { tiers: [50, 100, 150, 200, 250, 300] };
 e.setHonoldTariff(HONOLD_SYNTH);
 
 test('processHonold: without the decrypted tariff the row is skipped (null), never blanked', () => {
   e.setHonoldTariff(null);
   try {
-    const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 53: 'AT' });
+    const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '150' });
     assert.equal(e.processHonold(ws, R, HONOLD_COLS), null);
   } finally {
     e.setHonoldTariff(HONOLD_SYNTH);
@@ -1264,68 +1262,74 @@ test('processHonold: without the decrypted tariff the row is skipped (null), nev
 });
 
 test('processHonold: Stat_Freigabe != 10 returns null', () => {
-  const ws = makeRow(R, { 50: 5, 51: '30', 52: '150', 53: 'AT' });
+  const ws = makeRow(R, { 50: 5, 51: '30', 52: '150', 54: '150' });
   assert.equal(e.processHonold(ws, R, HONOLD_COLS), null);
 });
 
-test('processHonold: blank FR Kosten DL -> weight-difference note', () => {
-  const ws = makeRow(R, { 50: 10, 52: '150', 53: 'AT' });
-  assert.equal(e.processHonold(ws, R, HONOLD_COLS), HONOLD_DIFF);
-});
-
-test('processHonold: FR is the rate at the Volumen kg bracket -> previous-tariff note', () => {
-  // Volumen kg 150 falls in bracket 2 (101..150); FR 30 is AT1[2].
-  const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 53: 'AT' });
+test('processHonold: same Bis bracket for Volumen kg and Volumen kg DL -> previous-tariff note', () => {
+  // 150 and 140 both fall in bracket 2 (101..150).
+  const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '140' });
   assert.equal(e.processHonold(ws, R, HONOLD_COLS), HONOLD_OLD);
 });
 
-test('processHonold: FR is a rate but at a different bracket than Volumen kg -> weight-difference note', () => {
-  // FR 50 is AT1[4]; the row weighs 150 (bracket 2).
-  const ws = makeRow(R, { 50: 10, 51: '50', 52: '150', 53: 'AT' });
+test('processHonold: Volumen kg DL in another Bis bracket -> weight-difference note', () => {
+  // 150 -> bracket 2 (101..150), 250 -> bracket 4 (201..250).
+  const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '250' });
   assert.equal(e.processHonold(ws, R, HONOLD_COLS), HONOLD_DIFF);
 });
 
-test('processHonold: FR not present in the destination country column -> weight-difference note', () => {
-  const ws = makeRow(R, { 50: 10, 51: '999', 52: '150', 53: 'AT' });
+test('processHonold: blank FR -> weight-difference note even when the brackets match', () => {
+  const ws = makeRow(R, { 50: 10, 52: '150', 54: '140' });
   assert.equal(e.processHonold(ws, R, HONOLD_COLS), HONOLD_DIFF);
-});
-
-test('processHonold: destination country absent from the tariff -> weight-difference note', () => {
-  const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 53: 'XX' });
-  assert.equal(e.processHonold(ws, R, HONOLD_COLS), HONOLD_DIFF);
-});
-
-test('processHonold: bracket boundary (150 vs 151) flips the note', () => {
-  // AT1 rate 30 sits in bracket 2 (101..150) only.
-  const inTier = makeRow(R, { 50: 10, 51: '30', 52: '150', 53: 'AT' });
-  const outTier = makeRow(R, { 50: 10, 51: '30', 52: '151', 53: 'AT' });
-  assert.equal(e.processHonold(inTier, R, HONOLD_COLS), HONOLD_OLD);
-  assert.equal(e.processHonold(outTier, R, HONOLD_COLS), HONOLD_DIFF);
 });
 
 test('processHonold: missing / 0 Volumen kg -> weight-difference note', () => {
-  const missing = makeRow(R, { 50: 10, 51: '30', 53: 'AT' });
-  const zero = makeRow(R, { 50: 10, 51: '30', 52: '0', 53: 'AT' });
+  const missing = makeRow(R, { 50: 10, 51: '30', 54: '140' });
+  const zero = makeRow(R, { 50: 10, 51: '30', 52: '0', 54: '140' });
   assert.equal(e.processHonold(missing, R, HONOLD_COLS), HONOLD_DIFF);
   assert.equal(e.processHonold(zero, R, HONOLD_COLS), HONOLD_DIFF);
 });
 
-test('processHonold: FR matching two brackets -> previous-tariff when the Volumen kg bracket is one of them', () => {
-  // IT1 rate 110 sits in brackets 2 and 3: 150 -> bracket 2, 180 -> bracket 3.
-  const lowerTier = makeRow(R, { 50: 10, 51: '110', 52: '150', 53: 'IT' });
-  const upperTier = makeRow(R, { 50: 10, 51: '110', 52: '180', 53: 'IT' });
-  const outTier = makeRow(R, { 50: 10, 51: '110', 52: '50', 53: 'IT' });
-  assert.equal(e.processHonold(lowerTier, R, HONOLD_COLS), HONOLD_OLD);
-  assert.equal(e.processHonold(upperTier, R, HONOLD_COLS), HONOLD_OLD);
-  assert.equal(e.processHonold(outTier, R, HONOLD_COLS), HONOLD_DIFF);
+test('processHonold: blank / 0 Volumen kg DL -> previous-tariff note', () => {
+  const blank = makeRow(R, { 50: 10, 51: '30', 52: '150' });
+  const zero = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '0' });
+  assert.equal(e.processHonold(blank, R, HONOLD_COLS), HONOLD_OLD);
+  assert.equal(e.processHonold(zero, R, HONOLD_COLS), HONOLD_OLD);
 });
 
-test('processHonold: Volumen kg DL is ignored', () => {
-  // A DL volume in a different bracket (250 -> bracket 4 vs 150 -> bracket 2)
-  // flipped the note under the old same-bracket rule; the rule reads Volumen kg only.
-  const cols = { ...HONOLD_COLS, vkg_dl: 54 };
-  const ws = makeRow(R, { 50: 10, 51: '30', 52: '150', 53: 'AT', 54: '250' });
-  assert.equal(e.processHonold(ws, R, cols), HONOLD_OLD);
+test('processHonold: bracket boundary on either weight flips the note', () => {
+  const same = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '150' });
+  const dlAbove = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '151' });
+  const kgAbove = makeRow(R, { 50: 10, 51: '30', 52: '151', 54: '150' });
+  assert.equal(e.processHonold(same, R, HONOLD_COLS), HONOLD_OLD);
+  assert.equal(e.processHonold(dlAbove, R, HONOLD_COLS), HONOLD_DIFF);
+  assert.equal(e.processHonold(kgAbove, R, HONOLD_COLS), HONOLD_DIFF);
+});
+
+test('processHonold: destination country is no longer consulted', () => {
+  // The weights alone decide the note; the old rule read the country-keyed rate columns.
+  const at = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '140', 53: 'AT' });
+  const xx = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '140', 53: 'XX' });
+  const none = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '140' });
+  assert.equal(e.processHonold(at, R, HONOLD_COLS), HONOLD_OLD);
+  assert.equal(e.processHonold(xx, R, HONOLD_COLS), HONOLD_OLD);
+  assert.equal(e.processHonold(none, R, HONOLD_COLS), HONOLD_OLD);
+});
+
+test('processHonold: Volumen kg DL decides the note', () => {
+  // Identical FR and Volumen kg, only the DL weight differs; the old rule read
+  // Volumen kg alone, so this pair was a single note.
+  const same = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '140' });
+  const cross = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '250' });
+  assert.equal(e.processHonold(same, R, HONOLD_COLS), HONOLD_OLD);
+  assert.equal(e.processHonold(cross, R, HONOLD_COLS), HONOLD_DIFF);
+});
+
+test('processHonold: 20380293 row 4 (fr 46.97, vkg 127.661, vkg_dl 64.16) -> weight-difference note', () => {
+  // Labelled OLD in the sheet, but the two weights sit in brackets 2 and 1: a
+  // workbook error.
+  const ws = makeRow(R, { 50: 10, 51: '46.97', 52: '127.661', 54: '64.16' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS), HONOLD_DIFF);
 });
 
 test('phrase catalog: both Honold phrases resolve to stable keys', () => {
@@ -1335,6 +1339,29 @@ test('phrase catalog: both Honold phrases resolve to stable keys', () => {
      reuses that catalog key instead of adding a duplicate value. */
   assert.equal(e.phraseToKey('Differenz aufgrund abweichender Gewichte'),
     'abweichGewichte');
+});
+
+/* ── 20379045 Soll-Ist-Vergleich: the whole table ────────────────────────────
+   The 124 rule inputs (Stat, FR Kosten DL, Volumen kg, Volumen kg DL) and the
+   workbook's own Anmerkung labels. Rows 4, 44 and 117 are the workbook errors the
+   domain owner confirmed on 2026-10-12: their two weights sit in different Bis
+   brackets while the sheet says "bisherigen Tarif". This replay replaces the
+   FR-bracket evidence of 29db412. */
+test('processHonold: 20379045 replay agrees on 121/124, mismatches exactly [4, 44, 117]', () => {
+  const fx = JSON.parse(readFileSync(
+    new URL('./fixtures/honold-20379045-rows.json', import.meta.url), 'utf8'));
+  e.setHonoldTariff({ tiers: fx.tiers });
+  try {
+    const mismatches = [];
+    for (const x of fx.rows) {
+      const ws = makeRow(R, { 50: x.stat, 51: String(x.fr_dl), 52: String(x.vkg), 54: String(x.vkg_dl) });
+      if (e.processHonold(ws, R, HONOLD_COLS) !== x.truth) mismatches.push(x.row);
+    }
+    assert.equal(fx.rows.length, 124);
+    assert.deepEqual(mismatches, fx.outliers);
+  } finally {
+    e.setHonoldTariff(HONOLD_SYNTH);
+  }
 });
 
 /* ── AI bundle v3 2026-10-08 (Dachser, Soll-Ist-Vergleich 20261006) ───────────

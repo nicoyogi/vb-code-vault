@@ -36,7 +36,6 @@ for name in [
     "WACKLER_XTIER_NEAR_BAND", "WACKLER_BUENDEL_PARTIAL",
     "WACKLER_COLLI_KG", "WACKLER_SAME_WEIGHT_BAND",
     "WACKLER_BUENDEL_NEAR_BAND", "WACKLER_BUENDEL_MIN_REFS",
-    "HONOLD_RATE_TOL",
 ]:
     m = re.search(rf"const\s+{name}\s*=\s*([^;]+);", src)
     if m:
@@ -373,15 +372,17 @@ story.append(P("5. Honold — processHonold", h2))
 story.append(P(
     "Gate: Stat = 10, plus the OLD tariff must be unlocked. The tariff matrix is business data and "
     "ships encrypted (<code>assets/honold-tariff.enc.json</code>); until it is decrypted the engine "
-    "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. One rule:"
+    "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. One rule: "
+    "Volumen kg and Volumen kg DL in the same weight bracket mean the previous tariff is still being billed, "
+    "a different DL bracket is a weight difference."
 ))
 story.append(section_table([
-    ("FR Kosten DL is looked up in the destination country column of the OLD tariff to find the weight bracket(s) whose rate equals it; Volumen kg sits in one of those brackets", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
-    ("otherwise (blank / 0 FR, missing / 0 Volumen kg, unknown country, or FR matching no rate)", "Differenz aufgrund abweichender Gewichte"),
+    ("Volumen kg and Volumen kg DL sit in the same Bis bracket of the OLD tariff (business test, no rates read), or Volumen kg DL is blank / 0", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
+    ("the two weights sit in different brackets", "Differenz aufgrund abweichender Gewichte"),
+    ("blank / 0 FR Kosten DL, or a missing / 0 Volumen kg", "Differenz aufgrund abweichender Gewichte"),
 ]))
 story.append(P("Honold constants", h3))
 story.append(const_table([
-    ("FR ↔ OLD-tariff match tolerance", k("HONOLD_RATE_TOL")),
     ("Weight brackets", "Bis column of the OLD tariff (50 … 10 000, last row open above)"),
 ]))
 

@@ -1,0 +1,1049 @@
+{
+ "schema": "honold-20379045-rows/v1",
+ "source": "20379045 Soll-Ist-Vergleich.xlsx",
+ "tiers": [
+  50,
+  100,
+  150,
+  200,
+  250,
+  300,
+  350,
+  400,
+  450,
+  500,
+  600,
+  700,
+  800,
+  900,
+  1000,
+  1100,
+  1200,
+  1300,
+  1400,
+  1500,
+  1600,
+  1700,
+  1800,
+  1900,
+  2000,
+  2200,
+  2400,
+  2600,
+  2800,
+  3000,
+  3500,
+  4000,
+  4500,
+  5000,
+  5500,
+  6000,
+  6500,
+  7000,
+  7500,
+  8000,
+  8500,
+  9000,
+  9500,
+  10000
+ ],
+ "outliers": [
+  4,
+  44,
+  117
+ ],
+ "rows": [
+  {
+   "row": 4,
+   "stat": 10.0,
+   "fr_dl": 56.34,
+   "vkg": 123.0,
+   "vkg_dl": 55.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 5,
+   "stat": 10.0,
+   "fr_dl": 46.88,
+   "vkg": 174.0,
+   "vkg_dl": 87.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 6,
+   "stat": 10.0,
+   "fr_dl": 89.83,
+   "vkg": 203.0,
+   "vkg_dl": 203.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 7,
+   "stat": 10.0,
+   "fr_dl": 197.31,
+   "vkg": 928.0,
+   "vkg_dl": 100.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 8,
+   "stat": 10.0,
+   "fr_dl": 139.95,
+   "vkg": 522.0,
+   "vkg_dl": 522.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 9,
+   "stat": 10.0,
+   "fr_dl": 102.68,
+   "vkg": 238.0,
+   "vkg_dl": 238.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 10,
+   "stat": 10.0,
+   "fr_dl": 89.83,
+   "vkg": 246.0,
+   "vkg_dl": 246.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 11,
+   "stat": 10.0,
+   "fr_dl": 85.53,
+   "vkg": 249.0,
+   "vkg_dl": 249.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 12,
+   "stat": 10.0,
+   "fr_dl": 85.53,
+   "vkg": 244.0,
+   "vkg_dl": 244.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 13,
+   "stat": 10.0,
+   "fr_dl": 42.91,
+   "vkg": 65.0,
+   "vkg_dl": 65.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 14,
+   "stat": 10.0,
+   "fr_dl": 758.66,
+   "vkg": 3836.0,
+   "vkg_dl": 3836.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 15,
+   "stat": 10.0,
+   "fr_dl": 143.14,
+   "vkg": 691.0,
+   "vkg_dl": 691.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 16,
+   "stat": 10.0,
+   "fr_dl": 168.99,
+   "vkg": 893.0,
+   "vkg_dl": 893.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 17,
+   "stat": 10.0,
+   "fr_dl": 736.87,
+   "vkg": 2218.0,
+   "vkg_dl": 0.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 18,
+   "stat": 10.0,
+   "fr_dl": 736.87,
+   "vkg": 2218.0,
+   "vkg_dl": 1979.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 19,
+   "stat": 10.0,
+   "fr_dl": 413.66,
+   "vkg": 1176.0,
+   "vkg_dl": 1176.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 20,
+   "stat": 10.0,
+   "fr_dl": 73.48,
+   "vkg": 164.0,
+   "vkg_dl": 164.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 21,
+   "stat": 10.0,
+   "fr_dl": 97.02,
+   "vkg": 345.0,
+   "vkg_dl": 345.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 22,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 55.0,
+   "vkg_dl": 55.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 23,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 125.0,
+   "vkg_dl": 125.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 24,
+   "stat": 10.0,
+   "fr_dl": 463.82,
+   "vkg": 1706.0,
+   "vkg_dl": 1706.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 25,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 79.0,
+   "vkg_dl": 79.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 26,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 68.0,
+   "vkg_dl": 68.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 27,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 140.0,
+   "vkg_dl": 140.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 28,
+   "stat": 10.0,
+   "fr_dl": 58.46,
+   "vkg": 152.0,
+   "vkg_dl": 152.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 29,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 54.0,
+   "vkg_dl": 54.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 30,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 112.0,
+   "vkg_dl": 112.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 31,
+   "stat": 10.0,
+   "fr_dl": 40.57,
+   "vkg": 67.0,
+   "vkg_dl": 67.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 32,
+   "stat": 10.0,
+   "fr_dl": 934.99,
+   "vkg": 3176.0,
+   "vkg_dl": 1824.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 33,
+   "stat": 10.0,
+   "fr_dl": 413.66,
+   "vkg": 1184.0,
+   "vkg_dl": 1184.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 34,
+   "stat": 10.0,
+   "fr_dl": 83.97,
+   "vkg": 167.0,
+   "vkg_dl": 167.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 35,
+   "stat": 10.0,
+   "fr_dl": 182.85,
+   "vkg": 984.0,
+   "vkg_dl": 984.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 36,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 90.0,
+   "vkg_dl": 90.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 37,
+   "stat": 10.0,
+   "fr_dl": 127.25,
+   "vkg": 513.0,
+   "vkg_dl": 513.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 38,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 93.0,
+   "vkg_dl": 93.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 39,
+   "stat": 10.0,
+   "fr_dl": 71.86,
+   "vkg": 280.0,
+   "vkg_dl": 280.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 40,
+   "stat": 10.0,
+   "fr_dl": 494.52,
+   "vkg": 1960.0,
+   "vkg_dl": 1960.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 41,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 108.0,
+   "vkg_dl": 108.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 42,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 109.0,
+   "vkg_dl": 109.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 43,
+   "stat": 10.0,
+   "fr_dl": 58.46,
+   "vkg": 151.0,
+   "vkg_dl": 151.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 44,
+   "stat": 10.0,
+   "fr_dl": 127.25,
+   "vkg": 588.0,
+   "vkg_dl": 89.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 45,
+   "stat": 10.0,
+   "fr_dl": 88.51,
+   "vkg": 301.0,
+   "vkg_dl": 301.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 46,
+   "stat": 10.0,
+   "fr_dl": 88.51,
+   "vkg": 334.0,
+   "vkg_dl": 334.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 47,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 112.0,
+   "vkg_dl": 112.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 48,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 145.0,
+   "vkg_dl": 145.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 49,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 93.0,
+   "vkg_dl": 93.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 50,
+   "stat": 10.0,
+   "fr_dl": 58.46,
+   "vkg": 158.0,
+   "vkg_dl": 158.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 51,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 142.0,
+   "vkg_dl": 142.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 52,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 95.0,
+   "vkg_dl": 95.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 53,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 75.0,
+   "vkg_dl": 75.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 54,
+   "stat": 10.0,
+   "fr_dl": 58.46,
+   "vkg": 182.0,
+   "vkg_dl": 182.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 55,
+   "stat": 10.0,
+   "fr_dl": 71.74,
+   "vkg": 242.0,
+   "vkg_dl": 242.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 56,
+   "stat": 10.0,
+   "fr_dl": 71.86,
+   "vkg": 283.0,
+   "vkg_dl": 283.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 57,
+   "stat": 10.0,
+   "fr_dl": 491.06,
+   "vkg": 1320.0,
+   "vkg_dl": 633.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 58,
+   "stat": 10.0,
+   "fr_dl": 139.95,
+   "vkg": 586.0,
+   "vkg_dl": 209.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 59,
+   "stat": 10.0,
+   "fr_dl": 85.53,
+   "vkg": 250.0,
+   "vkg_dl": 250.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 60,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 103.0,
+   "vkg_dl": 103.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 61,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 110.0,
+   "vkg_dl": 110.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 62,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 94.0,
+   "vkg_dl": 94.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 63,
+   "stat": 10.0,
+   "fr_dl": 71.74,
+   "vkg": 238.0,
+   "vkg_dl": 238.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 64,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 75.0,
+   "vkg_dl": 75.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 65,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 93.0,
+   "vkg_dl": 93.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 66,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 63.0,
+   "vkg_dl": 63.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 67,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 61.0,
+   "vkg_dl": 61.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 68,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 91.0,
+   "vkg_dl": 91.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 69,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 74.0,
+   "vkg_dl": 74.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 70,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 92.0,
+   "vkg_dl": 92.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 71,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 92.0,
+   "vkg_dl": 92.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 72,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 91.0,
+   "vkg_dl": 91.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 73,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 63.0,
+   "vkg_dl": 63.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 74,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 93.0,
+   "vkg_dl": 93.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 75,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 74.0,
+   "vkg_dl": 74.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 76,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 63.0,
+   "vkg_dl": 63.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 77,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 75.0,
+   "vkg_dl": 75.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 78,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 64.0,
+   "vkg_dl": 64.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 79,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 73.0,
+   "vkg_dl": 73.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 80,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 91.0,
+   "vkg_dl": 91.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 81,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 62.0,
+   "vkg_dl": 62.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 82,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 62.0,
+   "vkg_dl": 62.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 83,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 62.0,
+   "vkg_dl": 62.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 84,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 77.0,
+   "vkg_dl": 77.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 85,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 93.0,
+   "vkg_dl": 93.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 86,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 89.0,
+   "vkg_dl": 89.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 87,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 63.0,
+   "vkg_dl": 63.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 88,
+   "stat": 10.0,
+   "fr_dl": 133.53,
+   "vkg": 455.0,
+   "vkg_dl": 0.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 89,
+   "stat": 10.0,
+   "fr_dl": 83.97,
+   "vkg": 152.0,
+   "vkg_dl": 0.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 90,
+   "stat": 10.0,
+   "fr_dl": 335.28,
+   "vkg": 447.0,
+   "vkg_dl": 0.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 91,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 86.0,
+   "vkg_dl": 0.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 92,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 117.0,
+   "vkg_dl": 0.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 93,
+   "stat": 10.0,
+   "fr_dl": 58.46,
+   "vkg": 194.0,
+   "vkg_dl": 0.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 94,
+   "stat": 10.0,
+   "fr_dl": 58.46,
+   "vkg": 195.0,
+   "vkg_dl": 0.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 95,
+   "stat": 10.0,
+   "fr_dl": 71.74,
+   "vkg": 249.0,
+   "vkg_dl": 0.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 96,
+   "stat": 10.0,
+   "fr_dl": 571.43,
+   "vkg": 1788.0,
+   "vkg_dl": 1788.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 97,
+   "stat": 10.0,
+   "fr_dl": 163.32,
+   "vkg": 674.0,
+   "vkg_dl": 674.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 98,
+   "stat": 10.0,
+   "fr_dl": 519.41,
+   "vkg": 1471.0,
+   "vkg_dl": 435.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 99,
+   "stat": 10.0,
+   "fr_dl": 97.02,
+   "vkg": 346.0,
+   "vkg_dl": 346.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 100,
+   "stat": 10.0,
+   "fr_dl": 85.53,
+   "vkg": 237.0,
+   "vkg_dl": 237.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 101,
+   "stat": 10.0,
+   "fr_dl": 54.55,
+   "vkg": 126.0,
+   "vkg_dl": 126.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 102,
+   "stat": 10.0,
+   "fr_dl": 395.94,
+   "vkg": 1052.0,
+   "vkg_dl": 1052.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 103,
+   "stat": 10.0,
+   "fr_dl": 42.91,
+   "vkg": 63.0,
+   "vkg_dl": 63.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 104,
+   "stat": 10.0,
+   "fr_dl": 413.66,
+   "vkg": 1106.0,
+   "vkg_dl": 688.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 105,
+   "stat": 10.0,
+   "fr_dl": 102.68,
+   "vkg": 237.0,
+   "vkg_dl": 237.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 106,
+   "stat": 10.0,
+   "fr_dl": 88.51,
+   "vkg": 334.0,
+   "vkg_dl": 334.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 107,
+   "stat": 10.0,
+   "fr_dl": 127.25,
+   "vkg": 593.0,
+   "vkg_dl": 493.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 108,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 126.0,
+   "vkg_dl": 126.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 109,
+   "stat": 10.0,
+   "fr_dl": 166.34,
+   "vkg": 888.0,
+   "vkg_dl": 888.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 110,
+   "stat": 10.0,
+   "fr_dl": 88.51,
+   "vkg": 338.0,
+   "vkg_dl": 338.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 111,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 122.0,
+   "vkg_dl": 122.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 112,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 69.0,
+   "vkg_dl": 69.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 113,
+   "stat": 10.0,
+   "fr_dl": 71.74,
+   "vkg": 210.0,
+   "vkg_dl": 210.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 114,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 110.0,
+   "vkg_dl": 110.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 115,
+   "stat": 10.0,
+   "fr_dl": 54.55,
+   "vkg": 113.0,
+   "vkg_dl": 113.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 116,
+   "stat": 10.0,
+   "fr_dl": 54.55,
+   "vkg": 108.0,
+   "vkg_dl": 108.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 117,
+   "stat": 10.0,
+   "fr_dl": 147.04,
+   "vkg": 564.0,
+   "vkg_dl": 237.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 118,
+   "stat": 10.0,
+   "fr_dl": 951.35,
+   "vkg": 4183.0,
+   "vkg_dl": 4183.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 119,
+   "stat": 10.0,
+   "fr_dl": 177.65,
+   "vkg": 857.0,
+   "vkg_dl": 857.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 120,
+   "stat": 10.0,
+   "fr_dl": 65.5,
+   "vkg": 143.0,
+   "vkg_dl": 143.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 121,
+   "stat": 10.0,
+   "fr_dl": 335.28,
+   "vkg": 1218.0,
+   "vkg_dl": 418.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 122,
+   "stat": 10.0,
+   "fr_dl": 36.5,
+   "vkg": 90.0,
+   "vkg_dl": 90.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 123,
+   "stat": 10.0,
+   "fr_dl": 71.74,
+   "vkg": 240.0,
+   "vkg_dl": 240.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 124,
+   "stat": 10.0,
+   "fr_dl": 46.97,
+   "vkg": 118.0,
+   "vkg_dl": 118.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 125,
+   "stat": 10.0,
+   "fr_dl": 88.51,
+   "vkg": 330.0,
+   "vkg_dl": 206.0,
+   "truth": "Differenz aufgrund abweichender Gewichte"
+  },
+  {
+   "row": 126,
+   "stat": 10.0,
+   "fr_dl": 166.34,
+   "vkg": 837.0,
+   "vkg_dl": 837.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  },
+  {
+   "row": 127,
+   "stat": 10.0,
+   "fr_dl": 171.6,
+   "vkg": 666.0,
+   "vkg_dl": 666.0,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+  }
+ ]
+}
