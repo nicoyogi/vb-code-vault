@@ -40,6 +40,31 @@ you do bump, move `version`, `entries[0].ver`, and the new entry in one commit, 
 `docs/anmerkung/INTEGRATION_v5.md` and `README.md` plus both the counts and the file hashes in
 `docs/anmerkung/integration-manifest.json` - nothing generates those, it is a manual step.
 
+## Dachser workbooks (truth vs tool output)
+
+Two folders, and they are not interchangeable:
+
+- `D:\TESTER\<Carrier>\*.xlsx` is the hand-corrected truth. This is the file to edit.
+- `D:\TESTER\Before\<Carrier>\*.xlsx` is tool output, kept for comparison. Never edit
+  it and never treat it as truth; a fresh engine run replaces it.
+
+When the user says a row is a **workbook error**, the engine's phrase is right and the truth
+file's Anmerkung cell is wrong. Fix the cell in the truth workbook, do not just write it down:
+
+```
+py scripts/dachser/fix_workbook.py --date 20261006 --show --rows 184
+py scripts/dachser/fix_workbook.py --date 20261006 --rows 184 --set "..."
+```
+
+The script resolves the `Anmerkung` column from the header row itself, refuses a path under
+`Before\`, copies the workbook to `D:\TESTER\_backup\` before writing, and re-reads the saved
+file so a silent miss cannot be reported as success. The rewrite is openpyxl-based, so it also
+drops `calcChain` and turns empty-string cells into true blanks on other sheets; both are
+invisible in Excel, and the backup keeps the original bytes. Never change `assets/anmerkung.js`
+to match a wrong sheet: the sheet is the thing that gets corrected. The audit notes under
+`docs/anmerkung/` stay as the as-found record; they are the evidence for the ruling, not a
+work list to rewrite afterwards.
+
 ## Vault notes
 
 Design notes for this project live in `Projects/Alchemist/` in the Obsidian vault
