@@ -27,13 +27,15 @@ function makeEl() {
   });
 }
 
-export function loadSplitter() {
+// The optional `seed` pre-fills localStorage before the inline script runs,
+// which is what the seed-dependent tests need.
+export function loadSplitter({ seed } = {}) {
   const html = readFileSync(HTML, 'utf8');
   const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
     .map(m => m[1]).find(s => s.includes('fileSplitter.names'));
   if (!inline) throw new Error('splitter inline script not found');
 
-  const store = new Map();
+  const store = new Map(seed ? Object.entries(seed) : []);
   const sandbox = {
     // decode_cell is the one XLSX util the pure helpers call ('BC12' -> {c:54, r:11}).
     XLSX: { utils: { decode_cell(a) {

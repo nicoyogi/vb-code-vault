@@ -329,6 +329,17 @@
   let splitting = false;
   const STEP_LABELS = ['Files', 'Notes', 'Exclusions', 'Totals', 'People', 'Split'];
   const NAMES_KEYS = { tariff: 'fileSplitter.names', factual: 'fileSplitter.namesFactual' };
+  const FORWARDER_KEY = 'fileSplitter.forwarders';
+  // Forwarder checklist picks keyed by system name, so a vendor unchecked once
+  // stays unchecked on the next upload of that system. Null-prototype maps keep
+  // a sheet named "__proto__" off Object.prototype.
+  let forwarderState = Object.create(null);
+  try {
+    const raw = JSON.parse(localStorage.getItem(FORWARDER_KEY) || 'null');
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      for (const sys of Object.keys(raw)) forwarderState[sys] = Object.assign(Object.create(null), raw[sys] && typeof raw[sys] === 'object' ? raw[sys] : {});
+    }
+  } catch (e) { /* storage unavailable */ }
 
   // Shared exclusion lists (Kreditor = Supplier, Referenz = Reference): one open
   // Firestore doc per list, no login; localStorage is the offline copy.
@@ -436,11 +447,22 @@
     }, 'Please upload an Excel file (.xlsx or .xls).');
   }
 
+  function savedForwarderState(systemName, forwarderName) {
+    const sys = forwarderState[systemName];
+    return sys && typeof sys[forwarderName] === 'boolean' ? sys[forwarderName] : true;
+  }
+
+  function saveForwarderState(systemName, forwarderName, checked) {
+    if (!forwarderState[systemName]) forwarderState[systemName] = Object.create(null);
+    forwarderState[systemName][forwarderName] = checked;
+    try { localStorage.setItem(FORWARDER_KEY, JSON.stringify(forwarderState)); } catch (e) { /* storage unavailable */ }
+  }
+
   function refreshSystemForwarders(sys) {
     const prevChecked = new Map((sys.forwarders || []).map(f => [f.name, f.checked]));
     sys.forwarders = tallyForwarders(sys.rows).map(f => ({
       ...f,
-      checked: prevChecked.has(f.name) ? prevChecked.get(f.name) : true
+      checked: prevChecked.has(f.name) ? prevChecked.get(f.name) : savedForwarderState(sys.name, f.name)
     }));
   }
 
@@ -1089,8 +1111,9 @@
             existing._fromPrio = false;
             existing.error = null;
           } else {
-            systems.push({ id: 'sys' + (sysSeq++), name: dedupeName(en.base, en.group), fileName: file.name, baseRows: en.rows, rows: en.rows,
-              forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: true })), group: en.group });
+            const sysName = dedupeName(en.base, en.group);
+            systems.push({ id: 'sys' + (sysSeq++), name: sysName, fileName: file.name, baseRows: en.rows, rows: en.rows,
+              forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: savedForwarderState(sysName, f.name) })), group: en.group });
           }
         }
       }
@@ -1190,7 +1213,7 @@
       if (sys.group !== 'factual') {
         renderChecklist(card, 'Filter forwarders…', sys.forwarders,
           name => sys.forwarders.find(f => f.name === name).checked,
-          (name, checked) => { sys.forwarders.find(f => f.name === name).checked = checked; });
+          (name, checked) => { sys.forwarders.find(f => f.name === name).checked = checked; saveForwarderState(sys.name, name, checked); });
       }
 
       el.appendChild(card);
