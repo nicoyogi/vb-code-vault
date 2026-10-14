@@ -1,4 +1,5 @@
-/* Unit tests for the pure extract/split helpers in File_splitter.html. */
+/* Unit tests for the pure extract/split helpers and the forwarder-checklist
+   persistence helpers (fileSplitter.forwarders) in File_splitter.html. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadSplitter } from './harness/load-splitter.mjs';
@@ -7,6 +8,8 @@ const s = loadSplitter();
 // vm-realm arrays/objects have a foreign prototype; JSON round-trip re-homes
 // them so deepStrictEqual compares by value.
 const plain = x => JSON.parse(JSON.stringify(x));
+
+const FORWARDER_KEY = 'fileSplitter.forwarders';
 
 test('pickColumns: finds the 4 targets by name regardless of order', () => {
   // [Vendor details, Supplier, Reference, Document number] -> their indices
@@ -633,4 +636,79 @@ test('upload guard: dropzone and PRIO uploads keep their own bad-type message (p
     'Please upload Excel files (.xlsx or .xls).',
     'Please upload an Excel file (.xlsx or .xls).',
   ]);
+});
+
+test('savedForwarderState: an unseen system and an unseen forwarder default to checked', () => {
+  const t = loadSplitter(); // own store: these tests write forwarder state
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), true);    // fresh store, nothing saved
+  t.saveForwarderState('FNP', 'DHL', false);                  // FNP is now a known system
+  assert.equal(t.savedForwarderState('FNP', 'Kuehne'), true); // unseen forwarder in a known system
+});
+
+test('saveForwarderState: false round-trips and lands under fileSplitter.forwarders as an object', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP', 'DHL', false);
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), false);
+  assert.deepEqual(plain(JSON.parse(t.localStorage.getItem(FORWARDER_KEY))), { FNP: { DHL: false } });
+});
+
+test('saveForwarderState: state is per system - the same vendor in another system stays checked', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP', 'DHL', false);
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), false); // sanity: the save landed
+  assert.equal(t.savedForwarderState('KSP', 'DHL'), true);  // other system, same vendor name
+});
+
+test('refreshSystemForwarders: seeds each vendor from saved state, unseen vendors stay checked', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP', 'DHL', false);
+  const sys = {
+    name: 'FNP', forwarders: [],
+    rows: [['DHL', 's', 'r', 'd', [], ''], ['Kuehne', 's', 'r', 'd', [], '']],
+  };
+  t.refreshSystemForwarders(sys);
+  assert.deepEqual(plain(sys.forwarders), [
+    { name: 'DHL', count: 1, checked: false },
+    { name: 'Kuehne', count: 1, checked: true },
+  ]);
+});
+
+test('refreshSystemForwarders: an in-session toggle outranks the saved value', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP', 'DHL', false);                  // saved: DHL unchecked
+  const sys = {
+    name: 'FNP',
+    forwarders: [{ name: 'DHL', count: 1, checked: true }],   // but re-checked this session
+    rows: [['DHL', 's', 'r', 'd', [], ''], ['Kuehne', 's', 'r', 'd', [], '']],
+  };
+  t.refreshSystemForwarders(sys);
+  assert.equal(sys.forwarders.find(f => f.name === 'DHL').checked, true);
+  assert.equal(sys.forwarders.find(f => f.name === 'Kuehne').checked, true);
+});
+
+test('forwarder persistence: a corrupted store is replaced, and __proto__ does not pollute', () => {
+  for (const bad of ['5', '[1,2]']) {
+    const t = loadSplitter({ seed: { [FORWARDER_KEY]: bad } });
+    assert.doesNotThrow(() => t.saveForwarderState('SYS', 'DHL', false), `seed ${bad}`);
+    const stored = JSON.parse(t.localStorage.getItem(FORWARDER_KEY));
+    assert.equal(Array.isArray(stored), false, `stored value must stay an object after seed ${bad}`);
+    assert.deepEqual(plain(stored), { SYS: { DHL: false } }, `stored value after seed ${bad}`);
+  }
+  // A system literally named __proto__ must not write through to Object.prototype.
+  // savedForwarderState is a vm-realm function, so its .constructor is that realm's
+  // Function: it hands back the vm Object.prototype for an honest in-realm check.
+  const t = loadSplitter();
+  const vmProto = t.savedForwarderState.constructor('return Object.prototype')();
+  assert.equal(vmProto.DHL, undefined);
+  t.saveForwarderState('__proto__', 'DHL', false);
+  assert.equal(t.savedForwarderState('__proto__', 'DHL'), false);
+  assert.equal(vmProto.DHL, undefined);
+  assert.equal(Object.prototype.DHL, undefined); // host realm stays clean too
+});
+
+test('forwarder persistence: a well-formed stored value is read back on load', () => {
+  const t = loadSplitter({ seed: { [FORWARDER_KEY]: '{"FNP":{"DHL":false,"Kuehne":true}}' } });
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), false);  // saved pick survives the load
+  assert.equal(t.savedForwarderState('FNP', 'Kuehne'), true);
+  assert.equal(t.savedForwarderState('KSP', 'DHL'), true);   // still per system
 });
