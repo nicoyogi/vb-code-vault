@@ -229,6 +229,7 @@
     <span class="prio-tag">PRIO</span>
     <span class="prio-label" id="prioLabel"></span>
     <button class="fwd-mini" id="prioBtn">Add PRIO list</button>
+    <button class="fwd-mini" id="prioForget" hidden title="Forget the rows written by the last split">Forget last output</button>
     <button class="remove-file" id="prioClear" hidden title="Remove PRIO list">×</button>
   </div>
 </div>
@@ -341,6 +342,24 @@
     }
   } catch (e) { /* storage unavailable */ }
 
+  // Identity (Reference + Document number) of every row written by the last
+  // split, scoped per system so a row only suppresses PRIO re-adds in the
+  // system it was emitted for. Unknown shapes load as empty.
+  const LAST_OUTPUT_KEY = 'fileSplitter.lastOutput';
+  let lastOutput = new Map();
+  try {
+    const raw = JSON.parse(localStorage.getItem(LAST_OUTPUT_KEY) || 'null');
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      for (const key of Object.keys(raw)) {
+        const entry = raw[key];
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+        const refs = new Set((Array.isArray(entry.refs) ? entry.refs : []).map(normDoc).filter(Boolean));
+        const docs = new Set((Array.isArray(entry.docs) ? entry.docs : []).map(normDoc).filter(Boolean));
+        if (refs.size || docs.size) lastOutput.set(key, { refs, docs });
+      }
+    }
+  } catch (e) { /* storage unavailable */ }
+
   // Shared exclusion lists (Kreditor = Supplier, Referenz = Reference): one open
   // Firestore doc per list, no login; localStorage is the offline copy.
   // ponytail: last-writer-wins per system, no live sync; add a snapshot listener if simultaneous edits become real
@@ -416,6 +435,12 @@
     renderPrio();
     refreshAll();
   });
+  document.getElementById('prioForget').addEventListener('click', () => {
+    clearLastOutput();
+    applyPrioToSystems();
+    renderPrio();
+    refreshAll();
+  });
 
   function readWorkbook(file, onLoaded, badTypeMessage) {
     if (!file.name.match(/\.(xlsx|xls)$/i)) { showError(badTypeMessage); return; }
@@ -482,10 +507,12 @@
     document.getElementById('prioZone').classList.toggle('loaded', !!prio);
     document.getElementById('prioClear').hidden = !prio;
     document.getElementById('prioBtn').hidden = !!prio;
+    document.getElementById('prioForget').hidden = lastOutput.size === 0;
     const label = document.getElementById('prioLabel');
     if (prio) {
       const addedText = prio.addedRowsCount > 0 ? ` (${prio.addedRowsCount} missing added)` : '';
-      label.innerHTML = `<strong>${escapeHtml(prio.fileName)}</strong> — ${prio.docs.size} document numbers${addedText}. Matches get a yellow “PRIO” mark.`;
+      const skippedText = prio.skippedCount > 0 ? ` (${prio.skippedCount} already split, not added)` : '';
+      label.innerHTML = `<strong>${escapeHtml(prio.fileName)}</strong> — ${prio.docs.size} document numbers${addedText}${skippedText}. Matches get a yellow “PRIO” mark.`;
     } else {
       label.textContent = 'Optional — matching document numbers get a yellow “PRIO” mark in the split files.';
     }
@@ -675,6 +702,45 @@
     const i = SYSTEM_ORDER.findIndex(k => u.includes(k));
     return i < 0 ? SYSTEM_ORDER.length : i;
   }
+  // Remembered identities are scoped per system+group (FNP never suppresses
+  // KSP). A known code keys by its rank; an ad-hoc name keys by its own name,
+  // so unrelated uploads never share a bucket.
+  function lastOutputKey(name, group) {
+    const rank = systemRank(name);
+    const id = rank < SYSTEM_ORDER.length ? SYSTEM_ORDER[rank] : 'NAME:' + String(name).trim().toUpperCase();
+    return id + '|' + (group || 'tariff');
+  }
+  // Significant name tokens: alphanumeric runs of 3+ chars that are not all
+  // digits. A rename keeps its memory while any token survives the rename.
+  function nameTokens(name) {
+    const tokens = String(name).toUpperCase().match(/[A-Z0-9]+/g) || [];
+    return new Set(tokens.filter(t => t.length >= 3 && !/^\d+$/.test(t)));
+  }
+  // A system matches its own key, plus, for an ad-hoc name, remembered group
+  // names whose significant tokens are a subset of (or superset of) its own. A
+  // shared token alone never merges; an empty token set only matches by name.
+  function memoriesFor(seen, name, group) {
+    const rank = systemRank(name);
+    const ownKey = lastOutputKey(name, group);
+    if (rank < SYSTEM_ORDER.length) {
+      const entry = seen.get(ownKey);
+      return entry ? [entry] : [];
+    }
+    const g = group || 'tariff';
+    const wanted = nameTokens(name);
+    const subset = (a, b) => a.size > 0 && b.size > 0 && [...a].every(t => b.has(t));
+    const out = [];
+    const own = seen.get(ownKey);
+    if (own) out.push(own);
+    for (const [key, entry] of seen) {
+      if (key === ownKey) continue;
+      const m = /^NAME:(.+)\|([^|]*)$/.exec(key);
+      if (!m || (m[2] || 'tariff') !== g) continue;
+      const remembered = nameTokens(m[1]);
+      if (subset(wanted, remembered) || subset(remembered, wanted)) out.push(entry);
+    }
+    return out;
+  }
   // Harvest document numbers from one PRIO-workbook sheet. Walks the sheet's
   // actual cells, never its declared range — real PRIO files carry a !ref
   // stretched to ~1M blank rows. A 'Dokumentnummer' / 'Document number' cell
@@ -758,19 +824,21 @@
   // Reconcile PRIO rows into systems: for every system, if a PRIO row's
   // Referenz (or doc) does not appear in the normal file, add it. If a system
   // in PRIO is completely missing from the normal files, add that system.
-  function reconcilePrio(systems, prioEntries, allowNewSystems = true) {
-    const seen = new Set();
+  function reconcilePrio(systems, prioEntries, allowNewSystems = true, seen = lastOutput) {
+    const seenKeys = new Set();
     const deduped = [];
     for (const p of prioEntries) {
       const k = [p.system, p.group, normDoc(p.row[3]), normDoc(p.row[2])].join('|');
-      if (!seen.has(k)) { seen.add(k); deduped.push(p); }
+      if (!seenKeys.has(k)) { seenKeys.add(k); deduped.push(p); }
     }
     let totalAdded = 0;
+    let skipped = 0;
     const handledIndices = new Set();
     for (const sys of systems) {
       if (!sys.baseRows) sys.baseRows = [...sys.rows];
       const existingRefs = new Set(sys.baseRows.map(r => normDoc(r[2])).filter(Boolean));
       const existingDocs = new Set(sys.baseRows.map(r => normDoc(r[3])).filter(Boolean));
+      const memories = memoriesFor(seen, sys.name, sys.group);
       const toAdd = [];
       deduped.forEach((p, idx) => {
         const sysMatch = systemRank(sys.name) < SYSTEM_ORDER.length && systemRank(p.system) < SYSTEM_ORDER.length
@@ -780,8 +848,9 @@
           handledIndices.add(idx);
           const ref = normDoc(p.row[2]);
           const doc = normDoc(p.row[3]);
-          const appears = (ref && existingRefs.has(ref)) || (doc && existingDocs.has(doc));
-          if (!appears) toAdd.push(p.row);
+          const inFile = (ref && existingRefs.has(ref)) || (doc && existingDocs.has(doc));
+          const inLastOutput = memories.some(m => (ref && m.refs.has(ref)) || (doc && m.docs.has(doc)));
+          if (inFile || inLastOutput) { if (inLastOutput && !inFile) skipped++; } else toAdd.push(p.row);
         }
       });
       sys.rows = [...sys.baseRows, ...toAdd];
@@ -792,6 +861,10 @@
       const missingBySys = new Map();
       deduped.forEach((p, idx) => {
         if (handledIndices.has(idx)) return;
+        const ref = normDoc(p.row[2]);
+        const doc = normDoc(p.row[3]);
+        const memories = memoriesFor(seen, p.system, p.group);
+        if (memories.some(m => (ref && m.refs.has(ref)) || (doc && m.docs.has(doc)))) { skipped++; return; }
         const k = p.system + '|' + p.group;
         if (!missingBySys.has(k)) missingBySys.set(k, { system: p.system, group: p.group, rows: [] });
         missingBySys.get(k).rows.push(p.row);
@@ -812,6 +885,7 @@
         totalAdded += rows.length;
       }
     }
+    if (prio) prio.skippedCount = skipped;
     systems.sort((a, b) => systemRank(a.name) - systemRank(b.name));
     return totalAdded;
   }
@@ -823,6 +897,33 @@
       s.prioAdded = 0;
     }
     return kept;
+  }
+  // Rows written by a split stay remembered so the next PRIO upload can skip
+  // them; each run replaces the memory, and a run that produced no identities
+  // keeps the previous memory rather than wiping it.
+  function rememberOutput(written) {
+    const next = new Map();
+    for (const { name, group, rows } of written) {
+      const key = lastOutputKey(name, group);
+      for (const r of rows) {
+        const ref = normDoc(r[2]);
+        const doc = normDoc(r[3]);
+        if (!ref && !doc) continue;
+        let entry = next.get(key);
+        if (!entry) { entry = { refs: new Set(), docs: new Set() }; next.set(key, entry); }
+        if (ref) entry.refs.add(ref);
+        if (doc) entry.docs.add(doc);
+      }
+    }
+    if (next.size === 0) return;
+    lastOutput = next;
+    const stored = {};
+    for (const [key, entry] of next) stored[key] = { refs: [...entry.refs], docs: [...entry.docs] };
+    try { localStorage.setItem(LAST_OUTPUT_KEY, JSON.stringify(stored)); } catch (e) { /* storage unavailable */ }
+  }
+  function clearLastOutput() {
+    lastOutput = new Map();
+    try { localStorage.removeItem(LAST_OUTPUT_KEY); } catch (e) { /* storage unavailable */ }
   }
   // Partition raw data rows by the 'Step description' column — real exports mix
   // both work types in one sheet ("Tariff Check" / "Factual Check" rows). Rows
@@ -1468,6 +1569,7 @@
       const prioOn = prioColumnOn(valid);
       const overdueOn = hasOverdue(valid);
 
+      const writtenBySys = [];
       for (const job of jobs) {
         // Filter each system per its group policy, then deal shares via
         // systemShares: PRIO rows and the rest split as two independent
@@ -1481,6 +1583,7 @@
         // collecting the per-system rounding remainder. Each system's PRIO and
         // main pool then split that system's count for each person.
         const rowsBySys = job.systems.map(sys => splitRows(sys, keepNotes, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)));
+        job.systems.forEach((sys, si) => writtenBySys.push({ name: sys.name, group: sys.group, rows: rowsBySys[si] }));
         const sysSizes = allocateJobShares(rowsBySys.map(rows => rows.length), weights);
         const shares = {};
         job.systems.forEach((sys, si) => {
@@ -1542,7 +1645,10 @@
 
       setProgress(100, 'Done!');
       await sleep(400);
+      // An all-empty run must not wipe the remembered output.
+      if (writtenBySys.some(w => w.rows.length)) rememberOutput(writtenBySys);
       renderResults();
+      renderPrio();
     } catch (err) {
       showError('Split failed: ' + err.message);
     } finally {
