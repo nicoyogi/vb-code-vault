@@ -101,12 +101,15 @@
   .people-group[hidden] { display: none; }
   .group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .group-note { font-size: 12px; color: var(--text3); }
-  .total-block { display: flex; align-items: center; gap: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px 18px; }
+  .total-block { display: flex; align-items: flex-start; gap: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px 18px; }
   .total-block + .total-block { margin-top: 10px; }
   .total-info { flex: 1; min-width: 0; }
   .total-num { font-family: var(--mono); font-size: 26px; color: var(--accent); line-height: 1.1; }
   .total-rows { font-family: var(--mono); font-size: 11px; color: var(--text2); }
-  .total-sys { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-top: 5px; }
+  .total-preview { margin-top: 8px; max-width: 380px; display: flex; flex-direction: column; gap: 6px; }
+  .total-sys-line { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--text2); }
+  .total-fwd-list { margin: 2px 0 0 4px; padding-left: 10px; display: flex; flex-direction: column; gap: 1px; }
+  .total-fwd { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--text2); }
 
   /* step 2 — people */
   .people-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
@@ -1003,6 +1006,13 @@
     return skipBlanks ? rows.filter(r => !isBlankRow(r)) : rows;
   }
 
+  // One system's Totals preview: rows surviving the same filters the split
+  // uses, with a per-forwarder breakdown that sums to that row count.
+  function previewSystem(sys, keep, skipBlanks) {
+    const rows = splitRows(sys, keep, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name));
+    return { name: sys.name, rows: rows.length, forwarders: tallyForwarders(rows) };
+  }
+
   // De-dupe a system name against already-loaded entries of the same group —
   // the tariff and factual halves of one file may share a name (they never
   // share a workbook), but two uploads of the same system may not.
@@ -1170,7 +1180,8 @@
   }
 
   // Totals step: per work type, rows surviving the current forwarder + note
-  // filters (the exact rows the split would distribute), with per-system detail.
+  // filters (the exact rows the split would distribute), broken down by system
+  // and then by forwarder.
   function renderTotals() {
     const valid = validSystems();
     const keep = checkedNoteSet();
@@ -1180,7 +1191,7 @@
     for (const [group, label] of GROUPS) {
       const groupSys = valid.filter(s => s.group === group);
       if (groupSys.length === 0) continue;
-      const per = groupSys.map(sys => ({ name: sys.name, rows: splitRows(sys, keep, skipBlanks, kreditorSetFor(sys.name), referenzSetFor(sys.name)).length }));
+      const per = groupSys.map(sys => previewSystem(sys, keep, skipBlanks));
       const total = per.reduce((a, p) => a + p.rows, 0);
       const block = document.createElement('div');
       block.className = 'total-block';
@@ -1188,7 +1199,13 @@
         <span class="type-badge ${group}">${label.toUpperCase()}</span>
         <div class="total-info">
           <div><span class="total-num">${total}</span> <span class="total-rows">rows</span></div>
-          <div class="total-sys">${per.map(p => `${escapeHtml(p.name)} ${p.rows}`).join(' · ')}</div>
+          <div class="total-preview">
+            ${per.map(p => `
+              <div class="total-sys-line"><span>${escapeHtml(p.name)}</span><span>${p.rows}</span></div>
+              ${p.forwarders.length ? `<div class="total-fwd-list">
+                ${p.forwarders.map(f => `<div class="total-fwd"><span>${escapeHtml(f.name)}</span><span>${f.count}</span></div>`).join('')}
+              </div>` : ''}`).join('')}
+          </div>
         </div>`;
       body.appendChild(block);
     }

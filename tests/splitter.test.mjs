@@ -975,3 +975,56 @@ test('rememberOutput: a run whose rows all have blank identities does not wipe t
   assert.equal(t.reconcilePrio(systems, fresh), 1);
   assert.equal(systems[0].rows[0][2], 'REF-2');
 });
+
+test('previewSystem: surviving row count plus per-forwarder counts that sum to it', () => {
+  const sys = {
+    name: 'FNP', group: 'tariff',
+    rows: [
+      ['DHL', 'S', 'R', 'D1', []],
+      ['DHL', 'S', 'R', 'D2', []],
+      ['Kuehne', 'S', 'R', 'D3', []],
+    ],
+    forwarders: [{ name: 'DHL', checked: true }, { name: 'Kuehne', checked: true }],
+  };
+  const p = plain(s.previewSystem(sys, new Set(), true));
+  assert.deepEqual(p, {
+    name: 'FNP', rows: 3,
+    forwarders: [{ name: 'DHL', count: 2 }, { name: 'Kuehne', count: 1 }],
+  });
+  assert.equal(p.forwarders.reduce((a, f) => a + f.count, 0), p.rows);
+});
+
+test('previewSystem: an unchecked forwarder is excluded from rows and from its own breakdown', () => {
+  const sys = {
+    name: 'FNP', group: 'tariff',
+    rows: [['DHL', 'S', 'R', 'D1', []], ['Kuehne', 'S', 'R', 'D2', []]],
+    forwarders: [{ name: 'DHL', checked: true }, { name: 'Kuehne', checked: false }],
+  };
+  const p = plain(s.previewSystem(sys, new Set(), true));
+  assert.equal(p.rows, 1);
+  assert.deepEqual(p.forwarders, [{ name: 'DHL', count: 1 }]);
+});
+
+test('previewSystem: tariff rows honour the note filter, factual rows ignore it', () => {
+  const rows = [
+    ['DHL', 'S', 'R', 'D1', []],
+    ['DHL', 'S', 'R', 'D2', ['bad note']],
+  ];
+  const fwd = [{ name: 'DHL', checked: true }];
+  const tariff = plain(s.previewSystem({ name: 'FNP', group: 'tariff', rows, forwarders: fwd }, new Set(), true));
+  assert.equal(tariff.rows, 1);
+  assert.deepEqual(tariff.forwarders, [{ name: 'DHL', count: 1 }]);
+  const factual = plain(s.previewSystem({ name: 'KSP', group: 'factual', rows, forwarders: fwd }, new Set(), true));
+  assert.equal(factual.rows, 2);
+  assert.deepEqual(factual.forwarders, [{ name: 'DHL', count: 2 }]);
+});
+
+test('previewSystem: blank rows drop only when skipBlanks is on', () => {
+  const rows = [
+    ['DHL', 'S', 'R', 'D1', []],
+    ['', '', '', '', ''],
+  ];
+  const sys = { name: 'KSP', group: 'factual', rows };
+  assert.equal(s.previewSystem(sys, new Set(), false).rows, 2);
+  assert.equal(s.previewSystem(sys, new Set(), true).rows, 1);
+});
