@@ -3,6 +3,7 @@
    fileSplitter.lastOutput) in File_splitter.html. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import { loadSplitter } from './harness/load-splitter.mjs';
 
 const s = loadSplitter();
@@ -1027,4 +1028,175 @@ test('previewSystem: blank rows drop only when skipBlanks is on', () => {
   const sys = { name: 'KSP', group: 'factual', rows };
   assert.equal(s.previewSystem(sys, new Set(), false).rows, 2);
   assert.equal(s.previewSystem(sys, new Set(), true).rows, 1);
+});
+
+// ---- renderTotals composition (the Totals step's markup) ----
+// renderTotals writes DOM, so these tests load a sandbox whose document records
+// appended blocks and whose skipBlanks checkbox is settable. `systems` is a
+// lexical binding, not a global property, so it is injected with vm.runInContext.
+// SPLITTER_TOTALS_HTML is only used by the counterfactual run against a pasted
+// HEAD revision; it is unset in normal runs, so the repo file is the default.
+const TOTALS_HTML = process.env.SPLITTER_TOTALS_HTML || undefined;
+// Fail loudly when the retarget is in play: a run against a pasted revision is
+// not a run against the repo file, and the counts must not be quoted as one.
+if (TOTALS_HTML) console.error(`[splitter.test] SPLITTER_TOTALS_HTML retargets the renderTotals tests at ${TOTALS_HTML}`);
+const loadTotals = opts => loadSplitter({ captureDom: true, ...(TOTALS_HTML ? { htmlPath: TOTALS_HTML } : {}), ...opts });
+
+const countOf = (hay, needle) => hay.split(needle).length - 1;
+// Every .total-line in a chunk, in document order (system line first, then the
+// forwarder lines when the chunk was split at .total-fwds).
+const sysLines = part => [...part.matchAll(/<div class="total-line"><span class="total-nm">(.*?)<\/span><span class="total-ct">(\d+)<\/span><\/div>/g)].map(m => ({ name: m[1], count: Number(m[2]) }));
+// Mirrors File_splitter.html:1696 so expected forwarder names can be compared
+// to the escaped markup.
+const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function totalsMarkup(systems, { skipBlanks = true, seed } = {}) {
+  const t = loadTotals(seed ? { seed } : {});
+  vm.runInContext('systems = ' + JSON.stringify(systems), t);
+  t.document.getElementById('skipBlanks').checked = skipBlanks;
+  t.renderTotals();
+  const body = t.document.getElementById('totalsBody');
+  const blocks = body.appended;
+  return { t, body, blocks, html: blocks.join('\n') };
+}
+
+test('renderTotals: one block per group with per-system subtotals and forwarder breakdown', () => {
+  const systems = [
+    { name: 'KSP', group: 'tariff', rows: [
+        ['K&N <b>Log</b>', 'S', 'R', 'D1', []],
+        ['K&N <b>Log</b>', 'S', 'R', 'D2', []],
+        ['DHL', 'S', 'R', 'D3', []],
+      ], forwarders: [{ name: 'K&N <b>Log</b>', checked: true }, { name: 'DHL', checked: true }] },
+    { name: 'FNP', group: 'tariff', rows: [
+        ['DHL', 'S', 'R', 'D4', []],
+        ['DHL', 'S', 'R', 'D5', []],
+      ], forwarders: [{ name: 'DHL', checked: true }] },
+    { name: 'KSP', group: 'factual', rows: [
+        ['Alpha', 'S', 'R', 'D6', []],
+        ['Beta', 'S', 'R', 'D7', []],
+      ] },
+  ];
+  const { t, body, blocks, html } = totalsMarkup(systems);
+
+  // Exactly one .total-block per group present, in GROUPS order.
+  assert.equal(blocks.length, 2);
+  assert.deepEqual(body.children.map(c => c.className), ['total-block', 'total-block']);
+  assert.match(blocks[0], /class="type-badge tariff">TARIFF</);
+  assert.match(blocks[1], /class="type-badge factual">FACTUAL</);
+
+  // .total-head carries the group's summed preview row count (3 + 2 tariff, 2 factual).
+  const tariff = systems.filter(x => x.group === 'tariff');
+  assert.equal(Number(blocks[0].match(/class="total-num">(\d+)</)[1]), 5, 'tariff 3 + 2');
+  assert.equal(Number(blocks[1].match(/class="total-num">(\d+)</)[1]), 2, 'factual 2');
+
+  // One .total-sys per system; one .total-cols legend per block.
+  assert.equal(countOf(blocks[0], 'class="total-sys"'), 2);
+  assert.equal(countOf(blocks[1], 'class="total-sys"'), 1);
+  assert.equal(countOf(html, 'class="total-cols"'), blocks.length);
+
+  // Per system: subtotal equals previewSystem rows; every forwarder appears in
+  // .total-fwds with its count, and those counts sum to the subtotal.
+  blocks[0].split('<div class="total-sys">').slice(1).forEach((chunk, i) => {
+    const expected = plain(t.previewSystem(tariff[i], new Set(), true));
+    const [head, fwds = ''] = chunk.split('<div class="total-fwds">');
+    assert.deepEqual(sysLines(head), [{ name: expected.name, count: expected.rows }]);
+    const seen = sysLines(fwds);
+    for (const f of expected.forwarders) {
+      assert.ok(seen.some(l => l.name === esc(f.name) && l.count === f.count),
+        `forwarder ${f.name} (${f.count}) must appear inside .total-fwds`);
+    }
+    assert.equal(seen.reduce((a, l) => a + l.count, 0), expected.rows);
+  });
+});
+
+test('renderTotals: forwarders nest under their own system, before the next one', () => {
+  const systems = [
+    { name: 'KSP', group: 'tariff', rows: [['DHL', 'S', 'R', 'D1', []]], forwarders: [{ name: 'DHL', checked: true }] },
+    { name: 'FNP', group: 'tariff', rows: [['DHL', 'S', 'R', 'D2', []]], forwarders: [{ name: 'DHL', checked: true }] },
+  ];
+  const { blocks } = totalsMarkup(systems);
+  const block = blocks[0];
+  const iSys = block.indexOf('<div class="total-sys">');
+  const iLine = block.indexOf('class="total-line"');
+  const iFwds = block.indexOf('<div class="total-fwds">');
+  const iNextSys = block.indexOf('<div class="total-sys">', iSys + 1);
+  assert.ok(iSys >= 0, 'a .total-sys wrapper must exist');
+  assert.ok(iLine > iSys, 'the system .total-line must be inside its .total-sys');
+  assert.ok(iFwds > iLine, "the forwarder list must follow its system's .total-line");
+  assert.ok(iNextSys > iFwds, 'the forwarder list must close before the next .total-sys');
+});
+
+test('renderTotals: crafted system and forwarder names are escaped', () => {
+  const systems = [
+    { name: 'A&<b>B</b>', group: 'tariff', rows: [['X&<b>Y</b>', 'S', 'R', 'D1', []]], forwarders: [{ name: 'X&<b>Y</b>', checked: true }] },
+  ];
+  const { html } = totalsMarkup(systems);
+  assert.match(html, /A&amp;&lt;b&gt;B&lt;\/b&gt;/);
+  assert.match(html, /X&amp;&lt;b&gt;Y&lt;\/b&gt;/);
+  assert.doesNotMatch(html, /<b>B<\/b>|<b>Y<\/b>/, 'a crafted name must not become a raw tag');
+  assert.doesNotMatch(html, /&(?!amp;|lt;|gt;|quot;|#39;)/, 'every & must belong to an entity');
+});
+
+test('renderTotals: a zero tariff group shows the tariff wording and no system list', () => {
+  const systems = [
+    { name: 'EMPTY', group: 'tariff', rows: [['DHL', 'S', 'R', 'D1', []]], forwarders: [{ name: 'DHL', checked: false }] },
+  ];
+  const { blocks, html } = totalsMarkup(systems);
+  assert.equal(blocks.length, 1);
+  assert.match(html, /class="total-none"/);
+  assert.match(html, /No rows survive the current filters\. Check the forwarder checklist, the note filter, and the exclusions\./);
+  assert.doesNotMatch(html, /No rows survive the current filters\. Check the exclusions\./, 'the factual wording must not leak into the tariff block');
+  assert.doesNotMatch(html, /class="total-sys"/);
+  assert.match(html, /class="total-num">0</, 'the group total still renders 0');
+});
+
+// The blank row below cannot come out of extractRows (note cells are always an
+// array) and isBlankRow requires every cell === '', so skipBlanks cannot drop a
+// real projected row. This test is deliberately a wiring probe: it pins that the
+// renderTotals skipBlanks flag is the one previewSystem receives, which is the
+// only test that catches a hardcoded skipBlanks there. Its realistic companion,
+// a factual group emptied by a Referenz exclusion, is the next test.
+test('renderTotals: the skipBlanks flag reaches previewSystem, and a zero factual group shows the factual wording', () => {
+  const systems = [
+    { name: 'BLANK', group: 'factual', rows: [['', '', '', '', '']] },
+  ];
+
+  const on = totalsMarkup(systems, { skipBlanks: true });
+  assert.equal(on.blocks.length, 1);
+  assert.match(on.html, /class="total-none"/);
+  assert.match(on.html, /No rows survive the current filters\. Check the exclusions\./);
+  assert.doesNotMatch(on.html, /forwarder checklist/);
+  assert.match(on.html, /class="total-num">0</, 'skipBlanks: true must drop the row, leaving the group total at 0');
+
+  const off = totalsMarkup(systems, { skipBlanks: false });
+  assert.match(off.html, /class="total-num">1</, 'skipBlanks: false must let the row through to the group total');
+  assert.doesNotMatch(off.html, /class="total-none"/, 'a non-zero group renders the breakdown, not the zero-state note');
+});
+
+test('renderTotals: a factual group emptied by a Referenz exclusion shows the factual note', () => {
+  const systems = [
+    { name: 'BLANK', group: 'factual', rows: [['Alpha', 'S', 'R1', 'D1', []], ['Beta', 'S', 'R2', 'D2', []]] },
+  ];
+
+  // Without the seed the same systems total 2, so the seed is what empties the group
+  // and the test cannot pass because the systems were empty to begin with.
+  const unseeded = totalsMarkup(systems);
+  assert.match(unseeded.html, /class="total-num">2</, 'unseeded factual group totals 2');
+  assert.doesNotMatch(unseeded.html, /class="total-none"/);
+
+  const seeded = totalsMarkup(systems, { seed: { 'fileSplitter.referenz': JSON.stringify({ BLANK: 'r1 r2' }) } });
+  assert.equal(seeded.blocks.length, 1);
+  assert.match(seeded.html, /class="total-none"/);
+  assert.match(seeded.html, /No rows survive the current filters\. Check the exclusions\./);
+  assert.doesNotMatch(seeded.html, /forwarder checklist/);
+  assert.match(seeded.html, /class="total-num">0</, 'the excluded group renders 0');
+});
+
+test('renderTotals: no .total-none when the group total is above zero', () => {
+  const systems = [
+    { name: 'KSP', group: 'tariff', rows: [['DHL', 'S', 'R', 'D1', []]], forwarders: [{ name: 'DHL', checked: true }] },
+  ];
+  const { html } = totalsMarkup(systems);
+  assert.doesNotMatch(html, /class="total-none"/);
+  assert.match(html, /class="total-cols"/);
 });

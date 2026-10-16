@@ -27,10 +27,33 @@ function makeEl() {
   });
 }
 
+// captureDom element: stores innerHTML/className instead of swallowing them, so
+// renderTotals' block markup survives appendChild. Only used when captureDom is
+// on; every other property falls back to the existing no-op makeEl().
+function makeCaptureEl() {
+  const state = { innerHTML: '', className: '', value: '', textContent: '', children: [] };
+  return new Proxy(function () {}, {
+    get(_t, p) {
+      if (p === 'classList') return { add() {}, remove() {}, toggle() {}, contains() { return false; } };
+      if (p === 'appendChild') return child => { state.children.push(child); return child; };
+      if (p in state) return state[p];
+      return makeEl();
+    },
+    set(_t, p, v) { state[p] = v; return true; },
+    apply() { return makeEl(); },
+  });
+}
+
 // The optional `seed` pre-fills localStorage before the inline script runs,
 // which is what the seed-dependent tests need.
-export function loadSplitter({ seed } = {}) {
-  const html = readFileSync(HTML, 'utf8');
+// With `captureDom`, document.getElementById('totalsBody') records the markup
+// appended by renderTotals in an `appended` string array (and `children`), and
+// document.getElementById('skipBlanks').checked is a settable input defaulting
+// to true. `htmlPath` points the loader at another copy of the page, e.g. a
+// counterfactual HEAD revision kept outside the repo; without it the repo file
+// is used, so the default load behaviour is unchanged.
+export function loadSplitter({ seed, captureDom = false, htmlPath = HTML } = {}) {
+  const html = readFileSync(htmlPath, 'utf8');
   const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
     .map(m => m[1]).find(s => s.includes('fileSplitter.names'));
   if (!inline) throw new Error('splitter inline script not found');
@@ -44,11 +67,31 @@ export function loadSplitter({ seed } = {}) {
       return { c: c - 1, r: parseInt(a.slice(i), 10) - 1 };
     } } },
     JSZip: function () {},
-    document: {
-      getElementById: () => makeEl(), querySelector: () => makeEl(),
-      querySelectorAll: () => [], createElement: () => makeEl(),
-      addEventListener() {}, body: makeEl(),
-    },
+    document: (() => {
+      const doc = {
+        getElementById: () => makeEl(), querySelector: () => makeEl(),
+        querySelectorAll: () => [], createElement: () => makeEl(),
+        addEventListener() {}, body: makeEl(),
+      };
+      if (captureDom) {
+        let appended = [];
+        const children = [];
+        const totalsBody = {
+          children,
+          appendChild(el) { appended.push(el.innerHTML); children.push(el); return el; },
+        };
+        Object.defineProperty(totalsBody, 'appended', { get: () => appended });
+        Object.defineProperty(totalsBody, 'innerHTML', {
+          get: () => '',
+          // renderTotals clears the panel before each render; keep per-call captures.
+          set(v) { if (v === '') { appended = []; children.length = 0; } },
+        });
+        const byId = { totalsBody, skipBlanks: { checked: true } };
+        doc.getElementById = id => byId[id] || makeEl();
+        doc.createElement = () => makeCaptureEl();
+      }
+      return doc;
+    })(),
     localStorage: {
       getItem: k => (store.has(k) ? store.get(k) : null),
       setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k),
