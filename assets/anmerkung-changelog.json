@@ -1,6 +1,18 @@
 {
-  "version": "1.51.0",
+  "version": "1.52.0",
   "entries": [
+    {
+      "ver": "1.52.0",
+      "date": "2026-10-16",
+      "items": [
+        "Dachser - a K1AU special trip is now named from the rate cards before the bundling and doppelt90 branches. Rows 271, 272 and 276 of 20261013 read \"Sonderfahrt\" where the FR Kosten DL minus 90 lands on a NEW-card lane. A two-90 test was rejected: row 274 carries FR 180.01 and already reads Sonderfahrt.",
+        "Dachser - a K1AV SNK Kosten DL of 195 (3 x 65) now reads the headline alone: \"Wartezeit 3h á 65 EUR, ok?\". The bundled form still subtracts the 5 EUR admin fee first and keeps its suffix (135 -> 2h, 200 -> 3h, 265 -> 4h), so those rows are unchanged.",
+        "Dachser - new note \"Kalk. Kosten Zustellung\", emitted first, from the 196 Differenz column. Row 260 of 20261013 is the only non-zero 196 row in the corpus. The 196 Differenz column is exported and UID-excluded, like ZABF.",
+        "Dachser - an import lane (Abg.-Land not DE, Empf.-Land DE) with SNK Kosten DL 5 and a real Differenz now reads \"Differenz Laderaumkostenentwicklung\" instead of the automatic ZTV note (20261013 row 359); domestic case-5 rows keep the old wording.",
+        "Dachser - a cents-bearing SNK Kosten DL now reads \"Differenz Laderaumkostenentwicklung\" whenever its Differenz clears the threshold, without also requiring a cents-bearing Differenz (20261013 row 6, SNK_DL 16.29 with a rounded residual). The rows sitting on the 0.08 threshold stay silent.",
+        "Dachser - the 20261013 truth workbook matches 210 of 218 noted rows (was 203). The remaining 8 (rows 19, 29, 31, 174, 275, 346, 350, 351) carry auditor wording that no exported column expresses: cross-document Beleg numbers, a duplicate-reference flag with no per-row signal, and two weight/bundling pairs."
+      ]
+    },
     {
       "ver": "1.51.0",
       "date": "2026-10-12",

@@ -157,6 +157,7 @@ story.append(section_table([
 ]))
 story.append(P("1.1 Direct-cost labels (each fires independently)", h3))
 story.append(section_table([
+    ("C196 Differenz over threshold (Kalkulationskosten)", "Kalk. Kosten Zustellung (emitted as the leading segment)"),
     ("C502 Kosten DL has a non-zero value", "Einlagern"),
     ("C503 Kosten DL has a non-zero value", "Auslagern"),
     ("LG Differenz over threshold", "Lagergeld"),
@@ -181,9 +182,11 @@ story.append(section_table([
     ("SNK_DL = 14 (+ diff over T, TARIF not zero)", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag (K1AV → Differenz Laderaumkostenentwicklung)"),
     ("SNK_DL = 5 + SERV_ART = K1AV (SNK_TARIF=0)", "Admin Zeitfensterbuchung Handel"),
     ("SNK_DL = 5 + SERV_ART = K1AV (SNK_TARIF&gt;0)", "Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag"),
-    ("SNK_DL = 5 (+ diff over T); skipped when TARIF zero", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag"),
+    ("SNK_DL = 5 + diff over T + domestic lane (Abg.-Land blank or DE); skipped when TARIF zero", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag"),
+    ("SNK_DL = 5 + diff over T + import lane (Abg.-Land not DE, Empf.-Land DE)", "Differenz Laderaumkostenentwicklung"),
     ("SNK_DL = 9 (+ diff over T, TARIF not zero)", "Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag"),
-    ("other SNK_DL + SERV_ART = K1AV, or non-integer SNK_DL &amp; SNK_DIFF (SNK_DIFF &gt; T in both cases; a residual equal to the 0.08 threshold does not qualify)", "Differenz Laderaumkostenentwicklung"),
+    ("other SNK_DL + SERV_ART = K1AV, or non-integer SNK_DL whose SNK_DIFF &gt; T (a residual equal to the 0.08 threshold does not qualify)", "Differenz Laderaumkostenentwicklung"),
+    ("K1AV and SNK_DL is a whole 65-multiple (&ge; 65) and not one of the Standgeld values (130, 390)", "Wartezeit &lt;n&gt;h &aacute; 65 EUR, ok? (the headline alone, no admin-fee suffix)"),
     ("K1AV and SNK_DL &minus; 5 &ge; 65, residual a whole 65-multiple", "Wartezeit &lt;n&gt;h &aacute; 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag (the bundled admin fee is still owed, so the phrase is not emitted alone)"),
     ("K1AV and SNK_DL &minus; 5 &ge; 65, residual cents-bearing and not a 65-multiple", "&lt;amount&gt; Kosten f&uuml;r 2.Zustellung etc. ok?"),
     ("other SNK_DL (+ diff over T)", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag"),
@@ -198,6 +201,7 @@ story.append(section_table([
 ]))
 story.append(P("1.4 FR — weight/tier decision tree (after SNK)", h3))
 story.append(section_table([
+    ("SERV_ART = K1AU and the rate cards return Sonderfahrt for the lane (FR Kosten DL &minus; 180/150/120/90 lands on a NEW-card cell)", "Sonderfahrt"),
     ("Anz. Sdg &gt; 1 (multi-consignment)", "hätte gebündelt werden können?"),
     ("REFERENZ3 = ZW (deviating intermediate consignee)", "Differenz aufgrund abweichender Zwischenempfänger &lt;PLZ Ort&gt;"),
     ("SERV_ART = K1AS", "Sonderfahrt"),

@@ -603,6 +603,10 @@ test('phraseKeysFor: no ?: sentinel for noisy catalog phrases', () => {
     'genuinely unmapped phrases still surface as sentinels');
 });
 
+test('phraseToKey: the 196 note resolves to its catalog key', () => {
+  assert.equal(e.phraseToKey('Kalk. Kosten Zustellung'), 'kalkKostenZustellung');
+});
+
 test('PHRASES catalog: normPhrase folding never merges two distinct branches (known exception: Kontierung case pair)', () => {
   const seen = new Map(); const collisions = [];
   for (const [k, v] of Object.entries(e.PHRASES)) {

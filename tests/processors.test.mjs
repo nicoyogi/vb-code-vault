@@ -106,11 +106,31 @@ test('processDachser: SNK_DL=265 K1AV -> waiting time scales with the hour count
     'Wartezeit 4h á 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag');
 });
 
-test('processDachser: SNK_DL=195 K1AV -> integer residual that is no 65-multiple stays Laderaumkostenentwicklung', () => {
-  // 20260903 row 218: 195 − 5 = 190, integer and 190/65 is not whole ->
-  // the waiting-time / itemised branches must not grab it.
+test('processDachser: SNK_DL=195 K1AV -> pure 3 x 65 waiting time, no admin-fee suffix', () => {
+  // 20261013 row 12 (row_uid 2d5724df): 195 / 65 = 3 exactly; the truth cell is
+  // the headline alone. The old expectation (Laderaumkostenentwicklung) read the
+  // -5 admin-fee contract into a row that never carried the fee. 20260903 row 218
+  // (SNK_DL 195) truth is STANDGELDKOSTEN, a phrase no branch emits, and is wrong
+  // under both the old and the new engine.
   const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
-  const ws = makeRow(R, { 50: 10, 51: '666.43', 52: '195', 53: '134.87', 54: '60.13', 55: 'K1AV' });
+  const ws = makeRow(R, { 50: 10, 51: '94.54', 52: '195', 53: '100.46', 54: '94.54', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 3h á 65 EUR, ok?');
+});
+
+test('processDachser: SNK_DL=200 K1AV -> bundled 195 keeps the admin-fee suffix', () => {
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '717.2', 52: '200', 53: '195', 54: '5', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols),
+    'Wartezeit 3h á 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag');
+});
+
+test('processDachser: SNK_DL=196 K1AV -> a non-pure hour count stays Laderaumkostenentwicklung', () => {
+  // The boundary the rewritten 195 case left behind: 196/65 is not whole and
+  // 191 after the admin fee is neither a whole hour nor cents-bearing, so the
+  // pure-65 branch must not grab it. This is the fallback the old 195 test
+  // exercised before 195 became the pure case.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '94.54', 52: '196', 53: '100.46', 54: '94.54', 55: 'K1AV' });
   assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung');
 });
 
@@ -120,6 +140,37 @@ test('processDachser: SNK_DL=75 K1AV stays Speditionskosten gem. Text', () => {
   const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
   const ws = makeRow(R, { 50: 10, 51: '200', 52: '75', 53: '75', 54: '', 55: 'K1AV' });
   assert.equal(e.processDachser(ws, R, cols), 'Speditionskosten gem. Text');
+});
+
+test('processDachser: non-integer SNK_DL with an integer residual -> Laderaumkostenentwicklung', () => {
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53 };
+  const ws = makeRow(R, { 50: 10, 51: '600.72', 52: '16.29', 53: '-13' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung');
+});
+
+test('processDachser: import-lane SNK_DL=5 with a delta -> Laderaumkostenentwicklung', () => {
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, abg_land: 54, empf_land: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '140.84', 52: '5', 53: '0.15', 54: 'FR', 55: 'DE' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung');
+});
+
+test('processDachser: domestic SNK_DL=5 with a delta keeps the automatic-ZTV note', () => {
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, abg_land: 54, empf_land: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: '5', 53: '2.62', 54: 'DE', 55: 'DE' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag');
+});
+
+test('processDachser: 196 Differenz over threshold -> "Kalk. Kosten Zustellung" leads the note', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, abg_land: 55, empf_land: 56,
+                 fr_dl: 57, fr_tar: 58, exp: 59, exp_dl: 60, maut: 61, tz: 62,
+                 snk_dl: 63, snk_diff: 64, snk_tar: 65, c196_diff: 66 };
+  const ws = makeRow(R, { 3: '1', 50: 10, 51: '97.12', 52: '2.12', 53: '184', 54: '184',
+    55: 'DE', 56: 'PL', 57: '71', 58: '68.88', 59: '10', 60: '10', 61: '-2.72', 62: '0.38',
+    63: '3.55', 64: '0.11', 65: '3.44', 66: '110' });
+  assert.equal(e.processDachser(ws, R, cols),
+    'Kalk. Kosten Zustellung // Differenz Laderaumkostenentwicklung // Produktzuschlag // Mautdifferenz // Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  assert.equal(e.processDachser(makeRow(R, { 50: 10, 51: '100', 66: '0.08' }),
+    R, { stat: 50, tarif: 51, c196_diff: 66 }), '', 'the 0.08 boundary must stay silent');
 });
 
 test('phraseToKey: computed Dachser SNK phrases resolve to their template keys', () => {
@@ -280,8 +331,14 @@ test('processDachser: 2026-08-31 Dachser bundle signatures', () => {
   ws = makeRow(R, { 50: 10, 51: 170.9, 53: 0, 54: 201, 55: 6.32, 57: 6.32, 60: -9.83, 62: 'WC2B 4AN', 63: 'LONDON', 64: 1 });
   assert.equal(e.processDachser(ws, R, cols), 'Mautdifferenz // Zone korrekt berechnet? // Einfuhrzollabfertigung');
 
-  ws = makeRow(R, { 50: 10, 51: 194.43, 52: 90.02, 53: 0, 54: 173, 55: 3.45, 56: 3.45, 58: 40, 59: 50, 60: -7.64, 62: '02-495', 63: 'Warszawa', 64: 1, 65: 'K1AU', 66: '612110' });
-  assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung // Produktzuschlag // Mautdifferenz // "Sonderfahrt" 90 EUR doppelt berechnet?');
+  /* 2026-07-30 row 70 (K1AU, DE->PL, Anz.Sdg=1): the rate card matches an
+     add-on S=180 (248.9-180=68.90 vs NEW PL1 68.81), but the row's own FR
+     delta is 90.02, so the K1AU ratecard gate must not fire and the doppelt90
+     fallback stands. The lanes and weights are supplied so the ratecard path
+     actually runs (the shared cols leave cc='' and never reach it). */
+  const cols70 = { ...cols, fr_dl: 67, fr_tar: 68, abg_land: 69, empf_land: 70, brutto: 71 };
+  ws = makeRow(R, { 50: 10, 51: 194.43, 52: 90.02, 53: 0, 54: 173, 55: 3.45, 56: 3.45, 58: 40, 59: 50, 60: -7.64, 62: '02-495', 63: 'Warszawa', 64: 1, 65: 'K1AU', 66: '612110', 67: 248.9, 68: 158.88, 69: 'DE', 70: 'PL', 71: 173 });
+  assert.equal(e.processDachser(ws, R, cols70), 'Differenz Laderaumkostenentwicklung // Produktzuschlag // Mautdifferenz // "Sonderfahrt" 90 EUR doppelt berechnet?');
 
   // Bundle 2026-09-01: Admin Zeitfensterbuchung Handel - Laderaumzuschlag (with hyphen)
   ws = makeRow(R, { 50: 10, 51: 666.43, 54: 1594, 55: 5, 56: -65.84, 57: 70.84, 62: '59368', 63: 'Werne', 64: 1, 65: 'K1AV', 66: '612100' });
@@ -1561,6 +1618,35 @@ test('processDachser: without the ratecards the FR note falls back, it does not 
     assert.equal(
       e.processDachser(makeRow(R, cells), R, cols),
       'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
+test('processDachser: K1AU Sonderfahrt from the rate cards beats bundling and doppelt90', () => {
+  if (!e.DACHSER_RATECARDS) return;
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, abg_land: 55,
+                 empf_land: 56, serv_art: 57, fr_dl: 58, fr_tar: 59 };
+  let ws = makeRow(R, { 3: '1', 50: 10, 51: '98.91', 52: '89.99', 53: '16', 54: '16',
+    55: 'DE', 56: 'PL', 57: 'K1AU', 58: '130.7', 59: '40.71' });
+  assert.equal(e.processDachser(ws, R, cols), 'Sonderfahrt');
+  ws = makeRow(R, { 3: '3', 50: 10, 51: '98.91', 52: '90.05', 53: '191', 54: '191',
+    55: 'DE', 56: 'PL', 57: 'K1AU', 58: '161', 59: '70.95' });
+  assert.equal(e.processDachser(ws, R, cols), 'Sonderfahrt');
+  ws = makeRow(R, { 3: '2', 50: 10, 51: '98.91', 52: '90.03', 53: '5', 54: '5',
+    55: 'DE', 56: 'PL', 57: 'K1AU', 58: '132', 59: '41.97' });
+  assert.equal(e.processDachser(ws, R, cols), 'Sonderfahrt');
+});
+
+test('processDachser: without the ratecards a K1AU |FR-90| row keeps the doppelt90 fallback', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, abg_land: 55,
+                 empf_land: 56, serv_art: 57, fr_dl: 58, fr_tar: 59 };
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(null);
+    const ws = makeRow(R, { 3: '1', 50: 10, 51: '98.91', 52: '89.99', 53: '16', 54: '16',
+      55: 'DE', 56: 'PL', 57: 'K1AU', 58: '130.7', 59: '40.71' });
+    assert.equal(e.processDachser(ws, R, cols), '"Sonderfahrt" 90 EUR doppelt berechnet?');
   } finally {
     e.setDachserRatecards(saved);
   }

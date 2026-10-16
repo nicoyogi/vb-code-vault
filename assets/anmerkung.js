@@ -335,6 +335,7 @@ const PHRASES={
   daBisherigerTarif:          'Dachser berechnet die Kosten nach dem bisherigen Tarif',
   zoneKorrekt:                'Zone korrekt berechnet?',
   einfuhrzoll:                'Einfuhrzollabfertigung',
+  kalkKostenZustellung:       'Kalk. Kosten Zustellung',
   abholtermin:                'Abholterminvereinbarung',
   treibstof:                  'Differenz treibstof',
   zwPrefix:                   'Differenz aufgrund abweichender Zwischenempfänger',
@@ -773,6 +774,9 @@ function resolveDachser(ws,range){
     c38l_diff:fc('38L','Differenz'),
     c502_dl:  fc('502','Kosten DL'),
     c503_dl:  fc('503','Kosten DL'),
+    /* 196 (Kalk. Kosten Zustellung) - only the Differenz is read by a rule and
+       exported. Row 260 of 20261013 is the only non-zero row in the corpus. */
+    c196_diff:fc('196','Differenz'),
     lg_diff:  fc('LG','Differenz'),
     av_diff:  fc('AV','Differenz'),
     brutto:   fc('','Brutto kg'),
@@ -926,6 +930,22 @@ function daRatecardMatch(abgLand,empfLand,kg,frDl,frTar){
   return null;
 }
 
+/* The Sonderfahrt add-on S whose residual FR_DL-S lands on a NEW-card lane, or
+   null when none does. daRatecardMatch collapses this to a yes/no; the K1AU
+   gate needs S itself to check it against the row's own FR delta. */
+function daRatecardSonderfahrtS(abgLand,empfLand,kg,frDl){
+  const cards=daRatecardCards();
+  if(!cards||!(kg>0)||!(frDl>0))return null;
+  const cc=(empfLand&&empfLand!=='DE')?empfLand:(abgLand||'');
+  if(!cc)return null;
+  const nl=daRatecardLanes(cards.nw,kg,cc);
+  for(const S of DA_SONDERFAHRT_S){
+    const base=frDl-S;
+    if(base>0&&daAnyLaneNear(nl,base))return S;
+  }
+  return null;
+}
+
 function daIsTarifZero(ws,r,col){if(col<0)return false;const raw=cellStr(ws,r,col);if(!raw)return false;if(raw==='-')return true;return(cellNum(ws,r,col)===0&&raw.includes('0'));}
 function daIsNonInteger(n){return n!==Math.floor(n);}
 /* When SNK_DL has a non-integer tariff component (e.g. 14.72, 7.57), the "surcharge
@@ -960,7 +980,9 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
   const snkDl=cellNum(ws,r,cols.snk_dl),
         snkDiff=cellNum(ws,r,cols.snk_diff),
         snkTar=cols.snk_tar>=0?cellNum(ws,r,cols.snk_tar):0,
-        T=T_DACHSER;
+        T=T_DACHSER,
+        abgLand=cols.abg_land>=0?cellStr(ws,r,cols.abg_land).toUpperCase().trim():'',
+        empfLand=cols.empf_land>=0?cellStr(ws,r,cols.empf_land).toUpperCase().trim():'';
   if(snkDl===0&&snkTar===0&&snkDiff===0)return'';
 
   /* SNK_DL=80 bundles the two K1AV Amazon-DTM1 fee lines the auditor names
@@ -1013,6 +1035,10 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
         return(snkTar===0)?P.adminZeitfenster:P.adminZeitfensterDiff;
       }
       if(isTarifZero)return'';
+      /* Import lane with the 5 EUR code and a real Differenz: a Laderaum
+         tariff-line finding, not the automatic ZTV note. 20261013 row 359
+         (FR->DE, SNK_DL 5, diff 0.15); domestic case-5 rows keep the wording. */
+      if(abgLand&&abgLand!=='DE'&&empfLand==='DE')return P.snkLaderaumEntw;
       return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
     case 9:
       if(!hasErr(snkDiff,T)||isTarifZero)return'';
@@ -1037,11 +1063,14 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
          "Differenz Automatische Zustellterminvereinbarung — Laderaumzuschlag".
          K1AV's standard codes (5/14) are still handled higher up in the switch. */
       if(servArt.toUpperCase()==='K1AV'){
-        /* Residual after the bundled admin fee. A whole multiple of 65 EUR is
-           waiting time the auditor bills by the hour (130 → 2h); any other
-           cents-bearing residual is the itemised second-delivery charge, named
-           with its amount. Integer residuals that are not a 65-multiple (e.g.
-           190 on 20260903 row 218) keep the Laderaumkostenentwicklung wording. */
+        /* Waiting time is billed in whole hours at 65 EUR. A PURE whole multiple
+           (195 = 3 x 65) is the headline alone, with no bundled admin fee
+           (20261013 row 12, truth "Wartezeit 3h á 65 EUR, ok?"). The bundled
+           form keeps the residual path below and its admin-fee suffix:
+           135 = 130 + 5, 200 = 195 + 5, 265 = 260 + 5. */
+        const pureHrs=snkDl/65;
+        if(snkDl>=65&&Math.abs(pureHrs-Math.round(pureHrs))<0.005)
+          return'Wartezeit '+Math.round(pureHrs)+'h á 65 EUR, ok?';
         const residual=snkDl-DA_SNK_ADMIN_FEE;
         if(residual>=65){
           const hrs=residual/65;
@@ -1056,7 +1085,10 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
         }
         return'Differenz Laderaumkostenentwicklung';
       }
-      if(daIsNonInteger(snkDl)&&daIsNonInteger(snkDiff)){
+      /* A cents-bearing SNK_DL is itself the Laderaum tariff base; the residual
+         need not carry cents too. 20261013 row 6 (SNK_DL 16.29, SNK_DIFF -13)
+         reads Laderaumkostenentwicklung with an integer residual. */
+      if(daIsNonInteger(snkDl)){
         return'Differenz Laderaumkostenentwicklung';
       }
       return'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag';
@@ -1178,6 +1210,9 @@ function processDachser(ws,r,cols){
 
   let res='',hasFR=false;
 
+  /* 196 Kalkulationskosten - the note leads the cascade (20261013 row 260). */
+  if(cols.c196_diff>=0&&hasErr(cellNum(ws,r,cols.c196_diff),T))res=join(res,P.kalkKostenZustellung);
+
   if(cols.c502_dl>=0){const v=cellStr(ws,r,cols.c502_dl);if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c502_dl)!==0)res=join(res,'Einlagern');}
   if(cols.c503_dl>=0){const v=cellStr(ws,r,cols.c503_dl);if(v&&v!=='-'&&v!=='0'&&cellNum(ws,r,cols.c503_dl)!==0)res=join(res,'Auslagern');}
   if(cols.lg_diff>=0&&hasErr(cellNum(ws,r,cols.lg_diff),T))res=join(res,'Lagergeld');
@@ -1198,14 +1233,28 @@ function processDachser(ws,r,cols){
   if(cols.fr>=0&&(hasErr(cellNum(ws,r,cols.fr),T)||(Math.abs(cellNum(ws,r,cols.fr))>=0.05&&!res))){
     hasFR=true;
     const frVal=cellNum(ws,r,cols.fr);
-    /* "could have been bundled" dominates: a freight line carrying more than one
-       consignment (Anz. Sdg > 1) is the auditor's primary FR finding even when the
-       row also flags a deviating intermediate consignee (REFERENZ3=ZW). Bundle
-       2026-06-29 rows 289deb46 / 5998e21f (ZW, Anz.Sdg=2, SERV=DA01) expect
-       "hätte gebündelt werden können?", NOT the ZW note — so the bundling check runs
-       first. Single-shipment ZW rows (Anz.Sdg=1, e.g. f278b340) still fall through
-       to the ZW note below. */
-    if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
+    /* K1AU special trip: the rate card names Sonderfahrt when FR_DL minus a
+       matched add-on S lands on the NEW card, and only then if that S equals
+       the row's own FR delta. 20261013 rows 271/272/276 (S=90, fr~90) qualify;
+       20260730 row 70 matched via S=180 on an fr of 90.02 and keeps the
+       doppelt90 wording. Domestic K1AU rows cannot match - the NEW card carries
+       no DE lanes. */
+    const sfS=servArt.toUpperCase()==='K1AU'
+      ?daRatecardSonderfahrtS(abgLand,empfLand,
+          cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0,
+          cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0)
+      :null;
+    const k1auSf=sfS!==null&&Math.abs(sfS-Math.abs(frVal))<=DA_RC_TOL;
+    /* "could have been bundled" dominates the ZW / doppelt90 branches: a freight
+       line carrying more than one consignment (Anz. Sdg > 1) is the auditor's
+       primary FR finding even when the row also flags a deviating intermediate
+       consignee (REFERENZ3=ZW). Bundle 2026-06-29 rows 289deb46 / 5998e21f
+       (ZW, Anz.Sdg=2, SERV=DA01) expect "hätte gebündelt werden können?", NOT
+       the ZW note. It runs after the K1AU ratecard Sonderfahrt test above,
+       which pre-empts it; single-shipment ZW rows (Anz.Sdg=1, e.g. f278b340)
+       still fall through to the ZW note below. */
+    if(k1auSf)res=join(res,P.sonderfahrt);
+    else if(anzSdg>1)res=join(res,'hätte gebündelt werden können?');
     else if(isZW)res=join(res,daZWNote(ws,r,cols));
     else if(servArt.toUpperCase()==='K1AS')res=join(res,'Sonderfahrt');
     else if(servArt.toUpperCase()==='K1AU'&&Math.abs(frVal-90)<=0.1)res=join(res,P.sonderfahrtDoppelt90);
@@ -3168,7 +3217,7 @@ const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','
 /* Same rule, but only for the forwarder that gained the key later: excluding
    referenz globally would re-key every historical K+N/Wackler row, and el_diff
    is new to DHL. */
-const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz']),dhl:new Set(['el_diff'])};
+const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz','c196_diff']),dhl:new Set(['el_diff'])};
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
@@ -3195,9 +3244,13 @@ const CANONICAL_INPUT_ORDER={
            'c38l_diff',
            'lg_diff','av_diff','c502_dl','c503_dl',
            'referenz3','empf_plz','empf_ort','ki_zw_plz','ki_zw_ort','anz_sdg','serv_art','sachkonto',
-           /* Last on purpose: appending keeps every existing CSV column in
-              place, which is where the fallback already put this key. */
-           'referenz','zabf_diff'],
+           /* Last on purpose. For a dachser-only CSV this appends the key after
+              every existing column, which is where the fallback already put it.
+              A mixed-forwarder CSV shares one positional header row
+              (in_<key>), so a trailing dachser key shifts the first-seen keys of
+              the forwarders emitted after dachser by one index. The header names
+              the key either way, so name-keyed consumers are unaffected. */
+           'referenz','zabf_diff','c196_diff'],
   kn:['stat','tarif','fr_diff','exp_diff','mt_diff','tz_diff',
       'snk_dl','snk_diff',
       'referenz','recip','vkg','vkg_dl',
@@ -3603,6 +3656,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('c38l_diff',cols.c38l_diff);get('zabf_diff',cols.zabf_diff);
     get('lg_diff',cols.lg_diff);get('av_diff',cols.av_diff);
     get('c502_dl',cols.c502_dl);get('c503_dl',cols.c503_dl);
+    get('c196_diff',cols.c196_diff);
     get('referenz',cols.referenz);
     const placeIf=(k,idx)=>{if(idx===undefined||idx<0)return;o[k]=cellStr(ws,r,idx);};
     placeIf('referenz3',cols.referenz3>=0?cols.referenz3:DA_COL_REFERENZ3);
@@ -4774,6 +4828,7 @@ const INPUT_GLOSSARY={
   zone              :'Tarifzone — explicit rate-card zone token (DE1..DE9 national, or AT1/CH2/FR3/TR/… international). When present it wins over the Land/PLZ lane classification.',
   c502_dl           :'502 Kosten DL — Einlagern (into-storage) cost line (Dachser). Any non-zero value emits "Einlagern".',
   c503_dl           :'503 Kosten DL — Auslagern (out-of-storage) cost line (Dachser). Any non-zero value emits "Auslagern".',
+  c196_diff         :'196 Differenz - the Kalkulationskosten (Kalk. Kosten Zustellung) Differenz line (Dachser). Over threshold it emits "Kalk. Kosten Zustellung" as the leading note.',
   serv_art          :'Serv.-Art — service category code (Dachser). K1AV / K1AS gate several SNK branches.',
   kostenstelle      :'KOSTENSTELLE — cost-center. Empty or "X" triggers Kontierung?.',
   sachkonto         :'SACHKONTO — GL account. Empty or "X" triggers Kontierung? (or VORHOLUNG on Dachser when "X").',
