@@ -101,15 +101,25 @@
   .people-group[hidden] { display: none; }
   .group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .group-note { font-size: 12px; color: var(--text3); }
-  .total-block { display: flex; align-items: flex-start; gap: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 15px 18px; }
+  /* step 4 - one block per work type: systems, each with its forwarders */
+  .total-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
   .total-block + .total-block { margin-top: 10px; }
-  .total-info { flex: 1; min-width: 0; }
-  .total-num { font-family: var(--mono); font-size: 26px; color: var(--accent); line-height: 1.1; }
+  .total-head { display: flex; align-items: baseline; gap: 8px; }
+  .total-num { margin-left: auto; font-family: var(--mono); font-size: 26px; font-variant-numeric: tabular-nums; color: var(--accent); line-height: 1.1; }
   .total-rows { font-family: var(--mono); font-size: 11px; color: var(--text2); }
-  .total-preview { margin-top: 8px; max-width: 380px; display: flex; flex-direction: column; gap: 6px; }
-  .total-sys-line { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--text2); }
-  .total-fwd-list { margin: 2px 0 0 4px; padding-left: 10px; display: flex; flex-direction: column; gap: 1px; }
-  .total-fwd { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--text2); }
+  .total-cols { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); }
+  .total-sys { padding-top: 10px; }
+  .total-sys + .total-sys { border-top: 1px solid var(--border); }
+  .total-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 12px; }
+  .total-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .total-ct { font-family: var(--mono); font-variant-numeric: tabular-nums; min-width: 5ch; text-align: right; white-space: nowrap; }
+  .total-sys > .total-line .total-nm { font-size: 13px; font-weight: 500; color: var(--text); }
+  .total-sys > .total-line .total-ct { font-size: 13px; color: var(--text); }
+  .total-fwds { display: flex; flex-direction: column; gap: 3px; margin-top: 5px; }
+  .total-fwds .total-nm { padding-left: 14px; font-size: 12px; color: var(--text2); }
+  .total-fwds .total-ct { font-size: 12px; color: var(--text2); }
+  .total-none { margin-top: 12px; font-size: 12.5px; color: var(--text2); line-height: 1.5; }
+  @media (max-width: 620px) { .total-block { padding: 14px; } .total-fwds .total-nm { padding-left: 12px; } }
 
   /* step 2 — people */
   .people-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
@@ -1195,18 +1205,25 @@
       const total = per.reduce((a, p) => a + p.rows, 0);
       const block = document.createElement('div');
       block.className = 'total-block';
+      const noneMsg = group === 'factual'
+        ? 'No rows survive the current filters. Check the exclusions.'
+        : 'No rows survive the current filters. Check the forwarder checklist, the note filter, and the exclusions.';
       block.innerHTML = `
-        <span class="type-badge ${group}">${label.toUpperCase()}</span>
-        <div class="total-info">
-          <div><span class="total-num">${total}</span> <span class="total-rows">rows</span></div>
-          <div class="total-preview">
-            ${per.map(p => `
-              <div class="total-sys-line"><span>${escapeHtml(p.name)}</span><span>${p.rows}</span></div>
-              ${p.forwarders.length ? `<div class="total-fwd-list">
-                ${p.forwarders.map(f => `<div class="total-fwd"><span>${escapeHtml(f.name)}</span><span>${f.count}</span></div>`).join('')}
-              </div>` : ''}`).join('')}
-          </div>
-        </div>`;
+        <div class="total-head">
+          <span class="type-badge ${group}">${label.toUpperCase()}</span>
+          <span class="total-num">${total}</span>
+          <span class="total-rows">rows</span>
+        </div>
+        ${total === 0 ? `<div class="total-none">${noneMsg}</div>` : `
+        <div class="total-cols"><span>System / forwarder</span><span>Rows</span></div>
+        ${per.map(p => `
+          <div class="total-sys">
+            <div class="total-line"><span class="total-nm">${escapeHtml(p.name)}</span><span class="total-ct">${p.rows}</span></div>
+            ${p.forwarders.length ? `<div class="total-fwds">
+              ${p.forwarders.map(f => `<div class="total-line"><span class="total-nm">${escapeHtml(f.name)}</span><span class="total-ct">${f.count}</span></div>`).join('')}
+            </div>` : ''}
+          </div>`).join('')}`}
+      `;
       body.appendChild(block);
     }
   }

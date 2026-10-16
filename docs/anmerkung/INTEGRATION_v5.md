@@ -13,8 +13,8 @@ This repository integrates the v5 Anmerkung hardening into `assets/anmerkung.js`
 
 `npm test`:
 
-- 397 tests
-- 397 passed
+- 432 tests
+- 432 passed
 - 0 failed
 
 The integration manifest is refreshed against the current tracked source.
