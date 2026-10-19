@@ -42,6 +42,15 @@
   /* Node test context: export the crypto core only, no DOM bootstrap. */
   if (typeof document === 'undefined') return;
 
+  /* Status is cosmetic: a missing helper or a throwing setter must never break
+     decryption, and these reports sit outside the existing try blocks. */
+  function report(key, state, detail) {
+    try {
+      if (root.TariffStatus && typeof root.TariffStatus.set === 'function')
+        root.TariffStatus.set(key, state, detail);
+    } catch (e) { /* status is cosmetic; it must never break decryption */ }
+  }
+
   function showUnlockButton() {
     /* Same single control as the Wackler loader. When both scripts ship,
        wackler-ratecard-loader.js runs first and this finds its button and
@@ -66,10 +75,11 @@
   async function boot() {
     var pass = null;
     try { pass = localStorage.getItem(LS_KEY); } catch (e) {}
-    if (!pass) { showUnlockButton(); return; }
+    if (!pass) { report('honold', 'locked', ''); showUnlockButton(); return; }
     /* An insecure origin has no crypto.subtle, so decryption cannot run. That is
        not a passphrase problem: keep the key and stay quiet. */
-    if (!(root.crypto && root.crypto.subtle)) return;
+    if (!(root.crypto && root.crypto.subtle)) { report('honold', 'insecure', 'no-crypto'); return; }
+    report('honold', 'loading', '');
     var enc;
     try {
       var res = await fetch(ENC_URL);
@@ -80,6 +90,7 @@
          valid, so keep it and stay quiet. A prompt cannot fix an unavailable
          artifact, and the engine runs with the tariff off (Honold rows
          skipped). */
+      report('honold', 'unavailable', '');
       return;
     }
     var code;
@@ -92,7 +103,10 @@
          and stay quiet. */
       if (e && e.name === 'OperationError') {
         try { localStorage.removeItem(LS_KEY); } catch (e2) {}
+        report('honold', 'locked', 'wrong-passphrase');
         showUnlockButton();
+      } else {
+        report('honold', 'error', 'bad-artifact');
       }
       return;
     }
@@ -102,8 +116,11 @@
     } catch (e) {
       /* Decrypt succeeded, so the passphrase is fine; a bad bundle is not a
          passphrase problem. Keep the key and stay quiet. */
+      report('honold', 'error', 'bundle-rejected');
       return;
     }
+    if (root.HONOLD_TARIFF && Array.isArray(root.HONOLD_TARIFF.tiers)) report('honold', 'ready', '');
+    else report('honold', 'error', 'bundle-empty');
   }
 
   boot();

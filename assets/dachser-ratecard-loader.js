@@ -44,15 +44,26 @@
   /* Node test context: export the crypto core only, no DOM bootstrap. */
   if (typeof document === 'undefined') return;
 
+  /* Status is cosmetic: a missing helper or a throwing setter must never break
+     decryption, and these reports sit outside the existing try blocks. */
+  function report(key, state, detail) {
+    try {
+      if (root.TariffStatus && typeof root.TariffStatus.set === 'function')
+        root.TariffStatus.set(key, state, detail);
+    } catch (e) { /* status is cosmetic; it must never break decryption */ }
+  }
+
   async function boot() {
     var pass = null;
     try { pass = localStorage.getItem(LS_KEY); } catch (e) {}
     /* No passphrase yet: the Wackler loader owns the single unlock button and
-       will offer it. Re-running this later (after that unlock) picks the key up. */
-    if (!pass) return;
+       will offer it. Re-running this later (after that unlock) picks the key up.
+       The dataset is locked either way, which is what the header reports. */
+    if (!pass) { report('dachser', 'locked', ''); return; }
     /* An insecure origin has no crypto.subtle, so decryption cannot run. That is
        not a passphrase problem: keep the key and stay quiet. */
-    if (!(root.crypto && root.crypto.subtle)) return;
+    if (!(root.crypto && root.crypto.subtle)) { report('dachser', 'insecure', 'no-crypto'); return; }
+    report('dachser', 'loading', '');
     var enc;
     try {
       var res = await fetch(ENC_URL);
@@ -60,6 +71,7 @@
       enc = await res.json();
     } catch (e) {
       /* Artifact unavailable: the stored passphrase may still be valid. */
+      report('dachser', 'unavailable', '');
       return;
     }
     var code;
@@ -69,6 +81,8 @@
       /* A wrong passphrase fails the AES-GCM tag (OperationError). Anything else
          is an artifact problem a re-typed passphrase cannot fix, so stay quiet
          and leave the shared key alone for the other loaders. */
+      if (e && e.name === 'OperationError') report('dachser', 'locked', 'wrong-passphrase');
+      else report('dachser', 'error', 'bad-artifact');
       return;
     }
     try {
@@ -77,8 +91,11 @@
     } catch (e) {
       /* Decrypt succeeded, so the passphrase is fine; a bad bundle is not a
          passphrase problem. Keep the key and stay quiet. */
+      report('dachser', 'error', 'bundle-rejected');
       return;
     }
+    if (root.DACHSER_RATECARDS) report('dachser', 'ready', '');
+    else report('dachser', 'error', 'bundle-empty');
   }
 
   /* The shared unlock control reloads the page, so a later script realm sees the

@@ -323,10 +323,26 @@ body.theme-light .trig-bar-bg { background: rgba(0,0,0,0.08); }
   .fw-grid { grid-template-columns: 1fr; }
   header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
   header .nav-badge { margin-left: auto; }
+  .tariff-status-label { display: none; }
 }
 
 /* ── HEADER CHROME: version, changelog button, theme toggle (#24 / #13) ── */
 .ver-badge { font-family: var(--mono); font-size: 9.5px; padding: 3px 9px; border-radius: 14px; border: 1px solid var(--border); color: var(--text3); letter-spacing: .08em; }
+/* Not a control: read-only status, so no hover, no pointer, no focus target. The
+   label keeps one colour in every state; only the dot changes with state. In the
+   mystic light skin the accent tint is 3.95:1 as 9.5px text on the chip's own
+   --surface2 (under 4.5:1), while a 6px dot needs only 3:1. The label uses --gold
+   instead: 9.81:1 on --surface2 in the dark skin, 5.03:1 in the light one. */
+.tariff-status { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; padding: 3px 9px; border-radius: 14px; border: 1px solid var(--border); color: var(--gold); background: var(--surface2); white-space: nowrap; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; }
+.tariff-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ts-dot, var(--text3)); flex: 0 0 auto; }
+.tariff-status[data-state="ready"] { --ts-dot: var(--accent); }
+.tariff-status[data-state="partial"], .tariff-status[data-state="locked"] { --ts-dot: var(--gold); }
+.tariff-status[data-state="loading"], .tariff-status[data-state="pending"] { --ts-dot: var(--text2); }
+.tariff-status[data-state="error"] { --ts-dot: var(--danger); }
+/* Must stay after the base rule above: same specificity, so source order decides. */
+@media (max-width: 520px) {
+  .tariff-status { padding: 3px 6px; }
+}
 .hdr-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 14px; cursor: pointer; letter-spacing: .08em; transition: color .2s, border-color .2s; display: inline-flex; align-items: center; gap: 6px; }
 .hdr-btn:hover { color: var(--text2); border-color: var(--border2); }
 .hdr-btn[aria-pressed="true"] { color: var(--accent); border-color: rgba(52,211,153,0.35); }

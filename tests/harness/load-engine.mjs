@@ -277,6 +277,8 @@ export function loadEngine() {
   }
 
   engine.encode_cell = encode_cell;
+  engine.evalInContext = (src) => vm.runInContext(src, ctx);
+  engine.context = sandbox;
   engine.localStorage = sandbox.localStorage;
   engine.WACKLER_RATECARD = sandbox.WACKLER_RATECARD || null;
   engine.WACKLER_NATIONAL_RATECARD = sandbox.WACKLER_NATIONAL_RATECARD || null;

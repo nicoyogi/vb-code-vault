@@ -36,6 +36,14 @@
   <a href="index.html" class="nav-back">← Grimoire</a>
   <div class="header-spacer"></div>
   <span class="ver-badge" id="verBadge" title="Current version">v0.0.0</span>
+  <span class="tariff-status" id="tariffStatus" role="status" aria-live="polite"
+        aria-atomic="true" data-state="pending"
+        data-datasets="wackler-intl wackler-national honold dachser"
+        title="Tariff data: checking" aria-describedby="tariffStatusDetail">
+    <span class="tariff-status-label">Rates</span>
+    <span id="tariffStatusValue">checking</span>
+  </span>
+  <span class="sr-only" id="tariffStatusDetail"></span>
   <button type="button" class="hdr-btn" id="btnChangelog" onclick="openChangelog()" title="What's new" aria-label="What's new">
     <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3v2.8l1.6 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
     News
@@ -448,6 +456,7 @@
   </div>
 </div>
 
+<script src="assets/tariff-status.js" defer></script>
 <script src="assets/wackler-ratecard-loader.js" defer></script>
 <script src="assets/honold-tariff-loader.js" defer></script>
 <script src="assets/dachser-ratecard-loader.js" defer></script>

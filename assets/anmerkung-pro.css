@@ -130,6 +130,27 @@ body.theme-pro .ver-badge {
   font-size: 10px;
 }
 
+body.theme-pro .tariff-status {
+  border-radius: 7px;
+  font-family: var(--syne);
+  font-size: 10px;
+  padding: 4px 8px;
+  background: var(--surface2);
+  /* --gold resolves to the pro blue here (#2563eb, set by the theme-pro block in
+     anmerkung.css), not to a warning tone, and on this --surface2 it is only
+     3.45:1, so the chip names its own label colour: 6.10:1 in the dark theme,
+     5.93:1 in the light one. */
+  color: var(--text3);
+}
+
+/* --warning is this palette's warning colour, defined in both pro themes, and it
+   clears the bar for a 6px dot in each: 8.31:1 on the dark surface (--warning
+   #f59e0b), 3.19:1 on the light one (--warning #d97706 on white). */
+body.theme-pro .tariff-status[data-state="partial"],
+body.theme-pro .tariff-status[data-state="locked"] {
+  --ts-dot: var(--warning);
+}
+
 body.theme-pro .hdr-btn {
   min-height: 32px;
   padding: 5px 9px;
@@ -1143,6 +1164,14 @@ body.theme-pro.theme-light #main > .btn-preview { color: #1e40af; }
 
   body.theme-pro .nav-badge {
     margin-left: auto;
+  }
+
+  body.theme-pro .tariff-status-label {
+    display: none;
+  }
+
+  body.theme-pro .tariff-status {
+    padding: 3px 6px;
   }
 
   body.theme-pro .container {
