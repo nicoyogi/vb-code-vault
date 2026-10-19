@@ -7,7 +7,8 @@
       "items": [
         "Wackler - the note now uses the rate card again. The decrypted card arrives after the engine has loaded, and the re-read hook that was lost in a refactor is back, so \"Wackler rechnet\" is derived from the rate card instead of only from the weight tier. Rows can therefore name a different tier than before.",
         "Header - a \"Rates\" chip next to the version badge reports whether the tariff data is loaded, still loading, locked or failed, per dataset (Wackler international and national, Honold, Dachser). Hover it for the reason: a wrong passphrase, an unavailable artifact, an insecure origin or a rejected bundle now read differently instead of all staying silent.",
-        "Header - the chip reports a dataset as loaded only when the engine can consume it, so a stale engine that ignores the card shows a problem instead of a false all-clear."
+        "Header - the chip reports a dataset as loaded only when the engine can consume it, so a stale engine that ignores the card shows a problem instead of a false all-clear.",
+        "Header - clicking the Rates chip opens a list of the four datasets with the state of each and the reason it is not loaded, so a red chip names the dataset instead of only the aggregate."
       ]
     },
     {

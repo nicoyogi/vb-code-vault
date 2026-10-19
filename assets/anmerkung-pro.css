@@ -151,6 +151,37 @@ body.theme-pro .tariff-status[data-state="locked"] {
   --ts-dot: var(--warning);
 }
 
+body.theme-pro .tariff-status:hover {
+  border-color: var(--border2);
+}
+
+body.theme-pro .tariff-status:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Dialog rows: same rule as the chip, --gold is the pro blue here so a locked row
+   would read as loaded. The mono lines take the palette's own greys: --text2 is
+   8.35:1 on --surface dark and 7.58:1 on white, --text3 6.06:1 and 5.93:1. */
+body.theme-pro .tariff-row[data-state="locked"] {
+  --ts-dot: var(--warning);
+}
+
+body.theme-pro .tariff-row-state,
+body.theme-pro .tariff-foot {
+  color: var(--text2);
+}
+
+body.theme-pro .tariff-row-why {
+  color: var(--text3);
+}
+
+/* Pro keeps its own greys on the intro line too: --text2 is 8.35:1 on the dark
+   dialog surface and 7.58:1 on the light one. */
+body.theme-pro .tariff-dialog .nd-hint {
+  color: var(--text2);
+}
+
 body.theme-pro .hdr-btn {
   min-height: 32px;
   padding: 5px 9px;
@@ -1166,8 +1197,18 @@ body.theme-pro.theme-light #main > .btn-preview { color: #1e40af; }
     margin-left: auto;
   }
 
+  /* Visually hidden, not display:none: the chip is a button, so the word still
+     has to reach the accessible name at phone widths. */
   body.theme-pro .tariff-status-label {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   body.theme-pro .tariff-status {
@@ -1193,6 +1234,17 @@ body.theme-pro.theme-light #main > .btn-preview { color: #1e40af; }
 
   body.theme-pro #stats-wrap {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* 44px touch target; the pro header is min 64px tall, so the desktop chip stays small. */
+@media (pointer: coarse) {
+  body.theme-pro .tariff-status {
+    min-height: 44px;
+    padding-block: 0;
+  }
+  body.theme-pro .tariff-dialog .nd-actions .tester-btn {
+    min-height: 44px;
   }
 }
 

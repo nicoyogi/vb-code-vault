@@ -3,8 +3,8 @@
   "source": "current repository tree",
   "anmerkung_hardening": "v5",
   "regression": {
-    "tests": 468,
-    "passed": 468,
+    "tests": 475,
+    "passed": 475,
     "failed": 0
   },
   "files": [
@@ -31,7 +31,7 @@
     {
       "path": "docs/anmerkung/INTEGRATION_v5.md",
       "bytes": 1128,
-      "sha256": "05d45a877b64b8212b5c69e613dc255185d2246020eec98fa4ca9dccc8b89a4d"
+      "sha256": "8a0eb3dc9c3fb725817c806920a702122f53360932d4ffa69549795655306d6f"
     },
     {
       "path": "assets/dachser-ratecard-loader.js",
