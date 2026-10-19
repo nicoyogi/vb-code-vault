@@ -323,17 +323,32 @@ body.theme-light .trig-bar-bg { background: rgba(0,0,0,0.08); }
   .fw-grid { grid-template-columns: 1fr; }
   header { padding: 0 1rem; flex-wrap: wrap; height: auto; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
   header .nav-badge { margin-left: auto; }
-  .tariff-status-label { display: none; }
+  /* Visually hidden, not display:none: the chip is a button, so the word still
+     has to reach the accessible name at phone widths. */
+  .tariff-status-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
 /* ── HEADER CHROME: version, changelog button, theme toggle (#24 / #13) ── */
 .ver-badge { font-family: var(--mono); font-size: 9.5px; padding: 3px 9px; border-radius: 14px; border: 1px solid var(--border); color: var(--text3); letter-spacing: .08em; }
-/* Not a control: read-only status, so no hover, no pointer, no focus target. The
-   label keeps one colour in every state; only the dot changes with state. In the
-   mystic light skin the accent tint is 3.95:1 as 9.5px text on the chip's own
-   --surface2 (under 4.5:1), while a 6px dot needs only 3:1. The label uses --gold
-   instead: 9.81:1 on --surface2 in the dark skin, 5.03:1 in the light one. */
-.tariff-status { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; padding: 3px 9px; border-radius: 14px; border: 1px solid var(--border); color: var(--gold); background: var(--surface2); white-space: nowrap; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; }
+/* The chip opens the tariff list. The label keeps one colour in every state;
+   only the dot changes with state. In the mystic light skin the accent tint is
+   3.95:1 as 9.5px text on the chip's own --surface2 (under 4.5:1), while a 6px
+   dot needs only 3:1. The label uses --gold instead: 9.81:1 on --surface2 in the
+   dark skin, 5.03:1 in the light one. */
+.tariff-status { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; padding: 3px 9px; border-radius: 14px; border: 1px solid var(--border); color: var(--gold); background: var(--surface2); white-space: nowrap; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; text-align: left; line-height: 1.35; appearance: none; }
+.tariff-status:hover { border-color: var(--border2); }
+/* Keeps the pill shape on focus; the global :focus-visible rule sets a 4px radius. */
+.tariff-status:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 14px; }
 .tariff-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ts-dot, var(--text3)); flex: 0 0 auto; }
 .tariff-status[data-state="ready"] { --ts-dot: var(--accent); }
 .tariff-status[data-state="partial"], .tariff-status[data-state="locked"] { --ts-dot: var(--gold); }
@@ -342,6 +357,11 @@ body.theme-light .trig-bar-bg { background: rgba(0,0,0,0.08); }
 /* Must stay after the base rule above: same specificity, so source order decides. */
 @media (max-width: 520px) {
   .tariff-status { padding: 3px 6px; }
+}
+/* 44px touch target; the 60px header has room, so the desktop chip stays small. */
+@media (pointer: coarse) {
+  .tariff-status { min-height: 44px; padding-block: 0; }
+  .tariff-dialog .nd-actions .tester-btn { min-height: 44px; }
 }
 .hdr-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 14px; cursor: pointer; letter-spacing: .08em; transition: color .2s, border-color .2s; display: inline-flex; align-items: center; gap: 6px; }
 .hdr-btn:hover { color: var(--text2); border-color: var(--border2); }
@@ -1056,6 +1076,33 @@ body.theme-pro .log::-webkit-scrollbar-thumb, body.theme-pro .cl-list::-webkit-s
 .project-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .project-name { font-family: var(--cinzel); font-size: 13px; font-weight: 600; }
 .project-desc { color: var(--text2); font-family: var(--mono); font-size: 10px; }
+
+/* Tariff list dialog: one row per declared dataset, dot plus state word plus reason.
+   Like the chip, the dot carries the state colour and the words stay one colour. The
+   mystic skins have no small-text tint that clears AA on this --surface (--text2 is
+   3.68:1, --text3 1.75:1 in the dark skin), so the hint, the mono lines and the footer
+   use --gold: 10.21:1 dark, 4.72:1 light, measured over the ::backdrop, i.e. the
+   translucent --surface over a 45%-darkened page. The pro skin overrides them with its
+   own passing greys. */
+.tariff-dialog { width: min(480px, 92vw); }
+body:not(.theme-pro) .tariff-dialog .nd-hint { color: var(--gold); }
+.tariff-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 2px; }
+.tariff-row { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.tariff-row:last-child { border-bottom: 0; }
+.tariff-row-name { font-family: var(--syne); font-size: 12.5px; color: var(--text); }
+.tariff-row-state { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--gold); }
+.tariff-row-state::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; background: var(--ts-dot, var(--text3)); }
+.tariff-row-why { grid-column: 1 / -1; font-family: var(--mono); font-size: 10px; color: var(--gold); }
+.tariff-row[data-state="ready"] { --ts-dot: var(--accent); }
+.tariff-row[data-state="locked"] { --ts-dot: var(--gold); }
+.tariff-row[data-state="loading"], .tariff-row[data-state="pending"] { --ts-dot: var(--text2); }
+.tariff-row[data-state="insecure"], .tariff-row[data-state="unavailable"], .tariff-row[data-state="error"], .tariff-row[data-state="unwired"], .tariff-row[data-state="missing"] { --ts-dot: var(--danger); }
+.tariff-foot { font-family: var(--mono); font-size: 10px; color: var(--gold); margin: 0 0 12px; }
+/* The dialog's primary-soft Close button cannot use --accent: 3.56:1 on the
+   mystic light tint (3.41:1 hovered). --gold clears AA by only 0.03 there, so the
+   control takes the page text token instead and keeps a wide margin in both
+   mystic skies. Pro keeps its white-on-fill treatment. */
+body:not(.theme-pro) .tariff-dialog .nd-actions .tester-btn { color: var(--text); }
 
 /* ── WACKLER RATE UNLOCK ── */
 /* Launched by wackler-ratecard-loader.js when no passphrase is stored. It has no

@@ -36,14 +36,15 @@
   <a href="index.html" class="nav-back">← Grimoire</a>
   <div class="header-spacer"></div>
   <span class="ver-badge" id="verBadge" title="Current version">v0.0.0</span>
-  <span class="tariff-status" id="tariffStatus" role="status" aria-live="polite"
-        aria-atomic="true" data-state="pending"
-        data-datasets="wackler-intl wackler-national honold dachser"
-        title="Tariff data: checking" aria-describedby="tariffStatusDetail">
+  <button type="button" class="tariff-status" id="tariffStatus"
+          data-state="pending" data-datasets="wackler-intl wackler-national honold dachser"
+          aria-haspopup="dialog" aria-controls="dlgTariff" aria-expanded="false"
+          aria-describedby="tariffStatusDetail" title="Tariff data: checking">
     <span class="tariff-status-label">Rates</span>
     <span id="tariffStatusValue">checking</span>
-  </span>
+  </button>
   <span class="sr-only" id="tariffStatusDetail"></span>
+  <span class="sr-only" id="tariffStatusAnnounce" role="status" aria-live="polite" aria-atomic="true"></span>
   <button type="button" class="hdr-btn" id="btnChangelog" onclick="openChangelog()" title="What's new" aria-label="What's new">
     <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3v2.8l1.6 1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
     News
@@ -194,6 +195,37 @@
     <div class="nd-actions project-actions">
       <span class="sr-only" id="projectStoredNote">Stored in this browser only.</span>
       <button type="button" class="tester-btn primary-soft project-confirm" onclick="confirmProject()">Continue</button>
+    </div>
+  </dialog>
+
+  <dialog id="dlgTariff" class="ds-dialog tariff-dialog" aria-labelledby="dlgTariffTitle">
+    <h3 id="dlgTariffTitle">Tariff data</h3>
+    <p class="nd-hint">Decrypted in this browser with the team passphrase. A dataset that is not loaded leaves its notes off.</p>
+    <ul class="tariff-list" id="tariffList">
+      <li class="tariff-row" data-dataset="wackler-intl" id="tariffRow-wackler-intl" data-state="pending">
+        <span class="tariff-row-name">Wackler international</span>
+        <span class="tariff-row-state" id="tariffRowState-wackler-intl">checking</span>
+        <span class="tariff-row-why" id="tariffRowWhy-wackler-intl"></span>
+      </li>
+      <li class="tariff-row" data-dataset="wackler-national" id="tariffRow-wackler-national" data-state="pending">
+        <span class="tariff-row-name">Wackler national</span>
+        <span class="tariff-row-state" id="tariffRowState-wackler-national">checking</span>
+        <span class="tariff-row-why" id="tariffRowWhy-wackler-national"></span>
+      </li>
+      <li class="tariff-row" data-dataset="honold" id="tariffRow-honold" data-state="pending">
+        <span class="tariff-row-name">Honold</span>
+        <span class="tariff-row-state" id="tariffRowState-honold">checking</span>
+        <span class="tariff-row-why" id="tariffRowWhy-honold"></span>
+      </li>
+      <li class="tariff-row" data-dataset="dachser" id="tariffRow-dachser" data-state="pending">
+        <span class="tariff-row-name">Dachser</span>
+        <span class="tariff-row-state" id="tariffRowState-dachser">checking</span>
+        <span class="tariff-row-why" id="tariffRowWhy-dachser"></span>
+      </li>
+    </ul>
+    <p class="tariff-foot" id="tariffFoot" hidden></p>
+    <div class="nd-actions">
+      <button type="button" class="tester-btn primary-soft" onclick="document.getElementById('dlgTariff').close()">Close</button>
     </div>
   </dialog>
 

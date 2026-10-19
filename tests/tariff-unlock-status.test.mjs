@@ -30,12 +30,28 @@ const BUNDLES = {
 
 function makeChip(declared) {
   const attrs = new Map();
+  const listeners = {};
   if (declared) attrs.set('data-datasets', declared);
   return {
     id: 'tariffStatus',
     title: '',
     getAttribute: (name) => (attrs.has(name) ? attrs.get(name) : null),
     setAttribute: (name, value) => attrs.set(name, String(value)),
+    addEventListener: (type, fn) => { listeners[type] = fn; },
+    click: () => listeners.click(),
+  };
+}
+
+function makeDialog() {
+  const listeners = {};
+  return {
+    open: false,
+    shown: 0,
+    closes: 0,
+    showModal() { this.shown++; this.open = true; },
+    close() { this.closes++; this.open = false; },
+    addEventListener: (type, fn) => { listeners[type] = fn; },
+    emit: (type, event) => listeners[type](event),
   };
 }
 
@@ -45,6 +61,17 @@ function makeContext(store, fetchImpl) {
   byId.set('tariffStatus', makeChip(DECLARED));
   byId.set('tariffStatusValue', { textContent: '' });
   byId.set('tariffStatusDetail', { textContent: '' });
+  byId.set('dlgTariff', makeDialog());
+  byId.set('tariffFoot', { hidden: true, textContent: '' });
+  DECLARED.split(' ').forEach((k) => {
+    const attrs = new Map();
+    byId.set(`tariffRow-${k}`, {
+      getAttribute: (name) => (attrs.has(name) ? attrs.get(name) : null),
+      setAttribute: (name, value) => attrs.set(name, String(value)),
+    });
+    byId.set(`tariffRowState-${k}`, { textContent: '' });
+    byId.set(`tariffRowWhy-${k}`, { textContent: '' });
+  });
   const document = {
     getElementById: (id) => byId.get(id) || null,
     createElement: () => ({ id: '', className: '', onclick: null, setAttribute() {} }),
@@ -103,6 +130,36 @@ async function until(check, timeoutMs = 5000) {
 
 const snap = (context) => context.TariffStatus.snapshot();
 const chipState = (context) => context.document.getElementById('tariffStatus').getAttribute('data-state');
+const rowState = (context, k) => context.document.getElementById(`tariffRow-${k}`).getAttribute('data-state');
+const rowWord = (context, k) => context.document.getElementById(`tariffRowState-${k}`).textContent;
+const foot = (context) => context.document.getElementById('tariffFoot');
+
+test('unlock status: the dialog rows follow the real loaders', async () => {
+  const wired = makeContext(new Map([[SHARED_KEY, FAKE]]));
+  wired.context.wacklerRatecardsReady = () => true;
+  load('tariff-status.js', wired.context);
+  loadLoaders(wired.context);
+  await until(() => snap(wired.context).aggregate === 'ready');
+
+  assert.equal(rowState(wired.context, 'wackler-intl'), 'ready');
+  assert.equal(rowWord(wired.context, 'wackler-intl'), 'loaded');
+  assert.equal(rowState(wired.context, 'wackler-national'), 'ready');
+  assert.equal(rowWord(wired.context, 'wackler-national'), 'loaded');
+  assert.equal(rowWord(wired.context, 'honold'), 'loaded');
+  assert.equal(foot(wired.context).hidden, true);
+
+  const locked = makeContext(new Map());
+  load('tariff-status.js', locked.context);
+  loadLoaders(locked.context);
+  await until(() => locked.appended.length === 1);
+
+  DECLARED.split(' ').forEach((k) => {
+    assert.equal(rowState(locked.context, k), 'locked');
+    assert.equal(rowWord(locked.context, k), 'locked');
+  });
+  assert.equal(foot(locked.context).hidden, false);
+  assert.match(foot(locked.context).textContent, /Unlock tariff data/);
+});
 
 test('unlock status: a valid passphrase loads all four datasets', async () => {
   const store = new Map([[SHARED_KEY, FAKE]]);
