@@ -43,6 +43,28 @@
   /* Node test context: export the crypto core only, no DOM bootstrap. */
   if (typeof document === 'undefined') return;
 
+  /* Status is cosmetic: a missing helper or a throwing setter must never break
+     decryption, and these reports sit outside the existing try blocks. */
+  function report(key, state, detail) {
+    try {
+      if (root.TariffStatus && typeof root.TariffStatus.set === 'function')
+        root.TariffStatus.set(key, state, detail);
+    } catch (e) { /* status is cosmetic; it must never break decryption */ }
+  }
+
+  /* One bundle feeds two datasets, so every branch reports both. */
+  function reportBoth(state, detail) {
+    report('wackler-intl', state, detail);
+    report('wackler-national', state, detail);
+  }
+
+  /* Decrypted, but can the engine actually use it? Only a truthy global AND a
+     successful engine hook counts as loaded. */
+  function bundleState(global, wired) {
+    if (!global) return ['error', 'bundle-empty'];
+    return wired ? ['ready', ''] : ['unwired', 'engine-hook-missing'];
+  }
+
   function showUnlockButton() {
     if (document.getElementById('tariffUnlockBtn')) return;
     var btn = document.createElement('button');
@@ -85,10 +107,11 @@
         }
       }
     } catch (e) {}
-    if (!pass) { showUnlockButton(); return; }
+    if (!pass) { reportBoth('locked', ''); showUnlockButton(); return; }
     /* An insecure origin has no crypto.subtle, so decryption cannot run. That is
        not a passphrase problem: keep the key and stay quiet. */
-    if (!(root.crypto && root.crypto.subtle)) return;
+    if (!(root.crypto && root.crypto.subtle)) { reportBoth('insecure', 'no-crypto'); return; }
+    reportBoth('loading', '');
     var enc;
     try {
       var res = await fetch(ENC_URL);
@@ -98,6 +121,7 @@
       /* Fetch, HTTP, or JSON-parse failure: the stored passphrase may still be
          valid, so keep it and stay quiet. A prompt cannot fix an unavailable
          artifact, and the engine runs with Wackler costing off. */
+      reportBoth('unavailable', '');
       return;
     }
     var code;
@@ -110,18 +134,27 @@
          and stay quiet. */
       if (e && e.name === 'OperationError') {
         try { localStorage.removeItem(LS_KEY); } catch (e2) {}
+        reportBoth('locked', 'wrong-passphrase');
         showUnlockButton();
+      } else {
+        reportBoth('error', 'bad-artifact');
       }
       return;
     }
+    var wired = false;
     try {
       (0, eval)(code); // both ratecard IIFEs target globalThis, so this defines the two globals
-      if (typeof root.wacklerRatecardsReady === 'function') root.wacklerRatecardsReady();
+      if (typeof root.wacklerRatecardsReady === 'function') wired = root.wacklerRatecardsReady() === true;
     } catch (e) {
       /* Decrypt succeeded, so the passphrase is fine; a bad bundle is not a
          passphrase problem. Keep the key and stay quiet. */
+      reportBoth('error', 'bundle-rejected');
       return;
     }
+    var intl = bundleState(root.WACKLER_RATECARD, wired);
+    var nat = bundleState(root.WACKLER_NATIONAL_RATECARD, wired);
+    report('wackler-intl', intl[0], intl[1]);
+    report('wackler-national', nat[0], nat[1]);
   }
 
   boot();

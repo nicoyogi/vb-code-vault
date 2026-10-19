@@ -29,6 +29,7 @@ const CORE = [
   './assets/anmerkung.css',
   './assets/anmerkung-pro.css',
   './assets/anmerkung.js',
+  './assets/tariff-status.js',
   './assets/wackler-ratecard-loader.js',
   './assets/wackler-ratecards.enc.json',
   './assets/honold-tariff-loader.js',
