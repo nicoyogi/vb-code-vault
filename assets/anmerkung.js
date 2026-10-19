@@ -49,6 +49,10 @@ let TH={...TH_DEFAULTS};
 /* Dynamic threshold accessors — used everywhere the old constants were used. */
 let T_DACHSER=TH.dachser,T_KN=TH.kn,T_DHL=TH.dhl,T_WACKLER=TH.wackler;
 function applyThresholds(){T_DACHSER=TH.dachser;T_KN=TH.kn;T_DHL=TH.dhl;T_WACKLER=TH.wackler;}
+/* The tolerance a forwarder's hasErr() gates are judged against. honold has no
+   field of its own: processHonold gates its ZZ Differenz with T_DACHSER, so the
+   Dachser value is Honold's effective threshold (and its exports must say so). */
+function effectiveThreshold(fw){const k=fw==='honold'?'dachser':fw;return (TH&&TH[k]!=null)?TH[k]:null;}
 /* Kontierung? check disabled — every "KOST/SACH blank or X" emission below is gated on this.
    Set to true to restore the original behavior. Other rules that merely branch on the same
    blank/X condition for a different message (e.g. Zone korrekt?) are unaffected. */
@@ -140,7 +144,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     el.addEventListener('input',()=>onThInput(key,el));
     el.addEventListener('change',()=>onThInput(key,el));
     const hint=el.parentElement&&el.parentElement.querySelector('.default-hint');
-    if(hint)hint.textContent='default '+TH_DEFAULTS[key];
+    if(hint)hint.textContent='default '+TH_DEFAULTS[key]+(key==='dachser'?' · also gates the Honold ZZ test':'');
   });
   setVersionBadge();
   loadChangelog();
@@ -2466,6 +2470,7 @@ function buildReason(fw,ws,r,cols){
     push('KOST',cellStr(ws,r,cols.kostenstelle));push('SACH',cellStr(ws,r,cols.sachkonto));
   } else if(fw==='honold'){
     push('STAT',num(cols.stat));push('FR_DL',num(cols.fr_dl));
+    push('ZZ',num(cols.zz));
     push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
     const land=cellStr(ws,r,cols.empf_land);if(land)parts.push('LAND='+land);
   }
@@ -2494,20 +2499,32 @@ function resolveHonold(ws,range){
     target:   fc('','Anmerkung'),
     stat:     fc('','Stat_Freigabe'),
     fr_dl:    fc('FR','Kosten DL'),
+    zz:       fc('ZZ','Differenz'),   /* -1 on every Honold layout before 20381523 */
     vkg:      fc('','Volumen kg'),
     vkg_dl:   fc('','Volumen kg DL'),
     empf_land:fc('','Empf.-Land'),
     empf_plz: fc('','Empf.-PLZ'),
   };
 }
-/* Volumen kg and Volumen kg DL in the same Bis bracket -> previous tariff; a blank / 0
-   FR or a cross-bracket DL weight -> weight difference. Without the decrypted tariff the
-   row is SKIPPED (null), never blanked: the engine must not overwrite a note it cannot re-derive. */
+/* A ZZ cost line can be a second delivery attempt billed on its own: its Differenz
+   cell is that attempt's Kosten DL minus its tariff cost. The branch fires only for
+   that standalone-fee shape - an FR Kosten DL column that exists and is blank /
+   0, ZZ Differenz over the Dachser tolerance - so a row that carries freight and
+   a ZZ charge keeps the tier note below, and a layout without the FR column keeps
+   its previous (1.53.0) note. That reading is ASSUMED for Honold: it rests on one
+   row (4 of 20381523, ZZ 35.08 with a blank FR) plus the inherited Dachser ZZ
+   evidence.
+   Otherwise: Volumen kg and Volumen kg DL in the same Bis bracket -> previous tariff;
+   a blank / 0 FR or a cross-bracket DL weight -> weight difference. Without the
+   decrypted tariff the row is SKIPPED (null), never blanked: the engine must not
+   overwrite a note it cannot re-derive. */
 function processHonold(ws,r,cols){
   if(!honoldTariff())return null;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
   const fr=cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0;
-  if(!(Math.abs(fr)>0))return P.abweichGewichte;
+  const noFr=!(Math.abs(fr)>0);
+  if(noFr&&cols.fr_dl>=0&&cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T_DACHSER))return P.zustell2;
+  if(noFr)return P.abweichGewichte;
   const tv=honoldTierIdx(cols.vkg>=0?cellNum(ws,r,cols.vkg):0);
   if(tv===null)return P.abweichGewichte;
   const td=honoldTierIdx(cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0);
@@ -2767,6 +2784,7 @@ const TESTER_FIELDS={
   ],
   honold:[
     ['stat','Stat_Freigabe','num'],['fr_dl','FR Kosten DL','num'],
+    ['zz','ZZ Differenz','num'],
     ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
     ['empf_land','Empf.-Land','str'],
   ],
@@ -2815,6 +2833,7 @@ const TESTER_PRESETS={
   honold:[
     {name:'Volumen kg / DL in the same Bis bracket',values:{stat:10,fr_dl:127.25,vkg:588,vkg_dl:570}},
     {name:'Volumen kg / DL in different Bis brackets',values:{stat:10,fr_dl:127.25,vkg:588,vkg_dl:493}},
+    {name:'ZZ second delivery (20381523 row 4)',values:{stat:10,vkg:157,vkg_dl:157,zz:35.08}},
   ],
 };
 
@@ -3230,9 +3249,10 @@ function granularLabel(beforeRaw,afterRaw,pd){
    collectInputsForRow key here too; the frozen seed is the v1.29 set. */
 const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','c502_dl','c503_dl','ki_zw_plz','ki_zw_ort','anz_colli','brutto_kg','c38l_diff','zabf_diff']);
 /* Same rule, but only for the forwarder that gained the key later: excluding
-   referenz globally would re-key every historical K+N/Wackler row, and el_diff
-   is new to DHL. */
-const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz','c196_diff']),dhl:new Set(['el_diff'])};
+   referenz globally would re-key every historical K+N/Wackler row, el_diff is
+   new to DHL, and zz_diff is new to Honold - Dachser has always hashed that
+   cell, so a global exclusion would re-key every historical Dachser ZZ row. */
+const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz','c196_diff']),dhl:new Set(['el_diff']),honold:new Set(['zz_diff'])};
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
@@ -3281,7 +3301,9 @@ const CANONICAL_INPUT_ORDER={
             'referenz','anz_colli','brutto_kg','vkg','vkg_dl',
            'abg_land','abg_plz','empf_land','empf_plz','empf_ort','zone',
            'kostenstelle','sachkonto'],
-  honold:['stat','fr_dl','vkg','vkg_dl','empf_land','empf_plz'],
+  honold:['stat','fr_dl','vkg','vkg_dl','empf_land','empf_plz',
+           /* Last on purpose, like dachser's referenz: existing CSV columns stay put. */
+           'zz_diff'],
 };
 
 /* Build the ordered key list for a CSV: union of (canonical for each
@@ -3419,7 +3441,7 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
       const processorName=(fw&&fw!=='unknown'&&fw!=='-')
         ?('process'+fw[0].toUpperCase()+fw.slice(1))
         :'';
-      const applicableThreshold=(TH&&TH[fw]!=null)?TH[fw]:null;
+      const applicableThreshold=effectiveThreshold(fw);
       /* Engine-vs-truth (#26) derived signal. Only populated when the
          engine actually ran (enginePd!=null); otherwise the row carries
          empty/null so a consumer can skip it the same way it skips an
@@ -3723,6 +3745,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('stat',cols.stat);get('fr_dl',cols.fr_dl);
     get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
     get('empf_land',cols.empf_land);get('empf_plz',cols.empf_plz);
+    get('zz_diff',cols.zz);
   }
   return o;
 }
@@ -4029,6 +4052,7 @@ function sendDiffToTester(i){
       nx_diff:'surc',os_diff:'over',tz_diff:'tz',
       kostenstelle:'kost',sachkonto:'sach',
     },
+    honold:{zz_diff:'zz'},
     wackler:{
       existing_anmerkung:'target',fr_diff:'fr',fr_tarif:'fr_tar',mt_diff:'maut',tz_diff:'tz',
     },
@@ -4808,7 +4832,7 @@ const INPUT_GLOSSARY={
   snk_diff          :'SNK Differenz — surcharge delta (numeric, signed). Compared against forwarder threshold.',
   snk_dl            :'SNK Kosten DL — DL-side surcharge code (numeric). Carries the surcharge type (e.g. 5/9/14/18/25/30/34/60/75/95/130/190).',
   snk_tarif         :'SNK Kosten lt. Tarif — tariff-side surcharge baseline (numeric).',
-  zz_diff           :'ZZ Differenz — second-attempt delivery delta (Dachser).',
+  zz_diff           :'ZZ Differenz - second delivery attempt: that attempt\'s Kosten DL minus its tariff cost. Clearing the threshold reads "2. Zustellung" (Dachser: joined with the other surcharges; Honold: the whole note, and only for a standalone ZZ fee with FR Kosten DL blank / 0).',
   sam_diff          :'SAM Differenz — Saturday delivery delta (Dachser).',
   dgr_diff          :'DGR Differenz — dangerous-goods surcharge delta (Dachser).',
   sbfu_diff         :'SBFU Differenz — SBfU certificate delta (Dachser).',
@@ -4881,7 +4905,7 @@ const FORWARDER_SPEC={
     processor:'processHonold',
     resolver :'resolveHonold',
     gate     :'Stat_Freigabe == 10 (and the OLD tariff must be unlocked — rows are skipped, not blanked, without it)',
-    notes    :'One rule. Volumen kg and Volumen kg DL in the same Bis bracket of the encrypted OLD tariff (assets/honold-tariff.enc.json) means the previous tariff is still being billed; a blank / 0 FR, a missing / 0 Volumen kg, or a Volumen kg DL in a different bracket is a weight difference. The destination country is no longer consulted.',
+    notes    :'Two rules. A ZZ cost line can be a second delivery attempt billed on its own: when its Differenz clears the Dachser difference threshold (T_DACHSER, 0.08 by default) and FR Kosten DL is blank / 0, the whole note is "2. Zustellung", decided before the weight comparison; a row that carries freight as well as a ZZ charge keeps the weight note. A layout without a ZZ group resolves that column to -1 and the branch is off. Otherwise Volumen kg and Volumen kg DL in the same Bis bracket of the encrypted OLD tariff (assets/honold-tariff.enc.json) means the previous tariff is still being billed; a blank / 0 FR, a missing / 0 Volumen kg, or a Volumen kg DL in a different bracket is a weight difference. The destination country is no longer consulted.',
   },
 };
 
@@ -4899,13 +4923,18 @@ function buildRuleSpec(){
       processor:spec.processor||'',
       resolver :spec.resolver||'',
       gate     :spec.gate||'',
-      threshold:(TH&&TH[fw]!=null)?TH[fw]:null,
+      threshold:effectiveThreshold(fw),
       notes    :spec.notes||'',
       input_keys:inputKeys.slice(),
       input_glossary:glossary,
       seen_in_export:fwsSeen.includes(fw),
     };
   }
+  /* One entry per forwarder, including honold (which has no key of its own and
+     is judged against the Dachser tolerance) - a bare {...TH} would leave it out
+     while forwarders.honold.threshold carries the number. */
+  const thresholds={};
+  for(const fw of Object.keys(forwarders))thresholds[fw]=effectiveThreshold(fw);
   const phraseTemplates=PHRASE_TEMPLATES.map(t=>({
     key:t.key,regex:t.regex.source,flags:t.regex.flags,
     example:t.example,processor:t.processor||'',
@@ -4928,7 +4957,7 @@ function buildRuleSpec(){
     /* phrase key → emitting function(s), scanned from the live source.
        [] = no branch emits it yet (a fix means a NEW branch). */
     phrase_emitters:buildPhraseEmitterIndex(),
-    thresholds:{...TH},
+    thresholds,
     label_taxonomy:{
       wrong:'A and B both non-empty and their phrase sets genuinely differ (content, not just order/case/whitespace).',
       missed:'A empty, B filled — engine should have fired.',

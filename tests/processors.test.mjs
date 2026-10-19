@@ -1300,6 +1300,10 @@ test('processWackler: 2026-08-31 bundle — pallet volume boundary gate (4c4576a
    assets/honold-tariff.enc.json, which never ships in plaintext.
 ─────────────────────────────────────────────────────────── */
 const HONOLD_COLS = { stat: 50, fr_dl: 51, vkg: 52, vkg_dl: 54, empf_land: 53 };
+const HONOLD_COLS_ZZ = { ...HONOLD_COLS, zz: 55 };
+/* resolveHonold finds its columns in the header rows (2 and 3) of the sheet, so the
+   resolver test needs a sheet with headers, not just a data row. */
+const SHEET_RANGE = { s: { r: 0, c: 0 }, e: { r: 3, c: 60 } };
 const HONOLD_OLD = 'Honold berechnet die Kosten nach dem bisherigen Tarif';
 const HONOLD_DIFF = 'Differenz aufgrund abweichender Gewichte';
 /* The rule reads the Bis brackets only; the destination-country rate columns of the
@@ -1307,6 +1311,21 @@ const HONOLD_DIFF = 'Differenz aufgrund abweichender Gewichte';
    tiers, with anything above the table in the last bracket. */
 const HONOLD_SYNTH = { tiers: [50, 100, 150, 200, 250, 300] };
 e.setHonoldTariff(HONOLD_SYNTH);
+
+test('resolveHonold: resolves the ZZ Differenz column, and -1 when that header pair is absent', () => {
+  /* A ZZ cost group is a row-2 label with a row-3 sub-label, so the resolver finds
+     it the same way it finds FR / Kosten DL. Without that pair the column index is
+     -1 and processHonold's ZZ branch is off - the 20379045 shape. */
+  const withZZ = makeRow(1, { 0: 'Anmerkung', 10: 'Stat_Freigabe', 12: 'FR', 20: 'ZZ', 22: 'Volumen kg' });
+  Object.assign(withZZ, makeRow(2, { 12: 'Kosten DL', 20: 'Differenz' }));
+  const withoutZZ = makeRow(1, { 0: 'Anmerkung', 10: 'Stat_Freigabe', 12: 'FR', 22: 'Volumen kg' });
+  Object.assign(withoutZZ, makeRow(2, { 12: 'Kosten DL' }));
+  assert.equal(e.resolveHonold(withZZ, SHEET_RANGE).zz, 20);
+  assert.equal(e.resolveHonold(withoutZZ, SHEET_RANGE).zz, -1);
+  // The value the branch reads has to reach the training export too.
+  const row = makeRow(R, { 50: 10, 52: '157', 54: '157', 55: 35.08 });
+  assert.equal(e.collectInputsForRow('honold', row, R, HONOLD_COLS_ZZ).zz_diff, '35.08');
+});
 
 test('processHonold: without the decrypted tariff the row is skipped (null), never blanked', () => {
   e.setHonoldTariff(null);
@@ -1389,6 +1408,71 @@ test('processHonold: 20380293 row 4 (fr 46.97, vkg 127.661, vkg_dl 64.16) -> wei
   assert.equal(e.processHonold(ws, R, HONOLD_COLS), HONOLD_DIFF);
 });
 
+test('processHonold: ZZ Differenz -> 2. Zustellung (20381523 row 4: stat 10, FR blank, 157/157, ZZ 35.08)', () => {
+  // The ZZ cost line is a second delivery attempt billed on its own, so its
+  // Differenz decides the note even though the FR guard would fire first.
+  const ws = makeRow(R, { 50: 10, 52: '157', 54: '157', 55: 35.08 });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS_ZZ), '2. Zustellung');
+  // A layout with no FR Kosten DL column resolves fr_dl to -1. There is no blank / 0
+  // FR to read, and 1.53.0 (no ZZ branch at all) returned the weight note for such a
+  // row, so the branch stays off rather than inventing a fee from a missing column.
+  const noFrCol = makeRow(R, { 50: 10, 52: '157', 54: '157', 55: 35.08 });
+  assert.equal(e.processHonold(noFrCol, R, { ...HONOLD_COLS_ZZ, fr_dl: -1 }), HONOLD_DIFF);
+});
+
+test('processHonold: a sheet without a ZZ group is unchanged', () => {
+  // 20379045 and every earlier Honold layout have no ZZ row-2 label, so
+  // resolveHonold yields -1 and the branch is off.
+  const noCol = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '140' });
+  const minusOne = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '140' });
+  assert.equal(e.processHonold(noCol, R, HONOLD_COLS), HONOLD_OLD);
+  assert.equal(e.processHonold(minusOne, R, { ...HONOLD_COLS, zz: -1 }), HONOLD_OLD);
+});
+
+test('processHonold: a blank or zero ZZ Differenz leaves the tier note in charge', () => {
+  const blank = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '140', 55: '' });
+  const zero = makeRow(R, { 50: 10, 51: '30', 52: '150', 54: '250', 55: 0 });
+  assert.equal(e.processHonold(blank, R, HONOLD_COLS_ZZ), HONOLD_OLD);
+  assert.equal(e.processHonold(zero, R, HONOLD_COLS_ZZ), HONOLD_DIFF);
+});
+
+test('processHonold: a ZZ Differenz inside the Dachser threshold does not fire', () => {
+  // Same guard as the Dachser ZZ branch: |v| > T_DACHSER (0.08), sign-insensitive.
+  // Blank FR, so this is the standalone-fee shape the branch is narrowed to.
+  const atThreshold = makeRow(R, { 50: 10, 52: '150', 54: '250', 55: 0.08 });
+  const over = makeRow(R, { 50: 10, 52: '150', 54: '250', 55: 0.09 });
+  const negative = makeRow(R, { 50: 10, 52: '150', 54: '250', 55: -35.08 });
+  assert.equal(e.processHonold(atThreshold, R, HONOLD_COLS_ZZ), HONOLD_DIFF);
+  assert.equal(e.processHonold(over, R, HONOLD_COLS_ZZ), '2. Zustellung');
+  assert.equal(e.processHonold(negative, R, HONOLD_COLS_ZZ), '2. Zustellung');
+});
+
+test('processHonold: the ZZ branch sits behind the tariff gate and the Stat gate', () => {
+  const locked = makeRow(R, { 50: 10, 52: '157', 54: '157', 55: 35.08 });
+  const notReleased = makeRow(R, { 50: 5, 52: '157', 54: '157', 55: 35.08 });
+  e.setHonoldTariff(null);
+  try {
+    assert.equal(e.processHonold(locked, R, HONOLD_COLS_ZZ), null);
+  } finally {
+    e.setHonoldTariff(HONOLD_SYNTH);
+  }
+  assert.equal(e.processHonold(notReleased, R, HONOLD_COLS_ZZ), null);
+});
+
+test('processHonold: a freight-bearing ZZ row keeps the tier note (only a standalone ZZ fee reads 2. Zustellung)', () => {
+  // The ZZ branch is narrowed to the standalone-fee shape: FR Kosten DL blank / 0.
+  // 20260903 row 294 (Dachser) carries both a ZZ charge and a freight difference
+  // and keeps its weight note, so a Honold row with freight must too.
+  const ws = makeRow(R, { 50: 10, 51: '30', 52: '157', 54: '999', 55: 35.08 });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS_ZZ), HONOLD_DIFF);
+});
+
+test('buildReason: the Honold trace carries the ZZ Differenz', () => {
+  const ws = makeRow(R, { 50: 10, 52: '157', 54: '157', 55: 35.08 });
+  assert.match(e.buildReason('honold', ws, R, HONOLD_COLS_ZZ), /ZZ=35\.08/);
+  assert.ok(!e.buildReason('honold', ws, R, HONOLD_COLS).includes('ZZ='));
+});
+
 test('phrase catalog: both Honold phrases resolve to stable keys', () => {
   assert.equal(e.phraseToKey('Honold berechnet die Kosten nach dem bisherigen Tarif'),
     'honoldBisherigerTarif');
@@ -1416,6 +1500,35 @@ test('processHonold: 20379045 replay agrees on 121/124, mismatches exactly [4, 4
     }
     assert.equal(fx.rows.length, 124);
     assert.deepEqual(mismatches, fx.outliers);
+  } finally {
+    e.setHonoldTariff(HONOLD_SYNTH);
+  }
+});
+
+/* 20381523 is the workbook that arrived with the 2026-10-19 bundle: it adds a ZZ
+   cost group, and its row 4 is the first Honold row whose note comes from that
+   group. The remaining mismatches are the five cross-bracket rows the 2026-10-12
+   ruling keeps on the tier comparison - a policy question, not an engine bug. */
+test('processHonold: 20381523 replay agrees on 36/41, mismatches exactly [9, 12, 15, 21, 35]', () => {
+  const fx = JSON.parse(readFileSync(
+    new URL('./fixtures/honold-20381523-rows.json', import.meta.url), 'utf8'));
+  e.setHonoldTariff({ tiers: fx.tiers });
+  try {
+    const mismatches = [];
+    for (const x of fx.rows) {
+      const ws = makeRow(R, { 50: x.stat, 51: x.fr_dl, 52: x.vkg, 54: x.vkg_dl, 55: x.zz });
+      const out = e.processHonold(ws, R, HONOLD_COLS_ZZ);
+      if (out !== x.truth) mismatches.push(x.row);
+      /* The five policy rows must disagree in exactly one direction: the sheet says
+         previous tariff, the engine says the weights sit in different brackets. */
+      if ([9, 12, 15, 21, 35].includes(x.row)) {
+        assert.equal(out, HONOLD_DIFF, `row ${x.row} engine phrase`);
+        assert.equal(x.truth, HONOLD_OLD, `row ${x.row} workbook phrase`);
+      }
+    }
+    assert.equal(fx.rows.length, 41);
+    assert.deepEqual(mismatches, [9, 12, 15, 21, 35]);
+    assert.deepEqual(fx.outliers, [9, 12, 15, 21, 35]);
   } finally {
     e.setHonoldTariff(HONOLD_SYNTH);
   }

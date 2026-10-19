@@ -113,6 +113,19 @@ test('hasErr: symmetric threshold', () => {
   assert.equal(e.hasErr(0.08, 0.08), false, 'strictly greater-than, not >=');
 });
 
+test('effectiveThreshold: each forwarder is judged against its own tolerance, honold against Dachser', () => {
+  /* honold has no persisted field of its own - processHonold gates its ZZ Differenz
+     with T_DACHSER - so both the export and the diff rows must report the Dachser
+     number rather than null. */
+  const TH = e.evalInContext('TH');
+  assert.equal(e.effectiveThreshold('honold'), TH.dachser);
+  assert.equal(e.effectiveThreshold('honold'), 0.08);
+  for (const fw of ['dachser', 'kn', 'dhl', 'wackler']) {
+    assert.equal(e.effectiveThreshold(fw), TH[fw], fw);
+  }
+  assert.equal(e.effectiveThreshold('bogus'), null, 'an unknown forwarder has no threshold');
+});
+
 test('join: case-insensitive de-duplicating concatenation', () => {
   assert.equal(e.join('a', ''), 'a');
   assert.equal(e.join('', 'b'), 'b');

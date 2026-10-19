@@ -1,6 +1,13 @@
 {
-  "version": "1.53.0",
+  "version": "1.54.0",
   "entries": [
+    {
+      "ver": "1.54.0",
+      "date": "2026-10-19",
+      "items": [
+        "Honold - a row whose ZZ cost line carries a Differenz and whose FR Kosten DL is blank or 0 now reads '2. Zustellung' before the tariff comparison: a ZZ charge with no freight is a second delivery attempt billed on its own. Row 4 of 20381523 (ZZ Differenz 35.08, FR Kosten DL blank, 157 / 157 kg) was the first such row and read 'Differenz aufgrund abweichender Gewichte'. A row that carries freight and a ZZ charge keeps the tariff/weight note, and sheets without a ZZ group are unchanged: 20379045 still matches 121 of 124 rows. On 20381523 the engine now agrees with the workbook on 36 of 41 rows - the five cross-bracket rows 9, 12, 15, 21 and 35 remain known disagreements between engine and workbook."
+      ]
+    },
     {
       "ver": "1.53.0",
       "date": "2026-10-19",

@@ -11,6 +11,12 @@ with the workbook's Anmerkung column.
 Rule A (weight-tier comparison, commit 6518ffa) supersedes the FR-bracket rule
 of commit 29db412 on the 2026-10-12 domain-owner ruling: old-workbook rows 4, 44
 and 117 are workbook errors, so expected mismatches are exactly those three.
+
+This replay reads the 20379045 layout by fixed column index and does not know
+the ZZ cost group, so the ZZ branch of processHonold ("2. Zustellung", see the
+20381523 fixture replay in tests/processors.test.mjs) never applies here and the
+result stays 124 rows / 3 mismatches. Do not point it at 20381523: that sheet
+has a different layout (no EXP group, a TG group, FR Kosten DL at column 42).
 """
 import sys
 from pathlib import Path

@@ -44,6 +44,14 @@ for name in ["dachser", "kn", "dhl", "wackler"]:
     m = re.search(rf"{name}:([\d.]+)", src)
     if m:
         const[f"TH_DEFAULT_{name.upper()}"] = m.group(1)
+# The runtime thresholds are aliases of the persisted map (`let T_DACHSER = TH.dachser,
+# T_KN = TH.kn, ...`), not literals, so the const scan above never matches them and
+# every threshold in the report would render as "?". Resolve each alias to the default
+# it starts from.
+for fw in ["dachser", "kn", "dhl", "wackler"]:
+    m = re.search(rf"(?:let|,)\s*T_{fw.upper()}\s*=\s*TH\.(\w+)", src)
+    if m:
+        const[f"T_{fw.upper()}"] = const.get(f"TH_DEFAULT_{m.group(1).upper()}", "?")
 const["KONTIERUNG_ENABLED"] = "true" if "KONTIERUNG_ENABLED=false" not in src else "false"
 
 
@@ -376,11 +384,16 @@ story.append(P("5. Honold — processHonold", h2))
 story.append(P(
     "Gate: Stat = 10, plus the OLD tariff must be unlocked. The tariff matrix is business data and "
     "ships encrypted (<code>assets/honold-tariff.enc.json</code>); until it is decrypted the engine "
-    "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. One rule: "
+    "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. Two rules. "
+    "A ZZ cost line is a second delivery attempt billed on its own: when its Differenz clears the Dachser "
+    "difference threshold (T_DACHSER, " f"{k('T_DACHSER')} by default) and FR Kosten DL is blank / 0, the whole note is "
+    "&quot;2. Zustellung&quot;. A row that carries freight as well as a ZZ charge keeps the weight note. "
+    "Otherwise "
     "Volumen kg and Volumen kg DL in the same weight bracket mean the previous tariff is still being billed, "
     "a different DL bracket is a weight difference."
 ))
 story.append(section_table([
+    (f"ZZ Differenz above the Dachser difference threshold ({k('T_DACHSER')} by default) and FR Kosten DL blank / 0", "2. Zustellung"),
     ("Volumen kg and Volumen kg DL sit in the same Bis bracket of the OLD tariff (business test, no rates read), or Volumen kg DL is blank / 0", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
     ("the two weights sit in different brackets", "Differenz aufgrund abweichender Gewichte"),
     ("blank / 0 FR Kosten DL, or a missing / 0 Volumen kg", "Differenz aufgrund abweichender Gewichte"),
