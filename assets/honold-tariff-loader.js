@@ -119,7 +119,23 @@
       report('honold', 'error', 'bundle-rejected');
       return;
     }
-    if (root.HONOLD_TARIFF && Array.isArray(root.HONOLD_TARIFF.tiers)) report('honold', 'ready', '');
+    /* Same readiness predicate as honoldTariff() in the engine: the rule reads
+       tiers, the zone rate arrays and the country -> zone codes that point at
+       them, so empty containers are as unusable as a missing matrix
+       (scripts/honold/build_tariff.py skips all-null zone columns, so a
+       headers-only sheet decrypts to {tiers:[],zones:{},codes:{}}). Ready means
+       at least one two-uppercase-letter country code names a zone whose rates
+       cover every tier and include a rate. */
+    var t = root.HONOLD_TARIFF;
+    var isObj = function (v) { return !!v && typeof v === 'object' && !Array.isArray(v); };
+    var ready = !!(t && Array.isArray(t.tiers) && t.tiers.length > 0 && isObj(t.zones) && isObj(t.codes)
+      && Object.keys(t.codes).some(function (c) {
+        return /^[A-Z]{2}$/.test(c) && Array.isArray(t.codes[c]) && t.codes[c].some(function (l) {
+          return Array.isArray(t.zones[l]) && t.zones[l].length >= t.tiers.length
+            && t.zones[l].some(function (r) { return r != null; });
+        });
+      }));
+    if (ready) report('honold', 'ready', '');
     else report('honold', 'error', 'bundle-empty');
   }
 

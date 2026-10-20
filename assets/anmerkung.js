@@ -2471,7 +2471,7 @@ function buildReason(fw,ws,r,cols){
   } else if(fw==='honold'){
     push('STAT',num(cols.stat));push('FR_DL',num(cols.fr_dl));
     push('ZZ',num(cols.zz));
-    push('VKG',num(cols.vkg));push('VKG_DL',num(cols.vkg_dl));
+    push('VKG',num(cols.vkg));
     const land=cellStr(ws,r,cols.empf_land);if(land)parts.push('LAND='+land);
   }
   return parts.join(' | ');
@@ -2483,7 +2483,25 @@ function buildReason(fw,ws,r,cols){
    assets/honold-tariff-loader.js. Read the global lazily so a passphrase
    unlocked after page load is picked up without reloading the engine. */
 function honoldTariff(){
-  return (typeof HONOLD_TARIFF!=='undefined'&&HONOLD_TARIFF&&Array.isArray(HONOLD_TARIFF.tiers))?HONOLD_TARIFF:null;
+  const t=(typeof HONOLD_TARIFF!=='undefined')?HONOLD_TARIFF:null;
+  /* Content, not truthiness: the rule reads the tier list, the zone rate arrays and
+     the country -> zone codes that point at them, so a payload without them cannot
+     answer it. Empty containers are reachable - scripts/honold/build_tariff.py skips
+     all-null zone columns, so a headers-only sheet decrypts to
+     {tiers:[],zones:{},codes:{}} - and such a tariff would turn every row into a
+     weight difference, overwriting notes it cannot re-derive. Ready means at least
+     one country code names a zone whose rate array covers every tier and carries a
+     rate; the code key must be two uppercase letters, the form processHonold looks
+     up after upper-casing the cell, so a lower-case key can never match. Incomplete
+     is the same as locked: null. */
+  return (t&&Array.isArray(t.tiers)&&t.tiers.length>0
+    &&t.zones&&typeof t.zones==='object'&&!Array.isArray(t.zones)
+    &&t.codes&&typeof t.codes==='object'&&!Array.isArray(t.codes)
+    &&Object.keys(t.codes).some(c=>/^[A-Z]{2}$/.test(c)
+      &&Array.isArray(t.codes[c])
+      &&t.codes[c].some(l=>Array.isArray(t.zones[l])
+        &&t.zones[l].length>=t.tiers.length
+        &&t.zones[l].some(r=>r!=null))))?t:null;
 }
 /* Index of the "Bis" bracket a weight falls into: first tier >= kg, last
    tier for anything above the table. null for missing / non-positive weights. */
@@ -2501,34 +2519,53 @@ function resolveHonold(ws,range){
     fr_dl:    fc('FR','Kosten DL'),
     zz:       fc('ZZ','Differenz'),   /* -1 on every Honold layout before 20381523 */
     vkg:      fc('','Volumen kg'),
-    vkg_dl:   fc('','Volumen kg DL'),
     empf_land:fc('','Empf.-Land'),
     empf_plz: fc('','Empf.-PLZ'),
   };
 }
-/* A ZZ cost line can be a second delivery attempt billed on its own: its Differenz
-   cell is that attempt's Kosten DL minus its tariff cost. The branch fires only for
-   that standalone-fee shape - an FR Kosten DL column that exists and is blank /
-   0, ZZ Differenz over the Dachser tolerance - so a row that carries freight and
-   a ZZ charge keeps the tier note below, and a layout without the FR column keeps
-   its previous (1.53.0) note. That reading is ASSUMED for Honold: it rests on one
-   row (4 of 20381523, ZZ 35.08 with a blank FR) plus the inherited Dachser ZZ
-   evidence.
-   Otherwise: Volumen kg and Volumen kg DL in the same Bis bracket -> previous tariff;
-   a blank / 0 FR or a cross-bracket DL weight -> weight difference. Without the
-   decrypted tariff the row is SKIPPED (null), never blanked: the engine must not
-   overwrite a note it cannot re-derive. */
+/* Half a cent: the OLD-tariff matrix carries 4-decimal values on some lanes
+   (the GB Großbrittanien 2 column) while the rest is whole cents, so equality is
+   a 0.005 tolerance; the <= boundary covers round-half-up. */
+const HONOLD_RATE_TOL=0.005;
+/* The note is decided from FR Kosten DL, never from Volumen kg DL: the DL weight
+   is unreliable when ReferenzNr lists several references (owner ruling 2026-10-20).
+   A ZZ cost line can be a second delivery attempt billed on its own: its Differenz
+   cell is that attempt's Kosten DL minus its tariff cost, and with FR Kosten DL
+   blank / 0 over the Dachser tolerance the whole note is "2. Zustellung".
+   Otherwise a blank / 0 FR or a missing / 0 Volumen kg is a weight difference, and
+   so is a FR the OLD tariff does not publish for the row's Empf.-Land in the Bis
+   bracket its Volumen kg falls in - membership across every zone of the country,
+   because the row carries the country but not the zone, and no OLD amount sits at
+   two different brackets across a country's zones (measured 0 for CH, ES, FR, GB,
+   GR, IT, NO, PL, PT, SE), so the zone cannot change which bracket a rate belongs to.
+   Known bound: one amount collides exactly between the OLD and the current table
+   (PL1 OLD@10000 = current@8000 = 858.93), so a current-tariff charge at a different
+   weight on that lane would read as the old tariff.
+   Without the decrypted tariff the row is SKIPPED (null), never blanked: the engine
+   must not overwrite a note it cannot re-derive; a tariff with tiers but no zones or
+   codes, with a country key that is not two uppercase letters, or whose zone arrays
+   do not cover every tier with a rate, counts as locked. */
 function processHonold(ws,r,cols){
-  if(!honoldTariff())return null;
+  const t=honoldTariff();
+  if(!t)return null;
   if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;
   const fr=cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0;
-  const noFr=!(Math.abs(fr)>0);
-  if(noFr&&cols.fr_dl>=0&&cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T_DACHSER))return P.zustell2;
-  if(noFr)return P.abweichGewichte;
+  if(!(Math.abs(fr)>0)){
+    if(cols.fr_dl>=0&&cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T_DACHSER))return P.zustell2;
+    return P.abweichGewichte;
+  }
   const tv=honoldTierIdx(cols.vkg>=0?cellNum(ws,r,cols.vkg):0);
   if(tv===null)return P.abweichGewichte;
-  const td=honoldTierIdx(cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0);
-  return (td===null||tv===td)?P.honoldBisherigerTarif:P.abweichGewichte;
+  const land=String(cols.empf_land>=0?cellStr(ws,r,cols.empf_land):'').trim().toUpperCase();
+  /* The country cell is workbook-controlled, so the zone list is taken only when it
+     really is an array: a key like toString or __proto__ would otherwise reach an
+     inherited non-iterable and throw inside runRules(), which has no try/catch. */
+  const labels=Array.isArray(t.codes[land])?t.codes[land]:[];
+  for(const label of labels){
+    const rates=t.zones[label];
+    if(Array.isArray(rates)&&rates[tv]!=null&&Math.abs(rates[tv]-fr)<=HONOLD_RATE_TOL)return P.honoldBisherigerTarif;
+  }
+  return P.abweichGewichte;
 }
 
 /* Run rules across the workbook without mutating files. Returns in-memory results + stats. */
@@ -2722,7 +2759,7 @@ async function runProcess(){
     resultBlob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',compression:'DEFLATE',compressionOptions:{level:6}});
     setProgress(100);
     renderStats(rep);
-    const skipMsg=(selectedFW==='honold'&&!honoldTariff())?'Honold tariff not unlocked (passphrase needed)':'Stat_Freigabe ≠ 10';
+    const skipMsg=(selectedFW==='honold'&&!honoldTariff())?'Honold tariff locked or incomplete':'Stat_Freigabe ≠ 10';
     showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (${skipMsg})${wantReason?' · reason column written':''}.`,'ok');
     document.getElementById('btnDl').style.display='block';
   }catch(e){showLog('Ritual failed: '+e.message+'\n'+e.stack,'err');console.error(e);}
@@ -2785,7 +2822,7 @@ const TESTER_FIELDS={
   honold:[
     ['stat','Stat_Freigabe','num'],['fr_dl','FR Kosten DL','num'],
     ['zz','ZZ Differenz','num'],
-    ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
+    ['vkg','Volumen kg','num'],
     ['empf_land','Empf.-Land','str'],
   ],
 };
@@ -2831,9 +2868,9 @@ const TESTER_PRESETS={
     {name:'Fremdnummer empty tarif',values:{stat:10,tarif:'',fr:29.5,maut:2.6,tz:2.51,vkg:120,vkg_dl:120}},
   ],
   honold:[
-    {name:'Volumen kg / DL in the same Bis bracket',values:{stat:10,fr_dl:127.25,vkg:588,vkg_dl:570}},
-    {name:'Volumen kg / DL in different Bis brackets',values:{stat:10,fr_dl:127.25,vkg:588,vkg_dl:493}},
-    {name:'ZZ second delivery (20381523 row 4)',values:{stat:10,vkg:157,vkg_dl:157,zz:35.08}},
+    {name:'FR = OLD tariff rate for the bracket (AT 588 kg, 127.25)',values:{stat:10,fr_dl:127.25,vkg:588,empf_land:'AT'}},
+    {name:'FR = OLD tariff rate, weight in another bracket (AT 337 kg, 143.14)',values:{stat:10,fr_dl:143.14,vkg:337,empf_land:'AT'}},
+    {name:'ZZ second delivery (20381523 row 4)',values:{stat:10,vkg:157,zz:35.08}},
   ],
 };
 
@@ -2917,7 +2954,7 @@ function buildSyntheticWs(fw,userVals){
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
     wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','colli','brutto','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
-    honold:['target','stat','fr_dl','vkg','vkg_dl','empf_land','empf_plz'],
+    honold:['target','stat','fr_dl','vkg','empf_land','empf_plz'],
   }[fw]||[];
   for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
   return{ws,cols};
@@ -2946,7 +2983,7 @@ function runTester(){
   const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   let body;
   if(result===null){
-    const why=(fw==='honold'&&!honoldTariff())?'the Honold tariff is not unlocked (passphrase needed)':'Stat_Freigabe ≠ 10';
+    const why=(fw==='honold'&&!honoldTariff())?'the Honold tariff is locked or incomplete':'Stat_Freigabe ≠ 10';
     body='<div class="to-null">null — row would be skipped ('+why+').</div>';
   } else if(result===''){
     body='<div class="to-empty">empty — no trigger fired, row would be filled with blank.</div>';
@@ -3301,7 +3338,7 @@ const CANONICAL_INPUT_ORDER={
             'referenz','anz_colli','brutto_kg','vkg','vkg_dl',
            'abg_land','abg_plz','empf_land','empf_plz','empf_ort','zone',
            'kostenstelle','sachkonto'],
-  honold:['stat','fr_dl','vkg','vkg_dl','empf_land','empf_plz',
+  honold:['stat','fr_dl','vkg','empf_land','empf_plz',
            /* Last on purpose, like dachser's referenz: existing CSV columns stay put. */
            'zz_diff'],
 };
@@ -3743,7 +3780,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('kostenstelle',cols.kostenstelle);get('sachkonto',cols.sachkonto);
   } else if(fw==='honold'){
     get('stat',cols.stat);get('fr_dl',cols.fr_dl);
-    get('vkg',cols.vkg);get('vkg_dl',cols.vkg_dl);
+    get('vkg',cols.vkg);
     get('empf_land',cols.empf_land);get('empf_plz',cols.empf_plz);
     get('zz_diff',cols.zz);
   }
@@ -4823,7 +4860,7 @@ const INPUT_GLOSSARY={
   tarif             :'Total Kosten lt. Tarif — booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
   fr_diff           :'FR Differenz — freight-charge delta vs tariff (numeric, signed).',
   fr_tarif          :'FR Kosten lt. Tarif — the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier.',
-  fr_dl             :'FR Kosten DL — the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it is only a blank / 0 guard: the note is decided by comparing the Volumen kg bracket against the Volumen kg DL bracket from the encrypted OLD tariff (assets/honold-tariff.enc.json).',
+  fr_dl             :'FR Kosten DL — the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it decides the note: equal to the OLD tariff rate that Empf.-Land publishes for the bracket the row\'s Volumen kg falls in means the previous tariff is still being billed.',
   exp_diff          :'EXP Differenz — express/priority surcharge delta (numeric, signed).',
   exp_dl            :'EXP Kosten DL — DL-side express cost (Dachser-only signal).',
   mt_diff           :'MT/Maut Differenz — toll delta (numeric, signed).',
@@ -4849,8 +4886,8 @@ const INPUT_GLOSSARY={
   nx_diff           :'NX Differenz — generic demand surcharge (DHL).',
   os_diff           :'OS Differenz — oversize piece surcharge (DHL).',
   avis_diff         :'AVIS Differenz — Wackler-only avisierung delta. Codes ±7.5/±8.5/±6.5/±8.7 each map to a specific phrase. AVIS=1 has its own phrase.',
-  vkg               :'Volumen kg — gross/volume weight on the audit row (numeric).',
-  vkg_dl            :'Volumen kg DL — DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table.',
+  vkg               :'Volumen kg — gross/volume weight on the audit row (numeric). On Honold rows it picks the Bis bracket FR Kosten DL is compared against.',
+  vkg_dl            :'Volumen kg DL — DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table. Not read on Honold rows: a multi-reference ReferenzNr makes it unreliable.',
   anz_colli         :'Anz. Colli — package count. For Wackler rows with at least 7 Colli, chargeable weight is max(Anz. Colli × 285, Volumen kg, Brutto kg).',
   brutto_kg          :'Brutto kg — gross weight used in Wackler chargeable-weight calculation when Anz. Colli is at least 7.',
   anz_sdg           :'Anz.Sdg — number of shipments on the row (Dachser).',
@@ -4862,7 +4899,7 @@ const INPUT_GLOSSARY={
   ki_zw_plz         :'KI_ZW_PLZ — Zwischenempfänger (intermediate-consignee) ZIP code (Dachser). The actual deviating hub daZWNote reports on a REFERENZ3=ZW row — distinct from, and preferred over, Empf.-PLZ.',
   ki_zw_ort         :'KI_ZW_ORT — Zwischenempfänger (intermediate-consignee) city (Dachser). Paired with ki_zw_plz in the ZW note; falls back to Empf.-Ort when absent.',
   abg_land          :'Abg.-Land — origin country code (Wackler). Together with empf_land it classifies the lane (DE→DE national vs international) that decides which rate card + zone the freight is published under (wacklerLane).',
-  empf_land         :'Empf.-Land — destination country code (Wackler). Non-DE ⇒ international lane keyed by this country + Empf.-PLZ; DE (with DE/blank origin) ⇒ national lane, zone from Empf.-PLZ.',
+  empf_land         :'Empf.-Land — destination country code. Wackler: non-DE means an international lane keyed by this country + Empf.-PLZ, DE (with DE/blank origin) a national lane with the zone from Empf.-PLZ. Honold: selects the OLD-tariff zone columns FR Kosten DL is matched against.',
   abg_plz           :'Abg.-PLZ — origin postal code (Wackler). Zone-resolves the non-German side on an import lane (Abg.-Land ≠ DE).',
   zone              :'Tarifzone — explicit rate-card zone token (DE1..DE9 national, or AT1/CH2/FR3/TR/… international). When present it wins over the Land/PLZ lane classification.',
   c502_dl           :'502 Kosten DL — Einlagern (into-storage) cost line (Dachser). Any non-zero value emits "Einlagern".',
@@ -4904,8 +4941,8 @@ const FORWARDER_SPEC={
   honold:{
     processor:'processHonold',
     resolver :'resolveHonold',
-    gate     :'Stat_Freigabe == 10 (and the OLD tariff must be unlocked — rows are skipped, not blanked, without it)',
-    notes    :'Two rules. A ZZ cost line can be a second delivery attempt billed on its own: when its Differenz clears the Dachser difference threshold (T_DACHSER, 0.08 by default) and FR Kosten DL is blank / 0, the whole note is "2. Zustellung", decided before the weight comparison; a row that carries freight as well as a ZZ charge keeps the weight note. A layout without a ZZ group resolves that column to -1 and the branch is off. Otherwise Volumen kg and Volumen kg DL in the same Bis bracket of the encrypted OLD tariff (assets/honold-tariff.enc.json) means the previous tariff is still being billed; a blank / 0 FR, a missing / 0 Volumen kg, or a Volumen kg DL in a different bracket is a weight difference. The destination country is no longer consulted.',
+    gate     :'Stat_Freigabe == 10, and the OLD tariff must be unlocked and complete (tiers, zone rates, country codes); rows are skipped, not blanked, otherwise',
+    notes    :'Two rules, decided from FR Kosten DL. A ZZ cost line can be a second delivery attempt billed on its own: when its Differenz clears the Dachser difference threshold (T_DACHSER, 0.08 by default) and FR Kosten DL is blank / 0, the whole note is "2. Zustellung"; a row that carries freight as well as a ZZ charge is decided by the second rule. A layout without a ZZ group resolves that column to -1 and the branch is off. Otherwise the OLD tariff (assets/honold-tariff.enc.json) is read by rate: the row keeps the previous-tariff note when FR Kosten DL equals a zone rate published for its Empf.-Land in the Bis bracket its Volumen kg falls in. Every zone of the country is a candidate, because the row carries the country but not the zone, and no OLD amount sits at two different brackets across the zones of one country (measured 0 for CH, ES, FR, GB, GR, IT, NO, PL, PT, SE). A blank / 0 FR, a missing / 0 Volumen kg, a destination country the tariff does not publish, or an FR that matches no zone rate at all is a weight difference. Volumen kg DL is not read: it is unreliable when ReferenzNr lists several references.',
   },
 };
 

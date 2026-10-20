@@ -22,8 +22,11 @@ const BUNDLES = {
   'assets/wackler-ratecards.enc.json': await encryptBundle(
     'globalThis.WACKLER_RATECARD = { tiers: [50, 100] };\n' +
     'globalThis.WACKLER_NATIONAL_RATECARD = { tiers: [50] };', FAKE),
+  /* The engine consumes all three parts (tiers, zones, country codes); a bundle
+     with only tiers is not usable, see the tariffs-only test below. */
   'assets/honold-tariff.enc.json': await encryptBundle(
-    'globalThis.HONOLD_TARIFF = { tiers: [50] };', FAKE),
+    'globalThis.HONOLD_TARIFF = { tiers: [50], zones: { "AT1 \u00d6sterreich": [10] }, ' +
+    'codes: { AT: ["AT1 \u00d6sterreich"] } };', FAKE),
   'assets/dachser-ratecards.enc.json': await encryptBundle(
     'globalThis.DACHSER_RATECARDS = { ok: 1 };', FAKE),
 };
@@ -217,6 +220,47 @@ test('unlock status: a wrong passphrase is reported, and the key is dropped', as
   assert.equal(store.has(SHARED_KEY), false);
   assert.equal(appended.length, 1);
   assert.equal(appended[0].id, 'tariffUnlockBtn');
+});
+
+test('unlock status: a Honold bundle the engine cannot consume is error/bundle-empty, never ready', async () => {
+  /* The rule reads tiers, the zone rate arrays and the country -> zone codes that
+     point at them, so a payload carrying only some of those - or empty containers,
+     which scripts/honold/build_tariff.py produces from a headers-only sheet because
+     it skips all-null zone columns - is one the engine cannot consume. The chip must
+     say so instead of a green "loaded". */
+  const unusable = {
+    'tiers only': '{ tiers: [50] }',
+    'empty containers': '{ tiers: [], zones: {}, codes: {} }',
+    'no zone arrays and no codes': '{ tiers: [50, 100], zones: {}, codes: {} }',
+    'codes with an empty zone list': '{ tiers: [50, 100], zones: { "X": [10, 20] }, codes: { AT: [] } }',
+    'zone array shorter than tiers': '{ tiers: [50, 100, 500], ' +
+      'zones: { "AT1 \\u00d6sterreich": [10, 20] }, codes: { AT: ["AT1 \\u00d6sterreich"] } }',
+    /* A zone of nulls carries no rate, and a lower-case country key is one the
+       engine never looks up, so neither may report ready. */
+    'zone array with no rate': '{ tiers: [50, 100], ' +
+      'zones: { "AT1 \\u00d6sterreich": [null, null] }, codes: { AT: ["AT1 \\u00d6sterreich"] } }',
+    'lower-case country key': '{ tiers: [50, 100], ' +
+      'zones: { "AT1 \\u00d6sterreich": [10, 20] }, codes: { at: ["AT1 \\u00d6sterreich"] } }',
+  };
+  const encrypted = {};
+  for (const [name, literal] of Object.entries(unusable)) {
+    encrypted[name] = await encryptBundle(`globalThis.HONOLD_TARIFF = ${literal};`, FAKE);
+  }
+  for (const [name, bundle] of Object.entries(encrypted)) {
+    const store = new Map([[SHARED_KEY, FAKE]]);
+    const bundles = { ...BUNDLES, 'assets/honold-tariff.enc.json': bundle };
+    const fetchImpl = async (url) => ({ ok: true, status: 200, json: async () => bundles[url] });
+    const { context } = makeContext(store, fetchImpl);
+    load('tariff-status.js', context);
+    loadLoaders(context);
+
+    await until(() => snap(context).states.honold.state === 'error');
+
+    const honold = snap(context).states.honold;
+    assert.equal(honold.state, 'error', name);
+    assert.equal(honold.detail, 'bundle-empty', name);
+    assert.notEqual(honold.state, 'ready', name);
+  }
 });
 
 test('unlock status: an unavailable artifact is reported and keeps the key', async () => {

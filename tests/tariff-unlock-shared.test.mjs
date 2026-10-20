@@ -21,7 +21,9 @@ const LEGACY_KEY = 'wackler_rc_pass';
 
 const BUNDLES = {
   'assets/wackler-ratecards.enc.json': await encryptBundle('globalThis.WACKLER_RATECARD = { ok: 1 };', FAKE),
-  'assets/honold-tariff.enc.json': await encryptBundle('globalThis.HONOLD_TARIFF = { tiers: [50] };', FAKE),
+  'assets/honold-tariff.enc.json': await encryptBundle(
+    'globalThis.HONOLD_TARIFF = { tiers: [50], zones: { "AT1 \\u00d6sterreich": [10] }, ' +
+    'codes: { AT: ["AT1 \\u00d6sterreich"] } };', FAKE),
 };
 
 function makeContext(store, fetchImpl) {
