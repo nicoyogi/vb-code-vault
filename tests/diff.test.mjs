@@ -161,6 +161,10 @@ test('rowUid: a key added for one forwarder does not re-key that key for the oth
   const dhlEnriched = e.rowUid('dhl', 'Sheet1', 5, { stat: '10', tarif: '12,74', el_diff: '2' });
   assert.equal(dhlEnriched, dhlLegacy,
     'DHL el_diff is a later export and must stay out of the uid seed');
+  const honoldLegacy = e.rowUid('honold', 'Sheet1', 5, { stat: '10', fr_dl: '127,25', vkg: '588' });
+  const honoldZz = e.rowUid('honold', 'Sheet1', 5, { stat: '10', fr_dl: '127,25', vkg: '588', zz_diff: '35.08' });
+  assert.equal(honoldZz, honoldLegacy,
+    'Honold zz_diff is a later export and must stay out of the uid seed');
 });
 
 /* ── collectInputsForRow — the export must carry every cell the engine gates on ── */

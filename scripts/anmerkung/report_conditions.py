@@ -44,6 +44,14 @@ for name in ["dachser", "kn", "dhl", "wackler"]:
     m = re.search(rf"{name}:([\d.]+)", src)
     if m:
         const[f"TH_DEFAULT_{name.upper()}"] = m.group(1)
+# The runtime thresholds are aliases of the persisted map (`let T_DACHSER = TH.dachser,
+# T_KN = TH.kn, ...`), not literals, so the const scan above never matches them and
+# every threshold in the report would render as "?". Resolve each alias to the default
+# it starts from.
+for fw in ["dachser", "kn", "dhl", "wackler"]:
+    m = re.search(rf"(?:let|,)\s*T_{fw.upper()}\s*=\s*TH\.(\w+)", src)
+    if m:
+        const[f"T_{fw.upper()}"] = const.get(f"TH_DEFAULT_{m.group(1).upper()}", "?")
 const["KONTIERUNG_ENABLED"] = "true" if "KONTIERUNG_ENABLED=false" not in src else "false"
 
 
@@ -374,16 +382,26 @@ story.append(PageBreak())
 # ════════ HONOLD ════════
 story.append(P("5. Honold — processHonold", h2))
 story.append(P(
-    "Gate: Stat = 10, plus the OLD tariff must be unlocked. The tariff matrix is business data and "
-    "ships encrypted (<code>assets/honold-tariff.enc.json</code>); until it is decrypted the engine "
-    "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. One rule: "
-    "Volumen kg and Volumen kg DL in the same weight bracket mean the previous tariff is still being billed, "
-    "a different DL bracket is a weight difference."
+    "Gate: Stat = 10, plus the OLD tariff must be unlocked and complete (tiers, zone rates, country codes). "
+    "The tariff matrix is business data and ships encrypted (<code>assets/honold-tariff.enc.json</code>); "
+    "until it is decrypted the engine "
+    "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. Two rules, "
+    "both decided from FR Kosten DL. "
+    "A ZZ cost line is a second delivery attempt billed on its own: when its Differenz clears the Dachser "
+    "difference threshold (T_DACHSER, " f"{k('T_DACHSER')} by default) and FR Kosten DL is blank / 0, the whole note is "
+    "&quot;2. Zustellung&quot;. A row that carries freight as well as a ZZ charge is decided by the second rule. "
+    "Otherwise FR Kosten DL is matched against the OLD tariff: the row keeps the previous-tariff note when it "
+    "equals a zone rate published for its Empf.-Land in the Bis bracket its Volumen kg falls in (every zone of "
+    "the country is a candidate, because the row carries the country but not the zone, and no OLD amount sits at "
+    "two different brackets across a country's zones - measured 0 for CH, ES, FR, GB, GR, IT, NO, PL, PT, SE), and "
+    "reads a weight difference otherwise. Volumen kg DL is not read: it is unreliable when ReferenzNr lists "
+    "several references."
 ))
 story.append(section_table([
-    ("Volumen kg and Volumen kg DL sit in the same Bis bracket of the OLD tariff (business test, no rates read), or Volumen kg DL is blank / 0", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
-    ("the two weights sit in different brackets", "Differenz aufgrund abweichender Gewichte"),
-    ("blank / 0 FR Kosten DL, or a missing / 0 Volumen kg", "Differenz aufgrund abweichender Gewichte"),
+    (f"ZZ Differenz above the Dachser difference threshold ({k('T_DACHSER')} by default) and FR Kosten DL blank / 0", "2. Zustellung"),
+    ("FR Kosten DL equals an OLD-tariff rate for the row's Empf.-Land in the bracket its Volumen kg falls in", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
+    ("FR Kosten DL matches no OLD-tariff rate for the row's Empf.-Land in that bracket (a rate of another bracket, or none at all)", "Differenz aufgrund abweichender Gewichte"),
+    ("blank / 0 FR Kosten DL, a missing / 0 Volumen kg, or no zone column for the destination country", "Differenz aufgrund abweichender Gewichte"),
 ]))
 story.append(P("Honold constants", h3))
 story.append(const_table([

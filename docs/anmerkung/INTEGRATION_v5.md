@@ -13,9 +13,10 @@ This repository integrates the v5 Anmerkung hardening into `assets/anmerkung.js`
 
 `npm test`:
 
-- 475 tests
-- 475 passed
+- 494 tests on a machine with the plaintext `assets/honold-tariff.js`
+- 494 passed
 - 0 failed
+- 3 of the 494 are the Honold workbook replays (20379045, 20381523, 20380293), and they report as skipped on a clone without that gitignored file; 491 pass there
 
 The integration manifest is refreshed against the current tracked source.
 

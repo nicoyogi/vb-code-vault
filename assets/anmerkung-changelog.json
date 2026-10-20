@@ -1,6 +1,20 @@
 {
-  "version": "1.53.0",
+  "version": "1.54.1",
   "entries": [
+    {
+      "ver": "1.54.1",
+      "date": "2026-10-20",
+      "items": [
+        "Honold - the note is now decided from FR Kosten DL, never from Volumen kg DL. A row reads 'Honold berechnet die Kosten nach dem bisherigen Tarif' when the billed freight equals an OLD-tariff rate that the destination country publishes in the bracket its Volumen kg falls in, and 'Differenz aufgrund abweichender Gewichte' otherwise. Volumen kg DL is unreliable when ReferenzNr lists several references, which is why the engine disagreed with 20379045 and 20381523; with the corrected cells both sheets now match in full (20379045 124 of 124, 20381523 41 of 41) and so does 20380293 (7 of 7). A standalone ZZ line still reads '2. Zustellung'. Honold training uids change once, because Volumen kg DL left the input set."
+      ]
+    },
+    {
+      "ver": "1.54.0",
+      "date": "2026-10-19",
+      "items": [
+        "Honold - a row whose ZZ cost line carries a Differenz and whose FR Kosten DL is blank or 0 now reads '2. Zustellung' before the tariff comparison: a ZZ charge with no freight is a second delivery attempt billed on its own. Row 4 of 20381523 (ZZ Differenz 35.08, FR Kosten DL blank, 157 / 157 kg) was the first such row and read 'Differenz aufgrund abweichender Gewichte'. A row that carries freight and a ZZ charge keeps the tariff/weight note, and sheets without a ZZ group are unchanged: 20379045 still matches 121 of 124 rows. On 20381523 the engine now agrees with the workbook on 36 of 41 rows - the five cross-bracket rows 9, 12, 15, 21 and 35 remain known disagreements between engine and workbook."
+      ]
+    },
     {
       "ver": "1.53.0",
       "date": "2026-10-19",
