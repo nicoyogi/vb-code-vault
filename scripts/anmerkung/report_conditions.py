@@ -299,15 +299,17 @@ story.append(PageBreak())
 # ════════ WACKLER ════════
 story.append(P("4. Wackler — processWackler", h2))
 story.append(P(
-    "Gate: Stat = 10 (otherwise only the Kontierung check runs). Fourteen numbered rules evaluated in "
+    "Gate: Stat = 10 (otherwise only the Kontierung check runs). Numbered rules evaluated in "
     "order with several early returns. Weight-tier logic uses the Wackler rate-card breakpoints "
     "(50 kg steps → 10 000 kg, open 999 999 bucket) shared by the national and international rate sheets."
 ))
 story.append(P("Terminal (early-return) rules", h3))
 story.append(section_table([
+    ("Empf.-PLZ 88499 and Empf.-Ort RIEDLINGEN (return hub, keyed on the recipient) - first rule, no exceptions: every other phrase is suppressed, since the freight/maut/fuel gaps are return artefacts", "Return, ok?"),
     ("TARIF '-' or '0' (non-empty), or blank + FR/MT/TZ signal — duplicate booking; all delta rules suppressed", "Fremdnummer xxx bereits berechnet in RExxx, ok?"),
     ("TARIF blank + SNK signal + no FR/MT/TZ + no known SNK/AVIS code — storage fee", "Lagergeld, ok?"),
     ("SNK &gt;= 1.0 × TARIF + no FR/MT/TZ + no codes (placeholder tariff)", "Pauschalfracht, ok?"),
+    ("|FR Differenz| &gt; T and the MT, SNK, TZ and AVIS Differenz cells all hold exactly zero - the freight is the only cost delta, sign-agnostic; all delta rules suppressed", "Pauschalfracht, ok?"),
 ]))
 story.append(P("AVIS surcharge codes", h3))
 story.append(section_table([
@@ -328,7 +330,6 @@ story.append(section_table([
     ("SNK ≈ 289", "Umverfügung"),
     ("SNK ≈ 49", "NL-12, ok?"),
     ("SNK ≈ 113", "NL-SPEZ, ok?"),
-    ("Empf. = 88499 RIEDLINGEN", "Return, ok?"),
     ("SNK ≈ 16", "NIGHTFIX"),
     ("SNK ≈ 81", "NL-10, ok?"),
     ("SNK ≈ 250", '"Zusatzkosten 250 €", ok?'),
@@ -350,21 +351,21 @@ story.append(section_table([
 ]))
 story.append(P("Fallback / additive rules", h3))
 story.append(section_table([
-    ("FR over T, no Gewichte/bundling/return fired", "Frachtdifferenz"),
+    ("FR over T, no Gewichte/bundling fired", "Frachtdifferenz"),
     ("MT over T", "Mautdifferenz"),
     ("|SNK| ≥ 5.0, unrecognised code, not bundled", "SNK Differenz"),
     ("SNK ≈ −150 (±2)", "hätte Hebebühne abrechnen dürfen"),
-    ("|TZ| ≥ 2.0, not on same-tier 'Wackler rechnet' row, not an FR credit — on a Hebebühne credit row the fuel gate queries the surcharge instead of flagging it", "Differenz Energiezuschlag // Dieselzuschlag ok?"),
+    ("|TZ| ≥ 2.0, not on same-tier 'Wackler rechnet' row, not an FR credit - 'Differenz treibstoff' when the fuel gap is the row's only finding, 'Differenz Energiezuschlag' when an FR, MT, SNK, AVIS, weight or bundling phrase fired as well; a Hebebühne credit row queries the surcharge instead", "Differenz treibstoff / Differenz Energiezuschlag / Dieselzuschlag ok?"),
     ("NL-FIX + FR + blank KOST/SACH — 'Zone korrekt?' prepended, Frachtdifferenz stripped", "Zone korrekt? // …"),
-    ("only rule left is TZ over T", "Differenz Energiezuschlag"),
+    ("only rule left is TZ over T, no other phrase fired", "Differenz treibstoff"),
     ("KOST &amp; SACH both blank/X (disabled)", "Kontierung?"),
 ]))
 
 story.append(Spacer(1, 6))
 story.append(P("Wackler constants", h3))
 story.append(const_table([
-    ("|TZ| trigger (rule 11)", k("WACKLER_TZ_ADDITIVE")),
-    ("|SNK| noise floor (rule 10)", k("WACKLER_SNK_NOISE")),
+    ("|TZ| trigger (rule 10)", k("WACKLER_TZ_ADDITIVE")),
+    ("|SNK| noise floor (rule 9)", k("WACKLER_SNK_NOISE")),
     ("SNK ≈ −150 ± 2 → Hebebühne", f"{k('WACKLER_HEBEBUEHNE_ABS')} ± {k('WACKLER_HEBEBUEHNE_TOL')}"),
     ("SNK ≥ ratio × TARIF → Pauschalfracht", f"× {k('WACKLER_PAUSCHAL_RATIO')}"),
     ("SNK ≈ 80 ± 0.5 → Terminzustellung (weighed)", f"{k('WACKLER_SNK_TERMIN80_ABS')} ± {k('WACKLER_SNK_TERMIN80_TOL')}"),
