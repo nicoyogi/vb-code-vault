@@ -1,0 +1,52 @@
+{
+ "schema": "wackler-rows/v1",
+ "source": "10369563 Soll-Ist-Vergleich.xlsx",
+ "outliers": [],
+ "rows": [
+  {
+   "row": 8,
+   "stat": "10",
+   "tarif": 141.17,
+   "snk_diff": 0,
+   "fr": 0,
+   "fr_tar": 114.78,
+   "fr_dl": 114.78,
+   "maut": 0,
+   "tz": 4.59,
+   "referenz": "2544566790,2544505895",
+   "colli": "13",
+   "brutto": "1859",
+   "vkg": "1480",
+   "vkg_dl": "379",
+   "empf_plz": "73312",
+   "empf_ort": "GEISLINGEN/STEIGE",
+   "kostenstelle": "211FO998",
+   "sachkonto": "612100",
+   "abg_land": "DE",
+   "empf_land": "DE",
+   "abg_plz": "88499",
+   "truth": "Differenz treibstoff"
+  },
+  {
+   "row": 32,
+   "stat": "10",
+   "tarif": 156.84,
+   "fr": 538.16,
+   "fr_tar": 156.84,
+   "fr_dl": 695,
+   "referenz": "81619636,81619614,81619610,81619608,81619638,81619634,81619621,81619601,81619606,81619600",
+   "colli": "10",
+   "brutto": "1034",
+   "vkg": "1034",
+   "vkg_dl": "1034",
+   "empf_plz": "42655",
+   "empf_ort": "Solingen",
+   "kostenstelle": "X",
+   "sachkonto": "X",
+   "abg_land": "DE",
+   "empf_land": "DE",
+   "abg_plz": "88499",
+   "truth": "Pauschalfracht, ok?"
+  }
+ ]
+}

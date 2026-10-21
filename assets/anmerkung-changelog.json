@@ -1,6 +1,13 @@
 {
-  "version": "1.54.1",
+  "version": "1.55.0",
   "entries": [
+    {
+      "ver": "1.55.0",
+      "date": "2026-10-21",
+      "items": [
+        "Wackler - a row delivered to the Riedlingen return hub (Empf.-PLZ 88499, Empf.-Ort RIEDLINGEN) now reads 'Return, ok?' alone, because the freight, maut and fuel gaps on a returned shipment are artefacts of the return rather than findings; all 11 inbound rows of the 2026-10-21 bundle carry nothing else. A row whose only cost delta is the freight (no MT, SNK, TZ or AVIS delta) now reads 'Pauschalfracht, ok?' instead of a bundling note (10369563 row 32). A fuel delta that is the row's only finding now reads 'Differenz treibstoff', while one that rides on another finding (FR, MT, SNK, AVIS, weight or bundling) keeps 'Differenz Energiezuschlag' (10369563 row 8; a freight credit drops the fuel note), and a liftgate credit keeps 'Dieselzuschlag ok?'. The three sheets that arrived corrected now agree on every released row (10369563 2 of 2, 10369566 9 of 9, 10369604 2 of 2), and the seven older Wackler sheets keep the cells they had."
+      ]
+    },
     {
       "ver": "1.54.1",
       "date": "2026-10-20",

@@ -482,13 +482,18 @@ const W_COLS = {
   fr_tar: 69, fr_dl: 70, colli: 71, brutto: 72,
 };
 
+/* Rule 2b calls a row flat freight only when MT, SNK, TZ and AVIS are all exactly zero, so the
+   cascade fixtures below carry the fuel spill 89 of the 90 released FR rows have, about 9% of
+   the freight delta (13% on the 10369566 return rows; 10361841 row 11: FR -10.44 / TZ -0.94).
+   The lone exception is 10369563 row 32 (TZ blank), the flat-freight row rule 2b exists to claim. */
+
 test('processWackler: existing annotation is ignored — output recomputed from inputs', () => {
   // target cell already holds a phrase, but the engine never preserves it:
   // VKG=120 and VKG_DL=130 both fall in the 150 kg bucket -> same-tier wording,
   // proving the pre-existing "Differenz aufgrund abweichender Gewichte" is discarded.
   const ws = makeRow(R, {
     50: 'Differenz aufgrund abweichender Gewichte',
-    51: 10, 52: '100', 55: '5', 59: '120', 60: '130', 63: '1', 64: '2',
+    51: 10, 52: '100', 55: '5', 57: '0.45', 59: '120', 60: '130', 63: '1', 64: '2',
   });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 150kg ab');
 });
@@ -534,13 +539,13 @@ test('processWackler: SNK code 38 -> NL-FIX', () => {
 
 test('processWackler: same-tier weight diff + FR -> "Wackler rechnet Frachtrate ... ab"', () => {
   // VKG=120 and VKG_DL=130 both fall in the 150 kg bucket
-  const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 59: '120', 60: '130', 63: '1', 64: '2' });
+  const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 57: '0.45', 59: '120', 60: '130', 63: '1', 64: '2' });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 150kg ab');
 });
 
 test('processWackler: cross-tier weights + FR -> Differenz aufgrund abweichender Gewichte', () => {
   // VKG=120 (tier 150) vs VKG_DL=400 (tier 400) fall in different rate buckets
-  const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 59: '120', 60: '400', 63: '1', 64: '2' });
+  const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 57: '0.45', 59: '120', 60: '400', 63: '1', 64: '2' });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 });
 
@@ -556,18 +561,18 @@ test('processWackler: 7+ Colli cascade judges on the REAL weights, names tiers v
 
   // Different REAL-weight tiers (VKG 1200 vs DL 1950/2200/2350) -> weight discrepancy, even
   // though the synthetic pallet volume (7×285=1995) once steered these to "rechnet 2000kg".
-  let ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 1200, 60: 1950, 63: 1, 64: 2, 71: 7, 72: 1500 });
+  let ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 57: 0.45, 59: 1200, 60: 1950, 63: 1, 64: 2, 71: 7, 72: 1500 });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 
-  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 1200, 60: 2200, 63: 1, 64: 2, 71: 7, 72: 1500 });
+  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 57: 0.45, 59: 1200, 60: 2200, 63: 1, 64: 2, 71: 7, 72: 1500 });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 
-  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 1200, 60: 2350, 63: 1, 64: 2, 71: 7, 72: 2300 });
+  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 57: 0.45, 59: 1200, 60: 2350, 63: 1, 64: 2, 71: 7, 72: 2300 });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 
   // Same real-weight tier (2500/2550 -> 2600), single reference, no other signal -> Wackler
   // simply billed that tier's rate; the note names the tier of the synthetic chargeable weight.
-  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 2500, 60: 2550, 63: 1, 64: 2, 71: 7, 72: 1500 });
+  ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 57: 0.45, 59: 2500, 60: 2550, 63: 1, 64: 2, 71: 7, 72: 1500 });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 2600kg ab');
 
   // MT stays additive on a positive-FR "rechnet" row (fuel itemised, not absorbed).
@@ -582,7 +587,7 @@ test('processWackler: 7+ Colli, same tier, >= 6 references -> hätte gebündelt 
   // At six references the row is unambiguously several consignments on one booking
   // (AI-bundle 97181c3c 8 refs / a0405b05 6 refs), regardless of how closely the weights agree.
   const ws = makeRow(R, {
-    51: 10, 52: 100, 55: 5, 58: 'r1,r2,r3,r4,r5,r6',
+    51: 10, 52: 100, 55: 5, 57: 0.45, 58: 'r1,r2,r3,r4,r5,r6',
     59: 1200, 60: 1200, 63: 1, 64: 2, 71: 7, 72: 1500,
   });
   assert.equal(e.processWackler(ws, R, W_COLS), 'hätte gebündelt werden müssen');
@@ -593,7 +598,7 @@ test('processWackler: 7+ Colli, multi-ref weights within the near-band -> hätte
   // or not the two weights share a tier (AI-bundle 6756eaf6 2.3% / fa79ebc2 2.2% / 5e168bd5 2.8%).
   // VKG 1000 vs VKG_DL 1023 cross tiers, so only the near-band branch can produce the finding.
   const ws = makeRow(R, {
-    51: 10, 52: 100, 55: 5, 58: 'r1,r2',
+    51: 10, 52: 100, 55: 5, 57: 0.45, 58: 'r1,r2',
     59: 1000, 60: 1023, 63: 1, 64: 2, 71: 8, 72: 1200,
   });
   assert.equal(e.processWackler(ws, R, W_COLS), 'hätte gebündelt werden müssen');
@@ -603,12 +608,14 @@ test('processWackler: 7+ Colli, pallet volume materially outruns the declared vo
   // colli*285 (1995) far exceeds VKG=VKG_DL=980 and the synthetic volume tier (2000) sits above
   // the declared tier (1000): the pallet space is the true chargeable weight and the DL billed a
   // lower one -> weight discrepancy (AI-bundle ec7eb2d5 1995 vs 980).
-  const ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 59: 980, 60: 980, 63: 1, 64: 2, 71: 7 });
+  const ws = makeRow(R, { 51: 10, 52: 100, 55: 5, 57: 0.45, 59: 980, 60: 980, 63: 1, 64: 2, 71: 7 });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte');
 });
 
-test('processWackler: bare FR delta -> Frachtdifferenz', () => {
-  const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 63: '1', 64: '2' });
+test('processWackler: FR delta plus a sub-threshold TZ, no weights -> Frachtdifferenz', () => {
+  // TZ 0.45 is below WACKLER_TZ_ADDITIVE and that is the only reason this shape escapes rule 2b,
+  // which demands TZ exactly zero, so the freight fallback labels the bare freight delta.
+  const ws = makeRow(R, { 51: 10, 52: '100', 55: '5', 57: '0.45', 63: '1', 64: '2' });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Frachtdifferenz');
 });
 
@@ -617,9 +624,165 @@ test('processWackler: blank KOST/SACH only stays silent while KONTIERUNG_ENABLED
   assert.equal(e.processWackler(ws, R, W_COLS), '');
 });
 
-test('processWackler: TZ >= 2.0 alone -> Differenz Energiezuschlag', () => {
+test('processWackler: standalone fuel (no FR/MT delta) -> "Differenz treibstoff"', () => {
+  // 10369563 row 8 (FR 0, MT 0, TZ 4.59) is the corpus's only standalone fuel row: no
+  // freight or toll phrase rides on it, so the auditor names the fuel itself.
   const ws = makeRow(R, { 51: 10, 52: '100', 57: '5', 63: '1', 64: '2' });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz Energiezuschlag');
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz treibstoff');
+});
+
+test('processWackler: a row delivered to the Riedlingen return hub reads "Return, ok?" alone', () => {
+  // 10369566 row 6: FR 80.19, MT 6.96, TZ 10.42 all read as findings until the row is
+  // recognised as a return; the truth cell carries the Return phrase and nothing else.
+  const ws = makeRow(R, {
+    51: 10, 52: '152.28', 55: '80.19', 56: '6.96', 57: '10.42', 58: '26381853',
+    59: '1500', 60: '1500', 61: '88499', 62: 'RIEDLINGEN', 63: '211FO998', 64: '612100',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Return, ok?');
+});
+
+test('processWackler: the return branch needs the exact 88499 / RIEDLINGEN pair', () => {
+  const cells = {
+    51: 10, 52: '152.28', 55: '80.19', 56: '6.96', 57: '10.42', 58: '26381853',
+    59: '1500', 60: '1500', 63: '211FO998', 64: '612100', 71: '8', 72: '1500',
+  };
+  const out = 'Differenz aufgrund abweichender Gewichte // Mautdifferenz // Differenz Energiezuschlag';
+  assert.equal(e.processWackler(makeRow(R, { ...cells, 61: '88498', 62: 'RIEDLINGEN' }), R, W_COLS), out);
+  assert.equal(e.processWackler(makeRow(R, { ...cells, 61: '88499', 62: 'RIEDLINGENX' }), R, W_COLS), out);
+});
+
+test('processWackler: FR is the only cost delta -> "Pauschalfracht, ok?" (10369563 row 32)', () => {
+  // 10369563 row 32 is the one released row whose only cost delta is the freight: FR 538.16
+  // against a 156.84 tariff, MT/SNK/TZ/AVIS all blank. Owner ruling 2026-10-21: "only FR always
+  // Pauschalfracht".
+  const ws = makeRow(R, {
+    51: 10, 52: '156.84', 55: '538.16', 58: 'r1,r2,r3,r4,r5,r6,r7,r8,r9,r10',
+    59: '1034', 60: '1034', 63: 'X', 64: 'X', 69: '156.84', 70: '695', 71: '10', 72: '1034',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Pauschalfracht, ok?');
+});
+
+test('processWackler: a return row wins over the flat-freight arm', () => {
+  // Same flat-freight shape (10369563 row 32), delivered to the Riedlingen return hub. The
+  // return branch runs before rule 2b, so the freight arm cannot claim the row.
+  const ws = makeRow(R, {
+    51: 10, 52: '156.84', 55: '538.16', 58: 'r1,r2,r3,r4,r5,r6,r7,r8,r9,r10',
+    59: '1034', 60: '1034', 61: '88499', 62: 'RIEDLINGEN', 63: 'X', 64: 'X',
+    69: '156.84', 70: '695', 71: '10', 72: '1034',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Return, ok?');
+});
+
+test('processWackler: an FR delta with a TZ delta keeps the rate-card note (10361841 row 11)', () => {
+  // 1 ref, 389/389 kg, FR -10.44 with TZ -0.94 (9% of FR): the freight is not the only cost
+  // delta, so rule 2b stays off and the weight cascade names the tier. The row's SNK -0.04 is
+  // left out so the TZ term is the one this test exercises.
+  const ws = makeRow(R, {
+    51: 10, 52: '119.87', 55: '-10.44', 57: '-0.94', 58: '2544271490',
+    59: '389', 60: '389', 63: '211FO002', 64: '612110', 69: '104.39', 70: '93.95',
+    71: '2', 72: '389',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Wackler rechnet Frachtrate für 400kg ab');
+});
+
+test('processWackler: the FR-only shape ignores reference count and weight agreement', () => {
+  // The old arm needed 2+ references and VKG === VKG_DL; neither condition is left, so the same
+  // row 32 shape reads flat freight with one reference and with 560/140 kg.
+  const base = {
+    51: 10, 52: '261.14', 55: '1084.04', 63: '1', 64: '2', 69: '229.34', 70: '1313.38',
+    71: '4', 72: '560',
+  };
+  assert.equal(e.processWackler(makeRow(R, { ...base, 58: 'a', 59: '560', 60: '140' }), R, W_COLS),
+    'Pauschalfracht, ok?');
+  assert.equal(e.processWackler(makeRow(R, { ...base, 58: 'a,b,c', 59: '560', 60: '140' }), R, W_COLS),
+    'Pauschalfracht, ok?');
+  assert.equal(e.processWackler(makeRow(R, { ...base, 58: 'a', 59: '1200', 60: '1200' }), R, W_COLS),
+    'Pauschalfracht, ok?');
+});
+
+test('processWackler: an FR credit with every other block zero reads "Pauschalfracht, ok?"', () => {
+  // "Only FR" is sign-agnostic: a freight credit that is the sole cost delta is the same
+  // flat-rate reading as a charge.
+  const ws = makeRow(R, {
+    51: 10, 52: '32.07', 55: '-108.93', 58: 'a', 59: '100', 60: '100',
+    63: '1', 64: '2', 69: '32.07', 70: '-76.86',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Pauschalfracht, ok?');
+});
+
+test('processWackler: an MT, TZ, SNK or AVIS signal keeps the flat-freight arm off', () => {
+  const flat = {
+    51: 10, 52: '156.84', 55: '538.16', 58: 'r1,r2,r3,r4,r5,r6,r7,r8,r9,r10',
+    59: '1034', 60: '1034', 63: 'X', 64: 'X', 69: '156.84', 70: '695', 71: '10', 72: '1034',
+  };
+  assert.equal(e.processWackler(makeRow(R, { ...flat, 56: '5' }), R, W_COLS),
+    'hätte gebündelt werden müssen // Mautdifferenz');
+  assert.equal(e.processWackler(makeRow(R, { ...flat, 57: '2.1' }), R, W_COLS),
+    'hätte gebündelt werden müssen // Differenz Energiezuschlag');
+  assert.equal(e.processWackler(makeRow(R, { ...flat, 54: '6' }), R, W_COLS),
+    'hätte gebündelt werden müssen');
+  assert.equal(e.processWackler(makeRow(R, { ...flat, 53: '7.5' }), R, W_COLS),
+    'Avis, ok? // hätte gebündelt werden müssen');
+});
+
+test('processWackler: FR + MT keeps the weight cascade (not flat freight)', () => {
+  const ws = makeRow(R, {
+    51: 10, 52: '156.84', 55: '538.16', 56: '5', 58: 'r1,r2,r3,r4,r5,r6,r7,r8,r9,r10',
+    59: '1034', 60: '1034', 63: 'X', 64: 'X', 69: '156.84', 70: '695', 71: '10', 72: '1034',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'hätte gebündelt werden müssen // Mautdifferenz');
+});
+
+test('processWackler: FR + SNK 6 keeps the weight cascade (not flat freight)', () => {
+  const ws = makeRow(R, {
+    51: 10, 52: '156.84', 54: '6', 55: '538.16', 58: 'r1,r2,r3,r4,r5,r6,r7,r8,r9,r10',
+    59: '1034', 60: '1034', 63: 'X', 64: 'X', 69: '156.84', 70: '695', 71: '10', 72: '1034',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'hätte gebündelt werden müssen');
+});
+
+test('processWackler: FR + AVIS 7.5 keeps the weight cascade (not flat freight)', () => {
+  const ws = makeRow(R, {
+    51: 10, 52: '156.84', 53: '7.5', 55: '538.16', 58: 'r1,r2,r3,r4,r5,r6,r7,r8,r9,r10',
+    59: '1034', 60: '1034', 63: 'X', 64: 'X', 69: '156.84', 70: '695', 71: '10', 72: '1034',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Avis, ok? // hätte gebündelt werden müssen');
+});
+
+test('processWackler: fuel riding on an FR delta keeps "Differenz Energiezuschlag"', () => {
+  // 10362276 row 18: FR +22.19 with TZ +2.00. The fuel gap is the FR percentage trickling
+  // through, so the auditor keeps the Energiezuschlag wording.
+  const ws = makeRow(R, {
+    51: 10, 52: '578.83', 54: '0.09', 55: '22.19', 57: '2', 58: 'a,b',
+    59: '3135', 60: '3135', 63: '1', 64: '2', 69: '493.22', 70: '515.41', 71: '11', 72: '3135',
+  });
+  assert.equal(e.processWackler(ws, R, W_COLS),
+    'Wackler rechnet Frachtrate für 3500kg ab // Differenz Energiezuschlag');
+});
+
+test('processWackler: fuel riding on an MT delta keeps "Differenz Energiezuschlag"', () => {
+  // No MT-only fuel row exists in the corpus (all 15 Energiezuschlag rows also carry FR),
+  // so the toll branch follows the same rule as the freight branch.
+  const ws = makeRow(R, { 51: 10, 52: '100', 56: '3', 57: '5', 63: '1', 64: '2' });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Mautdifferenz // Differenz Energiezuschlag');
+});
+
+test('processWackler: fuel with an SNK code keeps "Differenz Energiezuschlag"', () => {
+  // SNK 43 (2.Zustellung) is a finding of its own, so the fuel gap is not the row's only one.
+  const ws = makeRow(R, { 51: 10, 52: '100', 54: '43', 57: '5', 63: '1', 64: '2' });
+  assert.equal(e.processWackler(ws, R, W_COLS),
+    '2.Zustellung ok? // Differenz Energiezuschlag');
+});
+
+test('processWackler: fuel with an AVIS code keeps "Differenz Energiezuschlag"', () => {
+  const ws = makeRow(R, { 51: 10, 52: '100', 53: '7.5', 57: '5', 63: '1', 64: '2' });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Avis, ok? // Differenz Energiezuschlag');
+});
+
+test('processWackler: sub-threshold fuel alone keeps the standalone wording', () => {
+  // TZ 0.5 is below WACKLER_TZ_ADDITIVE, so only the pure-fuel fallback can emit.
+  const ws = makeRow(R, { 51: 10, 52: '100', 57: '0.5', 63: '1', 64: '2' });
+  assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz treibstoff');
 });
 
 test('processWackler: Mautdifferenz stays additive on a same-tier "Wackler rechnet" row', () => {
@@ -778,7 +941,7 @@ test('processWackler: DOMESTIC billed-tier uses the national rate card (DE2 150 
   // card leaves DE cells blank); the note stays plain — the auditor rejected the EUR suffix
   // (AI-bundle 2026-06-12).
   const ws = makeRow(R, {
-    51: 10, 52: '32.46', 55: '-2.96',
+    51: 10, 52: '32.46', 55: '-2.96', 57: '-0.27',
     58: '2543200001', 59: '148', 60: '149',
     61: '80331', 62: 'München', 63: '211FO002', 64: '612110', 65: 'DE2',
   });
@@ -810,7 +973,7 @@ test('processWackler: Abg.-Land=DE & Empf.-Land=DE classify domestic; zone comes
   // because the country is known to be DE. The FR credit -2.96 re-tiers 150 -> 200 on the
   // national card; the note stays plain (no EUR suffix).
   const ws = makeRow(R, {
-    51: 10, 52: '32.46', 55: '-2.96',
+    51: 10, 52: '32.46', 55: '-2.96', 57: '-0.27',
     58: '2543200001', 59: '148', 60: '149',
     61: '70173', 62: 'Stuttgart', 63: '211FO002', 64: '612110',
     66: 'DE', 67: 'DE',
@@ -826,7 +989,7 @@ test('processWackler: foreign Empf.-Land with a German-looking PLZ gets no spuri
   // DE8 under the old bare-PLZ fallback), but Empf.-Land=HR classifies the row international, so it
   // never resolves a German zone and the "Wackler rechnet" note stays free of any "(DEn: … €)".
   const ws = makeRow(R, {
-    51: 10, 52: '500', 55: '30',
+    51: 10, 52: '500', 55: '30', 57: '2.70',
     58: '2543299001', 59: '9760', 60: '9760',
     61: '10450', 62: 'Zagreb', 63: '211FO002', 64: '612110',
     66: 'HR', 67: 'DE',
@@ -1292,6 +1455,47 @@ test('processWackler: 2026-08-31 bundle — pallet volume boundary gate (4c4576a
     e.processWackler(ws, R, W_COLS),
     'Wackler rechnet Frachtrate für 9000kg ab // Differenz Energiezuschlag'
   );
+});
+
+/* ── 10369563 / 10369566 / 10369604: the corrected 2026-10-21 bundle ─────────
+   Inputs come from the tool's own Before/ workbooks, the expected strings from the
+   truth workbooks. None of the 13 rows carries a rate-card tier, so these replays do
+   not need the local rate card. Mismatches: none. */
+function replayWackler(name) {
+  const fx = JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
+  assert.deepEqual(fx.outliers, []);
+  const mismatches = [];
+  for (const x of fx.rows) {
+    const cells = {};
+    for (const [k, v] of Object.entries(x)) {
+      if (k === 'row' || k === 'truth') continue;
+      assert.ok(W_COLS[k] !== undefined, `${name} row ${x.row}: unknown column ${k}`);
+      cells[W_COLS[k]] = v;
+    }
+    const out = e.processWackler(makeRow(R, cells), R, W_COLS);
+    if (out !== x.truth) mismatches.push(`${x.row}: ${out} != ${x.truth}`);
+  }
+  return { fx, mismatches };
+}
+
+test('processWackler: 10369563 replay agrees on 2/2, no mismatches', () => {
+  // Row 8 is the standalone fuel row, row 32 the flat-freight row.
+  const { fx, mismatches } = replayWackler('wackler-10369563-rows.json');
+  assert.equal(fx.rows.length, 2);
+  assert.deepEqual(mismatches, []);
+});
+
+test('processWackler: 10369566 replay agrees on 9/9, no mismatches', () => {
+  // Every row 4-12 was delivered to the Riedlingen return hub.
+  const { fx, mismatches } = replayWackler('wackler-10369566-rows.json');
+  assert.equal(fx.rows.length, 9);
+  assert.deepEqual(mismatches, []);
+});
+
+test('processWackler: 10369604 replay agrees on 2/2, no mismatches', () => {
+  const { fx, mismatches } = replayWackler('wackler-10369604-rows.json');
+  assert.equal(fx.rows.length, 2);
+  assert.deepEqual(mismatches, []);
 });
 
 /* ──────────────────────────────────────────────────────────

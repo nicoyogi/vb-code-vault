@@ -41,7 +41,7 @@ A small, static collection of tools and reference pages for day-to-day VB/VBA wo
 | --- | --- |
 | Browse the live site | [codingkuh.my.id](https://codingkuh.my.id/) |
 | Annotate a forwarder invoice (Dachser / K+N / DHL / Wackler) | [The Alchemist](https://codingkuh.my.id/anmerkung.html) · [source](anmerkung.html) |
-| See what the Anmerkung rules actually do, per forwarder | [`docs/anmerkung/conditions-report.pdf`](docs/anmerkung/conditions-report.pdf) · [`docs/anmerkung/anmerkung_exact_condition_table.pdf`](docs/anmerkung/anmerkung_exact_condition_table.pdf) |
+| See what the Anmerkung rules actually do, per forwarder | [`docs/anmerkung/conditions-report.pdf`](docs/anmerkung/conditions-report.pdf) · [`docs/anmerkung/anmerkung_exact_condition_table.pdf`](docs/anmerkung/anmerkung_exact_condition_table.pdf) (September snapshot, the engine wins where they disagree) |
 | Understand the diff / AI-bundle workflow and its safety gates | [`docs/anmerkung/README-v5.md`](docs/anmerkung/README-v5.md) · [`docs/anmerkung/ai_operating_contract.md`](docs/anmerkung/ai_operating_contract.md) |
 | Check the engine against the production workbooks, row by row | [`docs/anmerkung/dachser-sheet-audit-2026-10-09.md`](docs/anmerkung/dachser-sheet-audit-2026-10-09.md) |
 | Run the test suite | [Tests](#tests) |
@@ -143,8 +143,8 @@ PORT=8081 npm run dev # if 8080 is taken
 The unit tests use the Node built-in test runner; there is no test framework to install.
 
 ```bash
-npm test                  # everything: 494 tests across the rule engine, diff mode, splitter and allocation
-                          # (3 of the 494 are the Honold workbook replays: they skip without assets/honold-tariff.js)
+npm test                  # everything: 513 tests across the rule engine, diff mode, splitter and allocation
+                          # (3 of the 513 are the Honold workbook replays: they skip without assets/honold-tariff.js)
 npm run test:anmerkung    # the Anmerkung suites only
 npm run verify:anmerkung  # syntax gate, required-engine symbols, SHA-256 of assets/anmerkung.js, then the full suite
 ```

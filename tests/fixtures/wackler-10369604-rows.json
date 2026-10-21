@@ -1,0 +1,51 @@
+{
+ "schema": "wackler-rows/v1",
+ "source": "10369604 Soll-Ist-Vergleich.xlsx",
+ "outliers": [],
+ "rows": [
+  {
+   "row": 4,
+   "stat": "10",
+   "tarif": 104.29,
+   "snk_diff": -0.01,
+   "fr": -2.51,
+   "fr_tar": 95.33,
+   "fr_dl": 92.82,
+   "maut": 6.55,
+   "tz": -0.23,
+   "referenz": "26314800",
+   "colli": "5",
+   "brutto": "1000",
+   "vkg": "1000",
+   "vkg_dl": "1000",
+   "empf_plz": "88499",
+   "empf_ort": "RIEDLINGEN",
+   "abg_land": "NL",
+   "empf_land": "DE",
+   "abg_plz": "5633 AA",
+   "truth": "Return, ok?"
+  },
+  {
+   "row": 5,
+   "stat": "10",
+   "tarif": 68.53,
+   "snk_diff": 0,
+   "fr": -0.88,
+   "fr_tar": 58.1,
+   "fr_dl": 57.22,
+   "maut": -0.93,
+   "tz": -0.08,
+   "referenz": "26303768",
+   "colli": "2",
+   "brutto": "500",
+   "vkg": "500",
+   "vkg_dl": "500",
+   "empf_plz": "88499",
+   "empf_ort": "RIEDLINGEN",
+   "abg_land": "DE",
+   "empf_land": "DE",
+   "abg_plz": "73037",
+   "truth": "Return, ok?"
+  }
+ ]
+}
