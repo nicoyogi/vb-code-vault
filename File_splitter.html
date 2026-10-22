@@ -485,15 +485,65 @@
     }, 'Please upload an Excel file (.xlsx or .xls).');
   }
 
+  // A known code wins over the rest of the name, so "KSP Air" and "KSP Ocean"
+  // share one bucket; an ad-hoc name only loses case, whitespace, "_<n>" and " (n)".
+  function forwarderStateKey(systemName) {
+    const rank = systemRank(systemName);
+    if (rank < SYSTEM_ORDER.length) return SYSTEM_ORDER[rank];
+    let k = String(systemName ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
+    let prev;
+    // "Honold_2 (1)" is a second upload of "Honold_2", so strip until stable.
+    do { prev = k; k = k.replace(/\s*\(\d+\)$/, '').replace(/_\d+$/, '').trim(); } while (k !== prev);
+    return k || 'SHEET';
+  }
+
+  // Canonical bucket first, then any legacy bucket for the same key: a canonical
+  // bucket that knows other vendors must not hide a legacy pick.
   function savedForwarderState(systemName, forwarderName) {
-    const sys = forwarderState[systemName];
-    return sys && typeof sys[forwarderName] === 'boolean' ? sys[forwarderName] : true;
+    const key = forwarderStateKey(systemName);
+    const canonical = forwarderState[key];
+    if (canonical && typeof canonical[forwarderName] === 'boolean') return canonical[forwarderName];
+    for (const name of Object.keys(forwarderState)) {
+      if (name === key || forwarderStateKey(name) !== key) continue;
+      const bucket = forwarderState[name];
+      if (bucket && typeof bucket[forwarderName] === 'boolean') return bucket[forwarderName];
+    }
+    return true;
   }
 
   function saveForwarderState(systemName, forwarderName, checked) {
-    if (!forwarderState[systemName]) forwarderState[systemName] = Object.create(null);
-    forwarderState[systemName][forwarderName] = checked;
+    const key = forwarderStateKey(systemName);
+    if (!forwarderState[key]) forwarderState[key] = Object.create(null);
+    forwarderState[key][forwarderName] = checked;
     try { localStorage.setItem(FORWARDER_KEY, JSON.stringify(forwarderState)); } catch (e) { /* storage unavailable */ }
+  }
+
+  // Two cards can canonicalize to one system (FNP and FNP_2), so a pick has to
+  // land on every card in that bucket or they show contradictory checklists.
+  function syncForwarderPick(systems, systemName, forwarderName, checked) {
+    const key = forwarderStateKey(systemName);
+    for (const s of systems) {
+      if (forwarderStateKey(s.name) !== key) continue;
+      const f = (s.forwarders || []).find(f => f.name === forwarderName);
+      if (f) f.checked = checked;
+    }
+  }
+
+  // Rendered twin of syncForwarderPick: a re-render would wipe the "Filter
+  // forwarders" search, so only the sibling rows' boxes are repainted.
+  function syncForwarderPickboxes(systemName, forwarderName, checked) {
+    const key = forwarderStateKey(systemName);
+    document.querySelectorAll('.fwd-row').forEach(row => {
+      if (!forwarderRowMatches(row, key, forwarderName)) return;
+      const box = row.querySelector('input');
+      if (box) box.checked = checked;
+    });
+  }
+
+  // Split out of syncForwarderPickboxes so the row match is testable without a DOM.
+  function forwarderRowMatches(row, key, forwarderName) {
+    const card = row.closest && row.closest('.system');
+    return !!card && card.dataset.sysKey === key && row.dataset.name === forwarderName;
   }
 
   function refreshSystemForwarders(sys) {
@@ -1298,6 +1348,7 @@
     items.forEach(it => {
       const row = document.createElement('label');
       row.className = 'fwd-row';
+      row.dataset.name = it.name;
       row.innerHTML = `<input type="checkbox" ${isChecked(it.name) ? 'checked' : ''} /><span class="fwd-nm" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}</span><span class="fwd-ct">${it.count}</span>`;
       row.querySelector('input').addEventListener('change', e => { onToggle(it.name, e.target.checked); if (onChange) onChange(); });
       list.appendChild(row);
@@ -1343,12 +1394,17 @@
         el.appendChild(card);
         return;
       }
+      card.dataset.sysKey = forwarderStateKey(sys.name);
 
       // Factual work is never forwarder-filtered — no checklist on those cards.
       if (sys.group !== 'factual') {
         renderChecklist(card, 'Filter forwarders…', sys.forwarders,
           name => sys.forwarders.find(f => f.name === name).checked,
-          (name, checked) => { sys.forwarders.find(f => f.name === name).checked = checked; saveForwarderState(sys.name, name, checked); });
+          (name, checked) => {
+            syncForwarderPick(systems, sys.name, name, checked);
+            saveForwarderState(sys.name, name, checked);
+            syncForwarderPickboxes(sys.name, name, checked);
+          });
       }
 
       el.appendChild(card);

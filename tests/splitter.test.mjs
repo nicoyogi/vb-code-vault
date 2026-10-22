@@ -716,6 +716,167 @@ test('forwarder persistence: a well-formed stored value is read back on load', (
   assert.equal(t.savedForwarderState('KSP', 'DHL'), true);   // still per system
 });
 
+test('forwarder persistence: one FNP bucket survives duplicate-download and duplicate-upload suffixes', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP', 'DHL', false);
+  assert.equal(t.savedForwarderState('FNP (1)', 'DHL'), false); // browser duplicate download
+  assert.equal(t.savedForwarderState('FNP_2', 'DHL'), false);   // duplicate upload
+});
+
+test('forwarder persistence: the known code wins over the rest of a multi-word card name', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP Soll-Ist', 'DHL', false);
+  assert.equal(t.savedForwarderState('FNP Soll-Ist_2', 'DHL'), false);
+  assert.equal(t.savedForwarderState('FNP Soll-Ist', 'DHL'), false);
+});
+
+test('forwarder persistence: an ad-hoc name normalizes case, whitespace and its _<n> suffix only', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('Honold_2', 'DHL', false);
+  assert.equal(t.savedForwarderState('honold  ', 'DHL'), false);
+  assert.equal(t.savedForwarderState('Honold', 'DHL'), false);   // same bucket
+  assert.equal(t.savedForwarderState('KSP', 'DHL'), true);       // still isolated
+});
+
+test('forwarder persistence: a pre-existing raw-name bucket stays readable, and survives a canonical write', () => {
+  const t = loadSplitter({ seed: { [FORWARDER_KEY]: '{"FNP Soll-Ist":{"DHL":false}}' } });
+  assert.equal(t.savedForwarderState('FNP Soll-Ist', 'DHL'), false); // legacy fallback
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), false);          // same bucket, so no default:true
+  t.saveForwarderState('FNP Soll-Ist', 'Kuehne', false);
+  assert.deepEqual(plain(JSON.parse(t.localStorage.getItem(FORWARDER_KEY))), {
+    'FNP Soll-Ist': { DHL: false },
+    FNP: { Kuehne: false },
+  });
+});
+
+test('saveForwarderState: writes the canonical FNP bucket, and another known system stays checked', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP (1)', 'DHL', false);
+  assert.deepEqual(plain(JSON.parse(t.localStorage.getItem(FORWARDER_KEY))), { FNP: { DHL: false } });
+  assert.equal(t.savedForwarderState('KSP', 'DHL'), true);
+});
+
+test('forwarder persistence: an ad-hoc name also drops the browser duplicate-download " (n)"', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('Honold', 'DHL', false);
+  assert.equal(t.savedForwarderState('Honold (1)', 'DHL'), false);
+  assert.equal(t.savedForwarderState('Honold_2', 'DHL'), false);
+});
+
+test('forwarder persistence: a legacy pick for one forwarder survives a canonical write for another', () => {
+  const t = loadSplitter({ seed: { [FORWARDER_KEY]: JSON.stringify({ FNP_2: { DHL: false } }) } });
+  assert.equal(t.savedForwarderState('FNP_2', 'DHL'), false);
+  t.saveForwarderState('FNP_2', 'Kuehne', false);
+  assert.equal(t.savedForwarderState('FNP_2', 'DHL'), false);   // legacy pick still read
+  assert.equal(t.savedForwarderState('FNP_2', 'Kuehne'), false);
+});
+
+test('forwarder persistence: both cards of one bucket agree when a legacy bucket holds the pick', () => {
+  // Canonical FNP gets Kuehne only; DHL lives in the pre-fix FNP_2 bucket.
+  const t = loadSplitter({ seed: { [FORWARDER_KEY]: JSON.stringify({ FNP_2: { DHL: false } }) } });
+  t.saveForwarderState('FNP', 'Kuehne', false);
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), false);
+  assert.equal(t.savedForwarderState('FNP_2', 'DHL'), false); // the two must not disagree
+});
+
+test('forwarder persistence: the canonical bucket wins over a legacy bucket for another card', () => {
+  // Pre-fix localStorage can hold FNP_2 alone; both cards of one bucket must agree.
+  const t = loadSplitter({ seed: { [FORWARDER_KEY]: JSON.stringify({ FNP_2: { DHL: false } }) } });
+  t.saveForwarderState('FNP', 'DHL', true);
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), true);
+  assert.equal(t.savedForwarderState('FNP_2', 'DHL'), true); // not the stale legacy false
+});
+
+test('forwarder persistence: an explicit legacy true does not outrank a canonical false', () => {
+  const t = loadSplitter({ seed: { [FORWARDER_KEY]: JSON.stringify({ FNP_2: { DHL: true } }) } });
+  t.saveForwarderState('FNP', 'DHL', false);
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), false);
+  assert.equal(t.savedForwarderState('FNP_2', 'DHL'), false);
+});
+
+test('forwarder persistence: a duplicate upload of Honold_2 stays in one bucket', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('Honold', 'DHL', false);
+  assert.equal(t.savedForwarderState('Honold_2 (1)', 'DHL'), false); // " (n)" then "_<n>"
+  assert.equal(t.savedForwarderState('Honold_2_2', 'DHL'), false);   // stacked upload suffix
+  const w = loadSplitter();
+  w.saveForwarderState('Honold_2 (1)', 'DHL', false);
+  assert.equal(w.savedForwarderState('Honold', 'DHL'), false);       // same bucket both ways
+});
+
+test('forwarder persistence: a saved pick survives a reload of the stored string', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP (1)', 'DHL', false);
+  const stored = t.localStorage.getItem(FORWARDER_KEY);
+  const reloaded = loadSplitter({ seed: { [FORWARDER_KEY]: stored } });
+  assert.equal(reloaded.savedForwarderState('FNP_2', 'DHL'), false);
+});
+
+test('syncForwarderPick: one pick reaches every card in the bucket and leaves the others alone', () => {
+  const t = loadSplitter();
+  const systems = [
+    { name: 'FNP', forwarders: [{ name: 'DHL', checked: true }] },
+    { name: 'FNP Soll-Ist_2', forwarders: [{ name: 'DHL', checked: true }, { name: 'Kuehne', checked: true }] },
+    { name: 'KSP', forwarders: [{ name: 'DHL', checked: true }] },
+  ];
+  t.syncForwarderPick(systems, 'FNP_2', 'DHL', false);
+  assert.equal(systems[0].forwarders[0].checked, false);
+  assert.equal(systems[1].forwarders.find(f => f.name === 'DHL').checked, false);
+  assert.equal(systems[2].forwarders[0].checked, true);           // other bucket untouched
+  t.syncForwarderPick(systems, 'FNP_2', 'Kuehne', false);         // absent on the FNP card
+  assert.equal(systems[0].forwarders.length, 1);                  // not invented there
+  assert.equal(systems[1].forwarders.find(f => f.name === 'Kuehne').checked, false);
+});
+
+test('forwarderRowMatches: only the named forwarder row inside the matching card', () => {
+  const t = loadSplitter();
+  const card = { dataset: { sysKey: 'FNP' } };
+  const row = (name, c) => ({ dataset: { name }, closest: () => c });
+  assert.equal(t.forwarderRowMatches(row('DHL', null), 'FNP', 'DHL'), false);            // outside any card
+  assert.equal(t.forwarderRowMatches(row('DHL', { dataset: {} }), 'FNP', 'DHL'), false); // card without a key
+  assert.equal(t.forwarderRowMatches(row('DHL', card), 'FNP', 'DHL'), true);
+  assert.equal(t.forwarderRowMatches(row('DHL', card), 'KSP', 'DHL'), false);            // other card
+  assert.equal(t.forwarderRowMatches(row('Kuehne', card), 'FNP', 'DHL'), false);         // other vendor
+});
+
+// The harness DOM is a no-op proxy, so a node that keeps its own properties is
+// the only way to see what renderChecklist writes onto a row.
+function fakeEl(tag = 'div') {
+  return {
+    tagName: tag, dataset: {}, className: '', innerHTML: '', children: [],
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    appendChild(c) { this.children.push(c); return c; },
+    addEventListener() {},
+    querySelector() { return fakeEl('input'); },
+    querySelectorAll() { return []; },
+    closest() { return null; },
+  };
+}
+
+test('renderChecklist: every row carries the forwarder name the repaint matches on', () => {
+  const t = loadSplitter();
+  t.document = { createElement: tag => fakeEl(tag) };
+  const host = fakeEl();
+  t.renderChecklist(host, 'Filter forwarders…', [{ name: 'DHL', count: 3 }, { name: 'Kuehne', count: 1 }], () => true, () => {});
+  const list = host.children.find(c => c.className === 'fwd-list');
+  assert.deepEqual(list.children.map(r => r.dataset.name), ['DHL', 'Kuehne']);
+  assert.equal(list.children[0].className, 'fwd-row');
+});
+
+test('syncForwarderPickboxes: repaints the sibling cards of one bucket and nothing else', () => {
+  const t = loadSplitter();
+  // key undefined stands for a note-filter row: no .system ancestor, so no card key.
+  const row = (key, name, checked = true) => {
+    const box = { checked };
+    return { dataset: { name }, closest: () => ({ dataset: key === undefined ? {} : { sysKey: key } }),
+      querySelector: sel => (sel === 'input' ? box : null), box };
+  };
+  const rows = [row('FNP', 'DHL'), row('FNP', 'DHL'), row('FNP', 'Kuehne'), row('KSP', 'DHL'), row(undefined, 'DHL')];
+  t.document = { querySelectorAll: sel => (sel === '.fwd-row' ? rows : []) };
+  t.syncForwarderPickboxes('FNP_2', 'DHL', false);
+  assert.deepEqual(rows.map(r => r.box.checked), [false, false, true, true, true]);
+});
+
 test('reconcilePrio: a remembered Reference keeps the PRIO row out, a fresh one is still added', () => {
   const entries = [{ system: 'FNP', group: 'tariff', row: ['DHL', 'K1', 'REF-1', 'D1', [], ''] }];
   const t = loadSplitter({ seed: { [LAST_OUTPUT_KEY]: '{"FNP|tariff":{"refs":["REF-1"],"docs":[]}}' } });
