@@ -388,6 +388,8 @@ const PHRASES={
   nlSpezOk:                   'NL-SPEZ, ok?',
   nl10Ok:                     'NL-10, ok?',
   zusatzkosten250:            'Zusatzkosten 250 €, ok?',
+  einlagerung40Ok:            'Einlagerung 40 €, ok?',
+  einlagerung30Ok:            'Einlagerung 30 €, ok?',
   terminzustellung:           'Terminzustellung',
   b2cLine:                    'hätte B2C-Line abrechnen dürfen',
   buendelMuessen:             'hätte gebündelt werden müssen',
@@ -473,7 +475,8 @@ const PHRASE_TEMPLATES=[
      is optional: 1 of the 6 ground-truth notes carries it, 5 do not. */
   {key:'fremdnummerInterpolated',regex:/^fremdnummer \S+ bereits berechnet in (?:re)?[a-z0-9]+, ok\?\.?$/i,
    example:'Fremdnummer 2544567001 bereits berechnet in RE0101165619, ok?',
-   processor:'processDachser'},
+   /* Both processors interpolate this phrase: Dachser has always, Wackler since D7. */
+   processors:['processDachser','processWackler']},
   {key:'tpl_keinTarifLand',regex:/^kein tarif f[uü]r/i,
    example:'kein Tarif für PT',
    processor:'processDachser'},
@@ -1757,6 +1760,16 @@ const WACKLER_SNK_TERMIN80_TOL=0.5;
 /* TZ additive threshold: TZ ≥ 2.0 fires DifferenzTreibstof alongside other classifications.
    Below 2.0 the TZ delta is fuel-on-toll math noise (typical FR/MT-percentage spill). */
 const WACKLER_TZ_ADDITIVE=2.0;
+/* Einlagerung pair: a quiet row whose only delta is a 70 € SNK gap is the storage fee the owner
+   reads as 40 € plus 30 € (10370017 row 18: SNK DL 70.46 vs lt. Tarif 0.46). The row itself
+   carries only the 70 sum, so the split and its order are the owner's, not a measured pair.
+   No other SNK gap sits strictly between 49 and 81 - the neighbours are 49.00 (NL-12, three rows
+   in the corpus: 10362192 row 33, 10367543 rows 174 and 221) and 81.00 (NL-10) - and no code-book
+   window overlaps [69.5, 70.5], so ±0.5 (the book's fee tolerance at 38 and 16) separates it from
+   both. Deliberately NOT a code-book entry: rule 4 is additive, so
+   a 70 beside a weight finding would gain the pair, and the 40/30 halves alone are unverified. */
+const WACKLER_EINLAGERUNG_ABS=70;
+const WACKLER_EINLAGERUNG_TOL=0.5;
 /* Fuel is derived, not a second finding: TZ is a percentage of FR, so when BOTH sides of the row
    carry the same percentage the TZ delta is just that rate riding on the freight delta and the
    auditor does not itemise it. Equal rates on the corpus sit within 0.0003 of each other (10369999
@@ -1859,7 +1872,18 @@ function processWackler(ws,r,cols){
      When this fires, all delta-derived rules (3–11) are suppressed since their inputs are
      comparing against a non-existent tariff. Kontierung (rule 12) still runs inline — when
      KOST/SACH are blank/X the row carries both classifications, matching training row 20's
-     expected "Fremdnummer xxx bereits berechnet in RExxx, ok? // Kontierung?". */
+     expected "Fremdnummer xxx bereits berechnet in RExxx, ok? // Kontierung?".
+     The Fremdnummer half is the row's OWN ReferenzNr, interpolated like the Dachser rule
+     (1208-1212): the first comma-separated token, trimmed, so a multi-ref cell stays
+     deterministic, and a blank cell keeps the 'xxx' literal. The Beleg it was charged in is
+     NOT derivable from this workbook (it names a document in another one), so RExxx stays a
+     placeholder. Only 10370017 row 126 and 10367543 row 218 reach this rule, both already
+     diffs: row 126 now cites 2545058028 instead of xxx and keeps RExxx, and the phrase key
+     becomes fremdnummerInterpolated, matching its truth cell's key. Owner ruling 2026-10-23:
+     the Fremdnummer is read off the ReferenzNr column, the same rule released and
+     corpus-verified on Dachser, so 10367543 row 218's 2026-10-01 cell - which names 2544818983
+     in 10367544, values present in no workbook - is the inconsistent side, left for the
+     auditor to correct, not a counterexample. */
   if(cols.tarif>=0){
     const tarifRaw=cellStr(ws,r,cols.tarif),tarifNumEarly=cellNum(ws,r,cols.tarif);
     const _frEarly=cols.fr>=0?cellNum(ws,r,cols.fr):0;
@@ -1868,7 +1892,12 @@ function processWackler(ws,r,cols){
     const dashOrZero=tarifRaw==='-'||(tarifNumEarly===0&&tarifRaw!=='');
     const emptyWithSignal=tarifRaw===''&&(Math.abs(_frEarly)>T_WACKLER||Math.abs(_mtEarly)>T_WACKLER||Math.abs(_tzEarly)>T_WACKLER);
     if(dashOrZero||emptyWithSignal){
-      let out='Fremdnummer xxx bereits berechnet in RExxx, ok?';
+      const refRaw=cols.referenz>=0?cellStr(ws,r,cols.referenz):'';
+      const ref=refRaw.split(',')[0].trim();
+      /* A '-' ReferenzNr is the sheet's "none" marker, not a reference: keep it blank so the
+         phrase keeps the literal 'xxx' and its 'fremdnummer' key. */
+      const refText=ref==='-'?'':ref;
+      let out=refText?('Fremdnummer '+refText+' bereits berechnet in RExxx, ok?'):P.fremdnummer;
       if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
         const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
         if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
@@ -2201,7 +2230,8 @@ function processWackler(ws,r,cols){
      (0 of 275); where the row already carries "Differenz aufgrund abweichender Gewichte" the
      residual SNK gap is part of that finding and the auditor does not repeat it (10369999 rows 27
      and 32, 6.79 and 6.38). On an otherwise SILENT row it stays: it
-     is the only signal the row has (10370017 row 18, SNK gap 70). The Hebebühne branch and the
+     is the only signal the row has, and the one quiet value it does not name is ≈70, which the
+     Einlagerung pair below claims. The Hebebühne branch and the
      SNK code book above are untouched — they name a charge, not a residual. WACKLER_SNK_NOISE
      stays 5.0: the floor is not what separates the false positives, the finding is. */
   if(cols.snk_diff>=0&&!snkCodeLabel&&snkHasVal
@@ -2214,6 +2244,14 @@ function processWackler(ws,r,cols){
       res=join(res,P.hebebuehne);
       hebebuehneFired=true;
     }
+    else if(!weightFindingFired&&!frHasVal&&!mtHasVal&&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE
+      &&Math.abs(avisVal)<=T_WACKLER&&Math.abs(Math.abs(snkVal)-WACKLER_EINLAGERUNG_ABS)<=WACKLER_EINLAGERUNG_TOL)
+      /* Quiet row (no FR/MT delta, TZ inside the fuel-noise band, no AVIS surcharge) whose only
+         gap is the ≈70 € storage fee: the owner reads it as the 40 + 30 pair, in that order
+         (10370017 row 18). snkHasVal, the noise floor and the code-book miss come from the outer
+         gate; the sign is ignored, like the code book. !weightFindingFired is implied by the
+         earlier rules but kept so a widening cannot resurrect a phrase on a weight row. */
+      res=join(P.einlagerung40Ok,P.einlagerung30Ok);
     else if(!weightFindingFired)
       res=join(res,'SNK Differenz');
   }
@@ -5110,7 +5148,10 @@ function buildRuleSpec(){
   for(const fw of Object.keys(forwarders))thresholds[fw]=effectiveThreshold(fw);
   const phraseTemplates=PHRASE_TEMPLATES.map(t=>({
     key:t.key,regex:t.regex.source,flags:t.regex.flags,
-    example:t.example,processor:t.processor||'',
+    example:t.example,
+    /* `processor` keeps its single-emitter value for older consumers; `processors` lists all. */
+    processor:t.processor||(t.processors||[])[0]||'',
+    processors:t.processors||(t.processor?[t.processor]:[]),
   }));
   const phraseLiterals={};
   for(const[k,v]of Object.entries(PHRASE_LITERALS)){
@@ -5466,7 +5507,10 @@ function buildPhraseEmitterIndex(){
      JSON.stringify escapes (the 250 € surcharge label carried literal quotes until v1.56.0), so
      the phrase would not be found in the serialised text. */
   for(const c of WACKLER_SNK_CODES)scanStrings(String(c.label).toLowerCase(),'wacklerSnkCode');
-  for(const t of PHRASE_TEMPLATES)if(t.processor)add(t.key,t.processor);
+  for(const t of PHRASE_TEMPLATES){
+    if(t.processor)add(t.key,t.processor);
+    for(const name of t.processors||[])add(t.key,name);
+  }
   return idx;
 }
 
@@ -5482,7 +5526,8 @@ function buildEngineSourceDoc(){
     WACKLER_BP,WACKLER_RATE_TOL,WACKLER_RETIER_EXACT_TOL,WACKLER_SNK_CODES,WACKLER_AVIS_CODES,
     WACKLER_SNK_NOISE,WACKLER_PAUSCHAL_RATIO,
     WACKLER_SNK_TERMIN80_ABS,WACKLER_SNK_TERMIN80_TOL,
-    WACKLER_TZ_ADDITIVE,WACKLER_HEBEBUEHNE_ABS,WACKLER_HEBEBUEHNE_TOL,WACKLER_BUENDEL_MAX_KG,
+    WACKLER_TZ_ADDITIVE,WACKLER_EINLAGERUNG_ABS,WACKLER_EINLAGERUNG_TOL,
+    WACKLER_HEBEBUEHNE_ABS,WACKLER_HEBEBUEHNE_TOL,WACKLER_BUENDEL_MAX_KG,
     WACKLER_XTIER_NEAR_BAND,WACKLER_BUENDEL_PARTIAL,WACKLER_COLLI_KG,WACKLER_SAME_WEIGHT_BAND,
     WACKLER_BUENDEL_NEAR_BAND,WACKLER_BUENDEL_MIN_REFS,
   };

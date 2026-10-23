@@ -4,6 +4,23 @@
  "outliers": [],
  "rows": [
   {
+   "row": 18,
+   "stat": "10",
+   "tarif": 120.27,
+   "avis_diff": 0,
+   "snk_diff": 70,
+   "fr": 0,
+   "maut": 0,
+   "tz": 0,
+   "referenz": "2544983744,2544976646",
+   "colli": "4",
+   "vkg": "589",
+   "vkg_dl": "589",
+   "empf_plz": "79539",
+   "empf_ort": "Lörrach",
+   "truth": "Einlagerung 40 €, ok? // Einlagerung 30 €, ok?"
+  },
+  {
    "row": 122,
    "stat": "10",
    "tarif": 153,

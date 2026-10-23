@@ -523,6 +523,31 @@ test('processWackler: dash tariff + blank KOST/SACH -> Fremdnummer query only (n
   assert.equal(e.processWackler(ws, R, W_COLS), 'Fremdnummer xxx bereits berechnet in RExxx, ok?');
 });
 
+test('processWackler: the Fremdnummer note names its own ReferenzNr (D7)', () => {
+  // D7: the cited invoice is cross-workbook, so RExxx stays a placeholder; the ref does not.
+  const one = makeRow(R, { 51: 10, 52: '', 55: '282.23', 58: '2545058028' });
+  assert.equal(e.processWackler(one, R, W_COLS),
+    'Fremdnummer 2545058028 bereits berechnet in RExxx, ok?');
+  // A multi-ref cell interpolates its first token only (10370017 row 18 shape).
+  const many = makeRow(R, { 51: 10, 52: '', 55: '282.23', 58: '2544983744,2544976646' });
+  assert.equal(e.processWackler(many, R, W_COLS),
+    'Fremdnummer 2544983744 bereits berechnet in RExxx, ok?');
+});
+
+test('processWackler: a "-" ReferenzNr is blank, not interpolated (D7)', () => {
+  // The sheet writes '-' where it has no reference; interpolating it would read
+  // 'Fremdnummer - bereits ...', naming a reference the row does not have.
+  const dash = makeRow(R, { 51: 10, 52: '', 55: '282.23', 58: '-' });
+  const dashOut = e.processWackler(dash, R, W_COLS);
+  assert.equal(dashOut, 'Fremdnummer xxx bereits berechnet in RExxx, ok?');
+  assert.deepEqual(Array.from(e.phraseKeysFor(e.splitTriggers(dashOut))), ['fremdnummer']);
+  // A blank cell keeps the same literal and the same key.
+  const blank = makeRow(R, { 51: 10, 52: '', 55: '282.23', 58: '' });
+  const blankOut = e.processWackler(blank, R, W_COLS);
+  assert.equal(blankOut, 'Fremdnummer xxx bereits berechnet in RExxx, ok?');
+  assert.deepEqual(Array.from(e.phraseKeysFor(e.splitTriggers(blankOut))), ['fremdnummer']);
+});
+
 test('processWackler: |SNK| >= tariff, no FR/MT/TZ, unknown code -> Pauschalfracht, ok?', () => {
   const ws = makeRow(R, { 51: 10, 52: '54.95', 54: '80', 63: '1', 64: '2' });
   assert.equal(e.processWackler(ws, R, W_COLS), 'Pauschalfracht, ok?');
@@ -1501,11 +1526,12 @@ test('processWackler: 10369604 replay agrees on 2/2, no mismatches', () => {
 
 test('processWackler: 10369999 / 10370014 / 10370017 replays agree, no mismatches', () => {
   // The 2026-10-23 bundle rows the engine now gets right: the 10369999 FR-credit weight rows plus
-  // the fixed residual-SNK row 32, the 10370014 fuel/250/bundle rows, and 10370017 row 122 (the
-  // row that starts AND ends at the Riedlingen hub). The known-miss rows (10369999 r27, 10370014 r4,
-  // 10370017 r18/r126) are pinned by their own assertions above, not by a fixture.
+  // the fixed residual-SNK row 32, the 10370014 fuel/250/bundle rows, and 10370017 rows 18 and 122
+  // (the Einlagerung pair and the row that starts AND ends at the Riedlingen hub). The known-miss
+  // rows (10369999 r27, 10370014 r4, 10370017 r126) are pinned by their own assertions above, not
+  // by a fixture.
   for (const [name, n] of [['wackler-10369999-rows.json', 4], ['wackler-10370014-rows.json', 7],
-    ['wackler-10370017-rows.json', 1]]) {
+    ['wackler-10370017-rows.json', 2]]) {
     const { fx, mismatches } = replayWackler(name);
     assert.equal(fx.rows.length, n, name);
     assert.deepEqual(mismatches, [], name);
@@ -1644,13 +1670,49 @@ test('processWackler: SNK 6.38 beside a weight finding loses "SNK Differenz" (10
   assert.equal(e.processWackler(ws, R, W_COLS), 'Differenz aufgrund abweichender Gewichte // Mautdifferenz');
 });
 
-test('processWackler: a silent row still names its SNK gap (10370017 row 18)', () => {
-  // D4 keeps the phrase where it is the row's only signal: SNK 70, every other delta 0.
+test('processWackler: a quiet 70 EUR SNK gap reads as the Einlagerung pair (10370017 row 18)', () => {
+  // D6: SNK 70, every other delta 0. The row carries only the 70 sum; the owner reads it as the
+  // 40 + 30 storage fee, in that order.
   const ws = makeRow(R, {
     51: 10, 52: '120.27', 53: '0', 54: '70', 55: '0', 56: '0', 57: '0', 58: '2544983744,2544976646',
     59: '589', 60: '589', 61: '79539', 62: 'Lörrach', 63: '211FO998', 64: '612100',
   });
-  assert.equal(e.processWackler(ws, R, W_COLS), 'SNK Differenz');
+  assert.equal(e.processWackler(ws, R, W_COLS),
+    'Einlagerung 40 €, ok? // Einlagerung 30 €, ok?');
+});
+
+test('processWackler: the Einlagerung pair needs a quiet row (D6 guard)', () => {
+  // Any FR/MT/TZ/AVIS delta or a gap outside 70 ± 0.5 keeps the generic phrase.
+  const base = {
+    51: 10, 52: '120.27', 53: '0', 54: '70', 55: '0', 56: '0', 57: '0', 58: '2544983744',
+    59: '589', 60: '589', 61: '79539', 62: 'Lörrach', 63: '211FO998', 64: '612100',
+  };
+  for (const override of [{ 56: '2.5' }, { 57: '2.5' }, { 53: '8.7' }, { 54: '70.6' }, { 54: '30.78' }]) {
+    const out = e.processWackler(makeRow(R, { ...base, ...override }), R, W_COLS);
+    assert.ok(out.includes('SNK Differenz'), `${JSON.stringify(override)}: ${out}`);
+    assert.ok(!out.includes('Einlagerung'), `${JSON.stringify(override)}: ${out}`);
+  }
+});
+
+test('processWackler: the Einlagerung window is 70 +- 0.5, sign-insensitive and FR-gated (D6 bounds)', () => {
+  // Tester addition: the tolerance edge is inclusive and the sign is ignored (like the code book),
+  // and a row with an FR delta is a freight finding first, so the pair must not appear there.
+  const base = {
+    51: 10, 52: '120.27', 53: '0', 54: '70', 55: '0', 56: '0', 57: '0', 58: '2544983744',
+    59: '589', 60: '589', 61: '79539', 62: 'Lörrach', 63: '211FO998', 64: '612100',
+  };
+  const pair = 'Einlagerung 40 €, ok? // Einlagerung 30 €, ok?';
+  const out = (override) => e.processWackler(makeRow(R, { ...base, ...override }), R, W_COLS);
+  assert.equal(out({ 54: '69.5' }), pair, 'lower edge is inclusive');
+  assert.equal(out({ 54: '70.5' }), pair, 'upper edge is inclusive');
+  assert.equal(out({ 54: '-70' }), pair, 'a credit is sign-insensitive');
+  assert.equal(out({ 54: '69.49' }), 'SNK Differenz', 'just outside the lower edge');
+  assert.equal(out({ 54: '70.51' }), 'SNK Differenz', 'just outside the upper edge');
+  for (const override of [{ 55: '2.5' }, { 57: '2.0' }]) {
+    const got = out(override);
+    assert.ok(got.includes('SNK Differenz'), `${JSON.stringify(override)}: ${got}`);
+    assert.ok(!got.includes('Einlagerung'), `${JSON.stringify(override)}: ${got}`);
+  }
 });
 
 test('processWackler: a rate-card row keeps its own SNK gap (single ref, SNK 70)', () => {

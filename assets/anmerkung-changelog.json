@@ -1,6 +1,13 @@
 {
-  "version": "1.56.0",
+  "version": "1.57.0",
   "entries": [
+    {
+      "ver": "1.57.0",
+      "date": "2026-10-23",
+      "items": [
+        "Wackler - a row whose only delta is a 70 EUR SNK gap now reads 'Einlagerung 40 €, ok? // Einlagerung 30 €, ok?' instead of 'SNK Differenz' (10370017 row 18; the 40 + 30 split is the owner's reading of the 70 EUR sum, the row itself carries only 70, and the arm fires only when FR, MT, TZ and AVIS are quiet); the duplicate-billing note now names the row's own ReferenzNr (first comma-separated token, e.g. 'Fremdnummer 2545058028 bereits berechnet in RExxx, ok?') instead of the xxx placeholder; the owner reads the Fremdnummer off the ReferenzNr column - 10370017 row 126's cell, whose 2545023088 sits in no workbook, was corrected to the row's own 2545058028 (also 10370014 row 237's reference); the invoice it was charged in stays the RExxx placeholder because it sits in another workbook, so 10370017 row 126 remains a diff against its cell, and 10367543 row 218 stays a diff too - its cell names a different reference (2544818983) and a different document (10367544), neither of which is in the corpus, so under the owner's rule that cell is the inconsistent side, left for the auditor to correct, not a counterexample."
+      ]
+    },
     {
       "ver": "1.56.0",
       "date": "2026-10-23",
