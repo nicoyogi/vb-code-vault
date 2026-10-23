@@ -598,6 +598,8 @@ test('phraseToKey: exact-case match wins over the case-folded Kontierung collisi
 
 test('phraseToKey: legacy literals and templates still resolve through the fold', () => {
   assert.equal(e.phraseToKey('DifferenzTreibstof'), 'lit_differenzTreibstofWackler', 'glued legacy literal');
+  assert.equal(e.phraseToKey('"Zusatzkosten 250 €", ok?'), 'zusatzkosten250',
+    'quoted Sep spelling folds onto the unquoted catalog key (10367543 r30/r222)');
   assert.equal(e.phraseToKey('Differenz aufgrund abweichender Zwischenempfänger 12345 Berlin'), 'zwPrefix', 'template');
 });
 

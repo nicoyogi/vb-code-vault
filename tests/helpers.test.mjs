@@ -88,7 +88,7 @@ test('wacklerSnkCode: sign-insensitive code book with tolerance', () => {
   assert.equal(e.wacklerSnkCode(82), null, 'above the NL-10 window');
   assert.equal(e.wacklerSnkCode(80.5), null, 'the 81 window stops below the Terminzustellung 80 boundary');
   assert.equal(e.wacklerSnkCode(80.51), 'NL-10, ok?', 'just inside the NL-10 window');
-  assert.equal(e.wacklerSnkCode(-250), '"Zusatzkosten 250 €", ok?', 'sign-insensitive; the label carries the auditor\'s straight quotes');
+  assert.equal(e.wacklerSnkCode(-250), 'Zusatzkosten 250 €, ok?', 'sign-insensitive; the label is the unquoted October spelling, shared with the freight axis');
   assert.equal(e.wacklerSnkCode(240), null, 'below the Zusatzkosten window (and 180 ± 0.5)');
 });
 
