@@ -387,7 +387,9 @@ const PHRASES={
   nl12Ok:                     'NL-12, ok?',
   nlSpezOk:                   'NL-SPEZ, ok?',
   nl10Ok:                     'NL-10, ok?',
-  zusatzkosten250:            '"Zusatzkosten 250 €", ok?',
+  zusatzkosten250:            'Zusatzkosten 250 €, ok?',
+  einlagerung40Ok:            'Einlagerung 40 €, ok?',
+  einlagerung30Ok:            'Einlagerung 30 €, ok?',
   terminzustellung:           'Terminzustellung',
   b2cLine:                    'hätte B2C-Line abrechnen dürfen',
   buendelMuessen:             'hätte gebündelt werden müssen',
@@ -461,6 +463,7 @@ const PHRASE_LITERALS={
   'zone korrekt?'                 :'lit_zoneKorrekt',               /* Wackler NL-FIX zone corollary */
   'differenztreibstof'            :'lit_differenzTreibstofWackler', /* Wackler legacy fuel wording — superseded by PHRASES.differenzEnergiezuschlag; kept so older slot-A exports that used "DifferenzTreibstof" still resolve to a stable key */
   'differenzenergiezuschlag'      :'differenzEnergiezuschlag',      /* Wackler legacy no-space fuel wording — the canonical phrase is now "Differenz Energiezuschlag" (with a space, matching the auditor's ground truth); this maps the older glued spelling onto the SAME catalog key so historic exports stay mappable */
+  '"zusatzkosten 250 €", ok?'    :'zusatzkosten250',               /* Wackler legacy QUOTED spelling (Sep cells 10367543 r30/r222, not editable). The quotes are formatting, not a second finding, so it folds onto the catalog key rather than a synthetic lit_ id; the unquoted October spelling is PHRASES.zusatzkosten250 */
 };
 
 /* Phrases that interpolate runtime values. The key identifies the
@@ -472,7 +475,8 @@ const PHRASE_TEMPLATES=[
      is optional: 1 of the 6 ground-truth notes carries it, 5 do not. */
   {key:'fremdnummerInterpolated',regex:/^fremdnummer \S+ bereits berechnet in (?:re)?[a-z0-9]+, ok\?\.?$/i,
    example:'Fremdnummer 2544567001 bereits berechnet in RE0101165619, ok?',
-   processor:'processDachser'},
+   /* Both processors interpolate this phrase: Dachser has always, Wackler since D7. */
+   processors:['processDachser','processWackler']},
   {key:'tpl_keinTarifLand',regex:/^kein tarif f[uü]r/i,
    example:'kein Tarif für PT',
    processor:'processDachser'},
@@ -1708,12 +1712,18 @@ const WACKLER_SNK_CODES=[
      81.00, so the narrower window still pins it. ponytail: pinned by ONE audit row — widen the
      evidence before trusting 81. */
   {abs:81,   tol:0.49, label:P.nl10Ok},
-  /* SNK≈250 is Wackler's flat "Zusatzkosten 250 €" surcharge, queried verbatim by the auditor
-     (straight double quotes are part of the cell). Two rows carry it as a bare SNK gap with no
-     FR/MT/TZ delta on a tariffed row — AI-bundle 2026-10-02 rows a75a84e6 (SNK DL 251.93 vs 1.93)
-     and e87fecfb (251.76 vs 1.76), both 250.00 — and used to fall through to rule 9's generic
-     "SNK Differenz". The 0.5 window cannot poach an existing reading: the neighbouring entries sit
-     at 180 ± 0.5 and 289 ± 0.5. */
+  /* SNK≈250 is Wackler's flat "Zusatzkosten 250 €" surcharge, queried verbatim by the auditor.
+     Two rows carry it as a bare SNK gap with no FR/MT/TZ delta on a tariffed row — AI-bundle
+     2026-10-02 rows a75a84e6 (SNK DL 251.93 vs 1.93) and e87fecfb (251.76 vs 1.76), both 250.00
+     — and used to fall through to rule 9's generic "SNK Differenz". The 0.5 window cannot poach
+     an existing reading: the neighbouring entries sit at 180 ± 0.5 and 289 ± 0.5.
+     ONE FEE, TWO AXES: the same 250 € sits on the FREIGHT line on audit 10370014 rows 22 / 250 /
+     253 (521.40 vs 271.40, 810.40 vs 560.40, 787.00 vs 537.00, every other delta exactly 0) and the
+     auditor spells it without the straight quotes there, while the two September cells (10367543
+     rows 30 / 222) still quote it and are a pending workbook correction, not a second finding. The
+     quotes are cell formatting, and the quoted spelling folds onto the same catalog key through
+     PHRASE_LITERALS, so both spellings resolve to zusatzkosten250; the label emitted here is the
+     unquoted October spelling (rule 2b claims the FR axis; this entry keeps the SNK axis). */
   {abs:250,  tol:0.5,  label:P.zusatzkosten250}
 ];
 function wacklerSnkCode(snk){const a=Math.abs(snk);for(const c of WACKLER_SNK_CODES)if(Math.abs(a-c.abs)<=c.tol)return c.label;return null;}
@@ -1726,7 +1736,7 @@ function isWacklerAvisCode(v){const a=Math.abs(v);return WACKLER_AVIS_CODES.some
 /* Resolve the audit wording for a Wackler AVIS code. The 8.7 credit (negative) is the
    "should have billed telephonically" signature; everything else is the generic "Avis, ok?". */
 function wacklerAvisLabel(v){if(!isWacklerAvisCode(v))return null;if(v<0&&Math.abs(Math.abs(v)-8.7)<0.01)return'hätte Avisgebühr telefonisch abrechnen dürfen';return'Avis, ok?';}
-function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),fr_tar:fc('FR','Kosten lt. Tarif'),fr_dl:fc('FR','Kosten DL'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),referenz:fc('','ReferenzNr'),colli:fcAny('Anz. Colli','Anz.Colli'),brutto:fc('','Brutto kg'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),abg_land:fcAny('Abg.-Land','Absenderland','Versandland'),empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),abg_plz:fcAny('Abg.-PLZ','Absender-PLZ','Versand-PLZ'),zone:fcAny('Tarifzone','Tarifgebiet','Zone')};}
+function resolveWackler(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);const fcAny=(...names)=>{for(const n of names){const c=fc('',n);if(c>=0)return c;}return -1;};return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),avis_diff:fc('AVIS','Differenz'),snk_diff:fc('SNK','Differenz'),fr:fc('FR','Differenz'),fr_tar:fc('FR','Kosten lt. Tarif'),fr_dl:fc('FR','Kosten DL'),maut:fc('MT','Differenz'),tz:fc('TZ','Differenz'),tz_dl:fc('TZ','Kosten DL'),tz_tar:fc('TZ','Kosten lt. Tarif'),referenz:fc('','ReferenzNr'),colli:fcAny('Anz. Colli','Anz.Colli'),brutto:fc('','Brutto kg'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),empf_plz:fc('','Empf.-PLZ'),empf_ort:fc('','Empf.-Ort'),kostenstelle:fc('','KOSTENSTELLE'),sachkonto:fc('','SACHKONTO'),abg_land:fcAny('Abg.-Land','Absenderland','Versandland'),empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),abg_plz:fcAny('Abg.-PLZ','Absender-PLZ','Versand-PLZ'),zone:fcAny('Tarifzone','Tarifgebiet','Zone')};}
 /* SNK rounding-noise floor: sub-€5 SNK gaps on rows that already carry FR/MT/TZ/Gewichte
    evidence are the fuel-on-toll percentage trickling into SNK, not a real classification. */
 const WACKLER_SNK_NOISE=5.0;
@@ -1750,6 +1760,25 @@ const WACKLER_SNK_TERMIN80_TOL=0.5;
 /* TZ additive threshold: TZ ≥ 2.0 fires DifferenzTreibstof alongside other classifications.
    Below 2.0 the TZ delta is fuel-on-toll math noise (typical FR/MT-percentage spill). */
 const WACKLER_TZ_ADDITIVE=2.0;
+/* Einlagerung pair: a quiet row whose only delta is a 70 € SNK gap is the storage fee the owner
+   reads as 40 € plus 30 € (10370017 row 18: SNK DL 70.46 vs lt. Tarif 0.46). The row itself
+   carries only the 70 sum, so the split and its order are the owner's, not a measured pair.
+   No other SNK gap sits strictly between 49 and 81 - the neighbours are 49.00 (NL-12, three rows
+   in the corpus: 10362192 row 33, 10367543 rows 174 and 221) and 81.00 (NL-10) - and no code-book
+   window overlaps [69.5, 70.5], so ±0.5 (the book's fee tolerance at 38 and 16) separates it from
+   both. Deliberately NOT a code-book entry: rule 4 is additive, so
+   a 70 beside a weight finding would gain the pair, and the 40/30 halves alone are unverified. */
+const WACKLER_EINLAGERUNG_ABS=70;
+const WACKLER_EINLAGERUNG_TOL=0.5;
+/* Fuel is derived, not a second finding: TZ is a percentage of FR, so when BOTH sides of the row
+   carry the same percentage the TZ delta is just that rate riding on the freight delta and the
+   auditor does not itemise it. Equal rates on the corpus sit within 0.0003 of each other (10369999
+   row 27 0.13501 / 0.13500, 10370014 row 4 0.13499 / 0.13498) and every real rate difference is
+   ≥ 0.025 (10362275 row 18 0.090 / 0.1174, 10369563 row 8, 10370014 row 259), so 0.005 splits the
+   gap with two orders of magnitude of margin. The rule is RATE-based, not date-based: the fuel
+   surcharge moved from 9 % to 13.5 % between the August and the October sheets, and a date gate
+   would fit that coincidence instead of the arithmetic. */
+const WACKLER_TZ_RATE_TOL=0.005;
 /* Hebebühne (liftgate) credit signature: a large negative SNK ≈ -150 that matches no recognised
    SNK code is the auditor's "should have been allowed to bill the Hebebühne (liftgate) surcharge"
    finding — a specific classification, not a generic SNK gap. The window is deliberately narrow
@@ -1814,13 +1843,16 @@ function processWackler(ws,r,cols){
      suppresses the Fremdnummer, Lagergeld, SNK-code and AVIS phrases. "Always" includes a real
      inbound delivery, which is what the 11 rows of the 2026-10-21 bundle are (10369566 r4-r12,
      10369604 r4-r5). Riedlingen is a hub rule keyed on the recipient, which is why it needs BOTH
-     Empf.-PLZ 88499 and Empf.-Ort RIEDLINGEN: the 50 outbound rows that merely start in 88499
-     keep their own words, and the town alone would also catch Riedlingen near Donauwörth (86609).
-     Kontierung? still appends, inherited from Fremdnummer/Lagergeld: KOST/SACH are blank on those
-     11 rows. */
+     Empf.-PLZ 88499 and Empf.-Ort RIEDLINGEN, and why it also reads the ORIGIN: a row that starts
+     AND ends at the hub is outbound traffic, not a return (audit 10370017 row 122: Abg 88499 /
+     Empf 88499, AVIS 8.7 vs 0 and every other delta 0, truth "Avis, ok?"). The 67 released
+     outbound rows that merely start in 88499 keep their own words; a blank or missing Abg.-PLZ
+     cell reads as '' and keeps the old return behaviour. The town alone would also catch
+     Riedlingen near Donauwörth (86609). Kontierung? still appends, inherited from
+     Fremdnummer/Lagergeld: KOST/SACH are blank on those 11 rows. */
   if(cols.empf_plz>=0&&cols.empf_ort>=0){
     const plz=cellStr(ws,r,cols.empf_plz),ort=cellStr(ws,r,cols.empf_ort).toUpperCase();
-    if(plz==='88499'&&ort==='RIEDLINGEN'){
+    if(plz==='88499'&&ort==='RIEDLINGEN'&&cellStr(ws,r,cols.abg_plz)!=='88499'){
       let out=P.returnOk;
       if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
         const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
@@ -1840,7 +1872,18 @@ function processWackler(ws,r,cols){
      When this fires, all delta-derived rules (3–11) are suppressed since their inputs are
      comparing against a non-existent tariff. Kontierung (rule 12) still runs inline — when
      KOST/SACH are blank/X the row carries both classifications, matching training row 20's
-     expected "Fremdnummer xxx bereits berechnet in RExxx, ok? // Kontierung?". */
+     expected "Fremdnummer xxx bereits berechnet in RExxx, ok? // Kontierung?".
+     The Fremdnummer half is the row's OWN ReferenzNr, interpolated like the Dachser rule
+     (1208-1212): the first comma-separated token, trimmed, so a multi-ref cell stays
+     deterministic, and a blank cell keeps the 'xxx' literal. The Beleg it was charged in is
+     NOT derivable from this workbook (it names a document in another one), so RExxx stays a
+     placeholder. Only 10370017 row 126 and 10367543 row 218 reach this rule, both already
+     diffs: row 126 now cites 2545058028 instead of xxx and keeps RExxx, and the phrase key
+     becomes fremdnummerInterpolated, matching its truth cell's key. Owner ruling 2026-10-23:
+     the Fremdnummer is read off the ReferenzNr column, the same rule released and
+     corpus-verified on Dachser, so 10367543 row 218's 2026-10-01 cell was corrected the
+     same way (2544818983 to the row's own 2544828688), and the row remains a diff only on
+     the invoice half, 10367544 against the RExxx placeholder. */
   if(cols.tarif>=0){
     const tarifRaw=cellStr(ws,r,cols.tarif),tarifNumEarly=cellNum(ws,r,cols.tarif);
     const _frEarly=cols.fr>=0?cellNum(ws,r,cols.fr):0;
@@ -1849,7 +1892,12 @@ function processWackler(ws,r,cols){
     const dashOrZero=tarifRaw==='-'||(tarifNumEarly===0&&tarifRaw!=='');
     const emptyWithSignal=tarifRaw===''&&(Math.abs(_frEarly)>T_WACKLER||Math.abs(_mtEarly)>T_WACKLER||Math.abs(_tzEarly)>T_WACKLER);
     if(dashOrZero||emptyWithSignal){
-      let out='Fremdnummer xxx bereits berechnet in RExxx, ok?';
+      const refRaw=cols.referenz>=0?cellStr(ws,r,cols.referenz):'';
+      const ref=refRaw.split(',')[0].trim();
+      /* A '-' ReferenzNr is the sheet's "none" marker, not a reference: keep it blank so the
+         phrase keeps the literal 'xxx' and its 'fremdnummer' key. */
+      const refText=ref==='-'?'':ref;
+      let out=refText?('Fremdnummer '+refText+' bereits berechnet in RExxx, ok?'):P.fremdnummer;
       if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
         const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
         if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
@@ -1910,17 +1958,43 @@ function processWackler(ws,r,cols){
      &&!isWacklerAvisCode(avisVal)){
     return'Pauschalfracht, ok?';
   }
-  /* 2b. Pauschalfracht aus der Fracht - the freight delta is the ONLY cost delta on the row:
+  /* 2b. Zusatzkosten 250 auf der Fracht — the same 250 € flat surcharge, billed on the FREIGHT
+     line instead of the SNK line: |FR Differenz| is 250.00 ± 0.5 and the MT, SNK, TZ and AVIS
+     Differenz cells all hold exactly zero. Audit 10370014 rows 22 / 250 / 253 (521.40 vs 271.40,
+     810.40 vs 560.40, 787.00 vs 537.00) are the three released rows with this shape, and the SNK
+     code book reads the identical amount on the SNK axis (10367543 rows 30 / 222). One finding,
+     both axes — the phrase names the charge, not the line it sits on. The guard is a copy of 2c's,
+     so this arm can only shrink that one: rules 1 / 1b / 2 all demand FR = 0 and cannot reach it. */
+  if(cols.fr>=0&&frHasVal&&mtVal===0&&snkVal===0&&tzVal===0&&avisVal===0
+     &&Math.abs(Math.abs(frVal)-250)<=0.5){
+    return P.zusatzkosten250;
+  }
+  /* 2c. Pauschalfracht aus der Fracht - the freight delta is the ONLY cost delta on the row:
      |FR Differenz| over T and the MT, SNK, TZ and AVIS Differenz cells all hold exactly zero.
      Owner ruling 2026-10-21: "only FR always Pauschalfracht", sign-agnostic (a credit counts).
      A cost block the sheet layout does not have counts as silent. One released row has this
      shape: 10369563 row 32 (FR 538.16 against a 156.84 tariff, every other Differenz blank).
      Rule 2 catches the same finding on the SNK axis; this arm keeps rule 5 from reading it as a
-     bundling finding. */
+     bundling finding. Rule 2b peels the 250 € surcharge off it first. */
   if(cols.fr>=0&&frHasVal&&mtVal===0&&snkVal===0&&tzVal===0&&avisVal===0){
     return'Pauschalfracht, ok?';
   }
   let res='';
+  /* Bundling is TERMINAL. "hätte gebündelt werden müssen" says the references should have ridden
+     ONE booking, so the per-shipment AVIS / MT / TZ / fuel / SNK phrases an additive cascade would
+     append are artefacts of the double billing, not findings of their own. The October truth cells
+     are unanimous (10369999 row 27, 10370014 rows 4 and 218 carry the phrase ALONE) while all five
+     August cells add their deltas — a practice change, so this is the corrected reading. Only
+     Kontierung? still appends, matching the partial-billing branch below (shared here so the
+     append pattern and the terminality cannot drift apart). */
+  const bundleOnly=()=>{
+    let out=P.buendelMuessen;
+    if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
+      const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
+      if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
+    }
+    return out;
+  };
   /* 3. AVIS surcharge codes (sign-insensitive: 7.5 / 8.5 / 6.5 / 8.7 ± credit).
      AVIS=-8.7 is the "should have billed telephonically" signature → specific wording. */
   if(cols.avis_diff>=0){const al=wacklerAvisLabel(avisVal);if(al)res=join(res,al);}
@@ -1964,7 +2038,11 @@ function processWackler(ws,r,cols){
                                                     f8ce2bae / 3aaa6bed / 9de2427a / 3ac4d429)
      ─ no real weights + multi-ref + FR          → "hätte gebündelt werden müssen"   (legacy bundling)
      MT and TZ stay additive on every branch except same-tier "Wackler rechnet" (see rules 9 & 11). */
-  let gewichteTriggered=false,wacklerRechnetFired=false,hebebuehneFired=false;
+  /* `gewichteTriggered` marks "the weight block ran", which the Frachtdifferenz fallback (rule 7)
+     needs. `weightFindingFired` marks the narrower "a weight/bundle finding was emitted" and is
+     what rule 9 reads: the rate-card `Wackler rechnet` arms also set the former, but a genuine
+     SNK gap on such a row is still a finding of its own (clause (c) only removes the fuel note). */
+  let gewichteTriggered=false,wacklerRechnetFired=false,hebebuehneFired=false,weightFindingFired=false;
   if(cols.vkg>=0&&cols.vkg_dl>=0&&cols.fr>=0&&frHasVal){
     const vkg=cellNum(ws,r,cols.vkg),vkgDl=cellNum(ws,r,cols.vkg_dl);
     const colli=cols.colli>=0?cellNum(ws,r,cols.colli):0;
@@ -2016,23 +2094,39 @@ function processWackler(ws,r,cols){
         const gap=Math.abs(vkg-vkgDl)/Math.max(vkg,vkgDl);
         const palletVol=colli*WACKLER_COLLI_KG;
         if(isBundle&&gap>WACKLER_SAME_WEIGHT_BAND&&gap<=WACKLER_BUENDEL_NEAR_BAND){
-          res=join(res,P.buendelMuessen);
+          /* TERMINAL — the bundling phrase is the row's only finding. Supersedes the additive
+             August cells 10361841 r26, 10362192 r59 and r163; the October cells for this shape
+             (10370014 r218) carry it alone. */
+          return bundleOnly();
         } else if(tReal!==tB){
           res=join(res,P.abweichGewichte);
+          weightFindingFired=true;
         } else if(refCount>=WACKLER_BUENDEL_MIN_REFS){
-          res=join(res,P.buendelMuessen);
+          /* TERMINAL — same reading as the near-band arm above. Supersedes the additive August
+             cells 10362192 r67 and 10362275 r7 (8 and 6 references, weights within the same
+             tier). */
+          return bundleOnly();
         } else if((palletVol>10000||palletVol>=1.05*vkg)&&tA!==tB){
           res=join(res,P.abweichGewichte);
+          weightFindingFired=true;
         } else if(refCount>=3){
           res=join(res,P.abweichGewichte);
+          weightFindingFired=true;
         } else {
           res=join(res,wacklerRechnetNote(reportTier));
-          /* On a high-colli row the fuel note is NOT absorbed into the rate-card finding when the
-             freight was over-billed: the auditor itemises it (b40e29c1 FR +200.50 / TZ +18.05,
-             b84ad3b9 +316.95 / +28.53, 4ab5b1c2 +22.19 / +2.00). Only FR credits stay absorbed,
-             and those are already covered by the frIsCredit guard on rule 10, so suppression here
-             is limited to the credit case — matching the low-colli rows (70cfd9a3 / efe5b124 /
-             49f8e936) whose positive-FR fuel gap the truth does keep silent. */
+          /* `wacklerRechnetFired=frVal<0` survives only for the rate-DIFFERING same-tier rate-card
+             row. On equal rates rule 10's clause (c) already suppresses the fuel note, which
+             supersedes the three cells this comment used to cite as itemised fuel (b40e29c1 /
+             b84ad3b9 / 4ab5b1c2 — UNVERIFIED: no workbook on disk carries them, so their rate
+             equality was never re-checked, the same class as 3ac4d429 / 89025060 / b8d93cb3).
+             What is left is the row where the two rates differ AND the freight is a credit: there
+             the fuel gap rides the over-billed freight and the auditor does not itemise it (which
+             the frIsCredit guard on rule 10 also covers). Keep the assignment this narrow:
+             `wacklerRechnetFired` is only ever read as !wacklerRechnetFired, so broadening it can
+             only suppress fuel, never re-add it — and it would suppress the note on the
+             positive-FR rate-card rows the auditor still itemises it on (the b40e29c1 /
+             b84ad3b9 / 4ab5b1c2 class, UNVERIFIED as above). The low-colli rows 70cfd9a3 /
+             efe5b124 / 49f8e936 set the flag in the tA===tB branch below, not here. */
           wacklerRechnetFired=frVal<0;
         }
       } else if(tA===tB){
@@ -2055,9 +2149,10 @@ function processWackler(ws,r,cols){
         if(isBundle&&!volumetric&&!sameWeight){
           /* Same-tier but materially UNEQUAL whole-kg weights on a multi-reference row: the auditor
              reads it as separate consignments that should have been combined onto a single booking,
-             not a single-shipment rate-card rounding. Do NOT set wacklerRechnetFired, so MT and TZ
-             stay additive below. */
-          res=join(res,P.buendelMuessen);
+             not a single-shipment rate-card rounding. TERMINAL for consistency with the other
+             bundling arms: the bundling finding is the row's only finding, so the old "leave MT/TZ
+             additive" note is moot. No released corpus cell reaches this arm. */
+          return bundleOnly();
         } else if(isBundle&&!volumetric&&sameWeight){
           /* Same-tier multi-reference row whose two weights are (near-)IDENTICAL whole-kg values:
              the COMBINED WEIGHT decides. Light rows (≤ WACKLER_BUENDEL_MAX_KG) are consignments
@@ -2096,27 +2191,26 @@ function processWackler(ws,r,cols){
            VKG_DL 94, FR=-15.39, AVIS=8.7, MT=-3.67 and 45c3d6e8: 3 refs, VKG 2079 / VKG_DL 152,
            FR=+30.21, SNK=226.12, MT=4.05, TZ=3.47 — both expect only the bundling phrase).
            Only Kontierung? still appends, mirroring the other terminal branches. */
-        let out=P.buendelMuessen;
-        if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){
-          const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();
-          if((kt===''||kt==='X')&&(sk===''||sk==='X'))out=join(out,'Kontierung?');
-        }
-        return out;
+        return bundleOnly();
       } else if(isBundle&&frVal>0&&Math.abs(vkg-vkgDl)<=WACKLER_XTIER_NEAR_BAND*Math.max(vkg,vkgDl)){
         /* Cross-tier multi-reference row whose weights still roughly agree, with a POSITIVE FR
            delta (system tariff above the bill): the system rated the references separately while
            Wackler billed them as one — the booking should have been bundled. Far-apart weights or
-           an FR credit stay a genuine weight discrepancy below. */
-        res=join(res,P.buendelMuessen);
+           an FR credit stay a genuine weight discrepancy below. TERMINAL, like the other bundling
+           arms — no released corpus cell reaches this one (all five additive cells are colli≥7),
+           so the terminal reading costs nothing here. */
+        return bundleOnly();
       } else {
         res=join(res,'Differenz aufgrund abweichender Gewichte');
+        weightFindingFired=true;
       }
       gewichteTriggered=true;
     }
   }
   if(!gewichteTriggered&&isBundle&&frHasVal){
-    res=join(res,'hätte gebündelt werden müssen');
-    gewichteTriggered=true;
+    /* Legacy bundling for a multi-reference row without two real weights. TERMINAL like every
+       other bundling arm; no released corpus cell reaches it. */
+    return bundleOnly();
   }
   /* 6. AVIS=1 — Avisnachweis line, separate from the surcharge codes above. */
   if(cols.avis_diff>=0&&Math.abs(avisVal-1)<0.01)res=join(res,'Differenz avis, ok?');
@@ -2129,7 +2223,17 @@ function processWackler(ws,r,cols){
      keeps Mautdifferenz on those rows too — it appears on 23 of the 46 ground-truth rows,
      including every "Wackler rechnet …" case that carries an MT delta.) */
   if(cols.maut>=0&&hasErr(mtVal,T_WACKLER))res=join(res,'Mautdifferenz');
-  /* 9. SNK Differenz fallback — unknown SNK code, above noise floor, not bundled. */
+  /* 9. SNK Differenz fallback — unknown SNK code, above noise floor, not bundled, and no
+     WEIGHT finding already on the row (weightFindingFired, not gewichteTriggered: a rate-card
+     `Wackler rechnet` arm runs the same block but says nothing about the SNK gap, so a genuine
+     one stays visible). No released truth cell in any Wackler workbook contains the phrase
+     (0 of 275); where the row already carries "Differenz aufgrund abweichender Gewichte" the
+     residual SNK gap is part of that finding and the auditor does not repeat it (10369999 rows 27
+     and 32, 6.79 and 6.38). On an otherwise SILENT row it stays: it
+     is the only signal the row has, and the one quiet value it does not name is ≈70, which the
+     Einlagerung pair below claims. The Hebebühne branch and the
+     SNK code book above are untouched — they name a charge, not a residual. WACKLER_SNK_NOISE
+     stays 5.0: the floor is not what separates the false positives, the finding is. */
   if(cols.snk_diff>=0&&!snkCodeLabel&&snkHasVal
      &&Math.abs(snkVal)>=WACKLER_SNK_NOISE
      &&!res.toLowerCase().includes('gebündelt')){
@@ -2140,7 +2244,15 @@ function processWackler(ws,r,cols){
       res=join(res,P.hebebuehne);
       hebebuehneFired=true;
     }
-    else
+    else if(!weightFindingFired&&!frHasVal&&!mtHasVal&&Math.abs(tzVal)<WACKLER_TZ_ADDITIVE
+      &&Math.abs(avisVal)<=T_WACKLER&&Math.abs(Math.abs(snkVal)-WACKLER_EINLAGERUNG_ABS)<=WACKLER_EINLAGERUNG_TOL)
+      /* Quiet row (no FR/MT delta, TZ inside the fuel-noise band, no AVIS surcharge) whose only
+         gap is the ≈70 € storage fee: the owner reads it as the 40 + 30 pair, in that order
+         (10370017 row 18). snkHasVal, the noise floor and the code-book miss come from the outer
+         gate; the sign is ignored, like the code book. !weightFindingFired is implied by the
+         earlier rules but kept so a widening cannot resurrect a phrase on a weight row. */
+      res=join(P.einlagerung40Ok,P.einlagerung30Ok);
+    else if(!weightFindingFired)
       res=join(res,'SNK Differenz');
   }
   /* 10. DifferenzEnergiezuschlag — the fuel/energy surcharge delta is additive above the 2.0
@@ -2153,9 +2265,22 @@ function processWackler(ws,r,cols){
            auditor does NOT list it as its own classification. (AI bundle 2026-06-05 rows
            f8ce2bae / 3aaa6bed / b47976d1 / 9de2427a / 8b5ae67c / f04300d4: every one carries a
            negative FR delta with a proportional TZ delta, and the ground truth has no fuel
-           note.) A POSITIVE FR delta is different — the auditor itemises the fuel surcharge
-           there (bundle rows 3ac4d429 / 89025060 / b8d93cb3), so only the credit case is
-           suppressed.
+           note.) The sign of the FR delta does not decide on its own: clause (c) overrides (b)
+           on an equal-rate row, so a POSITIVE FR delta keeps the fuel note only where the two
+           rates differ. The three positive-FR June cells once cited here as itemised fuel
+           (bundle rows 3ac4d429 / 89025060 / b8d93cb3) are outside the current corpus and were
+           never re-checked for rate equality.
+       (c) rows whose two sides carry the SAME fuel rate: TZ is a percentage of FR, so an equal
+           TZ/FR ratio on the Kosten-DL and the Kosten-lt.-Tarif side means the TZ delta is that
+           rate riding on the freight delta, not a finding of its own (fuelDerived below).
+           10369999 row 32, 10370014 rows 4 / 5 / 218 / 248 / 261 are exactly this shape and the
+           October truth cells have no fuel note. 10369563 row 8 and 10370014 row 259 keep
+           "Differenz treibstoff" for the opposite reason: both carry FR and TZ Kosten pairs
+           (114.78 / 114.78 and 230.60 / 230.60), so fuelRatesKnown is true, but the two sides
+           carry DIFFERENT fuel rates (10369563 row 8 14.92/114.78 = 0.130 vs 10.33/114.78 =
+           0.090; 10370014 row 259 62.26/230.60 = 0.270 vs 31.13/230.60 = 0.135), so fuelDerived
+           stays false and the plain |TZ| threshold applies as before. Same for the 45-column
+           layout (10369982), which has no FR/TZ Kosten cells at all.
      (A blanket FR&MT suppression was tried earlier and removed because the auditor keeps the
      fuel note when FR/MT are present on undercharge rows; the credit-only gate below is the
      correct, sign-aware refinement.)
@@ -2163,6 +2288,15 @@ function processWackler(ws,r,cols){
      "DifferenzTreibstof" survives only as a literal so older exports still resolve (see
      PHRASE_LITERALS). */
   const frIsCredit=frHasVal&&frVal<0;
+  const frDlVal=cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0;
+  const frTarVal=cols.fr_tar>=0?cellNum(ws,r,cols.fr_tar):0;
+  const tzDlVal=cols.tz_dl>=0?cellNum(ws,r,cols.tz_dl):0;
+  const tzTarVal=cols.tz_tar>=0?cellNum(ws,r,cols.tz_tar):0;
+  /* Both rates must be present to judge equality; a row without a fuel line (or a layout without
+     the TZ block) keeps the plain threshold. Both TZ values must be > 0 as well: a zero fuel line
+     is a missing line, not a 0 % rate, and it must not read as "equal rates". */
+  const fuelRatesKnown=frDlVal>0&&frTarVal>0&&tzDlVal>0&&tzTarVal>0;
+  const fuelDerived=fuelRatesKnown&&Math.abs(tzDlVal/frDlVal-tzTarVal/frTarVal)<=WACKLER_TZ_RATE_TOL;
   /* On a Hebebühne (liftgate) credit row the auditor QUERIES the diesel surcharge
      ("Dieselzuschlag ok?") rather than flatly flagging a generic "Differenz Energiezuschlag" —
      AI-bundle 2026-06-05 row ce9f73d9 (SNK≈-150 Hebebühne credit + TZ=-19.5, no FR). The fuel
@@ -2172,8 +2306,13 @@ function processWackler(ws,r,cols){
      Energiezuschlag"; a Hebebühne credit keeps "Dieselzuschlag ok?".
      TZ is a percentage of FR, not of FR+MT (10362276 row 23: 97.56 is 9.00% of FR 1084.04, not of
      FR+MT 1197.49). All 15 Energiezuschlag rows carry an FR delta, and 10369563 row 8 is the only
-     standalone fuel row. */
-  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!wacklerRechnetFired&&!frIsCredit)
+     standalone fuel row.
+     wacklerRechnetFired stays even though no corpus row NEEDS it after the rate gate: every row
+     where it is load-bearing either has equal rates (so fuelDerived already suppresses) or is an
+     FR credit, and the weight arms that reach here are terminal. It is the only guard that keeps a
+     same-tier "Wackler rechnet" row from gaining a fuel phrase if its two rates ever differ, and
+     removing it would turn that into a silent behaviour change. */
+  if(cols.tz>=0&&Math.abs(tzVal)>=WACKLER_TZ_ADDITIVE&&!fuelDerived&&!wacklerRechnetFired&&!frIsCredit)
     res=join(res,hebebuehneFired?P.dieselzuschlag:(res===''?P.treibstoff:P.differenzEnergiezuschlag));
   /* 11. NL-FIX zone corollary: when NL-FIX fires AND there's an FR delta AND KOST/SACH are blank,
      the destination zone may be miscoded — surface "Zone korrekt?" up front and drop the
@@ -2189,7 +2328,7 @@ function processWackler(ws,r,cols){
   if(KONTIERUNG_ENABLED&&cols.kostenstelle>=0&&cols.sachkonto>=0){const kt=cellStr(ws,r,cols.kostenstelle).toUpperCase(),sk=cellStr(ws,r,cols.sachkonto).toUpperCase();if((kt===''||kt==='X')&&(sk===''||sk==='X'))res=join(res,'Kontierung?');}
   /* 13. Pure fuel fallback — row had nothing but a fuel/energy delta above the noise floor.
      res is empty here, so no other phrase fired: the standalone wording applies. */
-  if(res===''&&cols.tz>=0&&hasErr(tzVal,T_WACKLER))res=P.treibstoff;
+  if(res===''&&cols.tz>=0&&!fuelDerived&&hasErr(tzVal,T_WACKLER))res=P.treibstoff;
   return res;
 }
 
@@ -5009,7 +5148,10 @@ function buildRuleSpec(){
   for(const fw of Object.keys(forwarders))thresholds[fw]=effectiveThreshold(fw);
   const phraseTemplates=PHRASE_TEMPLATES.map(t=>({
     key:t.key,regex:t.regex.source,flags:t.regex.flags,
-    example:t.example,processor:t.processor||'',
+    example:t.example,
+    /* `processor` keeps its single-emitter value for older consumers; `processors` lists all. */
+    processor:t.processor||(t.processors||[])[0]||'',
+    processors:t.processors||(t.processor?[t.processor]:[]),
   }));
   const phraseLiterals={};
   for(const[k,v]of Object.entries(PHRASE_LITERALS)){
@@ -5361,11 +5503,14 @@ function buildPhraseEmitterIndex(){
     for(const m of src.matchAll(/\bP\.([A-Za-z0-9_]+)/g))add(m[1],fn.name);
     scanStrings(src.toLowerCase(),fn.name);
   }
-  /* Scan the code-book LABELS, not their JSON dump: a label carrying literal quotes
-     ("Zusatzkosten 250 €", ok?) comes back from JSON.stringify with those quotes escaped,
-     so the phrase would never be found in the serialised text. */
+  /* Scan the code-book LABELS, not their JSON dump: a label can carry characters that
+     JSON.stringify escapes (the 250 € surcharge label carried literal quotes until v1.56.0), so
+     the phrase would not be found in the serialised text. */
   for(const c of WACKLER_SNK_CODES)scanStrings(String(c.label).toLowerCase(),'wacklerSnkCode');
-  for(const t of PHRASE_TEMPLATES)if(t.processor)add(t.key,t.processor);
+  for(const t of PHRASE_TEMPLATES){
+    if(t.processor)add(t.key,t.processor);
+    for(const name of t.processors||[])add(t.key,name);
+  }
   return idx;
 }
 
@@ -5381,7 +5526,8 @@ function buildEngineSourceDoc(){
     WACKLER_BP,WACKLER_RATE_TOL,WACKLER_RETIER_EXACT_TOL,WACKLER_SNK_CODES,WACKLER_AVIS_CODES,
     WACKLER_SNK_NOISE,WACKLER_PAUSCHAL_RATIO,
     WACKLER_SNK_TERMIN80_ABS,WACKLER_SNK_TERMIN80_TOL,
-    WACKLER_TZ_ADDITIVE,WACKLER_HEBEBUEHNE_ABS,WACKLER_HEBEBUEHNE_TOL,WACKLER_BUENDEL_MAX_KG,
+    WACKLER_TZ_ADDITIVE,WACKLER_EINLAGERUNG_ABS,WACKLER_EINLAGERUNG_TOL,
+    WACKLER_HEBEBUEHNE_ABS,WACKLER_HEBEBUEHNE_TOL,WACKLER_BUENDEL_MAX_KG,
     WACKLER_XTIER_NEAR_BAND,WACKLER_BUENDEL_PARTIAL,WACKLER_COLLI_KG,WACKLER_SAME_WEIGHT_BAND,
     WACKLER_BUENDEL_NEAR_BAND,WACKLER_BUENDEL_MIN_REFS,
   };

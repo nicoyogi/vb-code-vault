@@ -1,6 +1,20 @@
 {
-  "version": "1.55.0",
+  "version": "1.57.0",
   "entries": [
+    {
+      "ver": "1.57.0",
+      "date": "2026-10-23",
+      "items": [
+        "Wackler - a row whose only delta is a 70 EUR SNK gap now reads 'Einlagerung 40 €, ok? // Einlagerung 30 €, ok?' instead of 'SNK Differenz' (10370017 row 18; the 40 + 30 split is the owner's reading of the 70 EUR sum, the row itself carries only 70, and the arm fires only when FR, MT, TZ and AVIS are quiet); the duplicate-billing note now names the row's own ReferenzNr (first comma-separated token, e.g. 'Fremdnummer 2545058028 bereits berechnet in RExxx, ok?') instead of the xxx placeholder; the owner reads the Fremdnummer off the ReferenzNr column - 10370017 row 126's cell, whose 2545023088 sits in no workbook, was corrected to the row's own 2545058028 (also 10370014 row 237's reference); the invoice it was charged in stays the RExxx placeholder because it sits in another workbook, so 10370017 row 126 remains a diff against its cell, and 10367543 row 218 now differs only on the invoice half - its cell was corrected the same way (2544818983 -> the row's own 2544828688) and names 10367544 against the engine's RExxx placeholder, like 10370017 row 126."
+      ]
+    },
+    {
+      "ver": "1.56.0",
+      "date": "2026-10-23",
+      "items": [
+        "Wackler - a bundling finding now stands alone (10370014 row 218; the truth cells for 10369999 row 27 and 10370014 row 4 carry it alone too, but those rows stay not derivable from their inputs); the fuel note is itemised only when the two sides carry different fuel rates (a row or layout without both FR/TZ rate pairs keeps the plain |TZ| >= 2 threshold), so 10362275 row 18 keeps 'Dieselzuschlag ok?' while 10369563 row 8 and 10370014 row 259 keep 'Differenz treibstoff'; a 250 EUR freight delta reads 'Zusatzkosten 250 €, ok?' instead of 'Pauschalfracht, ok?' (10370014 rows 22, 250, 253); 'SNK Differenz' no longer repeats a weight finding (10369999 rows 27 and 32); and a row that starts and ends at the Riedlingen hub is no longer a return (10370017 row 122). 9 of the bundle's 14 rows now match the workbook, the other 5 are not derivable from row inputs. Of the older cells, five lose the phrases a bundling finding used to collect and fifteen lose an added fuel note (four carry both), and two September cells lose the auditor's quotes by decision."
+      ]
+    },
     {
       "ver": "1.55.0",
       "date": "2026-10-21",

@@ -1,0 +1,49 @@
+{
+ "schema": "wackler-rows/v1",
+ "source": "10370017 Soll-Ist-Vergleich.xlsx",
+ "outliers": [],
+ "rows": [
+  {
+   "row": 18,
+   "stat": "10",
+   "tarif": 120.27,
+   "avis_diff": 0,
+   "snk_diff": 70,
+   "fr": 0,
+   "maut": 0,
+   "tz": 0,
+   "referenz": "2544983744,2544976646",
+   "colli": "4",
+   "vkg": "589",
+   "vkg_dl": "589",
+   "empf_plz": "79539",
+   "empf_ort": "Lörrach",
+   "truth": "Einlagerung 40 €, ok? // Einlagerung 30 €, ok?"
+  },
+  {
+   "row": 122,
+   "stat": "10",
+   "tarif": 153,
+   "avis_diff": 8.7,
+   "snk_diff": 0,
+   "fr": 0,
+   "maut": 0,
+   "tz": 0,
+   "referenz": "2545010234,2545034270",
+   "vkg": "1410",
+   "vkg_dl": "1410",
+   "empf_plz": "88499",
+   "empf_ort": "RIEDLINGEN",
+   "empf_land": "DE",
+   "abg_land": "DE",
+   "abg_plz": "88499",
+   "fr_tar": 119.6,
+   "fr_dl": 119.6,
+   "colli": "8",
+   "brutto": "1410",
+   "tz_dl": 16.15,
+   "tz_tar": 16.15,
+   "truth": "Avis, ok?"
+  }
+ ]
+}

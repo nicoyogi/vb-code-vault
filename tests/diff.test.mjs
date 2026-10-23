@@ -596,8 +596,20 @@ test('phraseToKey: exact-case match wins over the case-folded Kontierung collisi
   assert.equal(e.phraseToKey('kontierung?'), 'kontierungLower', 'DHL casing');
 });
 
+test('phraseToKey: the Einlagerung pair and the interpolated Fremdnummer resolve', () => {
+  // D6: two catalog keys, no fold collision (the PHRASES fold test above covers that).
+  assert.equal(e.phraseToKey('Einlagerung 40 €, ok?'), 'einlagerung40Ok');
+  assert.equal(e.phraseToKey('Einlagerung 30 €, ok?'), 'einlagerung30Ok');
+  // D7: the literal still hits the exact catalog entry, the real digits hit the template.
+  assert.equal(e.phraseToKey('Fremdnummer xxx bereits berechnet in RExxx, ok?'), 'fremdnummer');
+  assert.equal(e.phraseToKey('Fremdnummer 2545058028 bereits berechnet in RExxx, ok?'),
+    'fremdnummerInterpolated');
+});
+
 test('phraseToKey: legacy literals and templates still resolve through the fold', () => {
   assert.equal(e.phraseToKey('DifferenzTreibstof'), 'lit_differenzTreibstofWackler', 'glued legacy literal');
+  assert.equal(e.phraseToKey('"Zusatzkosten 250 €", ok?'), 'zusatzkosten250',
+    'quoted Sep spelling folds onto the unquoted catalog key (10367543 r30/r222)');
   assert.equal(e.phraseToKey('Differenz aufgrund abweichender Zwischenempfänger 12345 Berlin'), 'zwPrefix', 'template');
 });
 
