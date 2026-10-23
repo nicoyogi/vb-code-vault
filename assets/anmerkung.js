@@ -1,4 +1,4 @@
-/* ── BACKGROUND PARTICLES ── */
+/* Background particles */
 (function(){
   const cv=document.getElementById('bg-canvas'),cx=cv.getContext('2d');
   let W,H,t=0,pts=[];
@@ -37,9 +37,7 @@
   else { scheduleFrame(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) scheduleFrame(); }); }
 })();
 
-/* ══════════════════════════════════════════════════════════
-   STATE
-══════════════════════════════════════════════════════════ */
+/* State */
 let selectedFW=null,rawFileBytes=null,workbook=null,resultBlob=null,originalFileName='';
 /* Thresholds are mutable + persisted (feature #8). Defaults chosen to preserve original behavior. */
 const TH_DEFAULTS={dachser:0.08,kn:0.09,dhl:0.04,wackler:0.09};
@@ -63,7 +61,7 @@ function onThInput(key,el){const n=parseFloat(el.value);if(!isNaN(n)&&n>=0){TH[k
 function resetThresholds(){TH={...TH_DEFAULTS};applyThresholds();saveThresholds();syncThFields();}
 function toggleAdv(){const t=document.getElementById('advToggle'),p=document.getElementById('advPanel');const open=!p.classList.contains('open');p.classList.toggle('open',open);t.classList.toggle('open',open);t.setAttribute('aria-expanded',open?'true':'false');}
 
-/* ── PROJECT PICKER ── */
+/* Project picker */
 /* Add future projects here. A project selection is intentionally separate from the
    forwarder/rule-engine choice: WMF currently uses the existing workflow unchanged. */
 const PROJECT_KEY='anmerkung.project.v1';
@@ -158,13 +156,11 @@ document.addEventListener('keydown',e=>{
   }
 });
 
-/* ══════════════════════════════════════════════════════════
-   VERSION + CHANGELOG (#24)
+/* Version + changelog (#24)
    Data lives in assets/anmerkung-changelog.json so the release
    notes can be edited without touching the app shell. The file
    is precached by the service worker so offline mode still has
-   the full history.
-══════════════════════════════════════════════════════════ */
+   the full history. */
 const CHANGELOG_URL='assets/anmerkung-changelog.json';
 const CHANGELOG_SEEN_KEY='anmerkung.changelog.seen.v1';
 let VERSION='0.0.0';
@@ -257,9 +253,7 @@ function showChangelogOnUpdate(){
   openChangelog();
 }
 
-/* ══════════════════════════════════════════════════════════
-   THEME TOGGLE — "Scriptorium" light (#13)
-══════════════════════════════════════════════════════════ */
+/* Theme toggle — "Scriptorium" light (#13) */
 const THEME_KEY='anmerkung.theme.v1';
 function applyTheme(t){
   const light=t==='light';
@@ -278,10 +272,8 @@ function toggleTheme(){
 }
 (function loadTheme(){try{const saved=localStorage.getItem(THEME_KEY);if(saved==='light'||saved==='dark')applyTheme(saved);}catch(_){}})();
 
-/* ══════════════════════════════════════════════════════════
-   STYLE TOGGLE — "Pro" professional vs "Mystic" grimoire look
-   Independent of dark/light theme. Persists to localStorage.
-══════════════════════════════════════════════════════════ */
+/* Style toggle — "Pro" professional vs "Mystic" grimoire look
+   Independent of dark/light theme. Persists to localStorage. */
 const STYLE_KEY='anmerkung.style.v1';
 function applyStyle(s){
   const pro=s==='pro';
@@ -298,11 +290,9 @@ function toggleStyle(){
 }
 (function loadStyle(){try{const saved=localStorage.getItem(STYLE_KEY);if(saved==='pro'||saved==='mystic')applyStyle(saved);else applyStyle('pro');}catch(_){applyStyle('pro');}})();
 
-/* ══════════════════════════════════════════════════════════
-   PHRASE CATALOG (#11 partial) — single source of truth for all
+/* Phrase catalog (#11 partial) — single source of truth for all
    rule output strings. Rule engine imports from here; Rule Tester
-   uses the same catalog. Changing wording is now a 1-line edit.
-══════════════════════════════════════════════════════════ */
+   uses the same catalog. Changing wording is now a 1-line edit. */
 const PHRASES={
   // Dachser
   ausfallfracht:              'AUSFALLFRACHT',
@@ -406,8 +396,7 @@ const PHRASES={
 /* Expose under shorter alias for compactness inside processors. */
 const P=PHRASES;
 
-/* ══════════════════════════════════════════════════════════
-   PHRASE → KEY REVERSE INDEX (AI-friendly training output)
+/* Phrase to key reverse index (AI-friendly training output)
    Every phrase the rule engine emits should resolve to a stable
    identifier that maps 1-to-1 to a branch in process<Forwarder>.
    That way training-data consumers (humans OR LLMs) can read a
@@ -427,8 +416,7 @@ const P=PHRASES;
         rule_spec.phrase_templates so an AI can see the variable parts.
 
    Anything that fails all three is returned as `?:<phrase>` so the
-   consumer can spot truly unmapped emissions and add a key.
-══════════════════════════════════════════════════════════ */
+   consumer can spot truly unmapped emissions and add a key. */
 const PHRASES_REVERSE=(function(){
   const exact=new Map(),folded=new Map();
   for(const[k,v]of Object.entries(PHRASES)){
@@ -520,11 +508,9 @@ function phraseKeysFor(arr){
   return(arr||[]).map(p=>phraseToKey(p)||('?:'+(p==null?'':String(p))));
 }
 
-/* ══════════════════════════════════════════════════════════
-   TIMESTAMPED STREAMING LOG (#16) — replaces original showLog
+/* Timestamped streaming log (#16) — replaces original showLog
    with an append-only stream. Kept the same public signature
-   so all existing call sites work unchanged.
-══════════════════════════════════════════════════════════ */
+   so all existing call sites work unchanged. */
 function pad2(n){return n<10?'0'+n:''+n;}
 function nowTs(){const d=new Date();return pad2(d.getHours())+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds());}
 let _logHasClear=false;
@@ -557,9 +543,7 @@ function showLog(msg,type){
   el.scrollTop=el.scrollHeight;
 }
 
-/* ══════════════════════════════════════════════════════════
-   A11Y: forwarder radiogroup keyboard nav (#17)
-══════════════════════════════════════════════════════════ */
+/* A11Y: forwarder radiogroup keyboard nav (#17) */
 function fwKeydown(e){
   const btns=[...document.querySelectorAll('#fwGroup .fw-btn')];
   const i=btns.indexOf(e.currentTarget);if(i<0)return;
@@ -572,14 +556,12 @@ function fwKeydown(e){
   if(next){e.preventDefault();btns.forEach(b=>b.tabIndex=-1);next.tabIndex=0;next.focus();next.click();}
 }
 
-/* ══════════════════════════════════════════════════════════
-   PWA REGISTRATION + OFFLINE DOWNLOAD BUTTON (#21)
+/* PWA registration + offline download button (#21)
    Uses Grimoire.Offline (see assets/grimoire-core.js) which:
      • registers sw.js
      • posts { type:'PRECACHE', urls:[…] } to the active SW
      • reports progress back via a MessageChannel
-     • reflects state on the button via data-offline-state
-══════════════════════════════════════════════════════════ */
+     • reflects state on the button via data-offline-state */
 (function setupOffline(){
   if(!window.Grimoire || !window.Grimoire.Offline) return; /* core failed to load */
   /* Register first so the SW is ready by the time a user clicks. */
@@ -601,9 +583,7 @@ function fwKeydown(e){
   });
 })();
 
-/* ══════════════════════════════════════════════════════════
-   BONUS PANEL TOGGLES (Tester + Diff)
-══════════════════════════════════════════════════════════ */
+/* Bonus panel toggles (Tester + Diff) */
 function toggleBonus(which){
   const m={tester:['testerToggle','testerPanel'],diff:['diffToggle','diffPanel'],bulk:['bulkToggle','bulkPanel']};
   const [tId,pId]=m[which];
@@ -614,7 +594,7 @@ function toggleBonus(which){
   if(open&&which==='tester')renderTesterFields();
 }
 
-/* ── UI HELPERS ── */
+/* UI helpers */
 function selectFW(btn){document.querySelectorAll('.fw-btn').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-checked','false');b.tabIndex=-1;});btn.classList.add('selected');btn.setAttribute('aria-checked','true');btn.tabIndex=0;selectedFW=btn.dataset.fw;checkReady();renderTesterFields();}
 function isXlsxFile(file){
   /* File.type is inconsistent across drag sources and desktop browsers.
@@ -678,7 +658,7 @@ function setupWorkbookDropZone(){
 function checkReady(){const ok=!!(selectedFW&&workbook);document.getElementById('btnRun').disabled=!ok;document.getElementById('btnPreview').disabled=!ok;}
 function setProgress(pct){document.getElementById('progressWrap').style.display='block';document.getElementById('progressFill').style.width=pct+'%';}
 
-/* ── CELL READING HELPERS ── */
+/* Cell reading helpers */
 /* Header-row cache: row 2 and row 3 are the lookup rows `findCol` scans.
    Pre-compute them once per (worksheet, range) pair as lowercased string
    arrays so every subsequent `findCol` call is a plain array walk with
@@ -743,7 +723,7 @@ function cellStr(ws,r,c){if(c<0)return'';const cell=ws[XLSX.utils.encode_cell({r
 function hasErr(v,t){return Math.abs(v)>t;}
 function join(a,b){if(!b)return a;if(a.toLowerCase().includes(b.toLowerCase()))return a;return a?a+' // '+b:b;}
 
-/* ── DACHSER ── */
+/* DACHSER */
 /* Legacy fixed positional fallbacks — only used if a header-based `findCol`
    lookup fails to find the column on the sheet (e.g. an older workbook
    export whose row2/row3 header text doesn't match). These indices matched
@@ -837,7 +817,7 @@ function resolveDachser(ws,range){
 const DACHSER_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8000,8500,9000,9500,10000,999999];
 function dachserGetTier(kg){if(kg<=0)return 0;for(const b of DACHSER_BP)if(kg<=b)return b;return 999999;}
 
-/* ── Dachser ratecard lookup ────────────────────────────────────────────────
+/* Dachser ratecard lookup
    The two matrices are business data and ship only as the encrypted
    assets/dachser-ratecards.enc.json, decrypted into DACHSER_RATECARDS by
    assets/dachser-ratecard-loader.js (same team passphrase as Wackler/Honold).
@@ -1330,7 +1310,7 @@ function processDachser(ws,r,cols){
   return res;
 }
 
-/* ── K+N ── */
+/* K+N */
 const KN_BP=[50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2200,2400,2600,2800,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500,8500,9500,99999];
 function knGetTier(kg){if(kg<=0)return 0;for(const b of KN_BP)if(kg<=b)return b;return 99999;}
 function resolveKN(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),recip:fc('','Empf.-Name'),referenz:fc('','ReferenzNr'),vkg:fc('','Volumen kg'),vkg_dl:fc('','Volumen kg DL'),kost:fc('','Kostenstelle'),sach:fc('','Sachkonto'),fr:fc('FR','Differenz'),exp:fc('EXP','Differenz'),toll:fc('MT','Differenz'),snk_dl:fc('SNK','Kosten DL'),snk_diff:fc('SNK','Differenz'),fuel:fc('TZ','Differenz')};}
@@ -1395,11 +1375,11 @@ function processKN(ws,r,cols){
   return res;
 }
 
-/* ── DHL Express ── */
+/* DHL Express */
 function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),addr:fc('FR','Differenz'),el:fc('EL','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz')};}
 function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer xxx bereits berechnet in RExxx, ok?.';}let res='';if(KONTIERUNG_ENABLED&&cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(KONTIERUNG_ENABLED&&cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.el,'EXTENDED LIABILITY, ok?'],[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'Differenz overweight, ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===5){res=join(res,'DIRECT SIGNATURE , ok?');block=true;}else if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
 
-/* ── Wackler ── */
+/* Wackler */
 /* Weight tier breakpoints (kg "bis" upper bounds) — taken DIRECTLY from the supplied
    Wackler rate cards: data/Wackler national Rate.xlsx and data/Wackler international Rate.xlsx.
    Both rate sheets share the same breakpoints up to 10000 kg, so a single table covers both.
@@ -1505,7 +1485,7 @@ function wacklerResolveNatZone(ws,r,cols){
 function wacklerRechnetNote(tierKg){
   return 'Wackler rechnet Frachtrate für '+wacklerTierLabel(tierKg)+'kg ab';
 }
-/* ── International rate-card zone + actually-billed tier ──────────────────────────────────────
+/* International rate-card zone + actually-billed tier
    The "Wackler rechnet Frachtrate für <tier>kg ab" note must name the tier Wackler ACTUALLY
    billed against — which is not always the tier the chargeable weight falls in. When an FR
    credit is exactly the rate-card gap to the NEXT tier up, Wackler billed that neighbouring
@@ -1579,7 +1559,7 @@ function wacklerRateProbe(ws,r,cols){
   if(intlZone&&WACKLER_RC)return{rateAt:kg=>WACKLER_RC.rate(kg,intlZone),tiers:WACKLER_BP};
   return null;
 }
-/* ── The tier named in the "Wackler rechnet Frachtrate für <kg> ab" note ──────────────────────
+/* The tier named in the "Wackler rechnet Frachtrate für <kg> ab" note
    That <kg> is the rate-card tier the freight is rated at PER THE TARIFF — the tier whose published
    rate equals FR Kosten lt. Tarif (the tariff freight). It is NOT necessarily the tier Wackler
    billed: on an over/undercharge the bill (FR Kosten DL) sits at a different tier, and the gap
@@ -2332,11 +2312,11 @@ function processWackler(ws,r,cols){
   return res;
 }
 
-/* ── COLUMN HELPERS ── */
+/* Column helpers */
 function idxToCol(idx){let r='',n=idx+1;while(n>0){const rem=(n-1)%26;r=String.fromCharCode(65+rem)+r;n=Math.floor((n-1)/26);}return r;}
 function colToIdx(col){let n=0;for(let i=0;i<col.length;i++)n=n*26+(col.charCodeAt(i)-64);return n-1;}
 
-/* ── SHARED STRINGS ── */
+/* Shared strings */
 function parseSharedStrings(xml){const strings=[];for(const m of xml.matchAll(/<si>([\s\S]*?)<\/si>/g)){const parts=[...m[1].matchAll(/<t(?:[^>]*)>([\s\S]*?)<\/t>/g)];strings.push(parts.map(p=>p[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'")).join(''));}return strings;}
 function getOrAdd(strings,str){const i=strings.indexOf(str);if(i!==-1)return i;strings.push(str);return strings.length-1;}
 function escXml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');}
@@ -2344,8 +2324,8 @@ function rebuildSharedStrings(strings){const n=strings.length,sis=strings.map(s=
 function ensureSharedStringsContentType(ctXml){const ssType='application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml';if(ctXml.includes(ssType))return ctXml;return ctXml.replace('</Types>',`<Override PartName="/xl/sharedStrings.xml" ContentType="${ssType}"/></Types>`);}
 function ensureSharedStringsRel(relXml){if(relXml.includes('sharedStrings'))return relXml;const ssType='http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings';return relXml.replace('</Relationships>',`<Relationship Id="rIdSS" Type="${ssType}" Target="sharedStrings.xml"/></Relationships>`);}
 
-/* ── DIFFERENZ COLUMN STYLE ── */
-const DIFF_STYLE_KEY='anmerkung.diffstyle.v1';   /* STYLE_KEY (line 158) is the Mystic/Pro UI chrome toggle — a different thing entirely */
+/* Differenz column style */
+const DIFF_STYLE_KEY='anmerkung.diffstyle.v1';   /* STYLE_KEY above is the Mystic/Pro UI chrome toggle — a different thing entirely */
 const DIFF_STYLE_LABELS={normal:'Normal (unchanged)',bad:'Bad',good:'Good',neutral:'Neutral'};
 /* Whole-column presets: every cell in the column gets the fill, zero rows included.
    Target is the GROUP Differenz columns (AVIS/FR/MT/SNK/TZ); Total/Differenz is excluded —
@@ -2496,7 +2476,7 @@ function recolourColumn(sheetXml,col,textIdx,numIdx){
   return{xml:out,cells};
 }
 
-/* ── SHEET XML PATCHER ── */
+/* Sheet XML patcher */
 function patchSheet(sheetXml,targetCol,rowResults,strings,styleSourceOffset=0){const tIdx=colToIdx(targetCol);for(const[rowNum,value]of rowResults){if(value===null)continue;const cellRef=targetCol+rowNum,ssIdx=getOrAdd(strings,value);const existRe=new RegExp(`<c\\b([^>]*?)\\br="${cellRef}"([^>]*?)(?:>([\\s\\S]*?)<\\/c>|\\s*\\/?>(?=\\s*<))`);const existMatch=existRe.exec(sheetXml);if(existMatch){const rawAttrs=(existMatch[1]+' '+(existMatch[2]||'')).replace(/\s*\bt="[^"]*"/g,'').replace(/\s+/g,' ').trim();const attrStr=rawAttrs?' '+rawAttrs:'';sheetXml=sheetXml.slice(0,existMatch.index)+`<c r="${cellRef}"${attrStr} t="s"><v>${ssIdx}</v></c>`+sheetXml.slice(existMatch.index+existMatch[0].length);continue;}const rowOpenRe=new RegExp(`<row\\b[^>]*\\br="${rowNum}"[^>]*(?<!/)>`);const rowOpenMatch=rowOpenRe.exec(sheetXml);if(!rowOpenMatch)continue;const afterOpen=rowOpenMatch.index+rowOpenMatch[0].length;const closeTag='</row>';const closeIdx=sheetXml.indexOf(closeTag,afterOpen);if(closeIdx<0)continue;const rowContent=sheetXml.slice(afterOpen,closeIdx);const sVals=[...rowContent.matchAll(/\bs="(\d+)"/g)].map(m=>m[1]);const freq={};sVals.forEach(v=>{freq[v]=(freq[v]||0)+1;});const sourceRef=idxToCol(tIdx+styleSourceOffset)+rowNum,sourceMatch=styleSourceOffset?new RegExp(`<c\\b(?=[^>]*\\br="${sourceRef}")(?=[^>]*\\bs="(\\d+)")[^>]*>`).exec(rowContent):null;const styleIdx=sourceMatch?sourceMatch[1]:(sVals.length?Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]:'0');const newCell=`<c r="${cellRef}" s="${styleIdx}" t="s"><v>${ssIdx}</v></c>`;let insertAt=rowContent.length;for(const m of rowContent.matchAll(/<c\s+r="([A-Z]+)(\d+)"/g)){if(colToIdx(m[1])>tIdx){insertAt=m.index;break;}}const newContent=rowContent.slice(0,insertAt)+newCell+rowContent.slice(insertAt);sheetXml=sheetXml.slice(0,afterOpen)+newContent+sheetXml.slice(closeIdx);}return sheetXml;}
 /* Excel column width unit: characters of the default font plus 0.7109375 of cell padding.
    The reference workbook's 75.7109375 is a 75-character fit, so the padding constant is exact. */
@@ -2564,7 +2544,7 @@ function ensureAutoFilter(sheetXml,lastColIdx){
   return insertAutoFilter(sheetXml,'<autoFilter ref="'+idxToCol(start)+'3:'+idxToCol(lastColIdx)+lastRow+'"/>');
 }
 
-/* ── MAIN RUNNER ── */
+/* Main runner */
 /* Split a processor result into distinct triggers (they're joined with ' // '). */
 function splitTriggers(s){if(!s)return[];return s.split(/\s*\/\/\s*/).map(x=>x.trim()).filter(Boolean);}
 /* Normalise a single phrase for comparison the way the rule engine itself
@@ -2651,7 +2631,7 @@ function buildReason(fw,ws,r,cols){
   return parts.join(' | ');
 }
 
-/* ── HONOLD ── */
+/* HONOLD */
 /* The tariff matrix is business data. It ships encrypted as
    assets/honold-tariff.enc.json and is decrypted in-page by
    assets/honold-tariff-loader.js. Read the global lazily so a passphrase
@@ -2790,7 +2770,7 @@ function runRules(){
   return{total,filled,skipped,empty,unreachable,allResults,trigCounts,previewRows};
 }
 
-/* ── PREVIEW (#1) ── */
+/* Preview (#1) */
 function runPreview(){
   const btn=document.getElementById('btnPreview');btn.disabled=true;btn.textContent='Computing dry-run...';
   document.getElementById('stats-wrap').style.display='none';
@@ -2832,7 +2812,7 @@ function closePreview(){
   if(trigger)trigger.focus();
 }
 
-/* ── STATS + TRIGGER BREAKDOWN (#12) ── */
+/* Stats + trigger breakdown (#12) */
 function renderStats(rep){
   document.getElementById('sTotal').textContent=rep.total;
   document.getElementById('sFilled').textContent=rep.filled;
@@ -2940,14 +2920,12 @@ async function runProcess(){
   btn.disabled=false;btn.textContent='Invoke the Ritual';
 }
 
-/* ── DOWNLOAD ── */
+/* Download */
 function downloadResult(){if(!resultBlob)return;const url=URL.createObjectURL(resultBlob),a=document.createElement('a');a.href=url;a.download=originalFileName||'anmerkung_processed.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 
-/* ══════════════════════════════════════════════════════════
-   RULE TESTER (#18) — builds a synthetic worksheet + cols from
+/* Rule tester (#18) — builds a synthetic worksheet + cols from
    user-entered values and runs the actual processor. Guarantees
-   identical behavior to the production engine, not a mock.
-══════════════════════════════════════════════════════════ */
+   identical behavior to the production engine, not a mock. */
 
 /* Per-forwarder field catalog — [key, label, type] where key matches
    the cols.* property the resolver returns. The tester writes values
@@ -3169,10 +3147,8 @@ function runTester(){
     (reason?'<div class="to-reason">Reason trace: '+esc(reason)+'</div>':'');
 }
 
-/* ══════════════════════════════════════════════════════════
-   DIFF MODE (#19) — compare two processed xlsx files on the
-   Anmerkung column per sheet/row. Purely client-side.
-══════════════════════════════════════════════════════════ */
+/* Diff mode (#19) — compare two processed xlsx files on the
+   Anmerkung column per sheet/row. Purely client-side. */
 const diffState={a:null,b:null,results:null};
 
 /* Bulk Diff state — two SETS of workbooks (predicted A-set + expected
@@ -3258,13 +3234,11 @@ function ensureAnmerkungCol(ws,range){
   return{idx:last+1,ok:true};
 }
 
-/* ──────────────────────────────────────────────────────────
-   TRAINING CONSOLE STATE + HELPERS
+/* Training console state + helpers
    Every diff row is enriched with forwarder / label /
    engine-now prediction / trigger trace / input cells so both
    the table and the training-set export can consume the same
-   records — no second sheet walk.
-────────────────────────────────────────────────────────── */
+   records — no second sheet walk. */
 const diffFilter={label:'all',fw:'all',sheet:'all',q:''};
 const LABEL_CLASS={wrong:'df-wrong',missed:'df-missed',overfired:'df-overfired',correct:'df-correct'};
 function _resolverFor(fw){
@@ -3338,8 +3312,7 @@ function classifyDiff(vA,vB){
   return 'wrong';
 }
 
-/* ──────────────────────────────────────────────────────────
-   PRECISION HELPERS FOR TRAINING-DATA OUTPUT
+/* Precision helpers for training-data output
    The Anmerkung column is a list of independent rule outputs
    joined by ' // '. Comparing the whole strings gives us
    wrong / missed / overfired / correct — useful but coarse.
@@ -3358,8 +3331,7 @@ function classifyDiff(vA,vB){
 
    Phrase comparison is case- and whitespace-insensitive (matching the
    engine's own dedup) but the output preserves the original casing from
-   whichever side it came.
-────────────────────────────────────────────────────────── */
+   whichever side it came. */
 function computePhraseDiff(beforeRaw,afterRaw){
   const A=splitTriggers(beforeRaw||''), B=splitTriggers(afterRaw||'');
   const norm=normPhrase;
@@ -3678,7 +3650,7 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
         extra_phrases    :phraseDiff.extra_phrases,
         phrase_jaccard   :phraseDiff.phrase_jaccard,
         granular,
-        /* === Phrase-key reverse-lookup payload (AI-friendly) === */
+        /* Phrase-key reverse-lookup payload (AI-friendly) */
         predicted_phrase_keys:phraseKeysFor(phraseDiff.predicted_phrases),
         expected_phrase_keys :phraseKeysFor(phraseDiff.expected_phrases),
         common_phrase_keys   :phraseKeysFor(phraseDiff.common_phrases),
@@ -3686,8 +3658,8 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
         extra_phrase_keys    :phraseKeysFor(phraseDiff.extra_phrases),
         engine_phrases       :enginePhrases,
         engine_phrase_keys   :phraseKeysFor(enginePhrases),
-        /* === Engine-vs-truth payload (#26) — the current engine's gap
-           against ground truth, the precise target for rule fixes. === */
+        /* Engine-vs-truth payload (#26) — the current engine's gap
+           against ground truth, the precise target for rule fixes. */
         engine_label              :engineLabel,
         engine_granular           :engineGranular,
         engine_vs_expected_jaccard:enginePd?enginePd.phrase_jaccard:null,
@@ -3695,10 +3667,10 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
         engine_extra_phrases      :engineExtra,
         engine_missing_phrase_keys:phraseKeysFor(engineMissing),
         engine_extra_phrase_keys  :phraseKeysFor(engineExtra),
-        /* === Source-code anchors === */
+        /* Source-code anchors */
         processor            :processorName,
         applicable_threshold :applicableThreshold,
-        /* === Provenance (which file pair this row came from) === */
+        /* Provenance (which file pair this row came from) */
         source               :srcLabel,
         source_file_a         :nameA||'',
         source_file_b         :nameB||'',
@@ -3741,13 +3713,11 @@ function runDiff(){
   finalizeDiff([part],`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}`,false);
 }
 
-/* ══════════════════════════════════════════════════════════
-   BULK DIFF — compare many (predicted, expected) pairs at once
+/* Bulk diff — compare many (predicted, expected) pairs at once
    for a far wider training corpus than a single file pair. Drop
    a set of predicted workbooks (A) + expected workbooks (B);
    they're auto-paired by filename, every pair runs through
-   diffWorkbooks, and all rows merge into one diffState.results.
-══════════════════════════════════════════════════════════ */
+   diffWorkbooks, and all rows merge into one diffState.results. */
 
 /* Normalise a filename to a pairing key: drop the extension + any
    role words (predicted/expected/truth/output/…) + a trailing a/b
@@ -4389,8 +4359,7 @@ function downloadDiffCsv(){
   showLog(`Diff CSV exported \u2014 ${rows.length} row(s), ${inputKeys.length} input column(s).`,'ok');
 }
 
-/* ══════════════════════════════════════════════════════════
-   TRAINING SET EXPORT (#20) — build (predicted, expected) pairs
+/* Training set export (#20) — build (predicted, expected) pairs
    from the diff, enriched with the input cells each forwarder's
    rules actually read + the trigger trace (reason).
 
@@ -4404,8 +4373,7 @@ function downloadDiffCsv(){
      • "correct"   — A === B (only exported when the "Include matching rows" checkbox is ticked)
 
    Forwarder is auto-detected per sheet by scanning which resolver finds
-   the most known columns; falls back to the currently-selected forwarder.
-══════════════════════════════════════════════════════════ */
+   the most known columns; falls back to the currently-selected forwarder. */
 
 /* NOTE: the legacy per-sheet helpers that used to live here
    (FW_RESOLVERS / tsResolverScore / tsDetectForwarder / tsLabelFor /
@@ -4565,13 +4533,11 @@ function buildTrainingSet(){
        not break) plus silent solved rows (where a loosened gate would
        over-fire first). */
 
-/* ══════════════════════════════════════════════════════════
-   DIFF/AI BUNDLE HARDENING (v2)
+/* Diff/AI bundle hardening (v2)
    - deterministic pattern hashes
    - normalized input comparison for evidence mining
    - explicit A/B provenance
-   - machine-readable bundle manifest
-══════════════════════════════════════════════════════════ */
+   - machine-readable bundle manifest */
 const DIFF_BUNDLE_SCHEMA='anmerkung.diff-bundle/v3';
 
 /* Canonicalise only for PATTERN EVIDENCE, never for rule inputs themselves.
@@ -5002,8 +4968,7 @@ function downloadTrainingSet(format){
     scopeNote+'.','ok');
 }
 
-/* ══════════════════════════════════════════════════════════
-   RULE SPEC + AI BUNDLE (#21) — make Diff-Mode exports
+/* Rule spec + AI bundle (#21) — make Diff-Mode exports
    self-describing so an AI consumer can update the rules in
    assets/anmerkung.js without re-reading the source.
 
@@ -5023,8 +4988,7 @@ function downloadTrainingSet(format){
 
    Pair (training.jsonl + rule_spec.json) is enough for an AI to
    propose source patches. The AI Bundle ZIP packages both plus a
-   README so a single drag-drop is all the user needs.
-══════════════════════════════════════════════════════════ */
+   README so a single drag-drop is all the user needs. */
 
 /* English glossary keyed by the same identifiers collectInputsForRow
    emits. Helps an AI consumer know "fr_diff" means "freight delta"
@@ -5386,7 +5350,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   return lines.join('\n')+'\n';
 }
 
-/* ── Not-derivable ledger ──
+/* Not-derivable ledger
    Rows an AI iteration judged "not derivable from row inputs" (cross-
    document notes, unexported columns). Persisted so every later bundle
    flags them and the assistant stops re-attempting known-impossible
@@ -5422,7 +5386,7 @@ function saveNotDerivableDialog(){
   showLog('Not-derivable ledger — '+Object.keys(m).length+' row(s).','ok');
 }
 
-/* ── DIFFERENZ STYLE DIALOG ── */
+/* Differenz style dialog */
 function openDiffStyleDialog(){
   const d=document.getElementById('dlgDiffStyle');
   d.querySelectorAll('.ds-swatch').forEach(sw=>{const btn=sw.closest('.ds-btn'),preset=btn&&btn.dataset.style;if(DIFF_STYLE_FILLS[preset])sw.style.background='#'+DIFF_STYLE_FILLS[preset].slice(2);});
@@ -5632,10 +5596,8 @@ async function downloadAiBundle(){
     ' indexed diff rows'+(filterScope?' · filter: '+filterScope:'')+'.','ok');
 }
 
-/* ══════════════════════════════════════════════════════════
-   BULK PROCESSING — process multiple files at once,
-   each with its own download button + download-all ZIP.
-══════════════════════════════════════════════════════════ */
+/* Bulk processing — process multiple files at once,
+   each with its own download button + download-all ZIP. */
 const bulkFiles = []; /* Array of { id, name, file, rawBytes, workbook, resultBlob, status } */
 let bulkIdCounter = 0;
 
@@ -5855,13 +5817,10 @@ const _origSelectFW = selectFW;
 selectFW = function(btn) { _origSelectFW(btn); checkBulkReady(); };
 
 
-/* ══════════════════════════════════════════════════════════
-   V5 HARDENING LAYER — deterministic diagnostics + transaction safety
-   ---------------------------------------------------------
+/* V5 hardening layer — deterministic diagnostics + transaction safety
    This layer is deliberately additive. It does not participate in classification
    unless a caller explicitly invokes the exposed helpers. The goal is to make the
-   browser engine explainable, replayable, and safer under bulk processing.
-══════════════════════════════════════════════════════════ */
+   browser engine explainable, replayable, and safer under bulk processing. */
 (function installV5Hardening(){
   const NS='AnmerkungV5';
   const SOURCE_SCHEMA='anmerkung.engine-hardening/v5';
@@ -5921,14 +5880,11 @@ selectFW = function(btn) { _origSelectFW(btn); checkBulkReady(); };
   };
 })();
 
-/* ══════════════════════════════════════════════════════════
-   V4 DIAGNOSTICS FACADE — opt-in, behavior-neutral
-   ---------------------------------------------------------
+/* V4 diagnostics facade — opt-in, behavior-neutral
    This facade does NOT participate in row classification. It exposes a
    stable diagnostic surface for auditors / automation around the existing
    engine without changing its outputs. All functions are defensive and
-   return serialisable data.
-══════════════════════════════════════════════════════════ */
+   return serialisable data. */
 (function installV4Diagnostics(){
   const NS='AnmerkungV4';
   const DIGEST_PREFIX='sha256:';
