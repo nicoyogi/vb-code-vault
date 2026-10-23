@@ -1881,9 +1881,9 @@ function processWackler(ws,r,cols){
      diffs: row 126 now cites 2545058028 instead of xxx and keeps RExxx, and the phrase key
      becomes fremdnummerInterpolated, matching its truth cell's key. Owner ruling 2026-10-23:
      the Fremdnummer is read off the ReferenzNr column, the same rule released and
-     corpus-verified on Dachser, so 10367543 row 218's 2026-10-01 cell - which names 2544818983
-     in 10367544, values present in no workbook - is the inconsistent side, left for the
-     auditor to correct, not a counterexample. */
+     corpus-verified on Dachser, so 10367543 row 218's 2026-10-01 cell was corrected the
+     same way (2544818983 to the row's own 2544828688), and the row remains a diff only on
+     the invoice half, 10367544 against the RExxx placeholder. */
   if(cols.tarif>=0){
     const tarifRaw=cellStr(ws,r,cols.tarif),tarifNumEarly=cellNum(ws,r,cols.tarif);
     const _frEarly=cols.fr>=0?cellNum(ws,r,cols.fr):0;
