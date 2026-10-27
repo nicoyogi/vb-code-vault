@@ -38,6 +38,7 @@ for name in [
     "WACKLER_COLLI_KG", "WACKLER_SAME_WEIGHT_BAND",
     "WACKLER_BUENDEL_NEAR_BAND", "WACKLER_BUENDEL_MIN_REFS",
     "WACKLER_TZ_RATE_TOL", "HONOLD_RATE_TOL",
+    "DA_NAT_PRICE_TOL", "DA_NAT_COPY_TOL", "DA_NAT_MAX_COPIES",
 ]:
     m = re.search(rf"const\s+{name}\s*=\s*([^;]+);", src)
     if m:
@@ -215,13 +216,14 @@ story.append(section_table([
 ]))
 story.append(P("1.4 FR — weight/tier decision tree (after SNK)", h3))
 story.append(section_table([
-    ("SERV_ART = K1AU and the rate cards return Sonderfahrt for the lane (FR Kosten DL &minus; 180/150/120/90 lands on a NEW-card cell)", "Sonderfahrt"),
+    ("SERV_ART = K1AU and the rate cards return Sonderfahrt for the lane (FR Kosten DL &minus; 180/150/120/90/110 lands on a NEW-card cell)", "Sonderfahrt"),
     ("Anz. Sdg &gt; 1 (multi-consignment)", "hätte gebündelt werden können?"),
     ("REFERENZ3 = ZW (deviating intermediate consignee)", "Differenz aufgrund abweichender Zwischenempfänger &lt;PLZ Ort&gt;"),
     ("SERV_ART = K1AS", "Sonderfahrt"),
     ("SERV_ART = K1AU and |FR − 90| ≤ 0.1", "\"Sonderfahrt\" 90 EUR doppelt berechnet?"),
+    ("domestic (DE to DE) row whose FR Kosten lt. Tarif is the national-card cell for its Empf.-PLZ zone and weight bracket, and whose FR delta is 1 to 4 whole zone prices with a unique count", "Referenz wird N+1x abgerechnet"),
     ("weights known, same tier, T &lt; FR &lt; 1.0, |Brutto kg &minus; Volumen kg DL| &ge; 0.05, no other label", "Differenz aufgrund abweichender Gewichte"),
-    ("weights equal or same tier; FR &gt; 1 on an international lane (non-DE origin or destination)", "Sonderfahrt, or Dachser berechnet die Kosten nach dem bisherigen Tarif &mdash; decided by the rate cards: (FR Kosten DL &minus; S) landing on a NEW-card cell for S in 180/150/120/90 gives Sonderfahrt, otherwise FR Kosten lt. Tarif landing on an OLD-card cell (timed by 1.15 on imports) gives the bisherigen wording. Ratecards are encrypted (assets/dachser-ratecards.enc.json); without the passphrase the bisherigen wording stands."),
+    ("weights equal or same tier; FR &gt; 1 on an international lane (non-DE origin or destination)", "Sonderfahrt, or Dachser berechnet die Kosten nach dem bisherigen Tarif &mdash; decided by the rate cards: (FR Kosten DL &minus; S) landing on a NEW-card cell for S in 180/150/120/90/110 gives Sonderfahrt, otherwise FR Kosten lt. Tarif landing on an OLD-card cell (timed by 1.15 on imports) gives the bisherigen wording. Ratecards are encrypted (assets/dachser-ratecards.enc.json); without the passphrase the bisherigen wording stands."),
     ("weights equal or same tier; FR &gt; 1 (or ≥ 0.05 with no other label); ZZ diff = 35", "Fracht Differenz (ZZ=35)"),
     ("weights equal or same tier; FR &gt; 1 (or ≥ 0.05 with no other label); otherwise", "Frachtdifferenz"),
     ("weights equal or same tier; FR &lt; −1.0", "Differenz aufgrund abweichender Gewichte"),
@@ -233,6 +235,12 @@ story.append(section_table([
 story.append(section_table([
     ("SNK_DL = 14 + SNK diff over T (footer)", "Abholterminvereinbarung"),
     ("row has no other label, only TZ over T", "Differenz treibstof"),
+]))
+story.append(P("Referenz-count constants (national card + PLZ zone table)", h3))
+story.append(const_table([
+    ("FR Kosten lt. Tarif vs the zone ladder cell of the row's weight bracket", k("DA_NAT_PRICE_TOL")),
+    ("one billed copy vs a zone price (any bracket of the zone)", k("DA_NAT_COPY_TOL")),
+    ("copies searched above the tariff copy", k("DA_NAT_MAX_COPIES")),
 ]))
 
 story.append(PageBreak())

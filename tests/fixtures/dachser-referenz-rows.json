@@ -1,0 +1,18 @@
+[
+  { "tag": "1019", "row": 363, "abg": "DE", "empf": "DE", "plz": "85084", "kg": 49, "fr_dl": 72.6, "fr_tar": 31.6, "want": "R2", "why": "zone 4 tariff copy 31.60 at <=50 kg, delta 41.00 = zone 4 @51-100" },
+  { "tag": "1019", "row": 373, "abg": "DE", "empf": "DE", "plz": "21337", "kg": 109, "fr_dl": 123, "fr_tar": 57.49, "want": "R2", "why": "zone 9 tariff copy at 101-150, delta 65.51 = zone 9 @151-200" },
+  { "tag": "1019", "row": 458, "abg": "DE", "empf": "DE", "plz": "84085", "kg": 90.179, "fr_dl": 76.5, "fr_tar": 43.44, "want": "R2", "why": "zone 5; the copy is 0.08 off the <=50 kg cell, the widest tolerance any row needs" },
+  { "tag": "1019", "row": 467, "abg": "DE", "empf": "DE", "plz": "24235", "kg": 61.642, "fr_dl": 84.6, "fr_tar": 47.55, "want": "R2", "why": "zone 9; copy lands on the <=50 kg cell, a bracket below the row's own" },
+  { "tag": "1019", "row": 474, "abg": "DE", "empf": "DE", "plz": "41748", "kg": 55.667, "fr_dl": 116.4, "fr_tar": 45.64, "want": "R3", "why": "zone 7; delta 70.76 = 2 x 35.42 (<=50 kg), the only decomposition" },
+  { "tag": "1019", "row": 478, "abg": "DE", "empf": "DE", "plz": "23701", "kg": 1254.701, "fr_dl": 296.2, "fr_tar": 259.15, "want": "R2", "why": "zone 9 at 1201-1300 kg; ratio 1.14, which no ratio gate reads as 2x" },
+  { "tag": "1013", "row": 161, "abg": "DE", "empf": "DE", "plz": "89264", "kg": 96.254, "fr_dl": 63.1, "fr_tar": 31.85, "want": "R2", "why": "zone 1; copy 31.23, 0.02 off the tariff copy" },
+  { "tag": "1013", "row": 174, "abg": "DE", "empf": "DE", "plz": "59269", "kg": 80.184, "fr_dl": 81, "fr_tar": 45.64, "want": "R2", "why": "zone 7; copy 35.42 at <=50 kg" },
+  { "tag": "1019", "row": 336, "abg": "DE", "empf": "DE", "plz": "64293", "kg": 170.39, "fr_dl": 81.4, "fr_tar": 56.5, "want": "none", "why": "fence: delta 24.90 sits below the cheapest zone 4 price (31.60)" },
+  { "tag": "1019", "row": 399, "abg": "DE", "empf": "DE", "plz": "48282", "kg": 342, "fr_dl": 127.9, "fr_tar": 89.39, "want": "none", "why": "fence: delta 38.51 is not a sum of zone 8 prices" },
+  { "tag": "1019", "row": 429, "abg": "DE", "empf": "DE", "plz": "88499", "kg": 402, "fr_dl": 190.5, "fr_tar": 83.17, "want": "none", "why": "fence: delta 107.33 is not a sum of zone 2 prices, though the sheet says 4x" },
+  { "tag": "1019", "row": 466, "abg": "DE", "empf": "DE", "plz": "88499", "kg": 301, "fr_dl": 121.9, "fr_tar": 69.46, "want": "none", "why": "fence: delta 52.44 is not a sum of zone 2 prices, though the sheet says 3x" },
+  { "tag": "1013", "row": 351, "abg": "DE", "empf": "DE", "plz": "73312", "kg": 707, "fr_dl": 413.5, "fr_tar": 178.48, "want": "none", "why": "fence: the delta decomposes, but the tariff copy is 84.47 off the zone 1 cell (178.48 against 94.01)" },
+  { "tag": "0903", "row": 250, "abg": "DE", "empf": "DE", "plz": "73312", "kg": 484, "fr_dl": 174.8, "fr_tar": 135.03, "want": "none", "why": "fence: tariff copy is not a zone 1 ladder cell at all" },
+  { "tag": "0903", "row": 270, "abg": "DE", "empf": "DE", "plz": "73312", "kg": 150, "fr_dl": 97.3, "fr_tar": 66.11, "want": "none", "why": "fence: tariff copy is not a zone 1 ladder cell at all" },
+  { "tag": "1019", "row": 201, "abg": "DE", "empf": "PL", "plz": "35-025", "kg": 60, "fr_dl": 162.7, "fr_tar": 51.17, "want": "none", "why": "fence: non-domestic lane (DE->PL, Sonderfahrt 110)" }
+]
