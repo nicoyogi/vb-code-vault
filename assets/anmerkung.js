@@ -327,6 +327,7 @@ const PHRASES={
   frachtzuAbschlag:           'Differenz Frachtzu/ abschlag',
   frachtDifferenz:            'Fracht Differenz',
   daBisherigerTarif:          'Dachser berechnet die Kosten nach dem bisherigen Tarif',
+  zusammengefassteAbrechnung: 'zusammengefasste Abrechnung',
   zoneKorrekt:                'Zone korrekt berechnet?',
   einfuhrzoll:                'Einfuhrzollabfertigung',
   kalkKostenZustellung:       'Kalk. Kosten Zustellung',
@@ -479,7 +480,7 @@ const PHRASE_TEMPLATES=[
   {key:'tpl_wartezeit',    regex:/^wartezeit \d+h á 65 eur, ok\?$/i,
    example:'Wartezeit 2h á 65 EUR, ok?',
    processor:'processDachser'},
-  {key:'tpl_zustellungKosten',regex:/^[\d.]+,\d{2} kosten f\u00fcr 2\.zustellung etc\. ok\?$/i,
+  {key:'tpl_zustellungKosten',regex:/^[\d.]+(?:,\d{2})? kosten f\u00fcr 2\.zustellung etc\. ok\?$/i,
    example:'931,15 Kosten für 2.Zustellung etc. ok?',
    processor:'processDachser'},
 ];
@@ -950,10 +951,11 @@ function daIsNonInteger(n){return n!==Math.floor(n);}
 const DA_SNK_SURCHARGE_CODES=[5,9,11,14];
 /* Amazon-DTM1 rows bundle the flat 5 EUR admin/fenster line (the SNK_DL=5 rows
    that classify as "Admin Zeitfensterbuchung Handel") into the same SNK_DL cell
-   as a residual fee. The auditor's finding is therefore the residual
-   SNK_DL − DA_SNK_ADMIN_FEE. Bundle 2026-09-18 rows 8c7714fd (135 → 130 = 2×65,
-   "Wartezeit 2h á 65 EUR") and 7d6db19e (936.15 → 931.15, "931,15 Kosten für
-   2.Zustellung etc."). */
+   as a residual fee. On a row with a separate SNK tariff base the auditor's
+   finding is the residual SNK_DL − DA_SNK_ADMIN_FEE; the no-base branch below
+   (SNK_DL over 500) names SNK_DL as billed instead. Bundle 2026-09-18 rows 8c7714fd (135 → 130 =
+   2×65, "Wartezeit 2h á 65 EUR") and 7d6db19e (936.15 → 931.15, "931,15 Kosten
+   für 2.Zustellung etc."). */
 const DA_SNK_ADMIN_FEE=5;
 /* German decimal rendering for phrases that embed a computed amount
    (the auditor writes "931,15", not "931.15"). */
@@ -971,6 +973,7 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
   const snkDl=cellNum(ws,r,cols.snk_dl),
         snkDiff=cellNum(ws,r,cols.snk_diff),
         snkTar=cols.snk_tar>=0?cellNum(ws,r,cols.snk_tar):0,
+        tarifBase=cellNum(ws,r,cols.tarif),
         T=T_DACHSER,
         abgLand=cols.abg_land>=0?cellStr(ws,r,cols.abg_land).toUpperCase().trim():'',
         empfLand=cols.empf_land>=0?cellStr(ws,r,cols.empf_land).toUpperCase().trim():'';
@@ -984,6 +987,13 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
   if(snkDl===80&&servArt.toUpperCase()==='K1AV')
     return P.speditionskostenGemText+' // '+P.adminZeitfenster;
 
+  /* SNK_DL=210 bundles the three K1AV lines the auditor names separately: the
+     130 two-hour waiting time (2 x 65), the 75 "Speditionskosten gem. Text" and
+     the flat 5 EUR admin/fenster fee. Bundle 2026-10-19 row 252 (K1AV, Werne)
+     expects all three in this order. */
+  if(snkDl===210&&servArt.toUpperCase()==='K1AV')
+    return P.adminZeitfensterDiff+' // '+P.speditionskostenGemText+' // Wartezeit 2h á 65 EUR, ok?';
+
   /* Non-integer SNK_DL (tariff base with cents) — re-derive the surcharge code from
      SNK_DIFF when it rounds cleanly to 5/9/11/14. Then fall through to the same
      switch so the downstream phrase mapping stays the single source of truth. */
@@ -995,8 +1005,12 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
     case 95:return'AUSFALLFRACHT';
     /* Standgeld is billed in whole 130 EUR units; 390 is three of them. Bundle
        2026-10-08 row e47bda75 (SNK_DL=390, K1AV, domestic) expects the bare
-       "Standgeld". */
+       "Standgeld". A single 130 on the K1AV lane is one two-hour waiting time
+       instead (2 x 65): bundle 2026-10-19 rows 64/81/99/154 expect "Wartezeit 2h
+       á 65 EUR, ok?". The 390 arm keeps the Standgeld wording. */
     case 130:
+      if(servArt.toUpperCase()==='K1AV')return'Wartezeit 2h á 65 EUR, ok?';
+      return'Standgeld';
     case 390:return'Standgeld';
     case 75:
       if(servArt.toUpperCase()==='K1AV')return'Speditionskosten gem. Text';
@@ -1072,6 +1086,13 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
              headline alone silently dropped the second segment. */
           if(Math.abs(hrs-Math.round(hrs))<0.005)
             return'Wartezeit '+Math.round(hrs)+'h á 65 EUR, ok? // '+P.adminZeitfensterDiff;
+          /* No separate SNK tariff base: SNK_DL is the 2.Zustellung bundle itself,
+             so the auditor names the amount as billed, without the flat 5 EUR admin
+             deduction. An integer amount loses the cents (row 23 reads "921", not
+             "921,00"). Bundle 2026-10-19 rows 22/23/155. */
+          if(snkDl>500&&(snkTar===0||snkTar===tarifBase))
+            return(daIsNonInteger(snkDl)?daFormatDe(snkDl):String(Math.round(snkDl)))
+              +' Kosten für 2.Zustellung etc. ok?';
           if(daIsNonInteger(residual))return daFormatDe(residual)+' Kosten für 2.Zustellung etc. ok?';
         }
         return'Differenz Laderaumkostenentwicklung';
@@ -1199,6 +1220,15 @@ function processDachser(ws,r,cols){
     }
   }
 
+  /* zusammengefasste Abrechnung: the invoice bills this shipment together with
+     another one, so the row's own DL side carries no cost line at all (both
+     volume columns zero) while FR, Maut and TZ all run short. The cascade below
+     would name the same fact once per zero line. Bundle 2026-10-19 rows 327/377/453. */
+  if(cols.fr>=0&&cols.maut>=0&&cols.tz>=0&&cols.vkg>=0&&cols.vkg_dl>=0
+     &&cellNum(ws,r,cols.fr)<-T&&cellNum(ws,r,cols.maut)<-T&&cellNum(ws,r,cols.tz)<-T
+     &&cellNum(ws,r,cols.vkg)===0&&cellNum(ws,r,cols.vkg_dl)===0)
+    return P.zusammengefassteAbrechnung;
+
   let res='',hasFR=false;
 
   /* 196 Kalkulationskosten - the note leads the cascade (20261013 row 260). */
@@ -1283,8 +1313,18 @@ function processDachser(ws,r,cols){
          "Frachtdifferenz". Domestic equal-weight rows keep "Frachtdifferenz"
          (old-bundle regression). */
       const intlLane=(abgLand&&abgLand!=='DE')||(empfLand&&empfLand!=='DE');
+      /* A sub-kilo FR delta inside one tier is the auditor's weight note, not a
+         freight difference: the two weights disagree even though the tier table
+         prices them the same. Bundle 2026-10-19 row 411 (68.533 vs 68 kg, FR
+         0.56). The tier clause is load-bearing: a cross-tier pair keeps
+         Frachtdifferenz (processors.test.mjs, "weights differ but small positive
+         FR delta (< 1.0)"), and an FR over 1 keeps it too (processors.test.mjs,
+         "weights differ but in same tier with positive FR"). */
+      const subKiloGap=bothKnown&&!res&&frVal>T&&frVal<1.0
+        &&Math.abs(v1-v2)>=0.05&&dachserGetTier(v1)===dachserGetTier(v2);
       if(sameWeight||sameTier){
-        if(frVal>1||(frVal>=0.05&&!res)){
+        if(subKiloGap)res=join(res,'Differenz aufgrund abweichender Gewichte');
+        else if(frVal>1||(frVal>=0.05&&!res)){
           /* International lane with a positive FR delta at equal / same-tier
              weights: the auditor is naming a tariff rollover or a special trip.
              The rate cards decide which (see daRatecardMatch): FR_DL minus a

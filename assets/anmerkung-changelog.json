@@ -1,6 +1,17 @@
 {
-  "version": "1.58.0",
+  "version": "1.59.0",
   "entries": [
+    {
+      "ver": "1.59.0",
+      "date": "2026-10-27",
+      "items": [
+        "Dachser - a K1AV row with SNK_DL = 130 now reads \"Wartezeit 2h á 65 EUR, ok?\" instead of \"Standgeld\": 130 is 2 x 65 EUR of waiting time, and the Standgeld arm shadowed the hour branch (20261019 rows 64/81/99/154). SNK_DL = 390 keeps \"Standgeld\" (20261006 row 256: SNK_DL 390, SNK differenz 330.3, SNK lt. Tarif 59.7, TARIF 616.62, K1AV, truth Standgeld), and a non-K1AV 130 keeps it too.",
+        "Dachser - a K1AV row with SNK_DL = 210 now reads \"Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag // Speditionskosten gem. Text // Wartezeit 2h á 65 EUR, ok?\": 210 = 5 + 75 + 2 x 65, the 80 + 130 the two neighbouring arms name (20261019 row 252).",
+        "Dachser - a K1AV 2.Zustellung row whose SNK_DL is the bundle itself (SNK_DL over 500 with SNK lt. Tarif blank/0 or equal to TARIF) now names the billed amount, without the flat 5 EUR admin deduction (20261019 rows 22/155). An integer amount renders without cents (\"921 Kosten für 2.Zustellung etc. ok?\"), which also needed the template to accept an amount without decimals (row 23).",
+        "Dachser - a row whose FR, MT and TZ all sit below minus threshold while Volumen kg and Volumen kg DL are both 0 now reads \"zusammengefasste Abrechnung\" alone: the invoice bills the shipment together with another one, so the row carries no DL volume and no DL cost cell, and the cascade used to name that emptiness once per zero line (20261019 rows 327/377/453).",
+        "Dachser - a row with an FR delta under 1 EUR inside one weight tier and two weights at least 0.05 kg apart now reads \"Differenz aufgrund abweichender Gewichte\" (20261019 row 411, 68.533 vs 68 kg, FR 0.56). The rule holds on a domestic row and an international one alike, and 20260903 row 279 is an international row where the auditor wants the weight note as well. Only an FR over 1 inside one tier keeps \"Frachtdifferenz\" on a domestic row and the \"Dachser berechnet die Kosten nach dem bisherigen Tarif\" or \"Sonderfahrt\" wording on an international one. The 20261019 audit now agrees on 338 of 349 noted rows, 11 differ, 0 engine-only."
+      ]
+    },
     {
       "ver": "1.58.0",
       "date": "2026-10-27",

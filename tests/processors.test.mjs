@@ -134,6 +134,114 @@ test('processDachser: SNK_DL=196 K1AV -> a non-pure hour count stays Laderaumkos
   assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung');
 });
 
+test('processDachser: K1AV SNK_DL 520 and 785 -> waiting time before the 2.Zustellung amount', () => {
+  // The >500 2.Zustellung branch sits below the two Wartezeit returns, so a
+  // large SNK_DL that is a whole hour count (520 = 8 x 65) still reads the
+  // headline alone, while 785 = 780 + 5 keeps the admin-fee suffix. This pins
+  // the branch order only and passes at HEAD as well, so it is not a witness of
+  // the new behaviour.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  let ws = makeRow(R, { 50: 10, 51: '700.92', 52: '520', 53: '515', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 8h á 65 EUR, ok?');
+  ws = makeRow(R, { 50: 10, 51: '700.92', 52: '785', 53: '780', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols),
+    'Wartezeit 12h á 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag');
+});
+
+test('processDachser: SNK_DL=130 K1AV -> one two-hour waiting time, not Standgeld', () => {
+  // Bundle 2026-10-19 rows 64/81/99/154 (K1AV, 612100): the 130 EUR line is
+  // 2 x 65 EUR. Both shapes are covered: row 64 carries a tariff base
+  // (SNK_DL 130 / SNK_DIFF 53.36 / SNK lt. Tarif 76.64), row 154 does not
+  // (SNK_DL 130 / SNK_DIFF 130 / SNK lt. Tarif blank).
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  let ws = makeRow(R, { 50: 10, 51: '758.66', 52: '130', 53: '53.36', 54: '76.64', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 2h á 65 EUR, ok?');
+  ws = makeRow(R, { 50: 10, 52: '130', 53: '130', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 2h á 65 EUR, ok?');
+});
+
+test('processDachser: SNK_DL=130 outside K1AV -> Standgeld', () => {
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: '130', 53: '60', 54: '70', 55: 'DA01' });
+  assert.equal(e.processDachser(ws, R, cols), 'Standgeld');
+});
+
+test('processDachser: SNK_DL=210 K1AV -> admin fee + Speditionskosten + 2h waiting time', () => {
+  // Bundle 2026-10-19 row 252: 210 = 130 (2 x 65 waiting time) + 75
+  // (Speditionskosten gem. Text) + 5 (admin/fenster fee), named in that order.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '871.24', 52: '210', 53: '125.51', 54: '84.49', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols),
+    'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag // Speditionskosten gem. Text // Wartezeit 2h á 65 EUR, ok?');
+});
+
+test('processDachser: K1AV 2.Zustellung names SNK_DL when the SNK tariff is blank', () => {
+  // Bundle 2026-10-19 row 22 (TARIF blank, SNK lt. Tarif blank): the 5 EUR admin
+  // deduction must not apply, the auditor names the amount as billed.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 52: '931.15', 53: '931.15', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), '931,15 Kosten für 2.Zustellung etc. ok?');
+});
+
+test('processDachser: K1AV 2.Zustellung names SNK_DL when the SNK tariff equals TARIF', () => {
+  // Bundle 2026-10-19 row 155: SNK lt. Tarif 53.55 == TARIF 53.55, so SNK_DL is
+  // the bundle itself and not a Laderaum base with a fee on top.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 51: '53.55', 52: '1163.45', 53: '1109.9', 54: '53.55', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), '1163,45 Kosten für 2.Zustellung etc. ok?');
+});
+
+test('processDachser: an integer 2.Zustellung amount renders without cents', () => {
+  // Bundle 2026-10-19 row 23: SNK_DL 921, TARIF and SNK lt. Tarif blank. The
+  // truth cell reads "921 Kosten für ...", not "921,00" (and not
+  // Laderaumkostenentwicklung, which is where the residual chain used to end).
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 52: '921', 53: '921', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), '921 Kosten für 2.Zustellung etc. ok?');
+  assert.equal(e.phraseToKey('921 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
+});
+
+test('processDachser: K1AV SNK_DL 500 exactly stays Laderaumkostenentwicklung', () => {
+  // The >500 branch is strict: 500 sits on the bound, not over it, so the row
+  // must not read a 2.Zustellung amount.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 52: '500', 53: '500', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung');
+});
+
+test('processDachser: K1AV SNK_DL 500.5 names the cents-bearing amount', () => {
+  // Just over the bound with cents: the amount is billed as-is, no admin
+  // deduction, and the cents survive the German formatting.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 52: '500.5', 53: '500.5', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), '500,50 Kosten für 2.Zustellung etc. ok?');
+});
+
+test('processDachser: all DL cost lines zero with three negative deltas -> zusammengefasste Abrechnung', () => {
+  // Bundle 2026-10-19 rows 327 (DA07, EXP -30, SNK -2.17) and 377 (DA01, SBFU -1,
+  // SNK -2.28): FR, MT and TZ all short, both volume columns 0, so the invoice
+  // billed the shipment together with another one.
+  const cols = { stat: 50, tarif: 51, fr: 52, exp: 53, maut: 54, tz: 55, sbfu: 56,
+                 snk_dl: 57, snk_diff: 58, snk_tar: 59, vkg: 60, vkg_dl: 61, serv_art: 62, sachkonto: 35 };
+  let ws = makeRow(R, { 50: 10, 51: '86.2', 52: '-43.44', 53: '-30', 54: '-1.77', 55: '-7.82',
+    56: '-1', 58: '-2.17', 59: '2.17', 60: '0', 61: '0', 62: 'DA07', 35: '' });
+  assert.equal(e.processDachser(ws, R, cols), 'zusammengefasste Abrechnung');
+  ws = makeRow(R, { 50: 10, 51: '53.03', 52: '-45.64', 54: '-3.55', 55: '-8.22',
+    56: '-1', 58: '-2.28', 59: '2.28', 60: '0', 61: '0', 62: 'DA01' });
+  assert.equal(e.processDachser(ws, R, cols), 'zusammengefasste Abrechnung');
+});
+
+test('processDachser: a DL weight on the row keeps the ordinary cascade', () => {
+  // Row 377 with Volumen kg DL 1828: the row does carry a DL cost basis, so the
+  // combined-invoice gate must not fire and the cascade speaks as before.
+  const cols = { stat: 50, tarif: 51, fr: 52, maut: 53, tz: 54, sbfu: 55,
+                 snk_dl: 56, snk_diff: 57, snk_tar: 58, vkg: 59, vkg_dl: 60, serv_art: 61 };
+  const ws = makeRow(R, { 50: 10, 51: '53.03', 52: '-45.64', 53: '-3.55', 54: '-8.22',
+    55: '-1', 57: '-2.28', 58: '2.28', 59: '0', 60: '1828', 61: 'DA01' });
+  assert.equal(e.processDachser(ws, R, cols),
+    'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag // Mautdifferenz // SBfU-Bescheinigung f. Umsatzsteuerzwecke // Differenz Frachtzu/ abschlag');
+});
+
 test('processDachser: SNK_DL=75 K1AV stays Speditionskosten gem. Text', () => {
   // The 75-code branch returns before the residual logic; a bundled residual of
   // 70 must not be mistaken for waiting time.
@@ -178,6 +286,9 @@ test('phraseToKey: computed Dachser SNK phrases resolve to their template keys',
   assert.equal(e.phraseToKey('Wartezeit 12h á 65 EUR, ok?'), 'tpl_wartezeit');
   assert.equal(e.phraseToKey('931,15 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
   assert.equal(e.phraseToKey('1200,50 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
+  // An integer amount has no cents, and the auditor still writes it in the same
+  // shape (bundle 2026-10-19 row 23: SNK_DL 921, truth "921 Kosten für ...").
+  assert.equal(e.phraseToKey('921 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
 });
 
 test('processDachser: equal weights with positive FR above 0.08 and no other triggers -> Frachtdifferenz', () => {
@@ -229,6 +340,21 @@ test('processDachser: weights differ but in same tier with positive FR -> Fracht
 test('processDachser: weights differ but small positive FR delta (< 1.0) -> Frachtdifferenz', () => {
   const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg: 54, vkg_dl: 55 };
   const ws = makeRow(R, { 50: 10, 51: '73.31', 52: '0.09', 53: '194', 54: '194', 55: '109' });
+  assert.equal(e.processDachser(ws, R, cols), 'Frachtdifferenz');
+});
+
+test('processDachser: sub-kilo weight gap inside one tier -> abweichender Gewichte', () => {
+  // Bundle 2026-10-19 row 411: Brutto 68.533 vs Volumen kg DL 68 (both tier 100),
+  // FR 0.56. The weights disagree by more than rounding, so the auditor names the
+  // weight even though the tier table prices the two the same.
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, tz: 55, serv_art: 56, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 51: '57.41', 52: '0.56', 53: '68.533', 54: '68', 55: '0.1', 56: 'DA01', 35: 'X' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz aufgrund abweichender Gewichte');
+});
+
+test('processDachser: a weight gap under 0.05 kg on the same tier keeps Frachtdifferenz', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54 };
+  const ws = makeRow(R, { 50: 10, 51: '57.41', 52: '0.56', 53: '68.53', 54: '68.5' });
   assert.equal(e.processDachser(ws, R, cols), 'Frachtdifferenz');
 });
 
