@@ -37,7 +37,7 @@ for name in [
     "WACKLER_XTIER_NEAR_BAND", "WACKLER_BUENDEL_PARTIAL",
     "WACKLER_COLLI_KG", "WACKLER_SAME_WEIGHT_BAND",
     "WACKLER_BUENDEL_NEAR_BAND", "WACKLER_BUENDEL_MIN_REFS",
-    "WACKLER_TZ_RATE_TOL",
+    "WACKLER_TZ_RATE_TOL", "HONOLD_RATE_TOL",
 ]:
     m = re.search(rf"const\s+{name}\s*=\s*([^;]+);", src)
     if m:
@@ -392,27 +392,40 @@ story.append(P(
     "Gate: Stat = 10, plus the OLD tariff must be unlocked and complete (tiers, zone rates, country codes). "
     "The tariff matrix is business data and ships encrypted (<code>assets/honold-tariff.enc.json</code>); "
     "until it is decrypted the engine "
-    "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. Two rules, "
-    "both decided from FR Kosten DL. "
+    "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. "
+    "Three rules, decided from FR Kosten DL and FR Kosten lt. Tarif. "
     "A ZZ cost line is a second delivery attempt billed on its own: when its Differenz clears the Dachser "
     "difference threshold (T_DACHSER, " f"{k('T_DACHSER')} by default) and FR Kosten DL is blank / 0, the whole note is "
-    "&quot;2. Zustellung&quot;. A row that carries freight as well as a ZZ charge is decided by the second rule. "
-    "Otherwise FR Kosten DL is matched against the OLD tariff: the row keeps the previous-tariff note when it "
+    "&quot;2. Zustellung&quot;. A row that carries freight as well as a ZZ charge is decided by the rules below. "
+    "FR Kosten lt. Tarif blank / 0 with an Empf.-Land reads &quot;Kein Tarif für '&lt;LAND&gt;'&quot; and nothing else: "
+    "the current tariff prices no lane for that country, so the OLD matrix cannot speak to it. "
+    "Otherwise FR Kosten DL is matched against the OLD tariff. The row keeps the previous-tariff note when it "
     "equals a zone rate published for its Empf.-Land in the Bis bracket its Volumen kg falls in (every zone of "
-    "the country is a candidate, because the row carries the country but not the zone, and no OLD amount sits at "
-    "two different brackets across a country's zones - measured 0 for CH, ES, FR, GB, GR, IT, NO, PL, PT, SE), and "
-    "reads a weight difference otherwise. Volumen kg DL is not read: it is unreliable when ReferenzNr lists "
-    "several references."
+    "the country is a candidate, because the row carries the country but not the zone, and a country's zone "
+    "columns can repeat one amount across neighbouring brackets - the AT tail from 6500 kg up is flat, GB3 "
+    "repeats at 450/500, MD at 50/100 - which is harmless because only the bracket the row's own Volumen kg "
+    "falls in is compared), and "
+    "that arm suppresses the weight half whatever Volumen kg DL says. A second arm joins both phrases: FR Kosten DL "
+    "is an OLD amount for the country from another bracket, Volumen kg DL is present in a bracket other than "
+    "Volumen kg's, and every OLD rate the country publishes at the billed bracket differs from the row's own "
+    "FR Kosten lt. Tarif by more than " f"{k('HONOLD_RATE_TOL')} - a proxy for the current matrix, which is not shipped, "
+    "so a lane whose OLD and current rates agree at the billed bracket but diverge at the bracket the billed "
+    "amount came from can read wrong. Volumen kg DL is read only by that arm; it is never a tier of its own."
 ))
 story.append(section_table([
+    ("the OLD tariff is locked / incomplete, or Stat_Freigabe is not 10", "row skipped (null, no note written)"),
     (f"ZZ Differenz above the Dachser difference threshold ({k('T_DACHSER')} by default) and FR Kosten DL blank / 0", "2. Zustellung"),
-    ("FR Kosten DL equals an OLD-tariff rate for the row's Empf.-Land in the bracket its Volumen kg falls in", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
-    ("FR Kosten DL matches no OLD-tariff rate for the row's Empf.-Land in that bracket (a rate of another bracket, or none at all)", "Differenz aufgrund abweichender Gewichte"),
-    ("blank / 0 FR Kosten DL, a missing / 0 Volumen kg, or no zone column for the destination country", "Differenz aufgrund abweichender Gewichte"),
+    ("FR Kosten DL blank / 0 without that ZZ fee", "Differenz aufgrund abweichender Gewichte"),
+    ("FR Kosten lt. Tarif blank / 0 and an Empf.-Land is present (an absent column leaves the rule off)", "Kein Tarif für '&lt;LAND&gt;'"),
+    ("no / 0 Volumen kg", "Differenz aufgrund abweichender Gewichte"),
+    ("FR Kosten DL equals an OLD-tariff rate for the row's Empf.-Land in the Bis bracket its Volumen kg falls in", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
+    ("FR Kosten DL equals an OLD-tariff rate of another bracket, Volumen kg DL > 0 sits in yet another bracket, and every OLD rate at the billed bracket differs from FR Kosten lt. Tarif", "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif"),
+    ("FR Kosten DL matches no OLD-tariff rate for the row's Empf.-Land, or the country has no zone column", "Differenz aufgrund abweichender Gewichte"),
 ]))
 story.append(P("Honold constants", h3))
 story.append(const_table([
     ("Weight brackets", "Bis column of the OLD tariff (50 … 10 000, last row open above)"),
+    ("Rate equality tolerance (OLD-tariff match and the KEIN zero test)", k("HONOLD_RATE_TOL")),
 ]))
 
 story.append(PageBreak())

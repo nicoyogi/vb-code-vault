@@ -7,8 +7,9 @@
   --border: rgba(216,181,110,0.1);
   --border2: rgba(216,181,110,0.22);
   --text: #f3efe3;
-  --text2: rgba(216,181,110,0.55);
-  --text3: rgba(216,181,110,0.28);
+  /* Alphas set for WCAG AA on --bg: 6.51:1 and 4.87:1. */
+  --text2: rgba(216,181,110,0.78);
+  --text3: rgba(216,181,110,0.66);
   
   /* Semantic Colors */
   --accent: #34d399;
@@ -242,7 +243,7 @@ header::after { content: ''; position: absolute; bottom: 0; left: 5%; right: 5%;
 .adv-field { display: flex; flex-direction: column; gap: 4px; }
 .adv-field label { font-family: var(--cinzel); font-size: 9.5px; color: var(--text3); letter-spacing: .18em; text-transform: uppercase; }
 .adv-field input { font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; transition: border-color .15s, background .15s; }
-.adv-field input:focus { outline: none; border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.04); }
+.adv-field input:focus { border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.04); }
 .adv-field .default-hint { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: .04em; }
 .adv-reset { margin-top: 10px; background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10.5px; padding: 6px 14px; border-radius: 20px; cursor: pointer; letter-spacing: .1em; transition: color .15s, border-color .15s; }
 .adv-reset:hover { color: var(--text2); border-color: var(--border2); }
@@ -381,8 +382,8 @@ body.theme-light {
   --border: rgba(80,55,20,0.12);
   --border2: rgba(80,55,20,0.25);
   --text: #1c1307;
-  --text2: rgba(80,55,20,0.75);
-  --text3: rgba(80,55,20,0.45);
+  --text2: rgba(80,55,20,0.88); /* 6.93:1 on --bg */
+  --text3: rgba(80,55,20,0.76); /* 5.0:1 on --bg, one clear step below --text2 */
   
   /* Semantic Colors */
   --accent: #0d8c5f;
@@ -391,7 +392,7 @@ body.theme-light {
 }
 body.theme-light header { background: rgba(252,246,232,0.92); }
 body.theme-light #bg-canvas { opacity: 0.35; }
-body.theme-light body::before { background-image: linear-gradient(rgba(80,55,20,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(80,55,20,0.04) 1px, transparent 1px); }
+body.theme-light::before { background-image: linear-gradient(rgba(80,55,20,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(80,55,20,0.04) 1px, transparent 1px); }
 body.theme-light .preview-table thead { background: #fcf6e8; }
 body.theme-light .trig-bar-bg { background: rgba(80,55,20,0.08); }
 
@@ -427,7 +428,7 @@ body.theme-light :focus-visible { outline-color: rgba(13,140,95,0.7); }
 .tester-field { display: flex; flex-direction: column; gap: 3px; }
 .tester-field label { font-family: var(--cinzel); font-size: 8.5px; color: var(--text3); letter-spacing: .18em; text-transform: uppercase; }
 .tester-field input { font-family: var(--mono); font-size: 11px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
-.tester-field input:focus { outline: none; border-color: rgba(52,211,153,0.45); }
+.tester-field input:focus { border-color: rgba(52,211,153,0.45); }
 .tester-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .tester-btn { background: transparent; border: 1px solid var(--border2); color: var(--text2); font-family: var(--mono); font-size: 10.5px; padding: 6px 12px; border-radius: 10px; cursor: pointer; letter-spacing: .06em; transition: all .15s; }
 .tester-btn:hover { color: var(--text); border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.04); }
@@ -575,7 +576,7 @@ body.theme-light .cl-box { background: #fcf6e8; }
   border-radius: 8px; padding: 6px 10px; transition: border-color .15s, background .15s;
 }
 .diff-filter select:focus,
-.diff-filter input[type="search"]:focus { outline: none; border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.04); }
+.diff-filter input[type="search"]:focus { border-color: rgba(52,211,153,0.45); background: rgba(52,211,153,0.04); }
 .diff-reset {
   background: none; border: 1px solid var(--border); color: var(--text3);
   font-family: var(--mono); font-size: 10px; padding: 7px 12px; border-radius: 18px;

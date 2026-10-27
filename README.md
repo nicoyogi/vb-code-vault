@@ -143,13 +143,13 @@ PORT=8081 npm run dev # if 8080 is taken
 The unit tests use the Node built-in test runner; there is no test framework to install.
 
 ```bash
-npm test                  # everything: 549 tests across the rule engine, diff mode, splitter and allocation
-                          # (3 of the 549 are the Honold workbook replays: they skip without assets/honold-tariff.js)
+npm test                  # everything: 559 tests across the rule engine, diff mode, splitter and allocation
+                          # (4 of the 559 are the Honold workbook replays: they skip without assets/honold-tariff.js)
 npm run test:anmerkung    # the Anmerkung suites only
 npm run verify:anmerkung  # syntax gate, required-engine symbols, SHA-256 of assets/anmerkung.js, then the full suite
 ```
 
-Tests live in `tests/`. Three harnesses in `tests/harness/` load the browser code into `node:vm` with stubs: `load-engine.mjs` for `assets/anmerkung.js`, `load-alokasi.mjs` for the script inside `alokasi-project.html`, and `load-splitter.mjs` for `File_splitter.html`. They pull the plaintext Wackler rate cards out of git history when those gitignored files are absent locally, so the suite passes on a fresh clone without the business data. The Honold OLD tariff is business data too: the harness reads the gitignored `assets/honold-tariff.js` when it is present and otherwise the Honold unit tests inject a synthetic tariff, while the three workbook replays skip because they need the real zone rates. The Dachser ratecards (`assets/dachser-ratecards.js`, built by `scripts/dachser/build_ratecards.py`) are the same: read from disk when present, and the Sonderfahrt/bisherigen table test is skipped when they are absent.
+Tests live in `tests/`. Three harnesses in `tests/harness/` load the browser code into `node:vm` with stubs: `load-engine.mjs` for `assets/anmerkung.js`, `load-alokasi.mjs` for the script inside `alokasi-project.html`, and `load-splitter.mjs` for `File_splitter.html`. They pull the plaintext Wackler rate cards out of git history when those gitignored files are absent locally, so the suite passes on a fresh clone without the business data. The Honold OLD tariff is business data too: the harness reads the gitignored `assets/honold-tariff.js` when it is present and otherwise the Honold unit tests inject a synthetic tariff, while the four workbook replays skip because they need the real zone rates. The Dachser ratecards (`assets/dachser-ratecards.js`, built by `scripts/dachser/build_ratecards.py`) are the same: read from disk when present, and the Sonderfahrt/bisherigen table test is skipped when they are absent.
 
 The condition-report PDF is generated separately and needs Python: `python scripts/anmerkung/report_conditions.py` writes `docs/anmerkung/conditions-report.pdf` from `assets/anmerkung.js`.
 
