@@ -165,6 +165,13 @@ test('rowUid: a key added for one forwarder does not re-key that key for the oth
   const honoldZz = e.rowUid('honold', 'Sheet1', 5, { stat: '10', fr_dl: '127,25', vkg: '588', zz_diff: '35.08' });
   assert.equal(honoldZz, honoldLegacy,
     'Honold zz_diff is a later export and must stay out of the uid seed');
+  /* 1.58.0 reads Volumen kg DL and FR Kosten lt. Tarif again and exports both, so they
+     need the same exclusion or every historical Honold row is re-keyed. */
+  const honoldFrt = e.rowUid('honold', 'Sheet1', 5, {
+    stat: '10', fr_dl: '127,25', vkg: '588', vkg_dl: '294', fr_tarif: '127,25',
+  });
+  assert.equal(honoldFrt, honoldLegacy,
+    'Honold vkg_dl and fr_tarif are 1.58.0 exports and must stay out of the uid seed');
 });
 
 /* ── collectInputsForRow — the export must carry every cell the engine gates on ── */
@@ -504,6 +511,11 @@ test('buildPhraseEmitterIndex: maps phrase keys to emitting functions, covers th
   assert.ok(A(idx.terminZuschlag).includes('daEvalEXP'), 'P.<key> token scan');
   assert.ok(A(idx.ausfallfrachtSchadensersatz).includes('daEvalSNK'),
     'hard-coded phrase string inside an enumerated helper (the hand-list used to miss daEvalSNK)');
+  /* Both processors emit the no-tariff template: Dachser as a raw literal, Honold as
+     the truth's quoted string. The index reads the template metadata, so the metadata
+     must name both or the catalog under-reports the emitters. */
+  assert.deepStrictEqual(A(idx.tpl_keinTarifLand), ['processDachser', 'processHonold'],
+    'tpl_keinTarifLand is emitted by Dachser and, since 1.58.0, by Honold');
   for (const key of Object.keys(e.PHRASES)) {
     assert.ok(Array.isArray(idx[key]), 'every catalog key present: ' + key);
   }

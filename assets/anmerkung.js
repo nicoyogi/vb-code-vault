@@ -185,7 +185,7 @@ function renderChangelog(){
   const list=document.getElementById('clList');if(!list)return;
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   if(!CHANGELOG.length){
-    list.innerHTML='<div class="cl-entry" style="opacity:.6"><span class="cl-ver">—</span><span class="cl-date">offline</span><ul class="cl-items"><li>Changelog data could not be loaded.</li></ul></div>';
+    list.innerHTML='<div class="cl-entry" style="opacity:.6"><span class="cl-ver">-</span><span class="cl-date">offline</span><ul class="cl-items"><li>Changelog data could not be loaded.</li></ul></div>';
     return;
   }
   list.innerHTML=CHANGELOG.map(e=>
@@ -465,9 +465,11 @@ const PHRASE_TEMPLATES=[
    example:'Fremdnummer 2544567001 bereits berechnet in RE0101165619, ok?',
    /* Both processors interpolate this phrase: Dachser has always, Wackler since D7. */
    processors:['processDachser','processWackler']},
+  /* Honold emits this one as the truth's own quoted literal, not through PHRASES:
+     the country is interpolated, so a catalog entry would be wrong. */
   {key:'tpl_keinTarifLand',regex:/^kein tarif f[uü]r/i,
-   example:'kein Tarif für PT',
-   processor:'processDachser'},
+   example:'Kein Tarif für \'SI\'',
+   processors:['processDachser','processHonold']},
   {key:'zwPrefix',         regex:/^differenz aufgrund abweichender zwischenempf/i,
    example:'Differenz aufgrund abweichender Zwischenempfänger 12345 Berlin',
    processor:'processDachser'},
@@ -634,7 +636,7 @@ function loadFile(file){
     rawFileBytes=ev.target.result;
     workbook=XLSX.read(rawFileBytes,{type:'array',cellNF:true});
     const fn=document.getElementById('fileName');
-    fn.textContent=file.name+' — '+workbook.SheetNames.length+' sheet(s)';
+    fn.textContent=file.name+': '+workbook.SheetNames.length+' sheet(s)';
     fn.style.display='block';
     showLog('Scroll loaded: '+file.name,'ok');
     checkReady();
@@ -2587,6 +2589,7 @@ function samePhraseSet(a,b){
    the processor actually reads, per-forwarder. Purely diagnostic — never affects rules. */
 function buildReason(fw,ws,r,cols){
   const parts=[];const push=(k,v)=>{if(v!==''&&v!=null&&v!=='0'&&v!=='-')parts.push(k+'='+v);};
+  const pushZero=(k,c)=>{if(c>=0)parts.push(k+'='+cellNum(ws,r,c));};
   const num=c=>c>=0?cellStr(ws,r,c):'';
   if(fw==='dachser'){
     push('STAT',num(cols.stat));push('TARIF',num(cols.tarif));
@@ -2625,7 +2628,7 @@ function buildReason(fw,ws,r,cols){
   } else if(fw==='honold'){
     push('STAT',num(cols.stat));push('FR_DL',num(cols.fr_dl));
     push('ZZ',num(cols.zz));
-    push('VKG',num(cols.vkg));
+    push('VKG',num(cols.vkg));pushZero('VKG_DL',cols.vkg_dl);pushZero('FR_TARIF',cols.fr_tar);
     const land=cellStr(ws,r,cols.empf_land);if(land)parts.push('LAND='+land);
   }
   return parts.join(' | ');
@@ -2673,6 +2676,8 @@ function resolveHonold(ws,range){
     fr_dl:    fc('FR','Kosten DL'),
     zz:       fc('ZZ','Differenz'),   /* -1 on every Honold layout before 20381523 */
     vkg:      fc('','Volumen kg'),
+    vkg_dl:   fc('','Volumen kg DL'),
+    fr_tar:   fc('FR','Kosten lt. Tarif'),
     empf_land:fc('','Empf.-Land'),
     empf_plz: fc('','Empf.-PLZ'),
   };
@@ -2681,17 +2686,32 @@ function resolveHonold(ws,range){
    (the GB Großbrittanien 2 column) while the rest is whole cents, so equality is
    a 0.005 tolerance; the <= boundary covers round-half-up. */
 const HONOLD_RATE_TOL=0.005;
-/* The note is decided from FR Kosten DL, never from Volumen kg DL: the DL weight
-   is unreliable when ReferenzNr lists several references (owner ruling 2026-10-20).
+/* Three rules, decided from FR Kosten DL and FR Kosten lt. Tarif.
    A ZZ cost line can be a second delivery attempt billed on its own: its Differenz
    cell is that attempt's Kosten DL minus its tariff cost, and with FR Kosten DL
-   blank / 0 over the Dachser tolerance the whole note is "2. Zustellung".
-   Otherwise a blank / 0 FR or a missing / 0 Volumen kg is a weight difference, and
-   so is a FR the OLD tariff does not publish for the row's Empf.-Land in the Bis
-   bracket its Volumen kg falls in - membership across every zone of the country,
-   because the row carries the country but not the zone, and no OLD amount sits at
-   two different brackets across a country's zones (measured 0 for CH, ES, FR, GB,
-   GR, IT, NO, PL, PT, SE), so the zone cannot change which bracket a rate belongs to.
+   blank / 0 over the Dachser tolerance the whole note is "2. Zustellung". A blank / 0
+   FR without that fee, or a missing / 0 Volumen kg, is a weight difference.
+   FR Kosten lt. Tarif blank / 0 means the current tariff publishes no rate for the
+   row's Empf.-Land, and the note is "Kein Tarif für '<LAND>'" - terminal, because the
+   OLD matrix cannot say anything about a lane the current one does not price. It reads
+   neither Volumen kg nor the OLD matrix, so it sits after the FR / ZZ branch and before
+   the Volumen kg gate; an absent column (cols.fr_tar < 0) turns it off.
+   Otherwise the OLD tariff is read by rate. The row keeps the previous-tariff note when
+   FR equals an OLD rate for its Empf.-Land in the Bis bracket its Volumen kg falls in -
+   membership across every zone of the country, because the row carries the country but
+   not the zone, and a country's zone columns can repeat one amount across neighbouring
+   brackets (the AT tail from 6500 kg up is flat, GB3 repeats at 450/500, MD at 50/100),
+   which is harmless because only the bracket the row's own Volumen kg falls in is
+   compared - and that arm suppresses the weight half whatever Volumen kg DL says
+   (owner ruling 2026-10-20).
+   A second arm covers an FR that is an OLD amount from ANOTHER bracket: it needs a DL
+   weight present in a bracket other than Volumen kg's, plus evidence the lane moved on,
+   read from the row's own FR Kosten lt. Tarif at the billed bracket - every OLD rate the
+   country publishes there must differ from it, or a rate that is still current (IT@450
+   96.13 on 20382640 row 4) keeps the note weight-only. That divergence test is a PROXY
+   for the current matrix, which is not shipped: it reads the wrong answer on a lane whose
+   OLD and current rates agree at the billed bracket but diverge at the bracket the billed
+   amount came from. A FR matching no OLD rate anywhere is a weight difference.
    Known bound: one amount collides exactly between the OLD and the current table
    (PL1 OLD@10000 = current@8000 = 858.93), so a current-tariff charge at a different
    weight on that lane would read as the old tariff.
@@ -2708,17 +2728,32 @@ function processHonold(ws,r,cols){
     if(cols.fr_dl>=0&&cols.zz>=0&&hasErr(cellNum(ws,r,cols.zz),T_DACHSER))return P.zustell2;
     return P.abweichGewichte;
   }
+  const land=String(cols.empf_land>=0?cellStr(ws,r,cols.empf_land):'').trim().toUpperCase();
+  const frtOk=cols.fr_tar>=0;
+  const frt=frtOk?cellNum(ws,r,cols.fr_tar):0;
+  if(frtOk&&land&&Math.abs(frt)<=HONOLD_RATE_TOL)return "Kein Tarif für '"+land+"'";
   const tv=honoldTierIdx(cols.vkg>=0?cellNum(ws,r,cols.vkg):0);
   if(tv===null)return P.abweichGewichte;
-  const land=String(cols.empf_land>=0?cellStr(ws,r,cols.empf_land):'').trim().toUpperCase();
   /* The country cell is workbook-controlled, so the zone list is taken only when it
      really is an array: a key like toString or __proto__ would otherwise reach an
      inherited non-iterable and throw inside runRules(), which has no try/catch. */
   const labels=Array.isArray(t.codes[land])?t.codes[land]:[];
+  let prevBilled=false,oldAnywhere=false;const oldAtTv=[];
   for(const label of labels){
     const rates=t.zones[label];
-    if(Array.isArray(rates)&&rates[tv]!=null&&Math.abs(rates[tv]-fr)<=HONOLD_RATE_TOL)return P.honoldBisherigerTarif;
+    if(!Array.isArray(rates))continue;
+    if(rates[tv]!=null){
+      if(Math.abs(rates[tv]-fr)<=HONOLD_RATE_TOL)prevBilled=true;
+      oldAtTv.push(rates[tv]);
+    }
+    for(const rate of rates)if(rate!=null&&Math.abs(rate-fr)<=HONOLD_RATE_TOL){oldAnywhere=true;break;}
   }
+  const vdl=cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0;
+  const td=honoldTierIdx(vdl);
+  const diverged=frtOk&&oldAtTv.length>0&&oldAtTv.every(v=>Math.abs(v-frt)>HONOLD_RATE_TOL);
+  const prevDl=oldAnywhere&&vdl>0&&td!==tv&&diverged;
+  if(prevBilled)return P.honoldBisherigerTarif;
+  if(prevDl)return join(P.abweichGewichte,P.honoldBisherigerTarif);
   return P.abweichGewichte;
 }
 
@@ -2741,7 +2776,7 @@ function runRules(){
       const ec=ensureAnmerkungCol(ws,range);
       if(!ec.ok){showLog(`Sheet "${name}": no Anmerkung column and no headers to append after.`,'err');unreachable++;continue;}
       cols.target=ec.idx;created=true;
-      showLog(`Sheet "${name}": no Anmerkung column — creating one at ${idxToCol(ec.idx)}3.`,'ok');
+      showLog(`Sheet "${name}": no Anmerkung column, creating one at ${idxToCol(ec.idx)}3.`,'ok');
     }
     const targetCol=idxToCol(cols.target),rowMap=new Map(),reasonMap=new Map();
     if(created)rowMap.set(3,'Anmerkung'); // header cell; patchSheet styles it like its neighbours
@@ -2779,9 +2814,9 @@ function runPreview(){
     const rep=runRules();
     renderStats(rep);
     renderPreview(rep);
-    showLog(`Dry-run — ${rep.filled} would be filled, ${rep.skipped} skipped, ${rep.empty} empty.`,'ok');
+    showLog(`Dry-run: ${rep.filled} would be filled, ${rep.skipped} skipped, ${rep.empty} empty.`,'ok');
   }catch(e){showLog('Preview failed: '+e.message,'err');console.error(e);}
-  btn.disabled=false;btn.textContent='Preview — dry-run without writing';
+  btn.disabled=false;btn.textContent='Preview: dry-run without writing';
 }
 function renderPreview(rep){
   const wrap=document.getElementById('previewWrap'),tbody=document.querySelector('#previewTable tbody');
@@ -2799,7 +2834,7 @@ function renderPreview(rep){
      covers every row, so point there when the cap bites. */
   const capped=rep.previewRows.length>rows.length;
   document.getElementById('previewMeta').textContent=
-    (capped?`showing first ${rows.length} of ${rep.previewRows.length} rows (table capped) — the stats below cover all of them · `:`showing ${rows.length} of ${rep.previewRows.length} rows · `)+
+    (capped?`showing first ${rows.length} of ${rep.previewRows.length} rows (table capped). The stats below cover all of them · `:`showing ${rows.length} of ${rep.previewRows.length} rows · `)+
     `${rep.filled} filled · ${rep.empty} empty · ${rep.skipped} skipped`;
   wrap.style.display='block';
 }
@@ -2820,7 +2855,7 @@ function renderStats(rep){
   document.getElementById('sEmpty').textContent=rep.empty;
   const list=document.getElementById('trigList');
   const entries=[...rep.trigCounts.entries()].sort((a,b)=>b[1]-a[1]);
-  if(!entries.length){list.innerHTML='<div class="trig-empty">No triggers fired — all clean.</div>';}
+  if(!entries.length){list.innerHTML='<div class="trig-empty">No triggers fired. All clean.</div>';}
   else{
     const max=entries[0][1];
     const totalFilled=rep.filled||entries.reduce((s,[,c])=>s+c,0);
@@ -2846,7 +2881,7 @@ async function runProcess(){
   let diffSel;
   try{diffSel=await askDiffStyle();}
   catch(err){showLog('Could not open the Differenz style dialog: '+err.message,'err');btn.disabled=false;btn.textContent='Invoke the Ritual';return;}
-  if(!diffSel){showLog('Ritual aborted — no Differenz column style chosen.','err');btn.disabled=false;btn.textContent='Invoke the Ritual';return;}
+  if(!diffSel){showLog('Ritual aborted: no Differenz column style chosen.','err');btn.disabled=false;btn.textContent='Invoke the Ritual';return;}
   const diffPreset=diffSel;
   document.getElementById('btnDl').style.display='none';document.getElementById('stats-wrap').style.display='none';setProgress(5);
   try{
@@ -2862,7 +2897,7 @@ async function runProcess(){
     let stylesXml=null,diffFont=null,diffCells=0;
     if(diffPreset!=='normal'){
       const sf=zip.file('xl/styles.xml');stylesXml=sf?await sf.async('string'):null;
-      if(!stylesXml)showLog('Differenz style — xl/styles.xml missing, style skipped.','err');
+      if(!stylesXml)showLog('Differenz style: xl/styles.xml missing, style skipped.','err');
       else{const tf=zip.file('xl/theme/theme1.xml');diffFont=tf?themeFontName(await tf.async('string')):null;}
     }
     const sheetNames=Object.keys(allResults);
@@ -2888,15 +2923,15 @@ async function runProcess(){
       if(stylesXml){
         const ws0=workbook&&workbook.Sheets?workbook.Sheets[name]:null;
         const dCols=ws0?diffColsOf(ws0,XLSX.utils.decode_range(ws0['!ref']||'A1:A1')):[];
-        if(!dCols.length)showLog('Sheet "'+name+'": no group Differenz column — style skipped.');
+        if(!dCols.length)showLog('Sheet "'+name+'": no group Differenz column, style skipped.');
         else for(const dCol of dCols){
           const letter=idxToCol(dCol),zones=columnStyleIdxs(sheetXml,letter);
-          if(!zones.text.length&&!zones.num.length){showLog('Sheet "'+name+'": no styled cell in '+letter+' — style skipped.','err');continue;}
+          if(!zones.text.length&&!zones.num.length){showLog('Sheet "'+name+'": no styled cell in '+letter+', style skipped.','err');continue;}
           /* Append in turn, updating stylesXml each time: a style index only exists after its
              own append, so the numeric donor is looked up against the already-grown cellXfs. */
           const mk=srcs=>{const d=pickDonor(stylesXml,srcs);if(d<0)return -1;const r=addDiffStyleXf(stylesXml,diffPreset,d,diffFont);stylesXml=r.xml;return r.styleIdx;};
           const pair=[mk(zones.text),mk(zones.num)];
-          if(pair[0]<0&&pair[1]<0){showLog('Sheet "'+name+'": cellXfs in xl/styles.xml unusable — style skipped.','err');continue;}
+          if(pair[0]<0&&pair[1]<0){showLog('Sheet "'+name+'": cellXfs in xl/styles.xml unusable, style skipped.','err');continue;}
           const t=recolourColumn(sheetXml,letter,pair[0],pair[1]);sheetXml=t.xml;diffCells+=t.cells;
           showLog('Differenz '+letter+': '+t.cells+' cells → '+DIFF_STYLE_LABELS[diffPreset]+'.','ok');
         }
@@ -2906,7 +2941,7 @@ async function runProcess(){
     }
     zip.file('xl/sharedStrings.xml',rebuildSharedStrings(strings));
     if(stylesXml)zip.file('xl/styles.xml',stylesXml);
-    showLog(diffPreset==='normal'?'Differenz columns: Normal — xl/styles.xml left unchanged.':(diffCells?'Differenz style '+DIFF_STYLE_LABELS[diffPreset]+' — '+diffCells+' cell(s) coloured.':'Differenz style '+DIFF_STYLE_LABELS[diffPreset]+' — 0 cells coloured (sheets without data rows were skipped; see the log above for details).'),'ok');
+    showLog(diffPreset==='normal'?'Differenz columns: Normal. xl/styles.xml left unchanged.':(diffCells?'Differenz style '+DIFF_STYLE_LABELS[diffPreset]+': '+diffCells+' cell(s) coloured.':'Differenz style '+DIFF_STYLE_LABELS[diffPreset]+': 0 cells coloured (sheets without data rows were skipped; see the log above for details).'),'ok');
     const ctFile=zip.file('[Content_Types].xml');if(ctFile){let ctXml=await ctFile.async('string');ctXml=ensureSharedStringsContentType(ctXml);zip.file('[Content_Types].xml',ctXml);}
     const wbRelFile=zip.file('xl/_rels/workbook.xml.rels');if(wbRelFile){let wbRel=await wbRelFile.async('string');wbRel=ensureSharedStringsRel(wbRel);zip.file('xl/_rels/workbook.xml.rels',wbRel);}
     setProgress(85);
@@ -2914,7 +2949,7 @@ async function runProcess(){
     setProgress(100);
     renderStats(rep);
     const skipMsg=(selectedFW==='honold'&&!honoldTariff())?'Honold tariff locked or incomplete':'Stat_Freigabe ≠ 10';
-    showLog(`Ritual complete — ${rep.filled} rows transmuted, ${rep.skipped} skipped (${skipMsg})${wantReason?' · reason column written':''}.`,'ok');
+    showLog(`Ritual complete: ${rep.filled} rows transmuted, ${rep.skipped} skipped (${skipMsg})${wantReason?' · reason column written':''}.`,'ok');
     document.getElementById('btnDl').style.display='block';
   }catch(e){showLog('Ritual failed: '+e.message+'\n'+e.stack,'err');console.error(e);}
   btn.disabled=false;btn.textContent='Invoke the Ritual';
@@ -2973,8 +3008,9 @@ const TESTER_FIELDS={
   ],
   honold:[
     ['stat','Stat_Freigabe','num'],['fr_dl','FR Kosten DL','num'],
+    ['fr_tar','FR Kosten lt. Tarif','num'],
     ['zz','ZZ Differenz','num'],
-    ['vkg','Volumen kg','num'],
+    ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
     ['empf_land','Empf.-Land','str'],
   ],
 };
@@ -3020,9 +3056,11 @@ const TESTER_PRESETS={
     {name:'Fremdnummer empty tarif',values:{stat:10,tarif:'',fr:29.5,maut:2.6,tz:2.51,vkg:120,vkg_dl:120}},
   ],
   honold:[
-    {name:'FR = OLD tariff rate for the bracket (AT 588 kg, 127.25)',values:{stat:10,fr_dl:127.25,vkg:588,empf_land:'AT'}},
-    {name:'FR = OLD tariff rate, weight in another bracket (AT 337 kg, 143.14)',values:{stat:10,fr_dl:143.14,vkg:337,empf_land:'AT'}},
+    {name:'FR = OLD tariff rate for the bracket (AT 588 kg, 127.25)',values:{stat:10,fr_dl:127.25,vkg:588,vkg_dl:588,fr_tar:118.34,empf_land:'AT'}},
+    {name:'FR = OLD tariff rate, weight in another bracket (AT 337 kg, 143.14)',values:{stat:10,fr_dl:143.14,vkg:337,vkg_dl:337,fr_tar:130.91,empf_land:'AT'}},
     {name:'ZZ second delivery (20381523 row 4)',values:{stat:10,vkg:157,zz:35.08}},
+    {name:'OLD rate from another bracket, DL weight in a third (20382640 row 5, AT)',values:{stat:10,fr_dl:58.46,vkg:'124,358',vkg_dl:'62,18',fr_tar:41.36,empf_land:'AT'}},
+    {name:'No current tariff for the lane (20382640 row 8, SI)',values:{stat:10,fr_dl:733.31,vkg:727,vkg_dl:0,fr_tar:0,empf_land:'SI'}},
   ],
 };
 
@@ -3032,7 +3070,7 @@ function renderTesterFields(){
   if(!fw){
     wrap.innerHTML='';
     presetsWrap.innerHTML='<span class="tester-presets-label">// select a forwarder above to begin</span>';
-    if(out)out.innerHTML='<div class="to-label">Result — select a forwarder above and fill in any fields to test</div>';
+    if(out)out.innerHTML='<div class="to-label">Result: select a forwarder above and fill in any fields to test</div>';
     return;
   }
   const fields=TESTER_FIELDS[fw]||[];
@@ -3057,7 +3095,7 @@ function applyTesterPreset(idx){
 function clearTester(){
   document.querySelectorAll('#testerFields input').forEach(el=>el.value='');
   const out=document.getElementById('testerOutput');
-  if(out)out.innerHTML='<div class="to-label">Result — fill in any fields to test</div>';
+  if(out)out.innerHTML='<div class="to-label">Result: fill in any fields to test</div>';
 }
 
 /* Build a synthetic ws that maps column index -> {v}. Keep column
@@ -3106,7 +3144,7 @@ function buildSyntheticWs(fw,userVals){
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
     wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','colli','brutto','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
-    honold:['target','stat','fr_dl','vkg','empf_land','empf_plz'],
+    honold:['target','stat','fr_dl','fr_tar','zz','vkg','vkg_dl','empf_land','empf_plz'],
   }[fw]||[];
   for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
   return{ws,cols};
@@ -3136,14 +3174,14 @@ function runTester(){
   let body;
   if(result===null){
     const why=(fw==='honold'&&!honoldTariff())?'the Honold tariff is locked or incomplete':'Stat_Freigabe ≠ 10';
-    body='<div class="to-null">null — row would be skipped ('+why+').</div>';
+    body='<div class="to-null">null: row would be skipped ('+why+').</div>';
   } else if(result===''){
-    body='<div class="to-empty">empty — no trigger fired, row would be filled with blank.</div>';
+    body='<div class="to-empty">empty: no trigger fired, row would be filled with blank.</div>';
   } else {
     body='<div class="to-result">'+esc(result)+'</div>';
   }
   out.innerHTML=
-    '<div class="to-label">Result — '+fw+'</div>'+body+
+    '<div class="to-label">Result: '+fw+'</div>'+body+
     (reason?'<div class="to-reason">Reason trace: '+esc(reason)+'</div>':'');
 }
 
@@ -3170,8 +3208,8 @@ function loadDiffFile(slot,file){
       const el=document.getElementById('diffSlot'+slot.toUpperCase());el.classList.add('loaded');
       document.getElementById('diffName'+slot.toUpperCase()).textContent=file.name+' \u00b7 '+wb.SheetNames.length+' sheet(s)';
       document.getElementById('btnDiffRun').disabled=!(diffState.a&&diffState.b);
-      showLog('Diff — loaded '+slot.toUpperCase()+': '+file.name,'ok');
-    }catch(err){showLog('Diff — could not read '+slot.toUpperCase()+': '+err.message,'err');}
+      showLog('Diff: loaded '+slot.toUpperCase()+', '+file.name,'ok');
+    }catch(err){showLog('Diff: could not read '+slot.toUpperCase()+', '+err.message,'err');}
   };
   r.readAsArrayBuffer(file);
 }
@@ -3434,8 +3472,10 @@ const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','
 /* Same rule, but only for the forwarder that gained the key later: excluding
    referenz globally would re-key every historical K+N/Wackler row, el_diff is
    new to DHL, and zz_diff is new to Honold - Dachser has always hashed that
-   cell, so a global exclusion would re-key every historical Dachser ZZ row. */
-const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz','c196_diff']),dhl:new Set(['el_diff']),honold:new Set(['zz_diff'])};
+   cell, so a global exclusion would re-key every historical Dachser ZZ row.
+   1.58.0 re-reads Volumen kg DL and reads FR Kosten lt. Tarif for Honold; both
+   are excluded here so that change re-keys nothing. */
+const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz','c196_diff']),dhl:new Set(['el_diff']),honold:new Set(['zz_diff','vkg_dl','fr_tarif'])};
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
@@ -3484,9 +3524,9 @@ const CANONICAL_INPUT_ORDER={
             'referenz','anz_colli','brutto_kg','vkg','vkg_dl',
            'abg_land','abg_plz','empf_land','empf_plz','empf_ort','zone',
            'kostenstelle','sachkonto'],
-  honold:['stat','fr_dl','vkg','empf_land','empf_plz',
+  honold:['stat','fr_dl','vkg','empf_land','empf_plz','zz_diff',
            /* Last on purpose, like dachser's referenz: existing CSV columns stay put. */
-           'zz_diff'],
+           'vkg_dl','fr_tarif'],
 };
 
 /* Build the ordered key list for a CSV: union of (canonical for each
@@ -3708,7 +3748,7 @@ function finalizeDiff(parts,metaText,multiSource){
 
 /* Single-pair Diff Mode entry point (unchanged behavior). */
 function runDiff(){
-  if(!diffState.a||!diffState.b){showLog('Diff — load both files first.','err');return;}
+  if(!diffState.a||!diffState.b){showLog('Diff: load both files first.','err');return;}
   const part=diffWorkbooks(diffState.a.wb,diffState.a.name,diffState.b.wb,diffState.b.name,null);
   finalizeDiff([part],`A: ${diffState.a.name}  \u2194  B: ${diffState.b.name}`,false);
 }
@@ -3760,7 +3800,7 @@ function onBulkDiffFile(e,slot){if(e.target.files&&e.target.files.length)addBulk
 function addBulkDiffFiles(fileList,slot){
   let added=0;
   for(const file of fileList){
-    if(!file.name.toLowerCase().endsWith('.xlsx')){showLog('Bulk Diff — skipped non-xlsx: '+file.name,'err');continue;}
+    if(!file.name.toLowerCase().endsWith('.xlsx')){showLog('Bulk Diff: skipped non-xlsx '+file.name,'err');continue;}
     /* Read + parse synchronously-ish via FileReader so runBulkDiff can
        stay a plain loop. Each entry holds the parsed workbook. */
     const entry={id:++bulkDiffIdCounter,name:file.name,wb:null,slot};
@@ -3768,14 +3808,14 @@ function addBulkDiffFiles(fileList,slot){
     const r=new FileReader();
     r.onload=ev=>{
       try{entry.wb=XLSX.read(ev.target.result,{type:'array',cellNF:true});}
-      catch(err){showLog('Bulk Diff — could not read '+file.name+': '+err.message,'err');
+      catch(err){showLog('Bulk Diff: could not read '+file.name+', '+err.message,'err');
         const i=bulkDiffFiles[slot].indexOf(entry);if(i>=0)bulkDiffFiles[slot].splice(i,1);}
       renderBulkDiffPairs();
     };
     r.readAsArrayBuffer(file);
     added++;
   }
-  if(added)showLog('Bulk Diff — added '+added+' file(s) to set '+slot.toUpperCase()+'.','ok');
+  if(added)showLog('Bulk Diff: added '+added+' file(s) to set '+slot.toUpperCase()+'.','ok');
   renderBulkDiffPairs();
 }
 
@@ -3796,7 +3836,7 @@ function _resetBulkDiffInputs(){
   });
   renderBulkDiffPairs();
 }
-function clearBulkDiff(){_resetBulkDiffInputs();showLog('Bulk Diff — cleared file sets.','ok');}
+function clearBulkDiff(){_resetBulkDiffInputs();showLog('Bulk Diff: cleared file sets.','ok');}
 
 function renderBulkDiffPairs(){
   /* Slot loaded-state + count labels */
@@ -3820,13 +3860,13 @@ function renderBulkDiffPairs(){
         <span class="bdp-file bdp-a" title="${esc(p.a.name)}">${esc(p.a.name)}</span>
         <span class="bdp-arrow">\u2194</span>
         <span class="bdp-file bdp-b" title="${esc(p.b.name)}">${esc(p.b.name)}</span>
-        ${p.ambiguous?'<span class="bdp-badge" title="Multiple files share this name key — paired by sorted name order. Rename for an exact 1:1 match if this is wrong.">by order</span>':''}
+        ${p.ambiguous?'<span class="bdp-badge" title="Multiple files share this name key. Paired by sorted name order. Rename for an exact 1:1 match if this is wrong.">by order</span>':''}
         <button type="button" class="bdp-rm" title="Remove this A file" onclick="removeBulkDiffFile('a',${p.a.id})">\u2715</button>
       </div>`).join('');
   }
   const unmatched=[...unmatchedA.map(f=>({f,slot:'a'})),...unmatchedB.map(f=>({f,slot:'b'}))];
   if(unmatched.length){
-    html+=`<div class="bdp-section-label">${unmatched.length} unmatched \u2014 no partner found</div>`;
+    html+=`<div class="bdp-section-label">${unmatched.length} unmatched, no partner found</div>`;
     html+=unmatched.map(({f,slot})=>
       `<div class="bdp-unmatched">
         <span class="bdp-file" title="${esc(f.name)}">${slot.toUpperCase()}: ${esc(f.name)}</span>
@@ -3842,9 +3882,9 @@ function renderBulkDiffPairs(){
 
 function runBulkDiff(){
   const{pairs}=computeBulkDiffPairs();
-  if(!pairs.length){showLog('Bulk Diff — no matched A/B pairs. Name predicted & expected files alike (role words like "predicted"/"expected" are ignored).','err');return;}
+  if(!pairs.length){showLog('Bulk Diff: no matched A/B pairs. Name predicted & expected files alike (role words like "predicted"/"expected" are ignored).','err');return;}
   const notReady=pairs.filter(p=>!p.a.wb||!p.b.wb);
-  if(notReady.length){showLog('Bulk Diff — '+notReady.length+' file(s) still parsing, try again in a moment.','err');return;}
+  if(notReady.length){showLog('Bulk Diff: '+notReady.length+' file(s) still parsing, try again in a moment.','err');return;}
   const parts=[];
   for(const p of pairs){
     const base=p.a.name.replace(/\.[^.]+$/,'');
@@ -3852,7 +3892,7 @@ function runBulkDiff(){
     parts.push(diffWorkbooks(p.a.wb,p.a.name,p.b.wb,p.b.name,source));
   }
   finalizeDiff(parts,`Bulk diff \u00b7 ${pairs.length} file pair(s)`,true);
-  showLog(`Bulk Diff — compared ${pairs.length} pair(s) into one corpus. Use the chips, filters, and exports below on the combined set.`,'ok');
+  showLog(`Bulk Diff: compared ${pairs.length} pair(s) into one corpus. Use the chips, filters, and exports below on the combined set.`,'ok');
   document.getElementById('diffResults').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -3927,6 +3967,7 @@ function collectInputsForRow(fw,ws,r,cols){
     get('vkg',cols.vkg);
     get('empf_land',cols.empf_land);get('empf_plz',cols.empf_plz);
     get('zz_diff',cols.zz);
+    get('vkg_dl',cols.vkg_dl);get('fr_tarif',cols.fr_tar);
   }
   return o;
 }
@@ -4017,7 +4058,7 @@ function renderDiff(){
   }
 
   refreshDiffView();
-  showLog(`Diff \u2014 ${wrong} wrong, ${missed} missed, ${overfired} overfired, ${drift} engine-drift (${total} rows scanned across ${forwarders.length||1} forwarder(s)).`,'ok');
+  showLog(`Diff: ${wrong} wrong, ${missed} missed, ${overfired} overfired, ${drift} engine-drift (${total} rows scanned across ${forwarders.length||1} forwarder(s)).`,'ok');
 }
 
 /* Incremental render cap. The table renders DIFF_PAGE rows at a time;
@@ -4064,8 +4105,8 @@ function refreshDiffView(){
 
   const foot=document.getElementById('diffTableFoot');
   if(foot){
-    if(!filtered.length){foot.textContent='// no rows match the current filter — loosen a chip or clear the search.';}
-    else if(filtered.length>MAX){foot.innerHTML=`// showing first ${MAX} of ${filtered.length} matching rows — <button type="button" class="df-show-more" onclick="expandDiffLimit()">show ${Math.min(DIFF_PAGE,filtered.length-MAX)} more</button> or use filters to narrow.`;}
+    if(!filtered.length){foot.textContent='// no rows match the current filter. Loosen a chip or clear the search.';}
+    else if(filtered.length>MAX){foot.innerHTML=`// showing first ${MAX} of ${filtered.length} matching rows: <button type="button" class="df-show-more" onclick="expandDiffLimit()">show ${Math.min(DIFF_PAGE,filtered.length-MAX)} more</button> or use filters to narrow.`;}
     else if(filtered.length<rows.length){foot.textContent=`// showing ${filtered.length} of ${rows.length} rows (filtered).`;}
     else{foot.textContent=`// showing all ${filtered.length} rows.`;}
   }
@@ -4089,7 +4130,7 @@ function renderDiffRow(r,i,esc){
     ? `<span class="df-src" title="Source file pair">${esc(r.source)}</span>${esc(r.sheet)}`
     : esc(r.sheet);
   if(r.change==='sheet'){
-    return `<tr class="df-sheet"><td>${sheetCell}</td><td>${r.row}</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-sheet">sheet</span></td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td><td class="df-engine"></td><td class="df-actions"></td></tr>`;
+    return `<tr class="df-sheet"><td>${sheetCell}</td><td>-</td><td><span class="fw-pill fw-${r.fw}">${esc(r.fw)}</span></td><td><span class="lbl-pill lbl-sheet">sheet</span></td><td class="df-before">${esc(r.before)}</td><td class="df-after">${esc(r.after)}</td><td class="df-engine"></td><td class="df-actions"></td></tr>`;
   }
   const labelCls=LABEL_CLASS[r.label]||'';
   const engine=renderEngineCell(r,esc);
@@ -4097,10 +4138,10 @@ function renderDiffRow(r,i,esc){
   /* Per-phrase highlighting: only the phrases that actually differ get
      the removed/added treatment; phrases both sides agree on render
      neutral, so on multi-phrase rows the disagreeing phrase pops out
-     without opening the detail drawer. Empty cells render an em-dash. */
+     without opening the detail drawer. Empty cells render a hyphen. */
   const phraseCell=(cls,raw,changedList,changedCls)=>{
     const parts=phraseCellParts(raw,changedList);
-    if(!parts.length)return `<td class="${cls}">\u2014</td>`;
+    if(!parts.length)return `<td class="${cls}">-</td>`;
     return `<td class="${cls}">${parts.map(p=>`<span class="dfp ${p.changed?changedCls:'dfp-common'}">${esc(p.text)}</span>`).join('<span class="dfp-sep"> // </span>')}</td>`;
   };
   const beforeCell=phraseCell('df-before',r.before,r.extra_phrases,'dfp-extra');
@@ -4109,9 +4150,9 @@ function renderDiffRow(r,i,esc){
 }
 
 function renderEngineCell(r,esc){
-  if(!r.engineNow&&!r.reason){return '<td class="df-engine empty"><span class="df-engine-val">\u2014</span></td>';}
+  if(!r.engineNow&&!r.reason){return '<td class="df-engine empty"><span class="df-engine-val">-</span></td>';}
   if(r.engineMatchesA){
-    return `<td class="df-engine match"><span class="match-dot"></span><span class="df-engine-val">${esc(r.engineNow||'\u2014')}</span></td>`;
+    return `<td class="df-engine match"><span class="match-dot"></span><span class="df-engine-val">${esc(r.engineNow||'-')}</span></td>`;
   }
   return `<td class="df-engine drift" title="Engine disagrees with slot A"><span class="drift-dot"></span><span class="df-engine-val">${esc(r.engineNow||'(empty)')}</span></td>`;
 }
@@ -4134,7 +4175,7 @@ function toggleDiffDetail(i){
     : '';
   const kv=srcKv+(keys.length
     ? keys.map(k=>`<div class="df-detail-kv"><span class="kv-k">${esc(k)}</span><span class="kv-v" title="${esc(r.inputs[k])}">${esc(r.inputs[k])}</span></div>`).join('')
-    : '<div class="df-detail-kv empty"><span class="kv-k">inputs</span><span class="kv-v">(no rule-visible cells captured — unknown forwarder)</span></div>');
+    : '<div class="df-detail-kv empty"><span class="kv-k">inputs</span><span class="kv-v">(no rule-visible cells captured: unknown forwarder)</span></div>');
   /* Phrase-level diff visualisation. Only render when meaningful — for
      `correct` rows there's nothing to show; for missed/overfired/wrong
      the breakdown is the whole point of the precision pass. */
@@ -4151,7 +4192,7 @@ function toggleDiffDetail(i){
            <span class="df-phr-title">phrase diff</span>
            ${r.granular?`<span class="df-gran-badge df-gran-${esc(r.granular)}">${esc(r.granular.replace(/_/g,' '))}</span>`:''}
            ${r.phrase_jaccard!=null?`<span class="df-phr-jac" title="Jaccard similarity of predicted vs expected phrase sets (1.0 = identical, 0 = disjoint)">jaccard ${(r.phrase_jaccard).toFixed(2)}</span>`:''}
-           ${r.row_uid?`<span class="df-uid" title="Stable row UID — identical rows across runs share this hash">uid ${esc(r.row_uid)}</span>`:''}
+           ${r.row_uid?`<span class="df-uid" title="Stable row UID. Identical rows across runs share this hash">uid ${esc(r.row_uid)}</span>`:''}
          </div>
          ${phrSection('missing',r.missing_phrases,'phr-missing')}
          ${phrSection('extra'  ,r.extra_phrases  ,'phr-extra')}
@@ -4169,7 +4210,7 @@ function toggleDiffDetail(i){
   const evtBlock=engineWrong
     ? `<div class="df-phr-block df-evt-block">
          <div class="df-phr-head">
-           <span class="df-phr-title" title="Current engine output vs ground truth B — this is what a rule fix must close">engine vs truth</span>
+           <span class="df-phr-title" title="Current engine output vs ground truth B. This is what a rule fix must close">engine vs truth</span>
            <span class="lbl-pill lbl-${esc(r.engine_label)}">${esc(r.engine_label)}</span>
            ${r.engine_granular?`<span class="df-gran-badge df-gran-${esc(r.engine_granular)}">${esc(r.engine_granular.replace(/_/g,' '))}</span>`:''}
            ${r.engine_vs_expected_jaccard!=null?`<span class="df-phr-jac" title="Jaccard similarity of the CURRENT engine's output vs ground-truth phrase sets (1.0 = identical, 0 = disjoint)">jaccard ${(r.engine_vs_expected_jaccard).toFixed(2)}</span>`:''}
@@ -4180,7 +4221,7 @@ function toggleDiffDetail(i){
     : '';
   const reasonHtml=r.reason
     ? `<div class="df-reason-block"><span class="rb-label">trigger trace</span>${esc(r.reason)}</div>`
-    : '<div class="df-reason-block empty"><span class="rb-label">trigger trace</span>(engine produced no reason — either no rule fired or forwarder unknown)</div>';
+    : '<div class="df-reason-block empty"><span class="rb-label">trigger trace</span>(engine produced no reason: either no rule fired or forwarder unknown)</div>';
   const canSend=r.fw&&r.fw!=='-'&&r.fw!=='unknown';
   const sendBtn=canSend
     ? `<button type="button" class="df-send-tester" onclick="sendDiffToTester(${i})" title="Open this case in the Rule Tester with every input pre-filled">✦ Send to Tester</button>`
@@ -4197,7 +4238,7 @@ function toggleDiffDetail(i){
    from the diff row's captured inputs, and auto-evaluate. */
 function sendDiffToTester(i){
   const filtered=filterDiffRows();const r=filtered[i];if(!r)return;
-  if(!r.fw||r.fw==='unknown'){showLog('Send to Tester \u2014 unknown forwarder, cannot pre-fill.','err');return;}
+  if(!r.fw||r.fw==='unknown'){showLog('Send to Tester: unknown forwarder, cannot pre-fill.','err');return;}
   /* 1. Select forwarder tile */
   const tile=document.querySelector(`.fw-btn[data-fw="${r.fw}"]`);
   if(tile&&tile.getAttribute('aria-checked')!=='true')selectFW(tile);
@@ -4233,7 +4274,7 @@ function sendDiffToTester(i){
       nx_diff:'surc',os_diff:'over',tz_diff:'tz',
       kostenstelle:'kost',sachkonto:'sach',
     },
-    honold:{zz_diff:'zz'},
+    honold:{zz_diff:'zz',fr_tarif:'fr_tar'},
     wackler:{
       existing_anmerkung:'target',fr_diff:'fr',fr_tarif:'fr_tar',mt_diff:'maut',tz_diff:'tz',
     },
@@ -4254,7 +4295,7 @@ function sendDiffToTester(i){
   runTester();
   /* 5. Scroll the tester into view so the user sees the result. */
   document.getElementById('testerPanel').scrollIntoView({behavior:'smooth',block:'start'});
-  showLog(`Send to Tester \u2014 loaded ${r.fw} row ${r.row} (${r.label}). Tweak the rule, re-evaluate, then re-run Train & Compare.`,'ok');
+  showLog(`Send to Tester: loaded ${r.fw} row ${r.row} (${r.label}). Tweak the rule, re-evaluate, then re-run Train & Compare.`,'ok');
 }
 
 /* Chip handler — 'drift' is a pseudo-label that bypasses the
@@ -4288,7 +4329,7 @@ function resetDiffFilters(){
 function downloadDiffCsv(){
   if(!diffState.results)return;
   const rows=filterDiffRows();
-  if(!rows.length){showLog('Diff CSV \u2014 nothing to export (filter scope is empty).','err');return;}
+  if(!rows.length){showLog('Diff CSV: nothing to export (filter scope is empty).','err');return;}
   const esc=s=>{const v=String(s==null?'':s);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
   /* Phrase arrays serialise to '|'-joined strings — readable in a
      spreadsheet AND parseable downstream. Empty arrays become ''. */
@@ -4356,7 +4397,7 @@ function downloadDiffCsv(){
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   a.href=url;a.download='anmerkung_diff_'+stamp+'.csv';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  showLog(`Diff CSV exported \u2014 ${rows.length} row(s), ${inputKeys.length} input column(s).`,'ok');
+  showLog(`Diff CSV exported: ${rows.length} row(s), ${inputKeys.length} input column(s).`,'ok');
 }
 
 /* Training set export (#20) — build (predicted, expected) pairs
@@ -4882,7 +4923,7 @@ function buildRegressionSet(rows){
 
 function downloadTrainingSet(format){
   const{records,inputKeys}=buildTrainingSet();
-  if(!records.length){showLog('Training set \u2014 no rows to export (maybe all rows matched; try "Include matching rows").','err');return;}
+  if(!records.length){showLog('Training set: no rows to export (maybe all rows matched; try "Include matching rows").','err');return;}
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   let blob,ext;
   if(format==='jsonl'){
@@ -4962,7 +5003,7 @@ function downloadTrainingSet(format){
   const lblParts=Object.keys(byLabel).sort().map(k=>k+'='+byLabel[k]);
   const granParts=Object.keys(byGran).sort().map(k=>k+'='+byGran[k]);
   const scopeNote=(diffFilter.label!=='all'||diffFilter.fw!=='all'||diffFilter.sheet!=='all'||(diffFilter.q&&diffFilter.q.trim()))?' (filter-scoped)':'';
-  showLog('Training set exported \u2014 '+records.length+' row(s) as '+ext.toUpperCase()+
+  showLog('Training set exported: '+records.length+' row(s) as '+ext.toUpperCase()+
     ' \u00b7 labels: '+lblParts.join(', ')+
     (granParts.length?' \u00b7 granular: '+granParts.join(', '):'')+
     scopeNote+'.','ok');
@@ -4994,59 +5035,59 @@ function downloadTrainingSet(format){
    emits. Helps an AI consumer know "fr_diff" means "freight delta"
    without having to grep header-string conventions. */
 const INPUT_GLOSSARY={
-  stat              :'Stat_Freigabe — approval state. 10 = approved (engine runs). Anything else gates most rules off.',
-  tarif             :'Total Kosten lt. Tarif — booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
-  fr_diff           :'FR Differenz — freight-charge delta vs tariff (numeric, signed).',
-  fr_tarif          :'FR Kosten lt. Tarif — the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier.',
-  fr_dl             :'FR Kosten DL — the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it decides the note: equal to the OLD tariff rate that Empf.-Land publishes for the bracket the row\'s Volumen kg falls in means the previous tariff is still being billed.',
-  exp_diff          :'EXP Differenz — express/priority surcharge delta (numeric, signed).',
-  exp_dl            :'EXP Kosten DL — DL-side express cost (Dachser-only signal).',
-  mt_diff           :'MT/Maut Differenz — toll delta (numeric, signed).',
-  maut_diff         :'Maut Differenz — toll delta (numeric, signed). Same signal as mt_diff for non-DHL forwarders.',
-  tz_diff           :'TZ Differenz — fuel surcharge delta (numeric, signed).',
-  snk_diff          :'SNK Differenz — surcharge delta (numeric, signed). Compared against forwarder threshold.',
-  snk_dl            :'SNK Kosten DL — DL-side surcharge code (numeric). Carries the surcharge type (e.g. 5/9/14/18/25/30/34/60/75/95/130/190).',
-  snk_tarif         :'SNK Kosten lt. Tarif — tariff-side surcharge baseline (numeric).',
+  stat              :'Stat_Freigabe: approval state. 10 = approved (engine runs). Anything else gates most rules off.',
+  tarif             :'Total Kosten lt. Tarif: booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
+  fr_diff           :'FR Differenz: freight-charge delta vs tariff (numeric, signed).',
+  fr_tarif          :'FR Kosten lt. Tarif: the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier. On Honold rows it is the current-tariff freight for the lane: blank / 0 means the current table prices no rate for that Empf.-Land and the note is "Kein Tarif für \'<LAND>\'", and otherwise its amount at the billed bracket decides whether the lane diverged from the OLD table.',
+  fr_dl             :'FR Kosten DL: the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it decides the note: equal to the OLD tariff rate that Empf.-Land publishes for the bracket the row\'s Volumen kg falls in means the previous tariff is still being billed, and equal to an OLD rate from another bracket while Volumen kg DL sits in yet another joins both phrases.',
+  exp_diff          :'EXP Differenz: express/priority surcharge delta (numeric, signed).',
+  exp_dl            :'EXP Kosten DL: DL-side express cost (Dachser-only signal).',
+  mt_diff           :'MT/Maut Differenz: toll delta (numeric, signed).',
+  maut_diff         :'Maut Differenz: toll delta (numeric, signed). Same signal as mt_diff for non-DHL forwarders.',
+  tz_diff           :'TZ Differenz: fuel surcharge delta (numeric, signed).',
+  snk_diff          :'SNK Differenz: surcharge delta (numeric, signed). Compared against forwarder threshold.',
+  snk_dl            :'SNK Kosten DL: DL-side surcharge code (numeric). Carries the surcharge type (e.g. 5/9/14/18/25/30/34/60/75/95/130/190).',
+  snk_tarif         :'SNK Kosten lt. Tarif: tariff-side surcharge baseline (numeric).',
   zz_diff           :'ZZ Differenz - second delivery attempt: that attempt\'s Kosten DL minus its tariff cost. Clearing the threshold reads "2. Zustellung" (Dachser: joined with the other surcharges; Honold: the whole note, and only for a standalone ZZ fee with FR Kosten DL blank / 0).',
-  sam_diff          :'SAM Differenz — Saturday delivery delta (Dachser).',
-  dgr_diff          :'DGR Differenz — dangerous-goods surcharge delta (Dachser).',
-  sbfu_diff         :'SBFU Differenz — SBfU certificate delta (Dachser).',
-  lg_diff           :'LG Differenz — storage-fee delta (Dachser).',
-  av_diff           :'AV Differenz — failed-pickup-attempt delta (Dachser).',
-  el_diff           :'EL Differenz — extended-liability surcharge delta (DHL).',
-  pal_diff          :'PAL Differenz — non-stackable surcharge (DHL).',
-  ow_diff           :'OW Differenz — overweight surcharge (DHL).',
-  yo_diff           :'YO Differenz — non-conveyable piece surcharge (DHL). Multiples of 15 are the piece-weight variant.',
-  yl_diff           :'YL Differenz — non-conveyable irregular piece (DHL).',
-  nd_diff           :'ND Differenz — neutral delivery (DHL).',
-  sf_diff           :'SF Differenz — direct-signature surcharge (DHL).',
-  ac_diff           :'AC Differenz — address-correction surcharge (DHL). Value 11 = "Addres Correction, ok?", others = "Address Correction ok?".',
-  nx_diff           :'NX Differenz — generic demand surcharge (DHL).',
-  os_diff           :'OS Differenz — oversize piece surcharge (DHL).',
-  avis_diff         :'AVIS Differenz — Wackler-only avisierung delta. Codes ±7.5/±8.5/±6.5/±8.7 each map to a specific phrase. AVIS=1 has its own phrase.',
-  vkg               :'Volumen kg — gross/volume weight on the audit row (numeric). On Honold rows it picks the Bis bracket FR Kosten DL is compared against.',
-  vkg_dl            :'Volumen kg DL — DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table. Not read on Honold rows: a multi-reference ReferenzNr makes it unreliable.',
-  anz_colli         :'Anz. Colli — package count. For Wackler rows with at least 7 Colli, chargeable weight is max(Anz. Colli × 285, Volumen kg, Brutto kg).',
-  brutto_kg          :'Brutto kg — gross weight used in Wackler chargeable-weight calculation when Anz. Colli is at least 7.',
-  anz_sdg           :'Anz.Sdg — number of shipments on the row (Dachser).',
-  referenz          :'ReferenzNr — Sendungs-Referenznummer. A "," in the value is the bundling signal (K+N / Wackler). On Dachser it is the shipment\'s own "Fremdnummer", interpolated verbatim into the already-billed note ("Fremdnummer <value> bereits berechnet in RE00123xxx, ok?").',
-  referenz3         :'ReferenzNr3 — Dachser-specific tertiary reference column (used in trigger trace).',
-  recip             :'Empf.-Name — recipient name. "amazon" substring triggers Amazon-tier branches in K+N.',
-  empf_plz          :'Empf.-PLZ — recipient ZIP code. 88499 is the Wackler return hub. On a Wackler international export lane it disambiguates multi-zone countries (CH/FR/ES/PL…).',
-  empf_ort          :'Empf.-Ort — recipient city. RIEDLINGEN is the Wackler return hub city.',
-  ki_zw_plz         :'KI_ZW_PLZ — Zwischenempfänger (intermediate-consignee) ZIP code (Dachser). The actual deviating hub daZWNote reports on a REFERENZ3=ZW row — distinct from, and preferred over, Empf.-PLZ.',
-  ki_zw_ort         :'KI_ZW_ORT — Zwischenempfänger (intermediate-consignee) city (Dachser). Paired with ki_zw_plz in the ZW note; falls back to Empf.-Ort when absent.',
-  abg_land          :'Abg.-Land — origin country code (Wackler). Together with empf_land it classifies the lane (DE→DE national vs international) that decides which rate card + zone the freight is published under (wacklerLane).',
-  empf_land         :'Empf.-Land — destination country code. Wackler: non-DE means an international lane keyed by this country + Empf.-PLZ, DE (with DE/blank origin) a national lane with the zone from Empf.-PLZ. Honold: selects the OLD-tariff zone columns FR Kosten DL is matched against.',
-  abg_plz           :'Abg.-PLZ — origin postal code (Wackler). Zone-resolves the non-German side on an import lane (Abg.-Land ≠ DE).',
-  zone              :'Tarifzone — explicit rate-card zone token (DE1..DE9 national, or AT1/CH2/FR3/TR/… international). When present it wins over the Land/PLZ lane classification.',
-  c502_dl           :'502 Kosten DL — Einlagern (into-storage) cost line (Dachser). Any non-zero value emits "Einlagern".',
-  c503_dl           :'503 Kosten DL — Auslagern (out-of-storage) cost line (Dachser). Any non-zero value emits "Auslagern".',
+  sam_diff          :'SAM Differenz: Saturday delivery delta (Dachser).',
+  dgr_diff          :'DGR Differenz: dangerous-goods surcharge delta (Dachser).',
+  sbfu_diff         :'SBFU Differenz: SBfU certificate delta (Dachser).',
+  lg_diff           :'LG Differenz: storage-fee delta (Dachser).',
+  av_diff           :'AV Differenz: failed-pickup-attempt delta (Dachser).',
+  el_diff           :'EL Differenz: extended-liability surcharge delta (DHL).',
+  pal_diff          :'PAL Differenz: non-stackable surcharge (DHL).',
+  ow_diff           :'OW Differenz: overweight surcharge (DHL).',
+  yo_diff           :'YO Differenz: non-conveyable piece surcharge (DHL). Multiples of 15 are the piece-weight variant.',
+  yl_diff           :'YL Differenz: non-conveyable irregular piece (DHL).',
+  nd_diff           :'ND Differenz: neutral delivery (DHL).',
+  sf_diff           :'SF Differenz: direct-signature surcharge (DHL).',
+  ac_diff           :'AC Differenz: address-correction surcharge (DHL). Value 11 = "Addres Correction, ok?", others = "Address Correction ok?".',
+  nx_diff           :'NX Differenz: generic demand surcharge (DHL).',
+  os_diff           :'OS Differenz: oversize piece surcharge (DHL).',
+  avis_diff         :'AVIS Differenz: Wackler-only avisierung delta. Codes ±7.5/±8.5/±6.5/±8.7 each map to a specific phrase. AVIS=1 has its own phrase.',
+  vkg               :'Volumen kg: gross/volume weight on the audit row (numeric). On Honold rows it picks the Bis bracket FR Kosten DL is compared against, both for the previous-tariff match and for the divergence test against FR Kosten lt. Tarif.',
+  vkg_dl            :'Volumen kg DL: DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table. On Honold rows it only confirms that the DL weight sits in a bracket other than Volumen kg\'s, which the previous-tariff-from-another-bracket arm needs; it never decides the note on its own.',
+  anz_colli         :'Anz. Colli: package count. For Wackler rows with at least 7 Colli, chargeable weight is max(Anz. Colli × 285, Volumen kg, Brutto kg).',
+  brutto_kg          :'Brutto kg: gross weight used in Wackler chargeable-weight calculation when Anz. Colli is at least 7.',
+  anz_sdg           :'Anz.Sdg: number of shipments on the row (Dachser).',
+  referenz          :'ReferenzNr: Sendungs-Referenznummer. A "," in the value is the bundling signal (K+N / Wackler). On Dachser it is the shipment\'s own "Fremdnummer", interpolated verbatim into the already-billed note ("Fremdnummer <value> bereits berechnet in RE00123xxx, ok?").',
+  referenz3         :'ReferenzNr3: Dachser-specific tertiary reference column (used in trigger trace).',
+  recip             :'Empf.-Name: recipient name. "amazon" substring triggers Amazon-tier branches in K+N.',
+  empf_plz          :'Empf.-PLZ: recipient ZIP code. 88499 is the Wackler return hub. On a Wackler international export lane it disambiguates multi-zone countries (CH/FR/ES/PL…).',
+  empf_ort          :'Empf.-Ort: recipient city. RIEDLINGEN is the Wackler return hub city.',
+  ki_zw_plz         :'KI_ZW_PLZ: Zwischenempfänger (intermediate-consignee) ZIP code (Dachser). The actual deviating hub daZWNote reports on a REFERENZ3=ZW row, distinct from, and preferred over, Empf.-PLZ.',
+  ki_zw_ort         :'KI_ZW_ORT: Zwischenempfänger (intermediate-consignee) city (Dachser). Paired with ki_zw_plz in the ZW note; falls back to Empf.-Ort when absent.',
+  abg_land          :'Abg.-Land: origin country code (Wackler). Together with empf_land it classifies the lane (DE→DE national vs international) that decides which rate card + zone the freight is published under (wacklerLane).',
+  empf_land         :'Empf.-Land: destination country code. Wackler: non-DE means an international lane keyed by this country + Empf.-PLZ, DE (with DE/blank origin) a national lane with the zone from Empf.-PLZ. Honold: selects the OLD-tariff zone columns FR Kosten DL is matched against.',
+  abg_plz           :'Abg.-PLZ: origin postal code (Wackler). Zone-resolves the non-German side on an import lane (Abg.-Land ≠ DE).',
+  zone              :'Tarifzone: explicit rate-card zone token (DE1..DE9 national, or AT1/CH2/FR3/TR/… international). When present it wins over the Land/PLZ lane classification.',
+  c502_dl           :'502 Kosten DL: Einlagern (into-storage) cost line (Dachser). Any non-zero value emits "Einlagern".',
+  c503_dl           :'503 Kosten DL: Auslagern (out-of-storage) cost line (Dachser). Any non-zero value emits "Auslagern".',
   c196_diff         :'196 Differenz - the Kalkulationskosten (Kalk. Kosten Zustellung) Differenz line (Dachser). Over threshold it emits "Kalk. Kosten Zustellung" as the leading note.',
-  serv_art          :'Serv.-Art — service category code (Dachser). K1AV / K1AS gate several SNK branches.',
-  kostenstelle      :'KOSTENSTELLE — cost-center. Empty or "X" triggers Kontierung?.',
-  sachkonto         :'SACHKONTO — GL account. Empty or "X" triggers Kontierung? (or VORHOLUNG on Dachser when "X").',
-  existing_anmerkung:'Existing Anmerkung — exported for context only. The engine is fully deterministic and recomputes every row from its inputs; it never reads this cell back (the old protected-phrase preservation was removed in v1.15.0).',
+  serv_art          :'Serv.-Art: service category code (Dachser). K1AV / K1AS gate several SNK branches.',
+  kostenstelle      :'KOSTENSTELLE: cost-center. Empty or "X" triggers Kontierung?.',
+  sachkonto         :'SACHKONTO: GL account. Empty or "X" triggers Kontierung? (or VORHOLUNG on Dachser when "X").',
+  existing_anmerkung:'Existing Anmerkung: exported for context only. The engine is fully deterministic and recomputes every row from its inputs; it never reads this cell back (the old protected-phrase preservation was removed in v1.15.0).',
 };
 
 /* Per-forwarder gate + signature. Mirrors the gate doc-comments in
@@ -5074,13 +5115,13 @@ const FORWARDER_SPEC={
     processor:'processWackler',
     resolver :'resolveWackler',
     gate     :'Stat_Freigabe == 10 (partial: Kontierung still emitted on stat≠10 if KOST/SACH blank)',
-    notes    :'Fully deterministic — the existing Anmerkung cell is never read back (no protected-phrase preservation since v1.15.0). AVIS/SNK code-book is sign-insensitive with rounding tolerance.',
+    notes    :'Fully deterministic: the existing Anmerkung cell is never read back (no protected-phrase preservation since v1.15.0). AVIS/SNK code-book is sign-insensitive with rounding tolerance.',
   },
   honold:{
     processor:'processHonold',
     resolver :'resolveHonold',
     gate     :'Stat_Freigabe == 10, and the OLD tariff must be unlocked and complete (tiers, zone rates, country codes); rows are skipped, not blanked, otherwise',
-    notes    :'Two rules, decided from FR Kosten DL. A ZZ cost line can be a second delivery attempt billed on its own: when its Differenz clears the Dachser difference threshold (T_DACHSER, 0.08 by default) and FR Kosten DL is blank / 0, the whole note is "2. Zustellung"; a row that carries freight as well as a ZZ charge is decided by the second rule. A layout without a ZZ group resolves that column to -1 and the branch is off. Otherwise the OLD tariff (assets/honold-tariff.enc.json) is read by rate: the row keeps the previous-tariff note when FR Kosten DL equals a zone rate published for its Empf.-Land in the Bis bracket its Volumen kg falls in. Every zone of the country is a candidate, because the row carries the country but not the zone, and no OLD amount sits at two different brackets across the zones of one country (measured 0 for CH, ES, FR, GB, GR, IT, NO, PL, PT, SE). A blank / 0 FR, a missing / 0 Volumen kg, a destination country the tariff does not publish, or an FR that matches no zone rate at all is a weight difference. Volumen kg DL is not read: it is unreliable when ReferenzNr lists several references.',
+    notes    :'Three rules, decided from FR Kosten DL and FR Kosten lt. Tarif. A ZZ cost line can be a second delivery attempt billed on its own: when its Differenz clears the Dachser difference threshold (T_DACHSER, 0.08 by default) and FR Kosten DL is blank / 0, the whole note is "2. Zustellung"; a row that carries freight as well as a ZZ charge is decided by the rules below. A layout without a ZZ group resolves that column to -1 and the branch is off. FR Kosten lt. Tarif blank / 0 with an Empf.-Land reads "Kein Tarif für \'<LAND>\'" and nothing else: the current tariff prices no lane for that country, so the OLD matrix cannot speak to it. Otherwise the OLD tariff (assets/honold-tariff.enc.json) is read by rate: the row keeps the previous-tariff note when FR Kosten DL equals a zone rate published for its Empf.-Land in the Bis bracket its Volumen kg falls in. Every zone of the country is a candidate, because the row carries the country but not the zone, and a country\'s zone columns can repeat one amount across neighbouring brackets (the AT tail from 6500 kg up is flat, GB3 repeats at 450/500, MD at 50/100), which is harmless because only the bracket the row\'s own Volumen kg falls in is compared. A second arm joins both phrases: FR Kosten DL is an OLD amount for the country from another bracket, Volumen kg DL is present in a bracket other than Volumen kg\'s, and the lane moved on - every OLD rate the country publishes at the billed bracket differs from the row\'s own FR Kosten lt. Tarif, a proxy for the current matrix, which is not shipped. Volumen kg DL is read only by that arm. A blank / 0 FR, a missing / 0 Volumen kg, a destination country the tariff does not publish, or an FR that matches no zone rate at all is a weight difference.',
   },
 };
 
@@ -5138,10 +5179,10 @@ function buildRuleSpec(){
     thresholds,
     label_taxonomy:{
       wrong:'A and B both non-empty and their phrase sets genuinely differ (content, not just order/case/whitespace).',
-      missed:'A empty, B filled — engine should have fired.',
-      overfired:'A filled, B empty — engine should NOT have fired.',
-      drift:'Current engine disagrees with slot A — rules already changed since A was generated.',
-      correct:'A and B carry the same phrase set, ignoring order, case, and whitespace — positive example. Phrases are compared per-phrase (the column is a "//"-joined list), so reordered/recased/respaced rows count as correct, not as rule errors.',
+      missed:'A empty, B filled: engine should have fired.',
+      overfired:'A filled, B empty: engine should NOT have fired.',
+      drift:'Current engine disagrees with slot A: rules already changed since A was generated.',
+      correct:'A and B carry the same phrase set, ignoring order, case, and whitespace - positive example. Phrases are compared per-phrase (the column is a "//"-joined list), so reordered/recased/respaced rows count as correct, not as rule errors.',
     },
     granular_label_taxonomy:{
       exact_match:'Strings identical (non-empty).',
@@ -5158,17 +5199,17 @@ function buildRuleSpec(){
     },
     forwarders,
     instructions:{
-      summary:'Each training record describes one rule-engine output vs ground truth. Use forwarder + processor to find the function in assets/anmerkung.js. The CURRENT engine\'s gap against truth is carried by engine_missing_phrase_keys (branches to ADD/loosen) and engine_extra_phrase_keys (branches to GUARD/tighten) — prefer these over the A-vs-B missing_/extra_phrase_keys when fixing rules, because A may be a stale or foreign-tool output. Use inputs.* as the gating signals.',
+      summary:'Each training record describes one rule-engine output vs ground truth. Use forwarder + processor to find the function in assets/anmerkung.js. The CURRENT engine\'s gap against truth is carried by engine_missing_phrase_keys (branches to ADD/loosen) and engine_extra_phrase_keys (branches to GUARD/tighten): prefer these over the A-vs-B missing_/extra_phrase_keys when fixing rules, because A may be a stale or foreign-tool output. Use inputs.* as the gating signals.',
       edit_target:'process<Forwarder> functions in assets/anmerkung.js (resolver columns are already wired; add/edit branches inside the processor).',
-      phrase_catalog_target:'PHRASES object near the top of assets/anmerkung.js — add new entries here, then reference via P.<key> with join().',
-      threshold_helper:'hasErr(value, T_FORWARDER) — returns true when |value| > threshold. Use this as the gating predicate on numeric *_diff inputs.',
-      engine_vs_truth:'engine_label / engine_matches_b / engine_missing_phrase_keys / engine_extra_phrase_keys / engine_vs_expected_jaccard compare what process<Forwarder> emits TODAY against ground truth B — this is the precise fix target. The top-level label (and missing_/extra_phrase_keys) compare slot A (the tool output) against B and can differ from the engine\'s own gap; when label=="correct" but engine_label!="correct" the engine has regressed on a row the tool got right. Treat engine_label as authoritative for rule edits; a fix is complete when engine_matches_b flips to true and engine_missing/extra_phrase_keys are empty.',
+      phrase_catalog_target:'PHRASES object near the top of assets/anmerkung.js: add new entries here, then reference via P.<key> with join().',
+      threshold_helper:'hasErr(value, T_FORWARDER): returns true when |value| > threshold. Use this as the gating predicate on numeric *_diff inputs.',
+      engine_vs_truth:'engine_label / engine_matches_b / engine_missing_phrase_keys / engine_extra_phrase_keys / engine_vs_expected_jaccard compare what process<Forwarder> emits TODAY against ground truth B: this is the precise fix target. The top-level label (and missing_/extra_phrase_keys) compare slot A (the tool output) against B and can differ from the engine\'s own gap; when label=="correct" but engine_label!="correct" the engine has regressed on a row the tool got right. Treat engine_label as authoritative for rule edits; a fix is complete when engine_matches_b flips to true and engine_missing/extra_phrase_keys are empty.',
       rule_update_workflow:[
         '1. Group records by forwarder, then by engine_missing_phrase_keys / engine_extra_phrase_keys patterns (fall back to missing_/extra_phrase_keys when engine_label is blank, e.g. unknown forwarder).',
         '2. For engine_missing (engine UNDER-fired vs truth): locate the existing branch that emits the missing key (or add one). Loosen its gate using the inputs.* signals on the failing rows.',
         '3. For engine_extra (engine OVER-fired vs truth): locate the branch that emits the extra key. Tighten its gate so the inputs.* signature on these rows no longer matches.',
         '4. For rows that are both: handle the missing and extra key sets independently.',
-        '5. Preserve the join() pattern — phrases are de-duplicated case-insensitively automatically. Any new phrase comparison must go through normPhrase, never a bare toLowerCase().trim().',
+        '5. Preserve the join() pattern: phrases are de-duplicated case-insensitively automatically. Any new phrase comparison must go through normPhrase, never a bare toLowerCase().trim().',
         '6. Check every proposed gate change against the bundle\'s regression.jsonl rows for that forwarder (the rows the current engine already solves): their inputs must keep producing exactly their expected_phrase_keys.',
         '7. After editing, the user re-runs Train & Compare; engine_matches_b flips to true and the row drops out of the wrong/missed/overfired (and engine-drift) buckets.',
       ],
@@ -5183,7 +5224,7 @@ function downloadRuleSpec(){
   const url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='anmerkung_rule_spec_'+stamp+'.json';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  showLog('Rule Spec exported \u2014 '+Object.keys(spec.phrases).length+' phrases, '+
+  showLog('Rule Spec exported: '+Object.keys(spec.phrases).length+' phrases, '+
     Object.keys(spec.forwarders).length+' forwarders, engine v'+spec.engine_version+'.','ok');
 }
 
@@ -5199,7 +5240,7 @@ function buildAiBundlePrompt(spec,summary,regressionCount){
     (p.missing_phrase_keys.length?' · missing: '+p.missing_phrase_keys.join(', '):'')+
     (p.extra_phrase_keys.length?' · extra: '+p.extra_phrase_keys.join(', '):'')).join('\n');
   return [
-'# Prompt — paste into your AI assistant together with this bundle\'s files',
+'# Prompt: paste into your AI assistant together with this bundle\'s files',
 '',
 '> Attach `training.jsonl`, `regression.jsonl`, `diff_index.jsonl`, `rule_spec.json`, `summary.json`, `manifest.json`, and `engine_source.md` (and `assets/anmerkung.js` if the assistant can read the repository), then paste everything below the line.',
 '',
@@ -5207,13 +5248,13 @@ function buildAiBundlePrompt(spec,summary,regressionCount){
 '',
 'You are maintaining `assets/anmerkung.js` (engine v'+spec.engine_version+'), a deterministic, browser-side rule engine that fills the German "Anmerkung" column of forwarder invoice audits. I am giving you labeled training data from the engine\'s Diff Mode:',
 '',
-'- `summary.json` — failure patterns, pre-grouped by forwarder and by the phrase keys the CURRENT engine gets wrong vs ground truth. '+summary.pattern_count+' pattern(s) over '+summary.engine_actionable+' actionable row(s); '+summary.engine_solved+' row(s) the engine already solves. Top patterns:',
+'- `summary.json`: failure patterns, pre-grouped by forwarder and by the phrase keys the CURRENT engine gets wrong vs ground truth. '+summary.pattern_count+' pattern(s) over '+summary.engine_actionable+' actionable row(s); '+summary.engine_solved+' row(s) the engine already solves. Top patterns:',
 topPatterns||'  - (none)',
-'- `training.jsonl` — one JSON record per row; join to patterns via `row_uid`.',
-'- `regression.jsonl` — '+(regressionCount||0)+' row(s) the CURRENT engine already solves (expected phrase set + the inputs that produce it). Your patch must keep every one of them passing.',
-'- `rule_spec.json` — the PHRASES catalog, per-forwarder thresholds, processor/resolver symbols, an English glossary for every `inputs.*` key, and `phrase_emitters`: phrase key → the function(s) that emit it (an empty list means NO branch emits it yet — the fix is a new branch, not a gate change).',
-'- `engine_source.md` — the CURRENT source of every processor, resolver, and helper, extracted from the running engine at export time. This is the ground truth for what each gate does today — reason from it, not from memory of earlier versions.',
-'- `not_derivable.json` (when present) — rows a previous iteration judged NOT derivable from row inputs, with the reason. Matching training records carry `known_not_derivable: true`.',
+'- `training.jsonl`: one JSON record per row; join to patterns via `row_uid`.',
+'- `regression.jsonl`: '+(regressionCount||0)+' row(s) the CURRENT engine already solves (expected phrase set + the inputs that produce it). Your patch must keep every one of them passing.',
+'- `rule_spec.json`: the PHRASES catalog, per-forwarder thresholds, processor/resolver symbols, an English glossary for every `inputs.*` key, and `phrase_emitters`: phrase key → the function(s) that emit it (an empty list means NO branch emits it yet: the fix is a new branch, not a gate change).',
+'- `engine_source.md`: the CURRENT source of every processor, resolver, and helper, extracted from the running engine at export time. This is the ground truth for what each gate does today: reason from it, not from memory of earlier versions.',
+'- `not_derivable.json` (when present): rows a previous iteration judged NOT derivable from row inputs, with the reason. Matching training records carry `known_not_derivable: true`.',
 '',
 '## Task',
 '',
@@ -5221,24 +5262,24 @@ topPatterns||'  - (none)',
 '',
 '## Rules',
 '',
-'1. The `engine_*` fields are authoritative: `engine_missing_phrase_keys` = phrases ground truth wants that the engine fails to emit (ADD a branch or LOOSEN its gate); `engine_extra_phrase_keys` = phrases the engine emits that truth rejects (GUARD or TIGHTEN the branch). Ignore the plain `predicted`/`missing_*`/`extra_*` fields unless `engine_label` is blank — they compare a possibly-stale tool output, not the current engine.',
+'1. The `engine_*` fields are authoritative: `engine_missing_phrase_keys` = phrases ground truth wants that the engine fails to emit (ADD a branch or LOOSEN its gate); `engine_extra_phrase_keys` = phrases the engine emits that truth rejects (GUARD or TIGHTEN the branch). Ignore the plain `predicted`/`missing_*`/`extra_*` fields unless `engine_label` is blank: they compare a possibly-stale tool output, not the current engine.',
 '2. Work each pattern as a hypothesis → verify loop, and only then patch:',
-'   a. **Hypothesise** the gate from `summary.json`: start from the pattern\'s `signature_hypothesis` — a machine-drafted conjunction of the failing rows\' shared values and numeric shapes, pre-evaluated against the contrast rows AND the FULL same-forwarder regression set (`contrast_rows_matching`/`silent_rows_matching` and `regression_rows_matching`/`regression_rows_total`). The counts are evidence, not verdicts: a good gate for a MISSED pattern matches the contrast rows, no silent row, and no regression row outside the contrast set (`regression_rows_matching > contrast_rows_matching` = false positives on solved rows = disproven gate); a good guard for an OVERFIRED pattern must NOT match the contrast rows. Refine it with `shared_inputs` and `numeric_profiles` (`min_abs` on `*_diff` keys is the concrete boundary the failing rows observe — copy it rather than inventing your own threshold); `varying_inputs` differ across rows and must NOT become gate conditions. Use `rule_spec.phrase_emitters[key]` to jump to the emitting function and read its actual code in `engine_source.md` before deciding what to change.',
-'   b. **Verify against the contrast rows** before writing any code: the pattern\'s `contrast_row_uids` are solved rows in `regression.jsonl` where a disputed phrase fires legitimately — your hypothesised gate applied to their `inputs` must keep producing exactly their `expected_phrase_keys`; `silent_contrast_row_uids` are solved rows where the engine must stay silent — the rows a loosened gate over-fires on first. If the hypothesis breaks either set, revise it, do not patch around it.',
+'   a. **Hypothesise** the gate from `summary.json`: start from the pattern\'s `signature_hypothesis`, a machine-drafted conjunction of the failing rows\' shared values and numeric shapes, pre-evaluated against the contrast rows AND the FULL same-forwarder regression set (`contrast_rows_matching`/`silent_rows_matching` and `regression_rows_matching`/`regression_rows_total`). The counts are evidence, not verdicts: a good gate for a MISSED pattern matches the contrast rows, no silent row, and no regression row outside the contrast set (`regression_rows_matching > contrast_rows_matching` = false positives on solved rows = disproven gate); a good guard for an OVERFIRED pattern must NOT match the contrast rows. Refine it with `shared_inputs` and `numeric_profiles` (`min_abs` on `*_diff` keys is the concrete boundary the failing rows observe: copy it rather than inventing your own threshold); `varying_inputs` differ across rows and must NOT become gate conditions. Use `rule_spec.phrase_emitters[key]` to jump to the emitting function and read its actual code in `engine_source.md` before deciding what to change.',
+'   b. **Verify against the contrast rows** before writing any code: the pattern\'s `contrast_row_uids` are solved rows in `regression.jsonl` where a disputed phrase fires legitimately: your hypothesised gate applied to their `inputs` must keep producing exactly their `expected_phrase_keys`; `silent_contrast_row_uids` are solved rows where the engine must stay silent, the rows a loosened gate over-fires on first. If the hypothesis breaks either set, revise it, do not patch around it.',
 '   c. **Patch** only a hypothesis that survived (b), and pull the matching `training.jsonl` records by `example_row_uids` to confirm the full picture.',
 '3. Emit phrases only via the existing `PHRASES` catalog and `join()` helper (it dedupes case-insensitively). New wording goes into `PHRASES` first; keys prefixed `lit_`/`tpl_`/`?:` are explained in `rule_spec.json`.',
-'4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Every `signature_hypothesis` was already replayed against the forwarder\'s FULL `regression.jsonl` set at export time — read `regression_rows_matching`/`regression_rows_total` first. After refining the gate, replay your NEW version against every regression record for that forwarder: applying it to the record\'s `inputs` must still yield exactly its `expected_phrase_keys` — including the records whose `expected` is empty, where the engine must stay silent.',
+'4. Respect each forwarder\'s `hasErr(value, threshold)` numeric guard and gate (see `rule_spec.forwarders.<fw>`). Every `signature_hypothesis` was already replayed against the forwarder\'s FULL `regression.jsonl` set at export time: read `regression_rows_matching`/`regression_rows_total` first. After refining the gate, replay your NEW version against every regression record for that forwarder: applying it to the record\'s `inputs` must still yield exactly its `expected_phrase_keys`, including the records whose `expected` is empty, where the engine must stay silent.',
 '5. Keep edits inside the `process<Forwarder>` functions (resolvers are already wired) unless a pattern clearly needs a new resolver column.',
-'6. Any phrase comparison or phrase→key lookup you add must go through `normPhrase` — never a bare `toLowerCase().trim()` (hand-edited truth cells carry NFD umlauts, zero-width chars, soft hyphens, dash variants). A new `PHRASES` entry must not normPhrase-fold onto an existing entry.',
-'7. If a pattern\'s truth phrase depends on data that is NOT in the row\'s `inputs` (cross-document references like "bereits berechnet in <other Beleg>", intermediate-consignee addresses from unexported columns), say so and mark it "not derivable from row inputs" instead of forcing a rule — a guessed rule poisons the next training iteration. End your answer with the `row_uid: reason` lines for every such row, ready to paste into the tool\'s Not-derivable ledger.',
-'8. Rows already flagged `known_not_derivable: true` (see `not_derivable.json`) were judged not derivable by a previous iteration — skip them unless their `inputs` now carry a signal the recorded reason says was missing. A pattern whose `known_not_derivable_rows` equals its `count` is not a rule bug; do not force a gate for it. A pattern with `no_common_signal: true` carries no machine-evidenced gate at all — split it by a `varying_inputs` value or report its rows as not derivable instead of inventing one.',
+'6. Any phrase comparison or phrase→key lookup you add must go through `normPhrase`, never a bare `toLowerCase().trim()` (hand-edited truth cells carry NFD umlauts, zero-width chars, soft hyphens, dash variants). A new `PHRASES` entry must not normPhrase-fold onto an existing entry.',
+'7. If a pattern\'s truth phrase depends on data that is NOT in the row\'s `inputs` (cross-document references like "bereits berechnet in <other Beleg>", intermediate-consignee addresses from unexported columns), say so and mark it "not derivable from row inputs" instead of forcing a rule - a guessed rule poisons the next training iteration. End your answer with the `row_uid: reason` lines for every such row, ready to paste into the tool\'s Not-derivable ledger.',
+'8. Rows already flagged `known_not_derivable: true` (see `not_derivable.json`) were judged not derivable by a previous iteration: skip them unless their `inputs` now carry a signal the recorded reason says was missing. A pattern whose `known_not_derivable_rows` equals its `count` is not a rule bug; do not force a gate for it. A pattern with `no_common_signal: true` carries no machine-evidenced gate at all: split it by a `varying_inputs` value or report its rows as not derivable instead of inventing one.',
 '',
 '## Output format',
 '',
 'For each pattern you fix, in priority order:',
-'1. **Diagnosis** — which branch/gate is wrong and why, citing the `shared_inputs` / `numeric_profiles` evidence and the current gate code from `engine_source.md`.',
-'2. **Patch** — the exact code change (unified diff or before/after snippet).',
-'3. **Coverage** — the `row_uid`s this change fixes, and the contrast/regression `row_uid`s you replayed the new gate against (both the must-still-fire and must-stay-silent sets).',
+'1. **Diagnosis**: which branch/gate is wrong and why, citing the `shared_inputs` / `numeric_profiles` evidence and the current gate code from `engine_source.md`.',
+'2. **Patch**: the exact code change (unified diff or before/after snippet).',
+'3. **Coverage**: the `row_uid`s this change fixes, and the contrast/regression `row_uid`s you replayed the new gate against (both the must-still-fire and must-stay-silent sets).',
 '',
 'A fix is complete when re-running Train & Compare flips the row\'s `engine_matches_b` to `true` and empties its `engine_missing_phrase_keys` / `engine_extra_phrase_keys`.',
 ''].join('\n');
@@ -5258,27 +5299,27 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('');
   lines.push('## Files in this bundle');
   lines.push('');
-  lines.push('- `prompt.md` — ready-to-paste prompt. Attach the other files to your AI assistant and paste this; it encodes the whole workflow below.');
-  lines.push('- `summary.json` — failure patterns, pre-grouped: every (forwarder × engine_missing/extra_phrase_keys) combination with its row count, label distribution, example `row_uid`s, and the input cells shared by every failing row (gate-signal candidates). Records are sorted deterministically (forwarder → source pair → sheet → row) so bundles diff cleanly across runs.');
-  lines.push('- `training.jsonl` — one JSON record per line, one record per failing/correct row from Diff Mode.');
-  lines.push('- `regression.jsonl` — '+(regressionCount||0)+' compact record(s), one per row the CURRENT engine already gets right (`engine_matches_b === true`), from the FULL diff (regardless of any export filter). Each carries `expected` + `expected_phrase_keys` + `inputs`: the constraint rows a rule change must not regress. Records whose `expected` is empty pin rows where the engine must stay silent.');
-  lines.push('- `rule_spec.json` — the schema. Lists every PHRASES key, every threshold, every input field per forwarder, the exact source-code symbol an AI should edit to update rules, and `phrase_emitters` — phrase key → the function(s) whose source emits it, scanned live at export time. An empty emitter list means no branch emits the key yet: the fix is a NEW branch, not a gate change.');
-  lines.push('- `engine_source.md` — the current source of every processor/resolver/helper plus the gate constants, extracted live from the running engine at export time (it cannot drift from the engine that produced the labels). The ground truth for what each gate does today.');
-  lines.push('- `not_derivable.json` (only when the ledger is non-empty) — `row_uid → {reason, added}` for rows a previous AI iteration judged not derivable from row inputs. Matching training records carry `known_not_derivable: true` and patterns count them in `known_not_derivable_rows`; a pattern where that equals `count` is not a rule bug. Maintained in the tool via the "Not derivable" button next to the AI Bundle export.');
-  lines.push('- `diff_index.jsonl` — complete non-padding Diff corpus index (not filter-scoped), including provenance, engine-vs-truth labels, phrase-key deltas, and deterministic pattern/evidence fingerprints.');
-  lines.push('- `manifest.json` — machine-readable bundle manifest with schema, counts, source pairs, filter scope, and payload fingerprints.');
-  lines.push('- `README.md` — this file.');
+  lines.push('- `prompt.md`: ready-to-paste prompt. Attach the other files to your AI assistant and paste this; it encodes the whole workflow below.');
+  lines.push('- `summary.json`: failure patterns, pre-grouped, every (forwarder × engine_missing/extra_phrase_keys) combination with its row count, label distribution, example `row_uid`s, and the input cells shared by every failing row (gate-signal candidates). Records are sorted deterministically (forwarder → source pair → sheet → row) so bundles diff cleanly across runs.');
+  lines.push('- `training.jsonl`: one JSON record per line, one record per failing/correct row from Diff Mode.');
+  lines.push('- `regression.jsonl`: '+(regressionCount||0)+' compact record(s), one per row the CURRENT engine already gets right (`engine_matches_b === true`), from the FULL diff (regardless of any export filter). Each carries `expected` + `expected_phrase_keys` + `inputs`: the constraint rows a rule change must not regress. Records whose `expected` is empty pin rows where the engine must stay silent.');
+  lines.push('- `rule_spec.json`: the schema. Lists every PHRASES key, every threshold, every input field per forwarder, the exact source-code symbol an AI should edit to update rules, and `phrase_emitters`: phrase key → the function(s) whose source emits it, scanned live at export time. An empty emitter list means no branch emits the key yet: the fix is a NEW branch, not a gate change.');
+  lines.push('- `engine_source.md`: the current source of every processor/resolver/helper plus the gate constants, extracted live from the running engine at export time (it cannot drift from the engine that produced the labels). The ground truth for what each gate does today.');
+  lines.push('- `not_derivable.json` (only when the ledger is non-empty): `row_uid → {reason, added}` for rows a previous AI iteration judged not derivable from row inputs. Matching training records carry `known_not_derivable: true` and patterns count them in `known_not_derivable_rows`; a pattern where that equals `count` is not a rule bug. Maintained in the tool via the "Not derivable" button next to the AI Bundle export.');
+  lines.push('- `diff_index.jsonl`: complete non-padding Diff corpus index (not filter-scoped), including provenance, engine-vs-truth labels, phrase-key deltas, and deterministic pattern/evidence fingerprints.');
+  lines.push('- `manifest.json`: machine-readable bundle manifest with schema, counts, source pairs, filter scope, and payload fingerprints.');
+  lines.push('- `README.md`: this file.');
   lines.push('');
   lines.push('## How an AI assistant should use this bundle');
   lines.push('');
   lines.push('### 0. Start with `summary.json`');
-  lines.push('It already does workflow step 1 (grouping) for you: patterns are sorted by row count, each carries `suggested_action` (`add_or_loosen_branch` / `guard_or_tighten_branch` / `fix_both`), `shared_inputs` (cell values identical on every failing row — prime gate signals), `varying_inputs` (present everywhere but differing — must NOT become gate conditions), and `example_row_uids` to pull the full records from `training.jsonl`. Rows the engine already solves are counted in `engine_solved` and excluded from patterns — they ship in full as `regression.jsonl`, the set a fix must not break.');
+  lines.push('It already does workflow step 1 (grouping) for you: patterns are sorted by row count, each carries `suggested_action` (`add_or_loosen_branch` / `guard_or_tighten_branch` / `fix_both`), `shared_inputs` (cell values identical on every failing row, prime gate signals), `varying_inputs` (present everywhere but differing, must NOT become gate conditions), and `example_row_uids` to pull the full records from `training.jsonl`. Rows the engine already solves are counted in `engine_solved` and excluded from patterns: they ship in full as `regression.jsonl`, the set a fix must not break.');
   lines.push('');
   lines.push('Two reasoning aids per pattern:');
-  lines.push('- `numeric_profiles` — for every numeric-typed input key present on all failing rows: `min`/`max`, `sign` (`all_negative`/`all_positive`/`all_zero`/`mixed`), and on `*_diff` keys `min_abs` (smallest observed |delta| — the concrete gate boundary to copy rather than inventing a threshold) and `all_beyond_threshold` (every row clears the forwarder\'s `hasErr` tolerance). A gate condition is usually one of these shapes; e.g. `fr_diff: {sign: "all_negative", min_abs: 2.1, all_beyond_threshold: true}` says "gate on a negative freight delta of at least 2.1", even though the raw values differ row to row.');
-  lines.push('- `contrast_row_uids` / `silent_contrast_row_uids` — `row_uid`s into `regression.jsonl`: solved same-forwarder rows where a disputed phrase fires legitimately (your changed gate must keep firing on their `inputs`), and solved rows where the engine must stay silent (the first casualties of an over-loosened gate). Replay any hypothesised gate against both BEFORE writing the patch.');
-  lines.push('- `signature_hypothesis` — a machine-drafted conjunction of the failing rows\' shared values and consistent numeric shapes (`predicates` + a `readable` one-liner), already evaluated against the contrast rows AND the forwarder\'s FULL regression set. Read the match counts by `suggested_action`: for `add_or_loosen_branch` a good gate matches the contrast rows, zero silent rows, and no regression row outside the contrast set (`regression_rows_matching > contrast_rows_matching` means the hypothesis false-positives on solved rows — revise it before patching); for `guard_or_tighten_branch` the signature (as a guard) must NOT match the contrast rows. It is a STARTING POINT — refine it, do not paste it blindly.');
-  lines.push('- `no_common_signal` — `true` when the failing rows share no value and no consistent numeric shape: there is NO machine-evidenced gate. Do not invent one; split the pattern by a `varying_inputs` value or report the rows as not derivable.');
+  lines.push('- `numeric_profiles`: for every numeric-typed input key present on all failing rows: `min`/`max`, `sign` (`all_negative`/`all_positive`/`all_zero`/`mixed`), and on `*_diff` keys `min_abs` (smallest observed |delta|: the concrete gate boundary to copy rather than inventing a threshold) and `all_beyond_threshold` (every row clears the forwarder\'s `hasErr` tolerance). A gate condition is usually one of these shapes; e.g. `fr_diff: {sign: "all_negative", min_abs: 2.1, all_beyond_threshold: true}` says "gate on a negative freight delta of at least 2.1", even though the raw values differ row to row.');
+  lines.push('- `contrast_row_uids` / `silent_contrast_row_uids`: `row_uid`s into `regression.jsonl`, solved same-forwarder rows where a disputed phrase fires legitimately (your changed gate must keep firing on their `inputs`), and solved rows where the engine must stay silent (the first casualties of an over-loosened gate). Replay any hypothesised gate against both BEFORE writing the patch.');
+  lines.push('- `signature_hypothesis`, a machine-drafted conjunction of the failing rows\' shared values and consistent numeric shapes (`predicates` + a `readable` one-liner), already evaluated against the contrast rows AND the forwarder\'s FULL regression set. Read the match counts by `suggested_action`: for `add_or_loosen_branch` a good gate matches the contrast rows, zero silent rows, and no regression row outside the contrast set (`regression_rows_matching > contrast_rows_matching` means the hypothesis false-positives on solved rows: revise it before patching); for `guard_or_tighten_branch` the signature (as a guard) must NOT match the contrast rows. It is a STARTING POINT: refine it, do not paste it blindly.');
+  lines.push('- `no_common_signal`: `true` when the failing rows share no value and no consistent numeric shape, there is NO machine-evidenced gate. Do not invent one; split the pattern by a `varying_inputs` value or report the rows as not derivable.');
   lines.push('');
   lines.push('### 1. Read `rule_spec.json`');
   lines.push('It tells you:');
@@ -5287,7 +5328,7 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('- The threshold per forwarder for the `hasErr()` numeric guard.');
   lines.push('- The English glossary for every input field on every forwarder.');
   lines.push('- The exact label / granular_label taxonomy.');
-  lines.push('- `phrase_emitters`: which function(s) emit each phrase key — jump straight to the branch instead of grepping `engine_source.md`.');
+  lines.push('- `phrase_emitters`: which function(s) emit each phrase key: jump straight to the branch instead of grepping `engine_source.md`.');
   lines.push('');
   lines.push('### 2. Walk `training.jsonl`');
   lines.push('Each line is a JSON object with these fields (selected):');
@@ -5299,28 +5340,28 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('| `applicable_threshold` | the `hasErr()` tolerance for this forwarder |');
   lines.push('| `label` | `wrong` / `missed` / `overfired` / `correct` |');
   lines.push('| `granular_label` | `phrase_subset` / `phrase_superset` / `phrase_disjoint` / etc. |');
-  lines.push('| `expected_phrase_keys` | PHRASES keys ground truth wants — use `rule_spec.phrases[key]` to see the German string |');
+  lines.push('| `expected_phrase_keys` | PHRASES keys ground truth wants: use `rule_spec.phrases[key]` to see the German string |');
   lines.push('| `predicted_phrase_keys` | PHRASES keys the engine output |');
   lines.push('| `missing_phrase_keys` | in expected, NOT in predicted → engine UNDER-fired |');
   lines.push('| `extra_phrase_keys` | in predicted, NOT in expected → engine OVER-fired |');
   lines.push('| `engine_phrase_keys` | what `process<Forwarder>` would output today (drift detector) |');
-  lines.push('| `engine_label` | how the CURRENT engine scores against ground truth B (`correct`/`wrong`/`missed`/`overfired`) — **the authoritative fix target** |');
+  lines.push('| `engine_label` | how the CURRENT engine scores against ground truth B (`correct`/`wrong`/`missed`/`overfired`): **the authoritative fix target** |');
   lines.push('| `engine_matches_b` | `true` once the current engine matches truth; the goal is to flip this to `true` |');
   lines.push('| `engine_missing_phrase_keys` | in truth, NOT in the current engine output → branch to **add / loosen** |');
   lines.push('| `engine_extra_phrase_keys` | in the current engine output, NOT in truth → branch to **guard / tighten** |');
   lines.push('| `engine_vs_expected_jaccard` | phrase-set similarity of current engine output vs truth (1.0 = solved) |');
   lines.push('| `inputs` | per-row map of cell values the rules read; keys explained in `rule_spec.forwarders.<fw>.input_glossary` |');
   lines.push('| `reason` | trigger trace (raw cell values that fired branches) |');
-  lines.push('| `known_not_derivable` | `true` when a previous iteration judged this row unfixable from its inputs (see `not_derivable.json`) — skip unless its inputs gained the missing signal |');
+  lines.push('| `known_not_derivable` | `true` when a previous iteration judged this row unfixable from its inputs (see `not_derivable.json`): skip unless its inputs gained the missing signal |');
   lines.push('| `row_uid` | stable hash for joining across runs |');
   lines.push('| `source_file` | which predicted/expected file pair this row came from (set when exported from Bulk Diff; blank for a single-pair run) |');
   lines.push('');
-  lines.push('> **Use the `engine_*` fields, not the plain `predicted`/`missing`/`extra` fields, to drive rule edits.** The plain fields compare slot A (your tool output, which may be stale or from another tool) against truth B; the `engine_*` fields compare what `process<Forwarder>` emits *today* against truth B. When `label == "correct"` but `engine_label != "correct"`, the tool was right but the current engine regressed on that row — fix it.');
+  lines.push('> **Use the `engine_*` fields, not the plain `predicted`/`missing`/`extra` fields, to drive rule edits.** The plain fields compare slot A (your tool output, which may be stale or from another tool) against truth B; the `engine_*` fields compare what `process<Forwarder>` emits *today* against truth B. When `label == "correct"` but `engine_label != "correct"`, the tool was right but the current engine regressed on that row: fix it.');
   lines.push('');
   lines.push('Synthetic key prefixes:');
-  lines.push('- `lit_*` — phrase string is hard-coded inside a processor (not yet in `PHRASES`). Promote it to `PHRASES` if you need to fire it from a new branch.');
-  lines.push('- `tpl_*` — dynamic phrase that interpolates runtime values (see `rule_spec.phrase_templates`).');
-  lines.push('- `?:<raw>` — phrase did not resolve. Add it to `PHRASES` or `PHRASE_LITERALS` first.');
+  lines.push('- `lit_*`: phrase string is hard-coded inside a processor (not yet in `PHRASES`). Promote it to `PHRASES` if you need to fire it from a new branch.');
+  lines.push('- `tpl_*`: dynamic phrase that interpolates runtime values (see `rule_spec.phrase_templates`).');
+  lines.push('- `?:<raw>`: phrase did not resolve. Add it to `PHRASES` or `PHRASE_LITERALS` first.');
   lines.push('');
   lines.push('### 3. Apply the rule-update workflow');
   lines.push('');
@@ -5330,23 +5371,23 @@ function buildAiBundleReadme(spec,recordCount,filterScope,regressionCount){
   lines.push('');
   lines.push('### 4. Common patterns');
   lines.push('');
-  lines.push('**`missed`** — engine should have emitted a phrase but didn\'t.');
+  lines.push('**`missed`**: engine should have emitted a phrase but didn\'t.');
   lines.push('- Find the existing branch in `process<Forwarder>` that emits the `missing_phrase_keys[i]` (search for `P.<key>` or the literal phrase).');
   lines.push('- Diagnose why the gate didn\'t match: compare the failing row\'s `inputs` against the gate condition.');
   lines.push('- Loosen the gate or add a parallel branch using `inputs` as new gating signals.');
   lines.push('');
-  lines.push('**`overfired`** — engine emitted a phrase that shouldn\'t appear.');
+  lines.push('**`overfired`**: engine emitted a phrase that shouldn\'t appear.');
   lines.push('- Find the branch that emits the `extra_phrase_keys[i]`.');
   lines.push('- Add a guard using `inputs` so the branch no longer matches the row\'s signature.');
-  lines.push('- Be careful not to break `correct` rows for the same forwarder — re-run Diff Mode to verify.');
+  lines.push('- Be careful not to break `correct` rows for the same forwarder: re-run Diff Mode to verify.');
   lines.push('');
-  lines.push('**`wrong`** — both missed AND extra keys present.');
+  lines.push('**`wrong`**: both missed AND extra keys present.');
   lines.push('- Treat the missing and extra sets independently. Often a single branch picked the wrong phrase: change the phrase emitted, not the gate.');
   lines.push('');
   lines.push('### 5. Verify');
   lines.push('Before finalising a patch, walk `regression.jsonl`: for every record of the forwarder you touched, the patched branch applied to the record\'s `inputs` must still produce exactly `expected_phrase_keys` (empty `expected` = the engine must emit nothing). If a truth phrase needs data absent from `inputs` (cross-document notes, unexported columns), report it as not derivable instead of inventing a gate.');
   lines.push('');
-  lines.push('Then re-run Diff Mode → Train & Compare. Each fixed row\'s `engine_matches_b` flips to `true`, its `engine_missing_phrase_keys` / `engine_extra_phrase_keys` empty out, and the `engine drift` overlay clears. Watch the chip counts move from `wrong`/`missed`/`overfired` toward `correct` — and the regression rows stay `correct`.');
+  lines.push('Then re-run Diff Mode → Train & Compare. Each fixed row\'s `engine_matches_b` flips to `true`, its `engine_missing_phrase_keys` / `engine_extra_phrase_keys` empty out, and the `engine drift` overlay clears. Watch the chip counts move from `wrong`/`missed`/`overfired` toward `correct`, and the regression rows stay `correct`.');
   return lines.join('\n')+'\n';
 }
 
@@ -5383,7 +5424,7 @@ function saveNotDerivableDialog(){
   saveNotDerivable(m);
   document.getElementById('dlgNotDerivable').close();
   updateNotDerivableCount();
-  showLog('Not-derivable ledger — '+Object.keys(m).length+' row(s).','ok');
+  showLog('Not-derivable ledger: '+Object.keys(m).length+' row(s).','ok');
 }
 
 /* Differenz style dialog */
@@ -5494,9 +5535,10 @@ function buildEngineSourceDoc(){
     WACKLER_HEBEBUEHNE_ABS,WACKLER_HEBEBUEHNE_TOL,WACKLER_BUENDEL_MAX_KG,
     WACKLER_XTIER_NEAR_BAND,WACKLER_BUENDEL_PARTIAL,WACKLER_COLLI_KG,WACKLER_SAME_WEIGHT_BAND,
     WACKLER_BUENDEL_NEAR_BAND,WACKLER_BUENDEL_MIN_REFS,
+    HONOLD_RATE_TOL,
   };
-  const lines=['# Engine source — v'+VERSION,'',
-    '> Extracted live via `Function.prototype.toString()` at export time — this IS the running engine, not a copy.',
+  const lines=['# Engine source: v'+VERSION,'',
+    '> Extracted live via `Function.prototype.toString()` at export time: this IS the running engine, not a copy.',
     '> Edit these symbols in `assets/anmerkung.js`. `PHRASES` / thresholds / input glossary are in `rule_spec.json`.',''];
   for(const[title,fns]of sections){
     lines.push('## '+title,'');
@@ -5507,10 +5549,10 @@ function buildEngineSourceDoc(){
 }
 
 async function downloadAiBundle(){
-  if(!diffState.results){showLog('AI Bundle — run Train & Compare first.','err');return;}
-  if(typeof JSZip==='undefined'){showLog('AI Bundle — JSZip not loaded yet, retry in a moment.','err');return;}
+  if(!diffState.results){showLog('AI Bundle: run Train & Compare first.','err');return;}
+  if(typeof JSZip==='undefined'){showLog('AI Bundle: JSZip not loaded yet, retry in a moment.','err');return;}
   const{records}=buildTrainingSet();
-  if(!records.length){showLog('AI Bundle — no training rows in current filter scope.','err');return;}
+  if(!records.length){showLog('AI Bundle: no training rows in current filter scope.','err');return;}
 
   const spec=buildRuleSpec();
   const filterScope=(diffFilter.label!=='all'||diffFilter.fw!=='all'||diffFilter.sheet!=='all'||(diffFilter.q&&diffFilter.q.trim()))
@@ -5591,7 +5633,7 @@ async function downloadAiBundle(){
   a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 
-  showLog('AI Bundle v3 exported — '+records.length+' training · '+summary.pattern_count+
+  showLog('AI Bundle v3 exported: '+records.length+' training · '+summary.pattern_count+
     ' patterns · '+regression.length+' regression · '+diffIndex.length+
     ' indexed diff rows'+(filterScope?' · filter: '+filterScope:'')+'.','ok');
 }
@@ -5607,7 +5649,7 @@ function onBulkFileSelect(e) { if (e.target.files.length) addBulkFiles(e.target.
 
 function addBulkFiles(fileList) {
   for (const file of fileList) {
-    if (!file.name.toLowerCase().endsWith('.xlsx')) { showLog('Bulk — skipped non-xlsx: ' + file.name, 'err'); continue; }
+    if (!file.name.toLowerCase().endsWith('.xlsx')) { showLog('Bulk: skipped non-xlsx ' + file.name, 'err'); continue; }
     bulkFiles.push({ id: ++bulkIdCounter, name: file.name, file, rawBytes: null, workbook: null, resultBlob: null, status: 'pending' });
   }
   renderBulkList();
@@ -5615,7 +5657,7 @@ function addBulkFiles(fileList) {
   const fc = document.getElementById('bulkFileCount');
   fc.textContent = bulkFiles.length + ' file(s) queued';
   fc.style.display = bulkFiles.length ? 'block' : 'none';
-  showLog('Bulk — ' + bulkFiles.length + ' file(s) queued.', 'ok');
+  showLog('Bulk: ' + bulkFiles.length + ' file(s) queued.', 'ok');
 }
 
 function removeBulkFile(id) {
@@ -5658,8 +5700,8 @@ function setBulkProgress(pct) {
 }
 
 async function runBulkProcess() {
-  if (!selectedFW) { showLog('Bulk — select a forwarder first.', 'err'); return; }
-  if (!bulkFiles.length) { showLog('Bulk — no files queued.', 'err'); return; }
+  if (!selectedFW) { showLog('Bulk: select a forwarder first.', 'err'); return; }
+  if (!bulkFiles.length) { showLog('Bulk: no files queued.', 'err'); return; }
 
   const btn = document.getElementById('btnBulkRun');
   btn.disabled = true; btn.textContent = 'Processing...';
@@ -5670,7 +5712,7 @@ async function runBulkProcess() {
   let diffSel;
   try { diffSel = await askDiffStyle(); }
   catch (err) { showLog('Could not open the Differenz style dialog: ' + err.message, 'err'); btn.disabled = false; btn.textContent = 'Transmute All Scrolls'; return; }
-  if (!diffSel) { showLog('Ritual aborted — no Differenz column style chosen.', 'err'); btn.disabled = false; btn.textContent = 'Transmute All Scrolls'; return; }
+  if (!diffSel) { showLog('Ritual aborted: no Differenz column style chosen.', 'err'); btn.disabled = false; btn.textContent = 'Transmute All Scrolls'; return; }
   const diffPreset = diffSel;
   let doneCount = 0;
 
@@ -5697,7 +5739,7 @@ async function runBulkProcess() {
       let stylesXml = null, diffFont = null, diffCells = 0;
       if (diffPreset !== 'normal') {
         const sf = zip.file('xl/styles.xml'); stylesXml = sf ? await sf.async('string') : null;
-        if (!stylesXml) showLog('Differenz style — xl/styles.xml missing, style skipped.', 'err');
+        if (!stylesXml) showLog('Differenz style: xl/styles.xml missing, style skipped.', 'err');
         else { const tf = zip.file('xl/theme/theme1.xml'); diffFont = tf ? themeFontName(await tf.async('string')) : null; }
       }
       const ssFile = zip.file('xl/sharedStrings.xml');
@@ -5733,15 +5775,15 @@ async function runBulkProcess() {
         if (stylesXml) {
           const ws0 = entry.workbook && entry.workbook.Sheets ? entry.workbook.Sheets[name] : null;
           const dCols = ws0 ? diffColsOf(ws0, XLSX.utils.decode_range(ws0['!ref'] || 'A1:A1')) : [];
-          if (!dCols.length) showLog('Sheet "' + name + '": no group Differenz column — style skipped.');
+          if (!dCols.length) showLog('Sheet "' + name + '": no group Differenz column, style skipped.');
           else for (const dCol of dCols) {
             const letter = idxToCol(dCol), zones = columnStyleIdxs(sheetXml, letter);
-            if (!zones.text.length && !zones.num.length) { showLog('Sheet "' + name + '": no styled cell in ' + letter + ' — style skipped.', 'err'); continue; }
+            if (!zones.text.length && !zones.num.length) { showLog('Sheet "' + name + '": no styled cell in ' + letter + ', style skipped.', 'err'); continue; }
             /* Append in turn, updating stylesXml each time: a style index only exists after its
                own append, so the numeric donor is looked up against the already-grown cellXfs. */
             const mk = srcs => { const d = pickDonor(stylesXml, srcs); if (d < 0) return -1; const r = addDiffStyleXf(stylesXml, diffPreset, d, diffFont); stylesXml = r.xml; return r.styleIdx; };
             const pair = [mk(zones.text), mk(zones.num)];
-            if (pair[0] < 0 && pair[1] < 0) { showLog('Sheet "' + name + '": cellXfs in xl/styles.xml unusable — style skipped.', 'err'); continue; }
+            if (pair[0] < 0 && pair[1] < 0) { showLog('Sheet "' + name + '": cellXfs in xl/styles.xml unusable, style skipped.', 'err'); continue; }
             const t = recolourColumn(sheetXml, letter, pair[0], pair[1]); sheetXml = t.xml; diffCells += t.cells;
             showLog('Differenz ' + letter + ': ' + t.cells + ' cells → ' + DIFF_STYLE_LABELS[diffPreset] + '.', 'ok');
           }
@@ -5751,7 +5793,7 @@ async function runBulkProcess() {
 
       zip.file('xl/sharedStrings.xml', rebuildSharedStrings(strings));
       if (stylesXml) zip.file('xl/styles.xml', stylesXml);
-      showLog('Differenz — ' + (diffPreset === 'normal' ? 'Normal, xl/styles.xml unchanged.' : (diffCells ? DIFF_STYLE_LABELS[diffPreset] + ', ' + diffCells + ' cell(s) coloured.' : DIFF_STYLE_LABELS[diffPreset] + ', 0 cells coloured (sheets without data rows were skipped; see the log above for details).')), 'ok');
+      showLog('Differenz: ' + (diffPreset === 'normal' ? 'Normal, xl/styles.xml unchanged.' : (diffCells ? DIFF_STYLE_LABELS[diffPreset] + ', ' + diffCells + ' cell(s) coloured.' : DIFF_STYLE_LABELS[diffPreset] + ', 0 cells coloured (sheets without data rows were skipped; see the log above for details).')), 'ok');
       const ctFile = zip.file('[Content_Types].xml');
       if (ctFile) { let ctXml = await ctFile.async('string'); ctXml = ensureSharedStringsContentType(ctXml); zip.file('[Content_Types].xml', ctXml); }
       const wbRelFile = zip.file('xl/_rels/workbook.xml.rels');
@@ -5760,10 +5802,10 @@ async function runBulkProcess() {
       entry.resultBlob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', compression: 'DEFLATE', compressionOptions: { level: 6 } });
       entry.status = 'done';
       doneCount++;
-      showLog('Bulk — ✓ ' + entry.name + ' (' + rep.filled + ' filled, ' + rep.skipped + ' skipped)', 'ok');
+      showLog('Bulk: ✓ ' + entry.name + ' (' + rep.filled + ' filled, ' + rep.skipped + ' skipped)', 'ok');
     } catch (e) {
       entry.status = 'error';
-      showLog('Bulk — ✗ ' + entry.name + ': ' + e.message, 'err');
+      showLog('Bulk: ✗ ' + entry.name + ', ' + e.message, 'err');
       console.error('Bulk error for', entry.name, e);
     }
 
@@ -5774,7 +5816,7 @@ async function runBulkProcess() {
   btn.disabled = false; btn.textContent = 'Transmute All Scrolls';
   if (doneCount > 0) {
     document.getElementById('btnBulkDlAll').style.display = 'block';
-    showLog('Bulk — complete: ' + doneCount + '/' + bulkFiles.length + ' files processed successfully.', 'ok');
+    showLog('Bulk complete: ' + doneCount + '/' + bulkFiles.length + ' files processed successfully.', 'ok');
   }
 }
 
@@ -5798,7 +5840,7 @@ function downloadBulkFile(id) {
 
 async function downloadAllBulk() {
   const done = bulkFiles.filter(f => f.status === 'done' && f.resultBlob);
-  if (!done.length) { showLog('Bulk — no processed files to download.', 'err'); return; }
+  if (!done.length) { showLog('Bulk: no processed files to download.', 'err'); return; }
   const zip = new JSZip();
   for (const entry of done) {
     zip.file(entry.name, entry.resultBlob);
@@ -5809,7 +5851,7 @@ async function downloadAllBulk() {
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   a.href = url; a.download = 'anmerkung_bulk_' + stamp + '.zip'; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showLog('Bulk — ZIP downloaded with ' + done.length + ' file(s).', 'ok');
+  showLog('Bulk: ZIP downloaded with ' + done.length + ' file(s).', 'ok');
 }
 
 /* Re-check bulk ready state when forwarder changes */

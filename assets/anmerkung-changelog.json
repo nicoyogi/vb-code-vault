@@ -1,6 +1,13 @@
 {
-  "version": "1.57.0",
+  "version": "1.58.0",
   "entries": [
+    {
+      "ver": "1.58.0",
+      "date": "2026-10-27",
+      "items": [
+        "Honold - the engine reads 'FR Kosten lt. Tarif' again: a row whose current-tariff cost is blank or 0 now reads \"Kein Tarif für '<LAND>'\" alone, because the current tariff prices no lane for that country and the OLD table cannot speak to it (20382640 row 8, SI). A row whose FR Kosten DL is an OLD-tariff amount from a bracket other than the one its Volumen kg falls in now reads both 'Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif' when its Volumen kg DL sits in yet another bracket and the lane moved on - read from the row's own FR Kosten lt. Tarif at the billed bracket, since the current matrix is not shipped, so that divergence test is a proxy (20382640 rows 5, 7, 9, 12, 13, 16). The previous-tariff arm for the row's own bracket still suppresses the weight half (20379045 rows 44/57/98/104/117/121/125, 20381523 rows 9/12/15/21/35, 20382640 row 6), and two rows keep the weight phrase although their FR is an OLD rate, each for its own reason: 20382640 row 4 because the lane did not diverge (its FR Kosten lt. Tarif at the billed bracket, 96.13 at 450 kg, still equals the OLD IT rate), and row 11 because it carries no Volumen kg DL, which the second arm needs. Both columns resolve through the header row, an absent column leaves the new branches off, and Volumen kg DL never decides a note on its own; replays: 20379045 124/124, 20381523 41/41, 20380293 7/7, 20382640 17/17."
+      ]
+    },
     {
       "ver": "1.57.0",
       "date": "2026-10-23",

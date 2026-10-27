@@ -268,15 +268,19 @@ html.light[data-grim="wording"] {
   --shadow-lg: 0 4px 24px rgba(80, 60, 20, 0.16), 0 1px 4px rgba(80, 60, 20, 0.08);
 }
 html.light[data-grim] .gr-aurora,
+body.theme-light .gr-aurora,
 html[data-grim="qa-siemens"]:not(.dark) .gr-aurora,
 html[data-grim="task-reviewer"]:not(.dark) .gr-aurora { opacity: 0.3; }
 html.light[data-grim] .gr-vignette,
+body.theme-light .gr-vignette,
 html[data-grim="qa-siemens"]:not(.dark) .gr-vignette,
 html[data-grim="task-reviewer"]:not(.dark) .gr-vignette { background: radial-gradient(120% 90% at 50% 30%, transparent 60%, rgba(80, 60, 20, 0.18) 100%); }
 html.light[data-grim] canvas.gr-aether,
+body.theme-light canvas.gr-aether,
 html[data-grim="qa-siemens"]:not(.dark) canvas.gr-aether,
 html[data-grim="task-reviewer"]:not(.dark) canvas.gr-aether { opacity: 0.16; }
 html.light[data-grim] .gr-veil,
+body.theme-light .gr-veil,
 html[data-grim="qa-siemens"]:not(.dark) .gr-veil,
 html[data-grim="task-reviewer"]:not(.dark) .gr-veil { background: #f1e9d6; }
 
