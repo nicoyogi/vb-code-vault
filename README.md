@@ -289,7 +289,7 @@ Which slot, in order:
 | `x.Y+1.0` | A new work unit: a fresh bundle triage, a new SNK code, a new panel or export, a new forwarder branch. | 1.42.0 (NIGHTFIX), 1.44.0 (cell-style popup), 1.46.0 (DHL bundle) |
 | major | Never. There is no API, no consumer, and no breaking-change axis to protect. | 0.9.0 → 1.0.0 is the only graduation |
 
-The split is *amendment vs new unit*, not feature vs bugfix - a new SNK code arrives in a `fix(anmerkung):` commit and still takes a minor. Of 64 entries, 15 are patches, and every one lands on or within six days of the release it corrects, with no new surface. The patch often stays in the same forwarder, but not always: 1.8.7 (Wackler) follows the Diff Mode 1.8.6, 1.8.3 (Dachser) follows the Wackler 1.8.2, and 1.7.1 (service worker and docs) follows the Dachser 1.7.0.
+The split is *amendment vs new unit*, not feature vs bugfix - a new SNK code arrives in a `fix(anmerkung):` commit and still takes a minor. Of 81 entries, 19 are patches, and every one lands on or within six days of the release it corrects, with no new surface. The patch often stays in the same forwarder, but not always: 1.8.7 (Wackler) follows the Diff Mode 1.8.6, 1.8.3 (Dachser) follows the Wackler 1.8.2, and 1.7.1 (service worker and docs) follows the Dachser 1.7.0.
 
 A bump is not free: [`showChangelogOnUpdate()`](assets/anmerkung.js) keys off the version string, so every bump pops the "What's new" modal for every returning user. Patch-bumping trivia spends that interruption on nothing.
 
