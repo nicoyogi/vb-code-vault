@@ -2598,6 +2598,88 @@ test('processDachser: ZABF Differenz of 0 stays silent', () => {
   assert.ok(!out.includes('Einfuhrzollabfertigung'), out);
 });
 
+/* ── T1 (Transitabfertigung): 20261027 row 139 and the shapes that must stay
+   silent around it. The T1 column group was mapped nowhere before 1.61.0. ── */
+
+const T1_ROW_139_COLS = {
+  stat: 50, tarif: 51, fr: 52, brutto: 53, vkg: 54, vkg_dl: 55, snk_dl: 56,
+  snk_diff: 57, maut: 58, tz: 59, referenz: 60, empf_plz: 61, empf_ort: 62,
+  serv_art: 63, sachkonto: 35, abg_land: 64, empf_land: 65,
+  t1_dl: 66, t1_tar: 67, t1_diff: 68,
+};
+function t1Row139(dl, tar, diff) {
+  return makeRow(R, {
+    50: 10, 51: '172.18', 52: '-20.91', 53: '124', 54: '0', 55: '62',
+    56: '5.92', 57: '5.92', 58: '-9.03', 59: '-0.29', 60: '1060382694',
+    61: '71380', 62: 'Ilijas', 63: 'DA01', 35: 'X', 64: 'DE', 65: 'BA',
+    66: dl, 67: tar, 68: diff,
+  });
+}
+
+test('processDachser: T1 billed against a blank base -> Transitabfertigung, ok? after Mautdifferenz', () => {
+  // 20261027 row 139 (DE -> BA Ilijas): T1 Kosten DL 50, Kosten lt. Tarif 0 on
+  // the sheet (fed here as a blank cell, since the arm treats both as no base),
+  // Differenz 50. The sheet puts the phrase between Mautdifferenz and the weight
+  // delta, so the join position is part of the pin.
+  assert.equal(
+    e.processDachser(t1Row139('50', undefined, '50'), R, T1_ROW_139_COLS),
+    'Differenz Laderaumkostenentwicklung // Mautdifferenz // Transitabfertigung, ok? // Differenz aufgrund abweichender Gewichte',
+  );
+});
+
+test('processDachser: T1 backed at 50/50 stays silent on transit', () => {
+  // 38 of the 41 T1-billed rows in the corpus carry tariff == cost, so the line
+  // is billed as quoted and the auditor says nothing about it.
+  assert.equal(
+    e.processDachser(t1Row139('50', '50', '0'), R, T1_ROW_139_COLS),
+    'Differenz Laderaumkostenentwicklung // Mautdifferenz // Differenz aufgrund abweichender Gewichte',
+  );
+});
+
+test('processDachser: T1 at 100 against a 50 base stays silent on transit', () => {
+  // 20260903 row 275 and 20261013 row 366 bill 100 against a 50 base and both
+  // truth cells stay silent on transit, so a non-zero base switches the arm off.
+  assert.equal(
+    e.processDachser(t1Row139('100', '50', '50'), R, T1_ROW_139_COLS),
+    'Differenz Laderaumkostenentwicklung // Mautdifferenz // Differenz aufgrund abweichender Gewichte',
+  );
+});
+
+test('processDachser: T1 threshold is 0.08 exclusive and a blank or zero base is the same cell', () => {
+  const cols = { stat: 50, tarif: 51, t1_dl: 52, t1_tar: 53, t1_diff: 54 };
+  let ws = makeRow(R, { 50: 10, 51: '100', 52: '50', 53: '0', 54: '0.08' });
+  assert.equal(e.processDachser(ws, R, cols), '', 'a difference equal to T_DACHSER is sub-threshold');
+  ws = makeRow(R, { 50: 10, 51: '100', 52: '50', 53: '0', 54: '0.09' });
+  assert.equal(e.processDachser(ws, R, cols), 'Transitabfertigung, ok?');
+  // No tariff cell at all and an explicit numeric 0 read the same: no base.
+  ws = makeRow(R, { 50: 10, 51: '100', 52: '50', 54: '50' });
+  assert.equal(e.processDachser(ws, R, cols), 'Transitabfertigung, ok?');
+  ws = makeRow(R, { 50: 10, 51: '100', 52: '50', 53: 0, 54: '50' });
+  assert.equal(e.processDachser(ws, R, cols), 'Transitabfertigung, ok?');
+});
+
+test('processDachser: a sheet with no T1 tariff column keeps the transit arm off', () => {
+  // A T1 group exported without the "Kosten lt. Tarif" column resolves that
+  // column to -1, and a -1 base is unreadable rather than zero. Reading it as 0
+  // would turn every billed T1 line on such a sheet into an unbacked one.
+  const cols = { stat: 50, tarif: 51, t1_dl: 52, t1_tar: -1, t1_diff: 53 };
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: '50', 53: '50' });
+  assert.equal(e.processDachser(ws, R, cols), '');
+});
+
+test('processDachser: a firing T1 line suppresses the FR !res arms', () => {
+  // The T1 phrase is joined before the FR block, so a small positive FR at equal
+  // weights no longer reaches the "frVal >= 0.05 && !res" branch. No corpus row
+  // has this shape; the test records the interaction rather than endorsing it.
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54,
+                 t1_dl: 55, t1_tar: 56, t1_diff: 57 };
+  const ws = makeRow(R, {
+    50: 10, 51: '100', 52: '0.5', 53: '100', 54: '100',
+    55: '50', 56: '0', 57: '50',
+  });
+  assert.equal(e.processDachser(ws, R, cols), 'Transitabfertigung, ok?');
+});
+
 test('processDachser: empty SNK cell never becomes a Laderaumkostenentwicklung', () => {
   // Row 117b99e2 (row 10, NO) has no SNK line, but this workbook parks the SNK
   // tariff figure in the Laderaum-surcharge field, so an empty SNK used to read
@@ -2681,6 +2763,103 @@ test('processDachser: blank TARIF at or below 10 t keeps the Fremdnummer fallbac
     56: '612100', 57: 'K1AV', 58: '2544805673',
   });
   assert.equal(e.processDachser(ws, R, cols), 'Fremdnummer 2544805673 bereits berechnet in RE00123xxx, ok?');
+});
+
+/* ── Amazon rows with no tariff, 20261027 rows 146-151 ─────────────────────
+   The Amazon tariff card is not shipped, so the arm infers it from an Amazon
+   Empf.-Name, a blank TARIF and a second delta line. Each test pins the whole
+   engine string, so a wrong join or order shows up as a failure. */
+
+const AMAZON_COLS = {
+  stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, maut: 55, tz: 56,
+  snk_dl: 57, snk_diff: 58, recip: 59, empf_plz: 60, empf_land: 61,
+  sachkonto: 62, serv_art: 63, referenz: 64, abg_land: 65,
+};
+
+test('processDachser: Amazon recipient, blank TARIF, domestic -> kein Tarif für AMAZON DE \'37293\'', () => {
+  // Row 146 (XDT6, Herleshausen 37293): FR 299.4, MT 52.82, TZ 53.89, 1794 kg.
+  const ws = makeRow(R, {
+    50: 10, 52: '299.4', 53: '1794,584', 54: '1795', 55: '52.82', 56: '53.89',
+    59: 'Amazon - XDT6', 60: '37293', 61: 'DE', 62: '612100', 63: 'K1AV',
+    64: '2545154269',
+  });
+  assert.equal(e.processDachser(ws, R, AMAZON_COLS), "kein Tarif für AMAZON DE '37293'");
+});
+
+test('processDachser: Amazon PL postal code keeps only its digit prefix', () => {
+  // Row 151 (IPLY, Warszawa 05-500) is the row the country arm used to answer
+  // with "kein Tarif für PL", so this pins both the position of the Amazon arm
+  // and the token: the full PLZ would read "'05-500'".
+  const ws = makeRow(R, {
+    50: 10, 52: '104.7', 53: '300', 54: '300', 55: '13', 56: '18.85',
+    57: '5.24', 58: '5.24', 59: 'Amazon - IPLY', 60: '05-500', 61: 'PL',
+    62: '612100', 63: 'K1AV',
+  });
+  assert.equal(e.processDachser(ws, R, AMAZON_COLS), "kein Tarif für AMAZON PL '05'");
+});
+
+test('processDachser: the 10 t ceiling still wins over the Amazon arm', () => {
+  // 20261006 row 205 (XDU5, 34474): Brutto 11573, FR 566.52, MT 129.87, TZ 87.81.
+  const ws = makeRow(R, {
+    50: 10, 52: '566.52', 53: '11573', 54: '5754', 55: '129.87', 56: '87.81',
+    59: 'Amazon - XDU5', 60: '34474', 61: 'DE', 62: '612100', 63: 'K1AV',
+  });
+  assert.equal(e.processDachser(ws, R, AMAZON_COLS), 'Kein Tarif für DE >10 to, ok?');
+});
+
+test('processDachser: an Amazon row with no second delta keeps the Fremdnummer literal', () => {
+  // 20260923 row 193 (DTM1, 59368): FR 75, no MT/TZ/EXP, SACH 612100 + K1AV.
+  const ws = makeRow(R, {
+    50: 10, 52: '75', 53: '2623', 54: '2623', 59: 'Amazon - DTM1', 60: '59368',
+    61: 'DE', 62: '612100', 63: 'K1AV', 64: '2544567001',
+  });
+  assert.equal(
+    e.processDachser(ws, R, AMAZON_COLS),
+    'Fremdnummer 2544567001 bereits berechnet in RE00123xxx, ok?',
+  );
+});
+
+test('processDachser: an Amazon row with a blank Empf.-Land keeps the Fremdnummer literal', () => {
+  // Kills dropping empfLand from the Amazon guard: the arm would then fire on an
+  // empty country and emit "kein Tarif für AMAZON  '37293'".
+  const ws = makeRow(R, {
+    50: 10, 52: '299.4', 53: '1794,584', 54: '1795', 55: '52.82', 56: '53.89',
+    59: 'Amazon - XDT6', 60: '37293', 62: '612100', 63: 'K1AV',
+    64: '2545154269', 65: 'DE',
+  });
+  const out = e.processDachser(ws, R, AMAZON_COLS);
+  assert.equal(out, 'Fremdnummer 2545154269 bereits berechnet in RE00123xxx, ok?');
+  assert.ok(!out.includes('AMAZON'), out);
+});
+
+test('processDachser: the Abg.-Land import arm wins over the Amazon arm', () => {
+  // Kills moving the Amazon arm above the import-country arm: a PL departure
+  // with a DE destination would then read "kein Tarif für AMAZON DE '05'".
+  const ws = makeRow(R, {
+    50: 10, 52: '104.7', 53: '300', 54: '300', 55: '13', 56: '18.85',
+    59: 'Amazon - IPLY', 60: '05-500', 61: 'DE', 62: '612100', 63: 'K1AV',
+    65: 'PL',
+  });
+  assert.equal(e.processDachser(ws, R, AMAZON_COLS), 'kein Tarif für PL');
+});
+
+test('processDachser: an Amazon row without a numeric PLZ token falls through to the country arm', () => {
+  // A GB postcode has no leading digits, so the arm must not emit a token-less
+  // "... AMAZON GB ''" and the country arm answers instead.
+  const ws = makeRow(R, {
+    50: 10, 52: '120', 53: '500', 54: '500', 55: '20',
+    59: 'Amazon - BHX1', 60: 'AB1 2CD', 61: 'GB', 62: '612100', 63: 'K1AV',
+  });
+  assert.equal(e.processDachser(ws, R, AMAZON_COLS), 'kein Tarif für GB');
+});
+
+test('processDachser: a non-Amazon recipient on a blank TARIF export keeps the country arm', () => {
+  // Kills a gate that drops the recipient test: DE -> RO with SACH + SERV.
+  const ws = makeRow(R, {
+    50: 10, 52: '1783.7', 53: '4200', 54: '4200', 55: '40',
+    59: 'Contoso GmbH', 60: '010101', 61: 'RO', 62: '612100', 63: 'K1AV',
+  });
+  assert.equal(e.processDachser(ws, R, AMAZON_COLS), 'kein Tarif für RO');
 });
 
 test('processDachser: FR wording comes from the rate cards, not the EXP lane proxy', () => {

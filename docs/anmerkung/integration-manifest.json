@@ -1,17 +1,18 @@
 {
  "schema": "vb-code-vault/anmerkung-integration/v1",
  "source": "current repository tree",
+ "hash_basis": "LF-normalised bytes",
  "anmerkung_hardening": "v5",
  "regression": {
-  "tests": 601,
-  "passed": 601,
+  "tests": 617,
+  "passed": 617,
   "failed": 0
  },
  "files": [
   {
    "path": "assets/anmerkung.js",
-   "bytes": 389580,
-   "sha256": "60353d4d2d7b7d88e8de8014e73aa52d2a69f986363e969be75721c5a8fcc7e0"
+   "bytes": 393061,
+   "sha256": "c6b8b1b1366ffab01a0b682c8d16017ddb3e4a38131be7ae6f8c8d6fef0483ed"
   },
   {
    "path": "tests/harness/load-engine.mjs",
@@ -31,7 +32,7 @@
   {
    "path": "docs/anmerkung/INTEGRATION_v5.md",
    "bytes": 1685,
-   "sha256": "5fd65feee315f0882daaa85eb322704df97855b0f384e32bef56767525605914"
+   "sha256": "d167ff66a51f8d660a547337854db222fc07594c6a3e81623a181917baa15c74"
   },
   {
    "path": "assets/dachser-ratecard-loader.js",

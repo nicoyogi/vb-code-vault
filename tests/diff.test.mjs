@@ -174,6 +174,49 @@ test('rowUid: a key added for one forwarder does not re-key that key for the oth
     'Honold vkg_dl and fr_tarif are 1.58.0 exports and must stay out of the uid seed');
 });
 
+test('rowUid: 1.61.0 Dachser exports stay out of the seed, so bundle uids still join', () => {
+  /* The 2026-10-28 bundle's row_uid values are the join key for every historical
+     Dachser corpus, so recip and the three T1 columns are excluded for Dachser
+     only. K+N has always hashed its own recip, so a global exclusion would
+     re-key every historical K+N row. */
+  const SHEET = 'Soll-Ist-Vergleich best. Beleg';
+  const row139 = {
+    stat: '10', tarif: '172.18', fr_diff: '-20.91', fr_dl: '118.3', fr_tar: '139.21',
+    brutto_kg: '124', vkg: '0', vkg_dl: '62', snk_dl: '5.92', snk_diff: '5.92',
+    snk_tarif: '', zz_diff: '', exp_diff: '', exp_dl: '', maut_diff: '-9.03',
+    sbfu_diff: '', tz_diff: '-0.29', zabf_diff: '', referenz: '1060382694',
+    referenz3: '', empf_plz: '71380', empf_ort: 'Ilijas', anz_sdg: '1',
+    serv_art: 'DA01', sachkonto: 'X', ki_zw_plz: '', ki_zw_ort: '',
+    abg_land: 'DE', empf_land: 'BA',
+  };
+  assert.equal(e.rowUid('dachser', SHEET, 139, row139), 'be966e20');
+  assert.equal(
+    e.rowUid('dachser', SHEET, 139, { ...row139, t1_dl: '50', t1_tar: '0', t1_diff: '50' }),
+    'be966e20',
+    'the T1 columns must not re-key row 139',
+  );
+  const row146 = {
+    stat: '10', tarif: '', fr_diff: '299.4', fr_dl: '299.4', fr_tar: '',
+    brutto_kg: '1794,584', vkg: '0', vkg_dl: '1795', snk_dl: '', snk_diff: '',
+    snk_tarif: '', zz_diff: '', exp_diff: '', exp_dl: '', maut_diff: '52.82',
+    sbfu_diff: '', tz_diff: '53.89', zabf_diff: '', referenz: '2545154269',
+    referenz3: '', empf_plz: '37293', empf_ort: 'Herleshausen', anz_sdg: '1',
+    serv_art: 'K1AV', sachkonto: '612100', ki_zw_plz: '', ki_zw_ort: '',
+    abg_land: 'DE', empf_land: 'DE',
+  };
+  assert.equal(e.rowUid('dachser', SHEET, 146, row146), 'd825bf88');
+  assert.equal(
+    e.rowUid('dachser', SHEET, 146, { ...row146, recip: 'Amazon - XDT6' }),
+    'd825bf88',
+    'the Empf.-Name export must not re-key row 146',
+  );
+  assert.notEqual(
+    e.rowUid('kn', 'Sheet1', 5, { stat: '10', recip: 'Amazon - XDT6' }),
+    e.rowUid('kn', 'Sheet1', 5, { stat: '10', recip: 'Contoso GmbH' }),
+    'K+N has always hashed recip, so the exclusion must stay Dachser-only',
+  );
+});
+
 /* ── collectInputsForRow — the export must carry every cell the engine gates on ── */
 
 test('collectInputsForRow: wackler exports weight/lane signals, dachser the 502/503 storage cells', () => {

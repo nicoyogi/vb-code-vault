@@ -165,6 +165,7 @@ story.append(section_table([
      "Fremdnummer &lt;row's ReferenzNr&gt; bereits berechnet in RE00123xxx, ok? (falls back to the 5034xxx placeholder when ReferenzNr is empty; the Beleg it was charged in stays a placeholder, it names a document outside this workbook)"),
     ("empty TARIF + FR trigger + departure country non-DE", "kein Tarif für &lt;Land&gt;"),
     ("empty TARIF + FR trigger + domestic lane above 10 t (Brutto kg &gt; 10000)", "Kein Tarif für DE &gt;10 to, ok?"),
+    ("empty TARIF + FR trigger + Empf.-Name contains &quot;amazon&quot; + Empf.-Land set + Brutto kg &le; 10000 + at least one other diff line + an Empf.-PLZ with leading digits", "kein Tarif für AMAZON &lt;Empf.-Land&gt; '&lt;PLZ digits&gt;' (named from the recipient and route because Amazon's tariff card is not shipped; checked between the departure-country and the destination-country arms)"),
     ("FR, MT and TZ all &lt; &minus;T while Volumen kg = 0 and Volumen kg DL = 0 (the invoice bills the shipment together with another one)", "zusammengefasste Abrechnung (early return, checked after the blank-TARIF block)"),
 ]))
 story.append(P("1.1 Direct-cost labels (each fires independently)", h3))
@@ -179,6 +180,7 @@ story.append(section_table([
     ("DGR Differenz over threshold (skipped when TARIF is zero)", "Gefahrgut-Zuschlag"),
     ("EXP Differenz over threshold", "Produktzuschlag, or Terminzuschlag when EXP Kosten DL = 95"),
     ("ZABF Differenz over threshold", "Einfuhrzollabfertigung"),
+    ("T1 Kosten DL and T1 Differenz both over T, with T1 Kosten lt. Tarif at or under T (a blank, a 0 and a missing base cell are the same case)", "Transitabfertigung, ok? (joined right after Mautdifferenz; 20261027 row 139 is the only unbacked T1 row in the corpus, and reading a T1 line as transit clearance is the auditor's mapping, not a documented rule)"),
     ("SBFU Differenz over threshold", "SBfU-Bescheinigung f. Umsatzsteuerzwecke"),
     ("C38L Differenz over threshold", "Maut von/bis NL"),
 ]))

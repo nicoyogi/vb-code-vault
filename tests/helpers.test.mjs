@@ -191,6 +191,15 @@ test('phraseToKey: catalog / literal / template resolution', () => {
     'fremdnummerInterpolated',
     'the engine-emitted placeholder form must map too, not just resolved truth',
   );
+  // 3c. 1.61.0 T1 arm: the phrase is a plain catalog key.
+  assert.equal(e.phraseToKey('Transitabfertigung, ok?'), 'transitabfertigung');
+  /* Two truth texts stay unmapped on purpose, because no ladder reproduces them:
+     the bare Zustellterminvereinbarung wording (3 rows, against 208 truth cells
+     carrying the long form across the ten audited workbooks) and the goods
+     annotation "chem. Reinigungsmitt" (1 row). A future catalog entry here would
+     hide the gap, not close it. */
+  assert.equal(e.phraseToKey('Differenz Automatische Zustellterminvereinbarung'), null);
+  assert.equal(e.phraseToKey('chem. Reinigungsmitt'), null);
   // unmapped
   assert.equal(e.phraseToKey('totally unknown phrase'), null);
   assert.equal(e.phraseToKey(''), null);
