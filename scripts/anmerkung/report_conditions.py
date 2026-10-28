@@ -221,7 +221,7 @@ story.append(section_table([
     ("REFERENZ3 = ZW (deviating intermediate consignee)", "Differenz aufgrund abweichender Zwischenempfänger &lt;PLZ Ort&gt;"),
     ("SERV_ART = K1AS", "Sonderfahrt"),
     ("SERV_ART = K1AU and |FR − 90| ≤ 0.1", "\"Sonderfahrt\" 90 EUR doppelt berechnet?"),
-    ("domestic (DE to DE) row whose FR Kosten lt. Tarif is the national-card cell for its Empf.-PLZ zone and weight bracket, and whose FR delta is 1 to 4 whole zone prices with a unique count", "Referenz wird N+1x abgerechnet"),
+    ("domestic (DE to DE) row whose FR Kosten lt. Tarif is the national-card cell for its Empf.-PLZ zone and Brutto kg bracket, and whose FR Kosten DL is 2 to 5 whole zone prices of that zone with a unique decomposition at the smallest number of summands, and is not itself one zone price of that zone (one zone price is one shipment billed at its own weight, not a duplicate: 20260923 row 126); terminal, so the phrase stands alone and bundling / ZW / K1AS / K1AU outrank it", "Referenz wird Nx abgerechnet (N = the summands)"),
     ("weights known, same tier, T &lt; FR &lt; 1.0, |Brutto kg &minus; Volumen kg DL| &ge; 0.05, no other label", "Differenz aufgrund abweichender Gewichte"),
     ("weights equal or same tier; FR &gt; 1 on an international lane (non-DE origin or destination)", "Sonderfahrt, or Dachser berechnet die Kosten nach dem bisherigen Tarif &mdash; decided by the rate cards: (FR Kosten DL &minus; S) landing on a NEW-card cell for S in 180/150/120/90/110 gives Sonderfahrt, otherwise FR Kosten lt. Tarif landing on an OLD-card cell (timed by 1.15 on imports) gives the bisherigen wording. Ratecards are encrypted (assets/dachser-ratecards.enc.json); without the passphrase the bisherigen wording stands."),
     ("weights equal or same tier; FR &gt; 1 (or ≥ 0.05 with no other label); ZZ diff = 35", "Fracht Differenz (ZZ=35)"),
@@ -239,8 +239,8 @@ story.append(section_table([
 story.append(P("Referenz-count constants (national card + PLZ zone table)", h3))
 story.append(const_table([
     ("FR Kosten lt. Tarif vs the zone ladder cell of the row's weight bracket", k("DA_NAT_PRICE_TOL")),
-    ("one billed copy vs a zone price (any bracket of the zone)", k("DA_NAT_COPY_TOL")),
-    ("copies searched above the tariff copy", k("DA_NAT_MAX_COPIES")),
+    ("0.08 on the residual of the whole sum, not per summand (any bracket of the zone)", k("DA_NAT_COPY_TOL")),
+    ("summands searched: N runs 2 to this bound", k("DA_NAT_MAX_COPIES")),
 ]))
 
 story.append(PageBreak())

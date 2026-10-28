@@ -2841,22 +2841,26 @@ test('processDachser: without the ratecards a K1AU |FR-90| row keeps the doppelt
 });
 
 /* ── Dachser Referenz count: domestic card + PLZ zone table ───────────────────
-   The auditor's "Referenz wird Nx abgerechnet" is not derivable in general: the
-   arm reproduces 8 of the 15 truth-labelled rows in the corpus. Four stay open
-   (20261019 rows 336, 399, 429, 466: their delta is no whole number of zone
-   prices) and three are out of reach (20260904 row 6, 20261013 rows 29 and 275:
-   not domestic). It fires when a domestic row's tariff copy is the card price of
-   its own weight bracket and the rest of the FR DL freight is a whole number of
-   zone prices. Two gates carry the rule and both are pinned below: the tariff
-   copy must sit on the ladder (20261013 row 351 decomposes but fails here), and
-   the copy count must be unique (ambiguity is silence, not a guess).
+   The auditor's "Referenz wird Nx abgerechnet" counts the whole national-card
+   zone prices that make up FR Kosten DL itself: 20261019 row 429 reads 5x
+   because five zone 2 prices reach its 190.50. The arm is terminal, so the note
+   stands alone and fires only when no earlier FR branch owns the row.
 
-   The synthetic card gives the three gates room: zone 1 prices 10/15/20 across
-   the three brackets, zone 2 30/40/15, zone 3 10/10/10 (one distinct price, so
-   a two-copy reading can never be unique). */
+   Three gates carry the rule and all are pinned below: the tariff copy must be
+   the card price of the row's own weight bracket (20261013 row 351 decomposes
+   but fails here), the decomposition must be unique at the smallest count
+   (ambiguity is silence, not a guess), and FR Kosten DL must not itself be one
+   zone price (20260923 row 126: one shipment at its own weight, not a
+   duplicate). Three truth-labelled rows stay out of
+   reach because they are not domestic: 20260904 row 6, 20261013 rows 29 and
+   275.
+
+   The synthetic card gives the gates room: zone 1 prices 10/15/20 across the
+   three brackets, zone 2 30/40/15, zone 3 10/10/10 (one distinct price, so a
+   two-copy reading can never be unique). */
 const REF_COLS = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54,
   abg_land: 55, empf_land: 56, empf_plz: 57, fr_dl: 58, fr_tar: 59, maut: 60,
-  referenz3: 61, anz_sdg: 62, serv_art: 63 };
+  referenz3: 61, anz_sdg: 62, serv_art: 63, exp: 64, exp_dl: 65 };
 const REF_CARD = {
   schema: 'dachser-ratecards/v1',
   national: {
@@ -2874,8 +2878,8 @@ const REF_CARD = {
 };
 function refRow(cells) {
   return makeRow(R, Object.assign(
-    { 50: 10, 51: '98.91', 52: '30', 53: '40', 54: '40', 55: 'DE', 56: 'DE',
-      57: '01067', 58: '40', 59: '10' }, cells));
+    { 50: 10, 51: '98.91', 52: '15', 53: '40', 54: '40', 55: 'DE', 56: 'DE',
+      57: '01067', 58: '25', 59: '10' }, cells));
 }
 function withRefCard(fn) {
   const saved = e.DACHSER_RATECARDS;
@@ -2887,54 +2891,58 @@ function withRefCard(fn) {
   }
 }
 
-test('processDachser: the Referenz note follows the cascade it shares a row with', () => {
-  /* Mautdifferenz is emitted before the FR chain, so the count lands after it
-     on the same row, the shape the 20261019 truth cells carry. */
+test('processDachser: the Referenz note stands alone when it fires', () => {
+  /* Mautdifferenz and Produktzuschlag are decided before the FR chain, and the
+     20261019 cells carry both segments beside the count. The finding is
+     terminal: the row answers with the Referenz phrase only. */
   withRefCard(() => {
-    const ws = refRow({ 57: '02067', 58: '70', 59: '30', 60: '2.5' });
-    assert.equal(e.processDachser(ws, R, REF_COLS),
-      'Mautdifferenz // Referenz wird 2x abgerechnet');
-  });
-});
-
-test('processDachser: the extra copy may sit on any bracket of the zone', () => {
-  /* Tariff copy 10.00 is the <=50 kg cell; the 20.00 copy is the 101-150 kg
-     cell. Requiring the copy to sit in the row's own bracket would read 1. */
-  withRefCard(() => {
-    const ws = refRow({ 58: '30', 59: '10' });
+    const ws = refRow({ 60: '2.5', 64: '5', 65: '10' });
     assert.equal(e.processDachser(ws, R, REF_COLS), 'Referenz wird 2x abgerechnet');
   });
 });
 
-test('processDachser: two extra copies read as 3x', () => {
-  /* delta 25 = 10 + 15, the only two-price decomposition of zone 1. */
+test('processDachser: the sum need not include the row\'s own bracket cell', () => {
+  /* 120 kg is the <=150 kg bracket, so the tariff copy is 20.00 while the two
+     whole copies are 10.00 + 15.00. Counting the delta instead would read 5.00
+     and find nothing (20261019 row 336). */
   withRefCard(() => {
-    const ws = refRow({ 58: '35', 59: '10' });
+    const ws = refRow({ 52: '5', 53: '120', 54: '120', 58: '25', 59: '20' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Referenz wird 2x abgerechnet');
+  });
+});
+
+test('processDachser: three whole copies read as 3x', () => {
+  /* 55 = 15 + 20 + 20, the only three-price decomposition of zone 1. */
+  withRefCard(() => {
+    const ws = refRow({ 52: '45', 58: '55' });
     assert.equal(e.processDachser(ws, R, REF_COLS), 'Referenz wird 3x abgerechnet');
   });
 });
 
-test('processDachser: an ambiguous copy count stays silent', () => {
-  /* delta 30 is both 10+20 and 15+15, so the count is unknowable. The row keeps
-     the weight wording instead of guessing 2x or 3x. */
+test('processDachser: an ambiguous decomposition stays silent', () => {
+  /* 30 is both 10 + 20 and 15 + 15: two decompositions at the smallest count of
+     2, so the decomposition is not unique and the row keeps the weight wording
+     instead of picking one. */
   withRefCard(() => {
-    const ws = refRow({ 58: '40', 59: '10' });
+    const ws = refRow({ 52: '20', 58: '30' });
     assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
   });
 });
 
-test('processDachser: a five-copy delta stays silent at the DA_NAT_MAX_COPIES bound', () => {
-  /* 95 = 20+20+20+20+15 is the only five zone 1 copies of that sum, and four
-     copies top out at 80. Raising DA_NAT_MAX_COPIES to 5 would read 6x. */
+test('processDachser: five whole copies read as 5x, six stay silent', () => {
+  /* 95 = 15 + 20 + 20 + 20 + 20 is the only five-copy reading (20261019 row
+     429), and 120 = 6 x 20 the only six-copy one, so a cap of 6 reads 6x. */
   withRefCard(() => {
-    const ws = refRow({ 58: '105', 59: '10' });
-    assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
+    assert.equal(e.processDachser(refRow({ 52: '85', 58: '95' }), R, REF_COLS),
+      'Referenz wird 5x abgerechnet');
+    assert.equal(e.processDachser(refRow({ 52: '95', 58: '120' }), R, REF_COLS),
+      'Frachtdifferenz');
   });
 });
 
 test('processDachser: a PLZ prefix missing from the zone table stays silent', () => {
   withRefCard(() => {
-    const ws = refRow({ 57: '99999', 58: '40', 59: '10' });
+    const ws = refRow({ 52: '30', 57: '99999', 58: '40' });
     assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
   });
 });
@@ -2943,16 +2951,16 @@ test('processDachser: a non-domestic lane never carries the Referenz note', () =
   /* 20261019 row 201 (DE->PL) is the Sonderfahrt 110 witness; its tariff copy
      is a lane price, not a zone price, so the domestic count must not fire. */
   withRefCard(() => {
-    const ws = refRow({ 56: 'PL', 57: '35-025', 58: '162.7', 59: '51.17' });
+    const ws = refRow({ 52: '111.53', 56: 'PL', 57: '35-025', 58: '162.7', 59: '51.17' });
     assert.equal(e.processDachser(ws, R, REF_COLS),
       'Dachser berechnet die Kosten nach dem bisherigen Tarif');
   });
 });
 
 test('processDachser: a tariff copy off the ladder stays silent', () => {
-  /* The delta 24.90 would decompose, but 10.50 is not a zone 1 ladder cell. */
+  /* The 25.00 sum would decompose, but 10.50 is not a zone 1 ladder cell. */
   withRefCard(() => {
-    const ws = refRow({ 58: '35.4', 59: '10.5' });
+    const ws = refRow({ 52: '24.9', 58: '35.4', 59: '10.5' });
     assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
   });
 });
@@ -2961,19 +2969,18 @@ test('processDachser: the Referenz arm never steals a flagged row', () => {
   /* Each of these rows would pass the count gate, but the earlier branch owns
      the note: multi-consignment, the ZW intermediate consignee, and K1AS. */
   withRefCard(() => {
-    assert.equal(e.processDachser(refRow({ 58: '30', 59: '10', 62: '2' }), R, REF_COLS),
+    assert.equal(e.processDachser(refRow({ 62: '2' }), R, REF_COLS),
       'hätte gebündelt werden können?');
-    assert.equal(e.processDachser(refRow({ 58: '30', 59: '10', 61: 'ZW' }), R, REF_COLS),
+    assert.equal(e.processDachser(refRow({ 61: 'ZW' }), R, REF_COLS),
       'Differenz aufgrund abweichender Zwischenempfänger 01067');
-    assert.equal(e.processDachser(refRow({ 58: '30', 59: '10', 63: 'K1AS' }), R, REF_COLS),
+    assert.equal(e.processDachser(refRow({ 63: 'K1AS' }), R, REF_COLS),
       'Sonderfahrt');
   });
 });
 
 test('processDachser: a weight above the card\'s last bracket stays silent', () => {
-  /* Brutto kg 200 has no ladder row (the synthetic card ends at 150). 20.00 is
-     that last bracket's price, so a fallback to it would read 2x from extra
-     15.00; there is no cell to compare against, so the arm stays off. */
+  /* Brutto kg 200 has no ladder row (the synthetic card ends at 150), so there
+     is no cell to compare the tariff copy against and the arm stays off. */
   withRefCard(() => {
     const ws = refRow({ 53: '200', 54: '200', 58: '35', 59: '20' });
     assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
@@ -2992,9 +2999,9 @@ test('processDachser: a freight below the tariff copy stays silent', () => {
 test('processDachser: a copy is accepted at exactly 0.08 off, not at 0.09', () => {
   /* 20261019 row 458 needs the whole 0.08; 0.11 would change row 474's count. */
   withRefCard(() => {
-    assert.equal(e.processDachser(refRow({ 58: '30.08', 59: '10' }), R, REF_COLS),
+    assert.equal(e.processDachser(refRow({ 52: '15.08', 58: '25.08' }), R, REF_COLS),
       'Referenz wird 2x abgerechnet');
-    assert.equal(e.processDachser(refRow({ 58: '30.09', 59: '10' }), R, REF_COLS),
+    assert.equal(e.processDachser(refRow({ 52: '15.09', 58: '25.09' }), R, REF_COLS),
       'Frachtdifferenz');
   });
 });
@@ -3005,9 +3012,9 @@ test('processDachser: without the national card the Referenz note stays off', ()
   const saved = e.DACHSER_RATECARDS;
   try {
     e.setDachserRatecards(null);
-    assert.equal(e.processDachser(refRow({ 58: '30', 59: '10' }), R, REF_COLS), 'Frachtdifferenz');
+    assert.equal(e.processDachser(refRow({}), R, REF_COLS), 'Frachtdifferenz');
     e.setDachserRatecards({ schema: 'dachser-ratecards/v1', new: { brackets: [] }, old: { brackets: [] } });
-    assert.equal(e.processDachser(refRow({ 58: '30', 59: '10' }), R, REF_COLS), 'Frachtdifferenz');
+    assert.equal(e.processDachser(refRow({}), R, REF_COLS), 'Frachtdifferenz');
   } finally {
     e.setDachserRatecards(saved);
   }
@@ -3016,10 +3023,10 @@ test('processDachser: without the national card the Referenz note stays off', ()
 test('processDachser: the Referenz table matches the confirmed sheet rows', {
   skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
 }, () => {
-  /* 16 rows: the 8 the rule must label (20261019 363/373/458/467/474/478 and
-     20261013 161/174) and the 8 that fence it: 336/399/429/466 sit below the
-     reachable sums, 351 and the two 20260903 bundling rows fail the tariff-copy
-     gate, 201 is not domestic. */
+  /* 17 rows: the 13 the rule must label (20261019 336/363/373/399/429/458/466/
+     467/474/478, 20261013 161/174, 20260903 303) and the 4 that fence it:
+     351 and 20260903 250/270 fail the tariff-copy gate, 201 is not domestic.
+     Each labelled row must answer with the Referenz phrase alone. */
   const rows = JSON.parse(
     readFileSync(new URL('./fixtures/dachser-referenz-rows.json', import.meta.url), 'utf8'));
   const mismatches = [];
@@ -3028,13 +3035,41 @@ test('processDachser: the Referenz table matches the confirmed sheet rows', {
       53: String(x.kg), 54: String(x.kg), 55: x.abg, 56: x.empf, 57: x.plz,
       58: String(x.fr_dl), 59: String(x.fr_tar) });
     const out = String(e.processDachser(ws, R, REF_COLS) || '');
-    const got = (out.match(/Referenz wird (\d+)x abgerechnet/) || [])[1];
-    const want = x.want === 'none' ? undefined : x.want.slice(1);
-    if (got !== want) {
-      mismatches.push(`${x.tag} r${x.row} plz${x.plz} kg${x.kg} DL=${x.fr_dl} TAR=${x.fr_tar} want=${x.want} got=${got || 'none'} (${x.why})`);
+    const want = x.want === 'none' ? undefined : 'Referenz wird ' + x.want.slice(1) + 'x abgerechnet';
+    const ok = want === undefined
+      ? !/Referenz wird \d+x abgerechnet/.test(out)
+      : out === want;
+    if (!ok) {
+      mismatches.push(`${x.tag} r${x.row} plz${x.plz} kg${x.kg} DL=${x.fr_dl} TAR=${x.fr_tar} want=${want || x.want} got=${out || 'none'} (${x.why})`);
     }
   }
   assert.deepEqual(mismatches, [], mismatches.join('\n'));
+});
+
+test('processDachser: a FR Kosten DL that is one zone price is not a duplicate', {
+  skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
+}, () => {
+  /* 20260923 row 126, cell for cell: zone 4 through PLZ 80839, Brutto 483 kg,
+     FR Kosten DL 216.90 and FR Kosten lt. Tarif 105.98 (the row's <=500 kg cell).
+     The freight is the <=1200 kg cell 216.93 within 0.03, so Dachser billed one
+     shipment at its own weight; the sum gate alone would read 3x from 31.60 +
+     49.82 + 135.53 = 216.95, 0.05 inside its bound. The sheet says Mautdifferenz
+     // abweichender Gewichte, and the cascade has to keep reaching it. */
+  const ws = makeRow(R, { 50: 10, 51: '126.6', 52: '110.92', 53: '483',
+    54: '1185', 55: 'DE', 56: 'DE', 57: '80839', 58: '216.9', 59: '105.98',
+    60: '12.22', 62: '1', 63: 'DA01' });
+  const out = String(e.processDachser(ws, R, REF_COLS) || '');
+  assert.equal(out, 'Mautdifferenz // Differenz aufgrund abweichender Gewichte');
+  assert.ok(!/Referenz wird \d+x abgerechnet/.test(out), out);
+});
+
+test('processDachser: the ladder guard silences a FR Kosten DL equal to one copy', () => {
+  /* FR DL 20.00 is the zone 1 <=150 kg cell and 20 = 10 + 10 is a unique two-copy
+     reading, so only the ladder guard keeps this row on its freight wording. */
+  withRefCard(() => {
+    const ws = refRow({ 52: '10', 58: '20', 59: '10' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
+  });
 });
 
 test('dachser ratecard asset: the national card is nine zones, capped and sound', {
