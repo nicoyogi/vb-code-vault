@@ -1,9 +1,9 @@
 /*
  * The Wackler ratecard loader and the Honold tariff loader share one
- * passphrase under 'anmerkung_tariff_pass' and render one unlock button
- * (id 'tariffUnlockBtn'). These tests load both classic scripts into a
- * node:vm context that has a document, so the DOM bootstrap runs, with a
- * Map-backed localStorage and a fetch over generated fake bundles.
+ * passphrase under 'anmerkung_tariff_pass'. The unlock control itself is
+ * static markup in anmerkung.html; these tests load both classic scripts
+ * into a node:vm context that has a document, so the DOM bootstrap runs,
+ * with a Map-backed localStorage and a fetch over generated fake bundles.
  *
  * The passphrase and bundles here are fake: encryptBundle is called with a
  * throwaway string. The real team passphrase and ciphertext never enter the
@@ -26,28 +26,10 @@ const BUNDLES = {
     'codes: { AT: ["AT1 \\u00d6sterreich"] } };', FAKE),
 };
 
-function makeActionsRow() {
-  /* Close is the existing child, so an insert at firstChild proves the unlock
-     control precedes it in the action row. */
-  const closeStub = { textContent: 'Close' };
-  const inserted = [];
-  const row = { id: 'tariffActions', firstChild: closeStub };
-  return { row, closeStub, inserted };
-}
-
-function makeContext(store, fetchImpl, opts = {}) {
+function makeContext(store, fetchImpl) {
   const appended = [];
+  const created = [];
   const byId = new Map();
-  const actions = opts.tariffActions ? makeActionsRow() : null;
-  if (actions) {
-    byId.set('tariffActions', actions.row);
-    /* A successful insertion puts the element in the document, so a second loader
-       must find it by id and stay quiet. */
-    actions.row.insertBefore = (el, ref) => {
-      actions.inserted.push([el, ref]);
-      if (el.id) byId.set(el.id, el);
-    };
-  }
   const document = {
     getElementById: (id) => byId.get(id) || null,
     createElement: () => {
@@ -55,6 +37,7 @@ function makeContext(store, fetchImpl, opts = {}) {
         id: '', className: '', onclick: null, attrs: {},
         setAttribute: (k, v) => { el.attrs[k] = String(v); },
       };
+      created.push(el);
       return el;
     },
     body: {
@@ -84,7 +67,7 @@ function makeContext(store, fetchImpl, opts = {}) {
     location: { reload() {} },
     prompt: () => null,
   });
-  return { context, appended, inserted: actions ? actions.inserted : [], row: actions && actions.row };
+  return { context, appended, created, byId };
 }
 
 function load(name, context) {
@@ -102,23 +85,19 @@ async function until(check, timeoutMs = 5000) {
   return check();
 }
 
-test('shared unlock: a Honold-only page puts the control in the Rates card row', async () => {
-  const { context, appended, inserted, row } = makeContext(new Map(), undefined, { tariffActions: true });
+test('shared unlock: a Honold-only page creates no unlock control of its own', async () => {
+  const { context, appended, created } = makeContext(new Map());
   const reports = [];
   context.TariffStatus = { set: (key, state, detail) => reports.push([key, state, detail]) };
   load('honold-tariff-loader.js', context);
 
-  await until(() => inserted.length === 1 && reports.length > 0);
+  await until(() => reports.length > 0);
 
-  /* The Honold loader alone must reach the row branch and report the same locked
-     state as the shared loaders do. */
-  assert.equal(inserted.length, 1);
-  assert.equal(inserted[0][0].id, 'tariffUnlockBtn');
-  assert.equal(inserted[0][0].textContent, '🔒 Unlock tariff data');
-  assert.equal(inserted[0][0].title, 'Enter the team passphrase to load the encrypted tariff data');
-  assert.equal(inserted[0][0].attrs['aria-label'], 'Unlock tariff data with the team passphrase');
-  assert.equal(inserted[0][1], row.firstChild);
+  /* The control lives in the Rates card markup; a loader that still builds or
+     appends one duplicates it next to the static button. */
   assert.equal(appended.length, 0);
+  assert.equal(created.length, 0);
+  assert.equal(context.document.getElementById('tariffUnlockBtn'), null);
   assert.deepEqual(reports, [['honold', 'locked', '']]);
   assert.equal(context.HONOLD_TARIFF, undefined);
 });
@@ -133,38 +112,35 @@ test('shared unlock: legacy wackler_rc_pass migrates and unlocks both bundles', 
 
   assert.equal(context.WACKLER_RATECARD.ok, 1);
   assert.deepEqual(Array.from(context.HONOLD_TARIFF.tiers), [50]);
-  /* The migrated passphrase unlocks both, so neither loader shows the lock. */
+  /* The migrated passphrase unlocks both, so no control is created. */
   assert.equal(appended.length, 0);
   assert.equal(store.get(SHARED_KEY), FAKE);
   assert.equal(store.has(LEGACY_KEY), false);
 });
 
-test('shared unlock: no passphrase leaves both tariffs off behind one button', async () => {
+test('shared unlock: no passphrase leaves both tariffs off and creates no button', async () => {
   const store = new Map();
   const { context, appended } = makeContext(store);
   load('wackler-ratecard-loader.js', context);
   load('honold-tariff-loader.js', context);
 
-  await until(() => appended.length > 0);
+  await new Promise((r) => setTimeout(r, 20));
 
-  assert.equal(appended.length, 1);
-  assert.equal(appended[0].id, 'tariffUnlockBtn');
+  assert.equal(appended.length, 0);
   assert.equal(context.WACKLER_RATECARD, undefined);
   assert.equal(context.HONOLD_TARIFF, undefined);
 });
 
-test('shared unlock: wrong passphrase fails both, drops the key, shows the button', async () => {
+test('shared unlock: wrong passphrase fails both, drops the key, creates no button', async () => {
   const store = new Map([[SHARED_KEY, 'wrong-passphrase']]);
   const { context, appended } = makeContext(store);
   load('wackler-ratecard-loader.js', context);
   load('honold-tariff-loader.js', context);
 
-  /* The existing failure path removes the shared key and re-offers the lock. */
   await until(() => !store.has(SHARED_KEY));
 
   assert.equal(store.has(SHARED_KEY), false);
-  assert.equal(appended.length, 1);
-  assert.equal(appended[0].id, 'tariffUnlockBtn');
+  assert.equal(appended.length, 0);
   assert.equal(context.WACKLER_RATECARD, undefined);
   assert.equal(context.HONOLD_TARIFF, undefined);
 });

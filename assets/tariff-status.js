@@ -4,7 +4,7 @@
    The three tariff loaders are the only code that knows WHY a dataset
    is not loaded, so they report a state per dataset here and this file
    turns those reports into the header chip and the tariff list dialog.
-   The chip is a button that opens that list; both are static markup in
+   The chip, the list and its unlock control are static markup in
    anmerkung.html and never created from JavaScript, so every lookup is
    null-guarded and a context without a document (tests) records states
    without rendering them.
@@ -25,7 +25,10 @@
     'engine-hook-missing': 'no engine hook', 'no-crypto': 'insecure origin' };
   var NAMES = { 'wackler-intl': 'Wackler international', 'wackler-national': 'Wackler national',
     honold: 'Honold', dachser: 'Dachser' };
-  var UNLOCK_HINT = 'Locked datasets stay off until they are unlocked. "Unlock tariff data" loads them with the team passphrase.';
+  var UNLOCK_HINT = 'Locked datasets stay off until they are unlocked.';
+  /* The key wackler-ratecard-loader.js, honold-tariff-loader.js and
+     dachser-ratecard-loader.js read, so this control unlocks all three. */
+  var LS_KEY = 'anmerkung_tariff_pass';
 
   var reports = {};
 
@@ -91,6 +94,9 @@
     });
     var foot = doc.getElementById('tariffFoot');
     if (foot) { foot.hidden = !blocked; foot.textContent = blocked ? UNLOCK_HINT : ''; }
+    /* Same predicate as the hint, so the control and the sentence never disagree. */
+    var btn = doc.getElementById('tariffUnlockBtn');
+    if (btn) btn.hidden = !blocked;
   }
 
   /* The aggregate is a data attribute and the reason lives in text: the visible
@@ -114,6 +120,19 @@
       if (announce.textContent !== spoken) announce.textContent = spoken;
     }
     renderRows(doc);
+  }
+
+  /* Prompt, store the key the loaders read, and reload so all three boot again.
+     Every access is guarded: tests load this file without prompt or localStorage. */
+  function unlock() {
+    var p = typeof root.prompt === 'function' ? root.prompt('Tariff passphrase:') : null;
+    if (!p) return;
+    var stored = false;
+    try { root.localStorage.setItem(LS_KEY, p); stored = true; } catch (e) {}
+    /* No reload without a stored key: the page would return still locked. */
+    if (!stored) return;
+    var loc = root.location;
+    if (loc && typeof loc.reload === 'function') loc.reload();
   }
 
   function set(key, state, detail) {
@@ -142,6 +161,9 @@
   function wire() {
     var doc = root.document;
     if (!doc || typeof doc.getElementById !== 'function') return;
+    /* Wired before the chip, so a page without the chip still unlocks. */
+    var unlockBtn = doc.getElementById('tariffUnlockBtn');
+    if (unlockBtn && typeof unlockBtn.addEventListener === 'function') unlockBtn.addEventListener('click', unlock);
     var chip = doc.getElementById('tariffStatus');
     if (!chip || typeof chip.addEventListener !== 'function') return;
     var dlg = doc.getElementById('dlgTariff');

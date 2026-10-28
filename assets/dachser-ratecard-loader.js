@@ -10,8 +10,9 @@
    dachserRatecardsReady().
 
    The passphrase is the same shared team key the Wackler and Honold
-   loaders use ('anmerkung_tariff_pass'), so the single existing unlock
-   control covers this too — this loader never adds a second button.
+   loaders use ('anmerkung_tariff_pass'), so the Rates card
+   (assets/tariff-status.js) offers the single unlock control - this
+   loader never adds a button of its own.
    Without the passphrase the engine runs normally and the Sonderfahrt /
    bisherigen / Referenz notes simply stay off (a graceful no-op).
    ══════════════════════════════════════════════════════════════ */
@@ -57,9 +58,9 @@
   async function boot() {
     var pass = null;
     try { pass = localStorage.getItem(LS_KEY); } catch (e) {}
-    /* No passphrase yet: the Wackler loader owns the single unlock button and
-       will offer it. Re-running this later (after that unlock) picks the key up.
-       The dataset is locked either way, which is what the header reports. */
+    /* No passphrase yet: the Rates card offers the unlock control, so a later
+       reload picks the key up. The dataset is locked either way, which is what
+       the header reports. */
     if (!pass) { report('dachser', 'locked', ''); return; }
     /* An insecure origin has no crypto.subtle, so decryption cannot run. That is
        not a passphrase problem: keep the key and stay quiet. */

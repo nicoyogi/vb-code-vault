@@ -1111,46 +1111,31 @@ body:not(.theme-pro) .tariff-dialog .nd-hint { color: var(--gold); }
    control takes the page text token instead and keeps a wide margin in both
    mystic skies. Pro keeps its white-on-fill treatment. */
 body:not(.theme-pro) .tariff-dialog .nd-actions .tester-btn { color: var(--text); }
-/* On the Rates card the unlock control is what the user came for, so it carries the
-   accent treatment; the floating fallback keeps the neutral pill. */
-#tariffActions .wackler-unlock-btn { color: var(--text); border-color: var(--accent); }
-/* The id rule above wins on specificity, so the shared :hover needs a matching
-   selector or a hovered button looks identical to a resting one. The tint follows
-   --accent per skin instead of hardcoding the mystic emerald; without color-mix
-   support the button keeps its resting fill, so no fallback is needed. */
-#tariffActions .wackler-unlock-btn:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 /* Center the row so Close does not stretch to the unlock button's 44px and read as
    a second full-size accent block. */
 .tariff-dialog .nd-actions { align-items: center; }
 
-/* ── WACKLER RATE UNLOCK ── */
-/* Launched by wackler-ratecard-loader.js or honold-tariff-loader.js when no
-   passphrase is stored, whichever loads first creates the control. Styles live here
-   so it follows the theme like every other control. 44px min target. */
-.wackler-unlock-btn {
+/* ── TARIFF UNLOCK ── */
+/* Owned by assets/tariff-status.js, shown only while a dataset is locked or its
+   passphrase was rejected, and it only ever sits inside #tariffActions. No display
+   rule here, so [hidden] still keeps it out of the tab order. The hover tint follows
+   --accent per skin; without color-mix support the button keeps its resting fill, so
+   no fallback is needed. 44px min target. */
+.tariff-unlock-btn {
   min-height: 44px;
   padding: 10px 16px;
   border-radius: 12px;
-  border: 1px solid var(--border2);
+  border: 1px solid var(--accent);
   background: var(--surface2);
-  color: var(--text2);
+  color: var(--text);
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: .06em;
   cursor: pointer;
   transition: color .2s, border-color .2s, background .2s;
 }
-.wackler-unlock-btn:hover {
+.tariff-unlock-btn:hover {
   color: var(--text);
   border-color: var(--accent);
-}
-/* Placement and elevation live on the fallback only: on the Rates card the button
-   sits in the dialog's action row, like any other card control, and the dialog
-   already carries its own shadow. */
-body > .wackler-unlock-btn {
-  position: fixed;
-  right: 14px;
-  bottom: 14px;
-  z-index: 999;
-  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
