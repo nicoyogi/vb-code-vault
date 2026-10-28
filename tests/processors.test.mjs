@@ -3019,24 +3019,33 @@ test('processDachser: without the ratecards a K1AU |FR-90| row keeps the doppelt
   }
 });
 
-/* ── Dachser Referenz count: domestic card + PLZ zone table ───────────────────
-   The auditor's "Referenz wird Nx abgerechnet" counts the whole national-card
-   zone prices that make up FR Kosten DL itself: 20261019 row 429 reads 5x
-   because five zone 2 prices reach its 190.50. The arm is terminal, so the note
-   stands alone and fires only when no earlier FR branch owns the row.
+/* ── Dachser Referenz count: the domestic zone ladder and the country lanes ───
+   The auditor's "Referenz wird Nx abgerechnet" counts the whole prices that make
+   up FR Kosten DL itself. On a domestic row those are national-card zone prices:
+   20261019 row 429 reads 5x because five zone 2 prices reach its 190.50. On an
+   international one they are the non-DE country's lane prices at the row's own
+   Brutto bracket: 20261013 row 29 reads 2x because 2 x 219.96 (the RO lane) is
+   439.92 against its 440.00. The arm is terminal either way, so the note stands
+   alone and fires only when no earlier FR branch owns the row.
 
-   Three gates carry the rule and all are pinned below: the tariff copy must be
-   the card price of the row's own weight bracket (20261013 row 351 decomposes
-   but fails here), the decomposition must be unique at the smallest count
-   (ambiguity is silence, not a guess), and FR Kosten DL must not itself be one
-   zone price (20260923 row 126: one shipment at its own weight, not a
-   duplicate). Three truth-labelled rows stay out of
-   reach because they are not domestic: 20260904 row 6, 20261013 rows 29 and
-   275.
+   Five gates carry the rule and all are pinned below: the tariff copy must sit
+   on the ladder of the row's own weight bracket (20261013 row 351 decomposes but
+   fails here), the decomposition must be unique at the smallest count (ambiguity
+   is silence, not a guess), a domestic FR Kosten DL must not itself be one zone
+   price (20260923 row 126: one shipment at its own weight, not a duplicate), an
+   international lane price matching the tariff copy must be unique across both
+   cards (XX Testland carries 40 and 40.01 against a 40.00 copy), and an
+   international FR Kosten DL must not itself be a lane price at any bracket (DE
+   to CZ: 140.97 is two copies of the 70.46 lane and also the lane at a heavier
+   bracket).
 
-   The synthetic card gives the gates room: zone 1 prices 10/15/20 across the
-   three brackets, zone 2 30/40/15, zone 3 10/10/10 (one distinct price, so a
-   two-copy reading can never be unique). */
+   The synthetic cards give the gates room: the national zone 1 prices 10/15/20
+   across the three brackets, zone 2 30/40/15, zone 3 10/10/10 (one distinct
+   price, so a two-copy reading can never be unique), and one bracket per
+   international card carries the country lanes the tests fence on. Four
+   truth-labelled cells stay out of reach by their freight/tariff ratio: 20260904
+   row 6 (9x, 14.14), 20261013 row 275 (2x, 3.31), 20261027 row 156 (4x, 1.56)
+   and row 157 (6x, 1.30). */
 const REF_COLS = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54,
   abg_land: 55, empf_land: 56, empf_plz: 57, fr_dl: 58, fr_tar: 59, maut: 60,
   referenz3: 61, anz_sdg: 62, serv_art: 63, exp: 64, exp_dl: 65 };
@@ -3064,6 +3073,38 @@ function withRefCard(fn) {
   const saved = e.DACHSER_RATECARDS;
   try {
     e.setDachserRatecards(REF_CARD);
+    return fn();
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+}
+/* One bracket of country lanes per international card, plus a heavier bracket
+   that carries the CZ lane alone. The national card rides along because the arm
+   still needs it present; only `old` carries the RO lane, which is the 20261013
+   row 29 price. */
+const INTL_LANES = {
+  'NO Norwegen 1': 367.93, 'NO Norwegen 2': 889.74, 'NO Norwegen 3': 95.1,
+  'PL Polen': 68.81, 'FR Frankreich 1': 138.6, 'CZ Tschechien': 70.46,
+  'XX Testland 1': 40, 'XX Testland 2': 40.01,
+};
+const INTL_CARD = {
+  schema: 'dachser-ratecards/v1',
+  national: REF_CARD.national,
+  new: { brackets: [
+    { von: 1, bis: 2000, lanes: INTL_LANES },
+    { von: 4501, bis: 5000, lanes: { 'CZ Tschechien': 140.97 } },
+  ] },
+  old: { brackets: [{ von: 1, bis: 2000, lanes: { ...INTL_LANES, 'RO Rumänien': 219.96 } }] },
+};
+function intlRow(cells) {
+  return makeRow(R, Object.assign(
+    { 50: 10, 51: '98.91', 52: '220.04', 53: '443', 54: '443', 55: 'DE', 56: 'RO',
+      57: '077085', 58: '440', 59: '219.96' }, cells));
+}
+function withIntlCard(fn) {
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(INTL_CARD);
     return fn();
   } finally {
     e.setDachserRatecards(saved);
@@ -3126,9 +3167,10 @@ test('processDachser: a PLZ prefix missing from the zone table stays silent', ()
   });
 });
 
-test('processDachser: a non-domestic lane never carries the Referenz note', () => {
+test('processDachser: a non-domestic row without the international cards keeps the cascade', () => {
   /* 20261019 row 201 (DE->PL) is the Sonderfahrt 110 witness; its tariff copy
-     is a lane price, not a zone price, so the domestic count must not fire. */
+     is a lane price of the international cards, which this synthetic card does
+     not carry, so the count must not fire. */
   withRefCard(() => {
     const ws = refRow({ 52: '111.53', 56: 'PL', 57: '35-025', 58: '162.7', 59: '51.17' });
     assert.equal(e.processDachser(ws, R, REF_COLS),
@@ -3194,6 +3236,143 @@ test('processDachser: without the national card the Referenz note stays off', ()
     assert.equal(e.processDachser(refRow({}), R, REF_COLS), 'Frachtdifferenz');
     e.setDachserRatecards({ schema: 'dachser-ratecards/v1', new: { brackets: [] }, old: { brackets: [] } });
     assert.equal(e.processDachser(refRow({}), R, REF_COLS), 'Frachtdifferenz');
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
+test('processDachser: an international lane counts the same way', () => {
+  /* 20261013 row 29: the RO lane prices at 219.96, so the row's 440.00 is two
+     whole copies. At 440.01 the residual is 0.09, past the 0.08 bound, and the
+     row keeps the bisherigen wording. Mutation: a domestic-only count leaves
+     the first row on that wording too. */
+  withIntlCard(() => {
+    assert.equal(e.processDachser(intlRow({}), R, REF_COLS),
+      'Referenz wird 2x abgerechnet');
+    assert.equal(e.processDachser(intlRow({ 52: '220.05', 58: '440.01' }), R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  });
+});
+
+test('processDachser: a lane price at another bracket is not a second copy', () => {
+  /* DE to CZ, Brutto 120: the new card prices the CZ lane at 70.46, and the
+     row's 140.97 is two whole copies of it, but 140.97 is itself the CZ lane
+     price at the 4501-5000 bracket, so the freight is one shipment at its own
+     weight, not a duplicate. The row keeps its until-now wording. Mutation:
+     dropping the daLaneOnLadder guard reads "Referenz wird 2x abgerechnet". */
+  withIntlCard(() => {
+    assert.equal(e.processDachser(intlRow({ 51: '68.60', 52: '70.37', 53: '120',
+      54: '120', 56: 'CZ', 57: '10000', 58: '140.97', 59: '70.46' }), R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  });
+});
+
+test('processDachser: the lane count starts at two copies', () => {
+  /* The copies loop opens at n=2, and that lower bound cannot be observed
+     through a row: a freight within 0.08 of one lane copy is within 0.08 of a
+     lane price, which daLaneOnLadder refuses before the loop, and a count of 1
+     is never emitted (the cascade reads refN>1). So the n=1 mutation is an
+     equivalent mutant already covered by the guard: one copy plus a 0.02
+     residual returns 0 and the genuine two-copy row returns 2, but neither
+     assertion observes the bound. Deleting the guard is what the CZ row above
+     catches. */
+  withIntlCard(() => {
+    assert.equal(e.evalInContext('daReferenzCountIntl("DE","RO",443,219.98,219.96)'), 0);
+    assert.equal(e.evalInContext('daReferenzCountIntl("DE","RO",443,440,219.96)'), 2);
+  });
+});
+
+test('processDachser: a locked card leaves the international row on its cascade', () => {
+  /* The arm reads the live global, so a page without the passphrase keeps
+     today's wording on the 20261013 row 29 shape. Mutation: a count derived
+     without the decrypted cards (neither gate) answers this locked page. */
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(null);
+    assert.equal(e.processDachser(intlRow({}), R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
+test('processDachser: one lane copy never reads as a reference', () => {
+  /* The DE->NO fence shapes sit at one copy and stay silent: 889.70 against the
+     889.74 lane, the equal pair at 95.10, 367.90 against 367.93. The control at
+     two copies must fire. Mutation: matching the freight instead of the tariff
+     copy silences the control. */
+  withIntlCard(() => {
+    assert.equal(e.processDachser(intlRow({ 52: '-0.04', 56: 'NO', 58: '889.7', 59: '889.74' }), R, REF_COLS), '');
+    assert.equal(e.processDachser(intlRow({ 52: '0', 56: 'NO', 58: '95.1', 59: '95.1' }), R, REF_COLS), '');
+    assert.equal(e.processDachser(intlRow({ 52: '-0.03', 56: 'NO', 58: '367.9', 59: '367.93' }), R, REF_COLS), '');
+    assert.equal(e.processDachser(intlRow({ 52: '367.93', 56: 'NO', 58: '735.86', 59: '367.93' }), R, REF_COLS),
+      'Referenz wird 2x abgerechnet');
+  });
+});
+
+test('processDachser: bundling still outranks the international count', () => {
+  /* 20261027 row 140 (Anz. Sdg 2, FR 188.80 against the 138.60 lane) keeps
+     "hätte gebündelt werden können?"; a two-copy row with Anz. Sdg 2 reads the
+     same and adds no Referenz note. Mutation: disabling the multi-consignment
+     branch turns the two-copy row into a Referenz note. */
+  withIntlCard(() => {
+    assert.equal(e.processDachser(intlRow({ 51: '175.23', 52: '50.2', 53: '186.42',
+      54: '186', 56: 'FR', 57: '38300', 58: '188.8', 59: '138.6', 62: '2' }), R, REF_COLS),
+      'hätte gebündelt werden können?');
+    assert.equal(e.processDachser(intlRow({ 62: '2' }), R, REF_COLS),
+      'hätte gebündelt werden können?');
+  });
+});
+
+test('processDachser: a partial lane multiple stays a weight finding', () => {
+  /* 20261027 row 156: Brutto 541.141 against Volumen kg DL 79, FR 573.00
+     against the 367.93 lane. 573 is not a whole multiple (ratio 1.56), so the
+     weight wording stands; 735.86 is exactly two copies and fires. Mutation:
+     rounding the quotient reads 573 as 2x. */
+  withIntlCard(() => {
+    assert.equal(e.processDachser(intlRow({ 52: '205.07', 53: '541.141', 54: '79',
+      56: 'NO', 57: '0694', 58: '573', 59: '367.93' }), R, REF_COLS),
+      'Differenz aufgrund abweichender Gewichte');
+    assert.equal(e.processDachser(intlRow({ 52: '367.93', 53: '541.141', 54: '79',
+      56: 'NO', 57: '0694', 58: '735.86', 59: '367.93' }), R, REF_COLS),
+      'Referenz wird 2x abgerechnet');
+  });
+});
+
+test('processDachser: two lane prices at the tariff copy stay silent', () => {
+  /* XX Testland carries 40 and 40.01, both inside the 0.02 tariff tolerance of
+     the row's 40.00 copy, so the match is not unique and the arm declines to
+     pick one. Mutation: taking the first matching lane. */
+  withIntlCard(() => {
+    assert.equal(e.processDachser(intlRow({ 52: '40', 56: 'XX', 58: '80', 59: '40' }), R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  });
+});
+
+test('processDachser: the international count is stable on a second pass', () => {
+  /* The arm holds no state, so the same row read twice returns one Referenz
+     phrase rather than an accumulated note. Mutation: a count kept in a
+     module-level variable across rows returns 3 on the second pass. */
+  withIntlCard(() => {
+    const first = e.processDachser(intlRow({}), R, REF_COLS);
+    const second = e.processDachser(intlRow({}), R, REF_COLS);
+    assert.equal(second, first);
+    assert.equal(second, 'Referenz wird 2x abgerechnet');
+  });
+});
+
+test('processDachser: the international arm needs the national card present', () => {
+  /* The arm is gated behind the national card, so a bundle carrying only the two
+     international cards keeps today's wording; the same row fires once the
+     national key is back. Mutation: dropping the national-card gate. */
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards({ ...INTL_CARD, national: undefined });
+    assert.equal(e.processDachser(intlRow({}), R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+    e.setDachserRatecards(INTL_CARD);
+    assert.equal(e.processDachser(intlRow({}), R, REF_COLS),
+      'Referenz wird 2x abgerechnet');
   } finally {
     e.setDachserRatecards(saved);
   }

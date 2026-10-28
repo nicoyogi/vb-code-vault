@@ -217,6 +217,35 @@ test('rowUid: 1.61.0 Dachser exports stay out of the seed, so bundle uids still 
   );
 });
 
+test('rowUid: the two international Referenz rows keep their bundle uids', () => {
+  /* Both rows carry "Referenz wird Nx abgerechnet" in the sheet. Row 29's
+     phrase was underivable until 1.61.1; row 156's still is not (freight/tariff
+     ratio 1.56), so that cell stands on the sheet alone. Their uids are the join
+     key the 2026-10-28 bundle already ships. The maps are the sheets' own cells;
+     the read-only FR pair, recip and the T1 columns are excluded for Dachser. */
+  const SHEET = 'Soll-Ist-Vergleich best. Beleg';
+  assert.equal(e.rowUid('dachser', SHEET, 29, {
+    stat: '10', tarif: '275.28', fr_diff: '220.04', fr_dl: '440', fr_tar: '219.96',
+    brutto_kg: '443', vkg: '0', vkg_dl: '443', snk_dl: '22', snk_diff: '11',
+    snk_tarif: '11', zz_diff: '', exp_diff: '', exp_dl: '', maut_diff: '22.87',
+    sbfu_diff: '1', tz_diff: '39.61', c38l_diff: '', zabf_diff: '', t1_dl: '',
+    t1_tar: '', t1_diff: '', av_diff: '', c196_diff: '', referenz: '1060368108',
+    recip: 'ALCOR INVEST 2000 S.R.L', referenz3: '', empf_plz: '077085',
+    empf_ort: 'DOBROESTI', anz_sdg: '1', serv_art: '', sachkonto: '',
+    ki_zw_plz: '', ki_zw_ort: '', abg_land: 'DE', empf_land: 'RO',
+  }), '57722bcb');
+  assert.equal(e.rowUid('dachser', SHEET, 156, {
+    stat: '10', tarif: '481.92', fr_diff: '205.07', fr_dl: '573', fr_tar: '367.93',
+    brutto_kg: '541,141', vkg: '0', vkg_dl: '79', snk_dl: '28.67',
+    snk_diff: '28.67', snk_tarif: '', zz_diff: '', exp_diff: '', exp_dl: '',
+    maut_diff: '-5.24', sbfu_diff: '', tz_diff: '36.9', zabf_diff: '',
+    t1_dl: '', t1_tar: '', t1_diff: '', referenz: '1060386794',
+    recip: 'Primulator AS', referenz3: '', empf_plz: '0694', empf_ort: 'Oslo',
+    anz_sdg: '1', serv_art: 'DA01', sachkonto: 'X', ki_zw_plz: '', ki_zw_ort: '',
+    abg_land: 'DE', empf_land: 'NO',
+  }), 'fbae511d');
+});
+
 /* ── collectInputsForRow — the export must carry every cell the engine gates on ── */
 
 test('collectInputsForRow: wackler exports weight/lane signals, dachser the 502/503 storage cells', () => {

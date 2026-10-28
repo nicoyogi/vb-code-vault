@@ -223,7 +223,7 @@ story.append(section_table([
     ("REFERENZ3 = ZW (deviating intermediate consignee)", "Differenz aufgrund abweichender Zwischenempfänger &lt;PLZ Ort&gt;"),
     ("SERV_ART = K1AS", "Sonderfahrt"),
     ("SERV_ART = K1AU and |FR − 90| ≤ 0.1", "\"Sonderfahrt\" 90 EUR doppelt berechnet?"),
-    ("domestic (DE to DE) row whose FR Kosten lt. Tarif is the national-card cell for its Empf.-PLZ zone and Brutto kg bracket, and whose FR Kosten DL is 2 to 5 whole zone prices of that zone with a unique decomposition at the smallest number of summands, and is not itself one zone price of that zone (one zone price is one shipment billed at its own weight, not a duplicate: 20260923 row 126); terminal, so the phrase stands alone and bundling / ZW / K1AS / K1AU outrank it", "Referenz wird Nx abgerechnet (N = the summands)"),
+    ("domestic (DE to DE) row whose FR Kosten lt. Tarif is the national-card cell for its Empf.-PLZ zone and Brutto kg bracket, or non-domestic row whose FR Kosten lt. Tarif is a lane price of the non-DE country at its Brutto kg bracket on either card; in both cases FR Kosten DL must be 2 to 5 whole such prices with a unique decomposition at the smallest number of summands, and on a domestic row must not itself be one zone price (one zone price is one shipment billed at its own weight, not a duplicate: 20260923 row 126), while on an international row the lane price matching the tariff copy must be unique across both cards, and FR Kosten DL must also not itself be a lane price of that country at any bracket on either card (DE to CZ: 140.97 is the 451-500 kg lane as well as two copies of 70.46); terminal, so the phrase stands alone and bundling / ZW / K1AS / K1AU outrank it", "Referenz wird Nx abgerechnet (N = the summands)"),
     ("weights known, same tier, T &lt; FR &lt; 1.0, |Brutto kg &minus; Volumen kg DL| &ge; 0.05, no other label", "Differenz aufgrund abweichender Gewichte"),
     ("weights equal or same tier; FR &gt; 1 on an international lane (non-DE origin or destination)", "Sonderfahrt, or Dachser berechnet die Kosten nach dem bisherigen Tarif &mdash; decided by the rate cards: (FR Kosten DL &minus; S) landing on a NEW-card cell for S in 180/150/120/90/110 gives Sonderfahrt, otherwise FR Kosten lt. Tarif landing on an OLD-card cell (timed by 1.15 on imports) gives the bisherigen wording. Ratecards are encrypted (assets/dachser-ratecards.enc.json); without the passphrase the bisherigen wording stands."),
     ("weights equal or same tier; FR &gt; 1 (or ≥ 0.05 with no other label); ZZ diff = 35", "Fracht Differenz (ZZ=35)"),
@@ -238,10 +238,10 @@ story.append(section_table([
     ("SNK_DL = 14 + SNK diff over T (footer)", "Abholterminvereinbarung"),
     ("row has no other label, only TZ over T", "Differenz treibstof"),
 ]))
-story.append(P("Referenz-count constants (national card + PLZ zone table)", h3))
+story.append(P("Referenz-count constants (national card + PLZ zone table, and the two international cards)", h3))
 story.append(const_table([
-    ("FR Kosten lt. Tarif vs the zone ladder cell of the row's weight bracket", k("DA_NAT_PRICE_TOL")),
-    ("0.08 on the residual of the whole sum, not per summand (any bracket of the zone)", k("DA_NAT_COPY_TOL")),
+    (Paragraph("FR Kosten lt. Tarif vs the zone ladder cell of the row's weight bracket, or vs a lane price of the non-DE country at that bracket", body), k("DA_NAT_PRICE_TOL")),
+    (Paragraph("0.08 on the residual of the whole sum, not per summand (any bracket of the zone or of the country's lanes)", body), k("DA_NAT_COPY_TOL")),
     ("summands searched: N runs 2 to this bound", k("DA_NAT_MAX_COPIES")),
 ]))
 

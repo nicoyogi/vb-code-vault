@@ -1,6 +1,14 @@
 {
-  "version": "1.61.0",
+  "version": "1.61.1",
   "entries": [
+    {
+      "ver": "1.61.1",
+      "date": "2026-10-28",
+      "items": [
+        "Dachser - a non-domestic row now reads \"Referenz wird Nx abgerechnet\" when the auditor's reference was billed more than once on the country's lane: FR Kosten lt. Tarif must equal a lane price of the non-DE country at the row's own Brutto kg bracket, on the NEW or the OLD card, that lane price must be the only one within 0.02 of the tariff copy, and FR Kosten DL must be 2 to 5 whole copies of it within 0.08. 20261013 row 29 (DE to RO) is the witness: 2 x 219.96 = 439.92 against its 440.00, which is exactly 0.08 over the two copies and so sits on the bound, while 440.01 is 0.09 past it and keeps \"Dachser berechnet die Kosten nach dem bisherigen Tarif\"; the RO lane exists on the OLD card only, the NEW card has no RO lane. The arm ranks like its domestic half, below bundling / ZW / K1AS / K1AU, the phrase stands alone as it does on a domestic row, and the arm stays off when the cards are locked or the bundle carries no national card, so a page without the passphrase keeps today's wording. 20261013 now reads 218 rows with a note, 212 exact, 6 differ and 0 engine-only; the other nine audited workbooks keep their counts.",
+        "Dachser - scope of the 2026-10-28 ruling: a reference billed more than once is counted on a domestic row from the national zone ladder and on an international one from the country's lane prices, so the 1.61.0 note that the count is domestic only no longer holds. Four truth-labelled cells stay out of reach, each with a freight/tariff ratio no whole copy explains: 20260904 row 6 (9x, 14.14), 20261013 row 275 (2x, 3.31), 20261027 row 156 (4x, 1.56) and row 157 (6x, 1.30). Neither count is derivable from the row, the leading explanation is an external invoice count, row 157's six copies would also exceed the cap of 5, and row 156 is 4x."
+      ]
+    },
     {
       "ver": "1.61.0",
       "date": "2026-10-28",
