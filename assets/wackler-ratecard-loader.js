@@ -71,17 +71,14 @@
     btn.id = 'tariffUnlockBtn';
     btn.type = 'button';
     /* The lock is the affordance, so it stays in the label as a role marker rather
-       than being decorative. One control unlocks Wackler rates and Honold notes,
-       which share a passphrase. The dialog is a prompt for now; see
-       docs/anmerkung for the planned in-page form. */
+       than decoration; one control covers both datasets, which share a passphrase. */
     btn.textContent = '🔒 Unlock tariff data';
-    btn.title = 'Enter the team passphrase to enable Wackler costing and Honold notes';
+    btn.title = 'Enter the team passphrase to load the encrypted tariff data';
     btn.setAttribute('aria-label', 'Unlock tariff data with the team passphrase');
     /* Styling lives in anmerkung.css / anmerkung-pro.css, next to the rest of the
        page's controls. Building it here with inline cssText put this one control
        outside the design system: it kept its own radius and font under the pro
-       skin and could not follow the theme. Only the fixed placement is inline,
-       because the page has no other launcher for it. */
+       skin and could not follow the theme. */
     btn.className = 'wackler-unlock-btn';
     btn.onclick = function () {
       var p = prompt('Tariff passphrase:');
@@ -89,7 +86,11 @@
       try { localStorage.setItem(LS_KEY, p); } catch (e) {}
       location.reload();
     };
-    document.body.appendChild(btn);
+    /* The Rates card is where a user learns which datasets are locked, so the control
+       belongs there; a page without that card keeps the floating fallback. */
+    var row = document.getElementById('tariffActions');
+    if (row && typeof row.insertBefore === 'function') row.insertBefore(btn, row.firstChild);
+    else document.body.appendChild(btn);
   }
 
   async function boot() {

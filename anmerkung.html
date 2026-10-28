@@ -199,7 +199,7 @@
   </dialog>
 
   <dialog id="dlgTariff" class="ds-dialog tariff-dialog" aria-labelledby="dlgTariffTitle">
-    <h3 id="dlgTariffTitle">Tariff data</h3>
+    <h3 id="dlgTariffTitle" tabindex="-1" autofocus>Tariff data</h3>
     <p class="nd-hint">Decrypted in this browser with the team passphrase. A dataset that is not loaded leaves its notes off.</p>
     <ul class="tariff-list" id="tariffList">
       <li class="tariff-row" data-dataset="wackler-intl" id="tariffRow-wackler-intl" data-state="pending">
@@ -224,7 +224,7 @@
       </li>
     </ul>
     <p class="tariff-foot" id="tariffFoot" hidden></p>
-    <div class="nd-actions">
+    <div class="nd-actions" id="tariffActions">
       <button type="button" class="tester-btn primary-soft" onclick="document.getElementById('dlgTariff').close()">Close</button>
     </div>
   </dialog>

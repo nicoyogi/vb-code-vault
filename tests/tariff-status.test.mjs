@@ -331,4 +331,19 @@ test('the static dialog rows are exactly the declared datasets, in order', () =>
       assert.ok(dialog.includes(`id="${prefix}-${k}"`), `anmerkung.html has no id="${prefix}-${k}"`);
     }
   }
+  /* The loaders insert the unlock control into this row at runtime, so the markup
+     needs exactly one row and must not ship a second, static button. */
+  assert.equal(Array.from(dialog.matchAll(/id="tariffActions"/g)).length, 1);
+  const actions = dialog.match(/id="tariffActions"[\s\S]*?<\/div>/)[0];
+  assert.match(actions, /<button[^>]*>\s*Close\s*<\/button>/, 'the Close button is not inside #tariffActions');
+  assert.ok(dialog.includes('id="tariffFoot"'), 'anmerkung.html has no id="tariffFoot"');
+  assert.ok(!dialog.includes('tariffUnlockBtn'), 'the unlock control is created by the loaders, not markup');
+  assert.ok(!dialog.includes('Unlock tariff data'), 'the unlock label belongs to the loaders, not markup');
+  /* Focus lands on the heading, so the dialog carries exactly one autofocus and it
+     sits on the tabindex="-1" anchor, never on the Close button. */
+  assert.equal(Array.from(dialog.matchAll(/\bautofocus\b/g)).length, 1, 'anmerkung.html must carry exactly one autofocus in #dlgTariff');
+  const anchor = dialog.match(/<h3[^>]*\bautofocus\b[^>]*>/);
+  assert.ok(anchor, 'the autofocus is not on the dialog heading');
+  assert.match(anchor[0], /tabindex="-1"/, 'the autofocus heading is not the tabindex="-1" focus anchor');
+  assert.ok(!/\bautofocus\b/.test(actions), 'the Close button must not carry autofocus');
 });

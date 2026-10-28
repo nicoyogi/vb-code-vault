@@ -26,12 +26,37 @@ const BUNDLES = {
     'codes: { AT: ["AT1 \\u00d6sterreich"] } };', FAKE),
 };
 
-function makeContext(store, fetchImpl) {
+function makeActionsRow() {
+  /* Close is the existing child, so an insert at firstChild proves the unlock
+     control precedes it in the action row. */
+  const closeStub = { textContent: 'Close' };
+  const inserted = [];
+  const row = { id: 'tariffActions', firstChild: closeStub };
+  return { row, closeStub, inserted };
+}
+
+function makeContext(store, fetchImpl, opts = {}) {
   const appended = [];
   const byId = new Map();
+  const actions = opts.tariffActions ? makeActionsRow() : null;
+  if (actions) {
+    byId.set('tariffActions', actions.row);
+    /* A successful insertion puts the element in the document, so a second loader
+       must find it by id and stay quiet. */
+    actions.row.insertBefore = (el, ref) => {
+      actions.inserted.push([el, ref]);
+      if (el.id) byId.set(el.id, el);
+    };
+  }
   const document = {
     getElementById: (id) => byId.get(id) || null,
-    createElement: () => ({ id: '', className: '', onclick: null, setAttribute() {} }),
+    createElement: () => {
+      const el = {
+        id: '', className: '', onclick: null, attrs: {},
+        setAttribute: (k, v) => { el.attrs[k] = String(v); },
+      };
+      return el;
+    },
     body: {
       appendChild: (el) => {
         appended.push(el);
@@ -59,7 +84,7 @@ function makeContext(store, fetchImpl) {
     location: { reload() {} },
     prompt: () => null,
   });
-  return { context, appended };
+  return { context, appended, inserted: actions ? actions.inserted : [], row: actions && actions.row };
 }
 
 function load(name, context) {
@@ -76,6 +101,27 @@ async function until(check, timeoutMs = 5000) {
   }
   return check();
 }
+
+test('shared unlock: a Honold-only page puts the control in the Rates card row', async () => {
+  const { context, appended, inserted, row } = makeContext(new Map(), undefined, { tariffActions: true });
+  const reports = [];
+  context.TariffStatus = { set: (key, state, detail) => reports.push([key, state, detail]) };
+  load('honold-tariff-loader.js', context);
+
+  await until(() => inserted.length === 1 && reports.length > 0);
+
+  /* The Honold loader alone must reach the row branch and report the same locked
+     state as the shared loaders do. */
+  assert.equal(inserted.length, 1);
+  assert.equal(inserted[0][0].id, 'tariffUnlockBtn');
+  assert.equal(inserted[0][0].textContent, '🔒 Unlock tariff data');
+  assert.equal(inserted[0][0].title, 'Enter the team passphrase to load the encrypted tariff data');
+  assert.equal(inserted[0][0].attrs['aria-label'], 'Unlock tariff data with the team passphrase');
+  assert.equal(inserted[0][1], row.firstChild);
+  assert.equal(appended.length, 0);
+  assert.deepEqual(reports, [['honold', 'locked', '']]);
+  assert.equal(context.HONOLD_TARIFF, undefined);
+});
 
 test('shared unlock: legacy wackler_rc_pass migrates and unlocks both bundles', async () => {
   const store = new Map([[LEGACY_KEY, FAKE]]);

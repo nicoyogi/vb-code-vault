@@ -25,7 +25,7 @@
     'engine-hook-missing': 'no engine hook', 'no-crypto': 'insecure origin' };
   var NAMES = { 'wackler-intl': 'Wackler international', 'wackler-national': 'Wackler national',
     honold: 'Honold', dachser: 'Dachser' };
-  var UNLOCK_HINT = 'Close this list, then enter the team passphrase with "Unlock tariff data" at the bottom right.';
+  var UNLOCK_HINT = 'Locked datasets stay off until they are unlocked. "Unlock tariff data" loads them with the team passphrase.';
 
   var reports = {};
 
