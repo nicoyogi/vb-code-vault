@@ -58,9 +58,20 @@ function makeDialog() {
   };
 }
 
-function makeContext(store, fetchImpl) {
+function makeActionsRow() {
+  /* Close is the existing child, so an insert at firstChild proves the unlock
+     control precedes it in the action row. */
+  const closeStub = { textContent: 'Close' };
+  const inserted = [];
+  const row = { id: 'tariffActions', firstChild: closeStub };
+  return { row, closeStub, inserted };
+}
+
+function makeContext(store, fetchImpl, opts = {}) {
   const appended = [];
   const byId = new Map();
+  const actions = opts.tariffActions ? makeActionsRow() : null;
+  if (actions) byId.set('tariffActions', actions.row);
   byId.set('tariffStatus', makeChip(DECLARED));
   byId.set('tariffStatusValue', { textContent: '' });
   byId.set('tariffStatusDetail', { textContent: '' });
@@ -75,9 +86,23 @@ function makeContext(store, fetchImpl) {
     byId.set(`tariffRowState-${k}`, { textContent: '' });
     byId.set(`tariffRowWhy-${k}`, { textContent: '' });
   });
+  /* A successful insertion puts the element in the document, so the second loader
+     must find it by id and stay quiet instead of adding a second control. */
+  if (actions) {
+    actions.row.insertBefore = (el, ref) => {
+      actions.inserted.push([el, ref]);
+      if (el.id) byId.set(el.id, el);
+    };
+  }
   const document = {
     getElementById: (id) => byId.get(id) || null,
-    createElement: () => ({ id: '', className: '', onclick: null, setAttribute() {} }),
+    createElement: () => {
+      const el = {
+        id: '', className: '', onclick: null, attrs: {},
+        setAttribute: (k, v) => { el.attrs[k] = String(v); },
+      };
+      return el;
+    },
     body: {
       appendChild: (el) => {
         appended.push(el);
@@ -107,7 +132,7 @@ function makeContext(store, fetchImpl) {
     /* assets/dachser-ratecard-loader.js calls root.addEventListener unguarded. */
     addEventListener: () => {},
   });
-  return { context, appended, byId };
+  return { context, appended, byId, inserted: actions ? actions.inserted : [], row: actions && actions.row };
 }
 
 function load(name, context) {
@@ -400,6 +425,34 @@ test('unlock status: a hook that returns false is unwired, never ready', async (
   assert.equal(result.states['wackler-intl'].detail, 'engine-hook-missing');
   assert.equal(result.states['wackler-national'].detail, 'engine-hook-missing');
   assert.equal(result.aggregate, 'error');
+});
+
+test('unlock status: the unlock control lands in the Rates card action row', async () => {
+  const { context, appended, inserted, row } = makeContext(new Map(), null, { tariffActions: true });
+  loadLoaders(context);
+
+  await until(() => inserted.length === 1);
+
+  /* Both loaders run; the row branch must create the single shared control and
+     leave the body append as a fallback only. */
+  assert.equal(inserted.length, 1);
+  assert.equal(inserted[0][0].id, 'tariffUnlockBtn');
+  assert.equal(inserted[0][0].textContent, '🔒 Unlock tariff data');
+  assert.equal(inserted[0][0].title, 'Enter the team passphrase to load the encrypted tariff data');
+  assert.equal(inserted[0][0].attrs['aria-label'], 'Unlock tariff data with the team passphrase');
+  assert.equal(inserted[0][1], row.firstChild);
+  assert.equal(appended.length, 0);
+});
+
+test('unlock status: a page without the Rates card keeps the floating fallback', async () => {
+  const { context, appended, inserted } = makeContext(new Map());
+  loadLoaders(context);
+
+  await until(() => appended.length === 1);
+
+  assert.equal(inserted.length, 0);
+  assert.equal(appended.length, 1);
+  assert.equal(appended[0].id, 'tariffUnlockBtn');
 });
 
 test('unlock status: without the helper the loaders behave exactly as before', async () => {

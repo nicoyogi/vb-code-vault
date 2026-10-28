@@ -60,7 +60,7 @@
     btn.id = 'tariffUnlockBtn';
     btn.type = 'button';
     btn.textContent = '🔒 Unlock tariff data';
-    btn.title = 'Enter the team passphrase to enable Wackler costing and Honold notes';
+    btn.title = 'Enter the team passphrase to load the encrypted tariff data';
     btn.setAttribute('aria-label', 'Unlock tariff data with the team passphrase');
     btn.className = 'wackler-unlock-btn';
     btn.onclick = function () {
@@ -69,7 +69,11 @@
       try { localStorage.setItem(LS_KEY, p); } catch (e) {}
       location.reload();
     };
-    document.body.appendChild(btn);
+    /* Same placement as the Wackler loader: the Rates card when the page has one,
+       otherwise the floating fallback. */
+    var row = document.getElementById('tariffActions');
+    if (row && typeof row.insertBefore === 'function') row.insertBefore(btn, row.firstChild);
+    else document.body.appendChild(btn);
   }
 
   async function boot() {
