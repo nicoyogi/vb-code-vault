@@ -6,8 +6,9 @@
    AES-256-GCM ciphertext (built by scripts/encrypt-honold-tariff.mjs);
    this loader decrypts it with a team passphrase (asked once, kept in
    localStorage) and defines HONOLD_TARIFF on the page.
-   The passphrase is shared with the Wackler ratecard loader, so one unlock
-   control covers both.
+   The passphrase is shared with the Wackler and Dachser loaders, and the
+   Rates card (assets/tariff-status.js) owns the single unlock control;
+   this loader only reports the state of its dataset.
 
    Without the passphrase the engine runs normally - Honold rows are
    skipped, never blanked, because the note cannot be re-derived.
@@ -51,35 +52,10 @@
     } catch (e) { /* status is cosmetic; it must never break decryption */ }
   }
 
-  function showUnlockButton() {
-    /* Same single control as the Wackler loader. When both scripts ship,
-       wackler-ratecard-loader.js runs first and this finds its button and
-       returns; this copy is for a page that loads only the Honold loader. */
-    if (document.getElementById('tariffUnlockBtn')) return;
-    var btn = document.createElement('button');
-    btn.id = 'tariffUnlockBtn';
-    btn.type = 'button';
-    btn.textContent = '🔒 Unlock tariff data';
-    btn.title = 'Enter the team passphrase to load the encrypted tariff data';
-    btn.setAttribute('aria-label', 'Unlock tariff data with the team passphrase');
-    btn.className = 'wackler-unlock-btn';
-    btn.onclick = function () {
-      var p = prompt('Tariff passphrase:');
-      if (!p) return;
-      try { localStorage.setItem(LS_KEY, p); } catch (e) {}
-      location.reload();
-    };
-    /* Same placement as the Wackler loader: the Rates card when the page has one,
-       otherwise the floating fallback. */
-    var row = document.getElementById('tariffActions');
-    if (row && typeof row.insertBefore === 'function') row.insertBefore(btn, row.firstChild);
-    else document.body.appendChild(btn);
-  }
-
   async function boot() {
     var pass = null;
     try { pass = localStorage.getItem(LS_KEY); } catch (e) {}
-    if (!pass) { report('honold', 'locked', ''); showUnlockButton(); return; }
+    if (!pass) { report('honold', 'locked', ''); return; }
     /* An insecure origin has no crypto.subtle, so decryption cannot run. That is
        not a passphrase problem: keep the key and stay quiet. */
     if (!(root.crypto && root.crypto.subtle)) { report('honold', 'insecure', 'no-crypto'); return; }
@@ -108,7 +84,6 @@
       if (e && e.name === 'OperationError') {
         try { localStorage.removeItem(LS_KEY); } catch (e2) {}
         report('honold', 'locked', 'wrong-passphrase');
-        showUnlockButton();
       } else {
         report('honold', 'error', 'bad-artifact');
       }
