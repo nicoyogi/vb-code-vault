@@ -1,7 +1,8 @@
 /* ══════════════════════════════════════════════════════════════
    DACHSER RATECARD LOADER — decrypts the tariff data client-side
    ──────────────────────────────────────────────────────────────
-   The two Dachser rate matrices are business data and do not ship in
+   The two Dachser rate matrices, the national (DE to DE) card and the
+   two-digit PLZ-prefix zone table are business data and do not ship in
    the public repo. assets/dachser-ratecards.enc.json carries them as
    an AES-256-GCM ciphertext (built by
    scripts/encrypt-dachser-ratecards.mjs); this loader decrypts it and
@@ -12,7 +13,7 @@
    loaders use ('anmerkung_tariff_pass'), so the single existing unlock
    control covers this too — this loader never adds a second button.
    Without the passphrase the engine runs normally and the Sonderfahrt /
-   bisherigen notes simply stay off (a graceful no-op).
+   bisherigen / Referenz notes simply stay off (a graceful no-op).
    ══════════════════════════════════════════════════════════════ */
 (function (root) {
   'use strict';

@@ -16,8 +16,8 @@
  * `fix_workbook.py --set` wants. No argument writes anything: this tool only reads.
  *
  * Needs `py` (Python 3 with openpyxl) for scripts/dachser/dump_sheet.py, and the local
- * plaintext assets/dachser-ratecards.js, without which the Sonderfahrt / bisherigen
- * branch is off and every FR row would be reported as a false difference.
+ * plaintext assets/dachser-ratecards.js, without which the Sonderfahrt / bisherigen /
+ * Referenz branches are off and every FR row would be reported as a false difference.
  */
 import { execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
@@ -107,7 +107,7 @@ function main() {
 
   if (!e.DACHSER_RATECARDS) {
     console.error('warning: assets/dachser-ratecards.js is missing, so the Sonderfahrt / '
-      + 'bisherigen branch is off and every FR row reads as "bisherigen".');
+      + 'bisherigen / Referenz branches are off and every FR row reads as "bisherigen".');
   }
 
   const range = decodeRange(data.ref);

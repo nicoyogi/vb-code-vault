@@ -38,6 +38,7 @@ for name in [
     "WACKLER_COLLI_KG", "WACKLER_SAME_WEIGHT_BAND",
     "WACKLER_BUENDEL_NEAR_BAND", "WACKLER_BUENDEL_MIN_REFS",
     "WACKLER_TZ_RATE_TOL", "HONOLD_RATE_TOL",
+    "DA_NAT_PRICE_TOL", "DA_NAT_COPY_TOL", "DA_NAT_MAX_COPIES",
 ]:
     m = re.search(rf"const\s+{name}\s*=\s*([^;]+);", src)
     if m:
@@ -164,6 +165,7 @@ story.append(section_table([
      "Fremdnummer &lt;row's ReferenzNr&gt; bereits berechnet in RE00123xxx, ok? (falls back to the 5034xxx placeholder when ReferenzNr is empty; the Beleg it was charged in stays a placeholder, it names a document outside this workbook)"),
     ("empty TARIF + FR trigger + departure country non-DE", "kein Tarif für &lt;Land&gt;"),
     ("empty TARIF + FR trigger + domestic lane above 10 t (Brutto kg &gt; 10000)", "Kein Tarif für DE &gt;10 to, ok?"),
+    ("FR, MT and TZ all &lt; &minus;T while Volumen kg = 0 and Volumen kg DL = 0 (the invoice bills the shipment together with another one)", "zusammengefasste Abrechnung (early return, checked after the blank-TARIF block)"),
 ]))
 story.append(P("1.1 Direct-cost labels (each fires independently)", h3))
 story.append(section_table([
@@ -183,11 +185,13 @@ story.append(section_table([
 story.append(P("1.2 SNK — switch on billed SNK_DL", h3))
 story.append(section_table([
     ("SNK_DL = 190 or 95", "AUSFALLFRACHT"),
-    ("SNK_DL = 130 or 390", "Standgeld"),
+    ("SNK_DL = 130", "Standgeld; SERV_ART = K1AV → Wartezeit 2h &aacute; 65 EUR, ok? (2 × 65)"),
+    ("SNK_DL = 390", "Standgeld (three 130 units, also on K1AV)"),
     ("SNK_DL = 75 + SNK_TARIF &gt; 0 + SNK diff over T", "Differenz Hebebuehnen-Zuschlag"),
     ("SNK_DL = 75 + SERV_ART = K1AV", "Speditionskosten gem. Text"),
     ("SNK_DL = 75 (no tariff backing)", "Ausfallfracht/Schadensersatz"),
     ("SNK_DL = 80 + SERV_ART = K1AV", "Speditionskosten gem. Text // Admin Zeitfensterbuchung Handel"),
+    ("SNK_DL = 210 + SERV_ART = K1AV", "Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag // Speditionskosten gem. Text // Wartezeit 2h &aacute; 65 EUR, ok? (210 = 5 + 75 + 2 × 65)"),
     ("SNK_DL = 11 (+ diff over T)", "Differenz Telefonische Zustellankündigung - Laderaumzuschlag"),
     ("SNK_DL = 14 (+ diff over T, TARIF not zero)", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag (K1AV → Differenz Laderaumkostenentwicklung)"),
     ("SNK_DL = 5 + SERV_ART = K1AV (SNK_TARIF=0)", "Admin Zeitfensterbuchung Handel"),
@@ -196,9 +200,10 @@ story.append(section_table([
     ("SNK_DL = 5 + diff over T + import lane (Abg.-Land not DE, Empf.-Land DE)", "Differenz Laderaumkostenentwicklung"),
     ("SNK_DL = 9 (+ diff over T, TARIF not zero)", "Differenz Telefonische Zustellterminvereinbarung - Laderaumzuschlag"),
     ("other SNK_DL + SERV_ART = K1AV, or non-integer SNK_DL whose SNK_DIFF &gt; T (a residual equal to the 0.08 threshold does not qualify)", "Differenz Laderaumkostenentwicklung"),
-    ("K1AV and SNK_DL is a whole 65-multiple (&ge; 65) and not one of the Standgeld values (130, 390)", "Wartezeit &lt;n&gt;h &aacute; 65 EUR, ok? (the headline alone, no admin-fee suffix)"),
+    ("K1AV and SNK_DL is a whole 65-multiple (&ge; 65) and not SNK_DL = 390", "Wartezeit &lt;n&gt;h &aacute; 65 EUR, ok? (the headline alone, no admin-fee suffix)"),
     ("K1AV and SNK_DL &minus; 5 &ge; 65, residual a whole 65-multiple", "Wartezeit &lt;n&gt;h &aacute; 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag (the bundled admin fee is still owed, so the phrase is not emitted alone)"),
-    ("K1AV and SNK_DL &minus; 5 &ge; 65, residual cents-bearing and not a 65-multiple", "&lt;amount&gt; Kosten f&uuml;r 2.Zustellung etc. ok?"),
+    ("K1AV and SNK_DL &gt; 500 with SNK_TARIF = 0 or SNK_TARIF = TARIF, when SNK_DL is not a whole 65-multiple and SNK_DL &minus; 5 is not a whole 65-multiple (the two Wartezeit rows above win first)", "&lt;SNK_DL&gt; Kosten f&uuml;r 2.Zustellung etc. ok? (the billed amount itself, no 5 EUR deduction; an integer amount renders without cents, e.g. \"921\")"),
+    ("K1AV and SNK_DL &minus; 5 &ge; 65, residual cents-bearing and not a 65-multiple, with SNK_DL &le; 500 or a separate SNK tariff base (SNK_TARIF ≠ 0 and ≠ TARIF)", "&lt;SNK_DL &minus; 5&gt; Kosten f&uuml;r 2.Zustellung etc. ok?"),
     ("other SNK_DL (+ diff over T)", "Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag"),
     ("Non-integer SNK_DL and SNK_DIFF rounds to 5/9/11/14 (±0.05)", "code re-derived from SNK_DIFF, then the switch above"),
 ]))
@@ -211,12 +216,14 @@ story.append(section_table([
 ]))
 story.append(P("1.4 FR — weight/tier decision tree (after SNK)", h3))
 story.append(section_table([
-    ("SERV_ART = K1AU and the rate cards return Sonderfahrt for the lane (FR Kosten DL &minus; 180/150/120/90 lands on a NEW-card cell)", "Sonderfahrt"),
+    ("SERV_ART = K1AU and the rate cards return Sonderfahrt for the lane (FR Kosten DL &minus; 180/150/120/90/110 lands on a NEW-card cell)", "Sonderfahrt"),
     ("Anz. Sdg &gt; 1 (multi-consignment)", "hätte gebündelt werden können?"),
     ("REFERENZ3 = ZW (deviating intermediate consignee)", "Differenz aufgrund abweichender Zwischenempfänger &lt;PLZ Ort&gt;"),
     ("SERV_ART = K1AS", "Sonderfahrt"),
     ("SERV_ART = K1AU and |FR − 90| ≤ 0.1", "\"Sonderfahrt\" 90 EUR doppelt berechnet?"),
-    ("weights equal or same tier; FR &gt; 1 on an international lane (non-DE origin or destination)", "Sonderfahrt, or Dachser berechnet die Kosten nach dem bisherigen Tarif &mdash; decided by the rate cards: (FR Kosten DL &minus; S) landing on a NEW-card cell for S in 180/150/120/90 gives Sonderfahrt, otherwise FR Kosten lt. Tarif landing on an OLD-card cell (timed by 1.15 on imports) gives the bisherigen wording. Ratecards are encrypted (assets/dachser-ratecards.enc.json); without the passphrase the bisherigen wording stands."),
+    ("domestic (DE to DE) row whose FR Kosten lt. Tarif is the national-card cell for its Empf.-PLZ zone and Brutto kg bracket, and whose FR Kosten DL is 2 to 5 whole zone prices of that zone with a unique decomposition at the smallest number of summands, and is not itself one zone price of that zone (one zone price is one shipment billed at its own weight, not a duplicate: 20260923 row 126); terminal, so the phrase stands alone and bundling / ZW / K1AS / K1AU outrank it", "Referenz wird Nx abgerechnet (N = the summands)"),
+    ("weights known, same tier, T &lt; FR &lt; 1.0, |Brutto kg &minus; Volumen kg DL| &ge; 0.05, no other label", "Differenz aufgrund abweichender Gewichte"),
+    ("weights equal or same tier; FR &gt; 1 on an international lane (non-DE origin or destination)", "Sonderfahrt, or Dachser berechnet die Kosten nach dem bisherigen Tarif &mdash; decided by the rate cards: (FR Kosten DL &minus; S) landing on a NEW-card cell for S in 180/150/120/90/110 gives Sonderfahrt, otherwise FR Kosten lt. Tarif landing on an OLD-card cell (timed by 1.15 on imports) gives the bisherigen wording. Ratecards are encrypted (assets/dachser-ratecards.enc.json); without the passphrase the bisherigen wording stands."),
     ("weights equal or same tier; FR &gt; 1 (or ≥ 0.05 with no other label); ZZ diff = 35", "Fracht Differenz (ZZ=35)"),
     ("weights equal or same tier; FR &gt; 1 (or ≥ 0.05 with no other label); otherwise", "Frachtdifferenz"),
     ("weights equal or same tier; FR &lt; −1.0", "Differenz aufgrund abweichender Gewichte"),
@@ -228,6 +235,12 @@ story.append(section_table([
 story.append(section_table([
     ("SNK_DL = 14 + SNK diff over T (footer)", "Abholterminvereinbarung"),
     ("row has no other label, only TZ over T", "Differenz treibstof"),
+]))
+story.append(P("Referenz-count constants (national card + PLZ zone table)", h3))
+story.append(const_table([
+    ("FR Kosten lt. Tarif vs the zone ladder cell of the row's weight bracket", k("DA_NAT_PRICE_TOL")),
+    ("0.08 on the residual of the whole sum, not per summand (any bracket of the zone)", k("DA_NAT_COPY_TOL")),
+    ("summands searched: N runs 2 to this bound", k("DA_NAT_MAX_COPIES")),
 ]))
 
 story.append(PageBreak())

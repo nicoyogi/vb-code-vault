@@ -134,6 +134,114 @@ test('processDachser: SNK_DL=196 K1AV -> a non-pure hour count stays Laderaumkos
   assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung');
 });
 
+test('processDachser: K1AV SNK_DL 520 and 785 -> waiting time before the 2.Zustellung amount', () => {
+  // The >500 2.Zustellung branch sits below the two Wartezeit returns, so a
+  // large SNK_DL that is a whole hour count (520 = 8 x 65) still reads the
+  // headline alone, while 785 = 780 + 5 keeps the admin-fee suffix. This pins
+  // the branch order only and passes at HEAD as well, so it is not a witness of
+  // the new behaviour.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  let ws = makeRow(R, { 50: 10, 51: '700.92', 52: '520', 53: '515', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 8h á 65 EUR, ok?');
+  ws = makeRow(R, { 50: 10, 51: '700.92', 52: '785', 53: '780', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols),
+    'Wartezeit 12h á 65 EUR, ok? // Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag');
+});
+
+test('processDachser: SNK_DL=130 K1AV -> one two-hour waiting time, not Standgeld', () => {
+  // Bundle 2026-10-19 rows 64/81/99/154 (K1AV, 612100): the 130 EUR line is
+  // 2 x 65 EUR. Both shapes are covered: row 64 carries a tariff base
+  // (SNK_DL 130 / SNK_DIFF 53.36 / SNK lt. Tarif 76.64), row 154 does not
+  // (SNK_DL 130 / SNK_DIFF 130 / SNK lt. Tarif blank).
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  let ws = makeRow(R, { 50: 10, 51: '758.66', 52: '130', 53: '53.36', 54: '76.64', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 2h á 65 EUR, ok?');
+  ws = makeRow(R, { 50: 10, 52: '130', 53: '130', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols), 'Wartezeit 2h á 65 EUR, ok?');
+});
+
+test('processDachser: SNK_DL=130 outside K1AV -> Standgeld', () => {
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: '130', 53: '60', 54: '70', 55: 'DA01' });
+  assert.equal(e.processDachser(ws, R, cols), 'Standgeld');
+});
+
+test('processDachser: SNK_DL=210 K1AV -> admin fee + Speditionskosten + 2h waiting time', () => {
+  // Bundle 2026-10-19 row 252: 210 = 130 (2 x 65 waiting time) + 75
+  // (Speditionskosten gem. Text) + 5 (admin/fenster fee), named in that order.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  const ws = makeRow(R, { 50: 10, 51: '871.24', 52: '210', 53: '125.51', 54: '84.49', 55: 'K1AV' });
+  assert.equal(e.processDachser(ws, R, cols),
+    'Differenz Admin Zeitfensterbuchung Handel - Laderaumzuschlag // Speditionskosten gem. Text // Wartezeit 2h á 65 EUR, ok?');
+});
+
+test('processDachser: K1AV 2.Zustellung names SNK_DL when the SNK tariff is blank', () => {
+  // Bundle 2026-10-19 row 22 (TARIF blank, SNK lt. Tarif blank): the 5 EUR admin
+  // deduction must not apply, the auditor names the amount as billed.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 52: '931.15', 53: '931.15', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), '931,15 Kosten für 2.Zustellung etc. ok?');
+});
+
+test('processDachser: K1AV 2.Zustellung names SNK_DL when the SNK tariff equals TARIF', () => {
+  // Bundle 2026-10-19 row 155: SNK lt. Tarif 53.55 == TARIF 53.55, so SNK_DL is
+  // the bundle itself and not a Laderaum base with a fee on top.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 51: '53.55', 52: '1163.45', 53: '1109.9', 54: '53.55', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), '1163,45 Kosten für 2.Zustellung etc. ok?');
+});
+
+test('processDachser: an integer 2.Zustellung amount renders without cents', () => {
+  // Bundle 2026-10-19 row 23: SNK_DL 921, TARIF and SNK lt. Tarif blank. The
+  // truth cell reads "921 Kosten für ...", not "921,00" (and not
+  // Laderaumkostenentwicklung, which is where the residual chain used to end).
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 52: '921', 53: '921', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), '921 Kosten für 2.Zustellung etc. ok?');
+  assert.equal(e.phraseToKey('921 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
+});
+
+test('processDachser: K1AV SNK_DL 500 exactly stays Laderaumkostenentwicklung', () => {
+  // The >500 branch is strict: 500 sits on the bound, not over it, so the row
+  // must not read a 2.Zustellung amount.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 52: '500', 53: '500', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz Laderaumkostenentwicklung');
+});
+
+test('processDachser: K1AV SNK_DL 500.5 names the cents-bearing amount', () => {
+  // Just over the bound with cents: the amount is billed as-is, no admin
+  // deduction, and the cents survive the German formatting.
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 52: '500.5', 53: '500.5', 55: 'K1AV', 35: '612100' });
+  assert.equal(e.processDachser(ws, R, cols), '500,50 Kosten für 2.Zustellung etc. ok?');
+});
+
+test('processDachser: all DL cost lines zero with three negative deltas -> zusammengefasste Abrechnung', () => {
+  // Bundle 2026-10-19 rows 327 (DA07, EXP -30, SNK -2.17) and 377 (DA01, SBFU -1,
+  // SNK -2.28): FR, MT and TZ all short, both volume columns 0, so the invoice
+  // billed the shipment together with another one.
+  const cols = { stat: 50, tarif: 51, fr: 52, exp: 53, maut: 54, tz: 55, sbfu: 56,
+                 snk_dl: 57, snk_diff: 58, snk_tar: 59, vkg: 60, vkg_dl: 61, serv_art: 62, sachkonto: 35 };
+  let ws = makeRow(R, { 50: 10, 51: '86.2', 52: '-43.44', 53: '-30', 54: '-1.77', 55: '-7.82',
+    56: '-1', 58: '-2.17', 59: '2.17', 60: '0', 61: '0', 62: 'DA07', 35: '' });
+  assert.equal(e.processDachser(ws, R, cols), 'zusammengefasste Abrechnung');
+  ws = makeRow(R, { 50: 10, 51: '53.03', 52: '-45.64', 54: '-3.55', 55: '-8.22',
+    56: '-1', 58: '-2.28', 59: '2.28', 60: '0', 61: '0', 62: 'DA01' });
+  assert.equal(e.processDachser(ws, R, cols), 'zusammengefasste Abrechnung');
+});
+
+test('processDachser: a DL weight on the row keeps the ordinary cascade', () => {
+  // Row 377 with Volumen kg DL 1828: the row does carry a DL cost basis, so the
+  // combined-invoice gate must not fire and the cascade speaks as before.
+  const cols = { stat: 50, tarif: 51, fr: 52, maut: 53, tz: 54, sbfu: 55,
+                 snk_dl: 56, snk_diff: 57, snk_tar: 58, vkg: 59, vkg_dl: 60, serv_art: 61 };
+  const ws = makeRow(R, { 50: 10, 51: '53.03', 52: '-45.64', 53: '-3.55', 54: '-8.22',
+    55: '-1', 57: '-2.28', 58: '2.28', 59: '0', 60: '1828', 61: 'DA01' });
+  assert.equal(e.processDachser(ws, R, cols),
+    'Differenz Automatische Zustellterminvereinbarung - Laderaumzuschlag // Mautdifferenz // SBfU-Bescheinigung f. Umsatzsteuerzwecke // Differenz Frachtzu/ abschlag');
+});
+
 test('processDachser: SNK_DL=75 K1AV stays Speditionskosten gem. Text', () => {
   // The 75-code branch returns before the residual logic; a bundled residual of
   // 70 must not be mistaken for waiting time.
@@ -178,6 +286,9 @@ test('phraseToKey: computed Dachser SNK phrases resolve to their template keys',
   assert.equal(e.phraseToKey('Wartezeit 12h á 65 EUR, ok?'), 'tpl_wartezeit');
   assert.equal(e.phraseToKey('931,15 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
   assert.equal(e.phraseToKey('1200,50 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
+  // An integer amount has no cents, and the auditor still writes it in the same
+  // shape (bundle 2026-10-19 row 23: SNK_DL 921, truth "921 Kosten für ...").
+  assert.equal(e.phraseToKey('921 Kosten für 2.Zustellung etc. ok?'), 'tpl_zustellungKosten');
 });
 
 test('processDachser: equal weights with positive FR above 0.08 and no other triggers -> Frachtdifferenz', () => {
@@ -229,6 +340,21 @@ test('processDachser: weights differ but in same tier with positive FR -> Fracht
 test('processDachser: weights differ but small positive FR delta (< 1.0) -> Frachtdifferenz', () => {
   const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg: 54, vkg_dl: 55 };
   const ws = makeRow(R, { 50: 10, 51: '73.31', 52: '0.09', 53: '194', 54: '194', 55: '109' });
+  assert.equal(e.processDachser(ws, R, cols), 'Frachtdifferenz');
+});
+
+test('processDachser: sub-kilo weight gap inside one tier -> abweichender Gewichte', () => {
+  // Bundle 2026-10-19 row 411: Brutto 68.533 vs Volumen kg DL 68 (both tier 100),
+  // FR 0.56. The weights disagree by more than rounding, so the auditor names the
+  // weight even though the tier table prices the two the same.
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, tz: 55, serv_art: 56, sachkonto: 35 };
+  const ws = makeRow(R, { 50: 10, 51: '57.41', 52: '0.56', 53: '68.533', 54: '68', 55: '0.1', 56: 'DA01', 35: 'X' });
+  assert.equal(e.processDachser(ws, R, cols), 'Differenz aufgrund abweichender Gewichte');
+});
+
+test('processDachser: a weight gap under 0.05 kg on the same tier keeps Frachtdifferenz', () => {
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54 };
+  const ws = makeRow(R, { 50: 10, 51: '57.41', 52: '0.56', 53: '68.53', 54: '68.5' });
   assert.equal(e.processDachser(ws, R, cols), 'Frachtdifferenz');
 });
 
@@ -2597,10 +2723,11 @@ test('processDachser: FR wording comes from the rate cards, not the EXP lane pro
    move a row, and it documents the 13 rows where the sheet's own wording is
    wrong (marked SF here, confirmed by the user against the cards).
 
-   Skipped when the local ratecard plaintext is absent — a plain clone ships only
+   Skipped when the local ratecard plaintext is absent: a plain clone ships only
    the encrypted bundle, so the fixture cannot be evaluated there. */
-test('processDachser: Sonderfahrt / bisherigen matches the confirmed 50-row table', () => {
-  if (!e.DACHSER_RATECARDS) return;
+test('processDachser: Sonderfahrt / bisherigen matches the confirmed 50-row table', {
+  skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
+}, () => {
   const rows = JSON.parse(
     readFileSync(new URL('./fixtures/dachser-sonderfahrt-rows.json', import.meta.url), 'utf8'));
   const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, abg_land: 55,
@@ -2625,6 +2752,43 @@ test('processDachser: Sonderfahrt / bisherigen matches the confirmed 50-row tabl
   assert.deepEqual(mismatches, [], mismatches.join('\n'));
 });
 
+test('processDachser: DA_SONDERFAHRT_S carries the 110 add-on', () => {
+  /* Pure code, so this runs on a card-less clone too: dropping 110 from the
+     set must fail here even when the 20261019 row 201 card test is skipped.
+     The order is pinned as well, so a reshuffle has to be deliberate. */
+  const set = e.evalInContext('DA_SONDERFAHRT_S');
+  assert.ok(set.includes(110), 'DA_SONDERFAHRT_S must carry the 110 add-on');
+  assert.deepEqual(Array.from(set), [180, 150, 120, 90, 110]);
+});
+
+test('processDachser: the 110 Sonderfahrt add-on is pinned by 20261019 row 201', {
+  skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
+}, () => {
+  /* Row 201 is the only witness for 110: FR_DL 162.70 minus 110 leaves 52.70,
+     which lands on the NEW PL1 lane 52.71 (0.5 tolerance). Drop 110 from the
+     set and the row falls through to FR_Tar 51.17, an exact OLD PL1 hit, so it
+     reports the bisherigen wording instead. */
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg: 54, vkg_dl: 55,
+                 abg_land: 56, empf_land: 57, fr_dl: 58, fr_tar: 59, maut: 60 };
+  const ws = makeRow(R, {
+    50: 10, 51: '69.74', 52: '111.53', 53: '60', 54: '0', 55: '60',
+    56: 'DE', 57: 'PL', 58: '162.70', 59: '51.17', 60: '-3.25',
+  });
+  assert.equal(e.processDachser(ws, R, cols), 'Mautdifferenz // Sonderfahrt');
+
+  /* Why 110 and not 120: 162.70 - 120 leaves 42.70, short of every NEW PL1
+     lane by about 10 EUR. The card values are pinned too, so a regenerated
+     card cannot silently make 120 fit. */
+  const bracket = e.DACHSER_RATECARDS.new.brackets.find(b => b.von <= 60 && b.bis >= 60);
+  assert.ok(bracket, 'the NEW card has a bracket covering 60 kg');
+  const lanes = ['PL1 Polen', 'PL2 Polen', 'PL3 Polen'].map(k => bracket.lanes[k]);
+  assert.deepEqual(lanes, [52.71, 54.33, 55.97]);
+  assert.ok(!lanes.some(v => Math.abs(v - (162.70 - 120)) <= 0.5),
+    '120 leaves 42.70, which must not match a NEW PL1 lane');
+  assert.ok(lanes.some(v => Math.abs(v - (162.70 - 110)) <= 0.5),
+    '110 leaves 52.70, which matches NEW PL1 52.71');
+});
+
 test('processDachser: without the ratecards the FR note falls back, it does not guess', () => {
   /* The bundles ship encrypted, so a locked page has no DACHSER_RATECARDS. The
      branch must then keep the previous wording rather than emitting Sonderfahrt
@@ -2646,8 +2810,9 @@ test('processDachser: without the ratecards the FR note falls back, it does not 
   }
 });
 
-test('processDachser: K1AU Sonderfahrt from the rate cards beats bundling and doppelt90', () => {
-  if (!e.DACHSER_RATECARDS) return;
+test('processDachser: K1AU Sonderfahrt from the rate cards beats bundling and doppelt90', {
+  skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
+}, () => {
   const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, abg_land: 55,
                  empf_land: 56, serv_art: 57, fr_dl: 58, fr_tar: 59 };
   let ws = makeRow(R, { 3: '1', 50: 10, 51: '98.91', 52: '89.99', 53: '16', 54: '16',
@@ -2673,4 +2838,296 @@ test('processDachser: without the ratecards a K1AU |FR-90| row keeps the doppelt
   } finally {
     e.setDachserRatecards(saved);
   }
+});
+
+/* ── Dachser Referenz count: domestic card + PLZ zone table ───────────────────
+   The auditor's "Referenz wird Nx abgerechnet" counts the whole national-card
+   zone prices that make up FR Kosten DL itself: 20261019 row 429 reads 5x
+   because five zone 2 prices reach its 190.50. The arm is terminal, so the note
+   stands alone and fires only when no earlier FR branch owns the row.
+
+   Three gates carry the rule and all are pinned below: the tariff copy must be
+   the card price of the row's own weight bracket (20261013 row 351 decomposes
+   but fails here), the decomposition must be unique at the smallest count
+   (ambiguity is silence, not a guess), and FR Kosten DL must not itself be one
+   zone price (20260923 row 126: one shipment at its own weight, not a
+   duplicate). Three truth-labelled rows stay out of
+   reach because they are not domestic: 20260904 row 6, 20261013 rows 29 and
+   275.
+
+   The synthetic card gives the gates room: zone 1 prices 10/15/20 across the
+   three brackets, zone 2 30/40/15, zone 3 10/10/10 (one distinct price, so a
+   two-copy reading can never be unique). */
+const REF_COLS = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54,
+  abg_land: 55, empf_land: 56, empf_plz: 57, fr_dl: 58, fr_tar: 59, maut: 60,
+  referenz3: 61, anz_sdg: 62, serv_art: 63, exp: 64, exp_dl: 65 };
+const REF_CARD = {
+  schema: 'dachser-ratecards/v1',
+  national: {
+    schema: 'dachser-national-ratecard/v1',
+    source: 'synthetic',
+    plz_source: 'synthetic',
+    capped_at_bis: 150,
+    brackets: [
+      { bis: 50, zones: { 1: 10, 2: 30, 3: 10 } },
+      { bis: 100, zones: { 1: 15, 2: 40, 3: 10 } },
+      { bis: 150, zones: { 1: 20, 2: 15, 3: 10 } },
+    ],
+    plz: { '01': '1', '02': '2', '03': '3' },
+  },
+};
+function refRow(cells) {
+  return makeRow(R, Object.assign(
+    { 50: 10, 51: '98.91', 52: '15', 53: '40', 54: '40', 55: 'DE', 56: 'DE',
+      57: '01067', 58: '25', 59: '10' }, cells));
+}
+function withRefCard(fn) {
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(REF_CARD);
+    return fn();
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+}
+
+test('processDachser: the Referenz note stands alone when it fires', () => {
+  /* Mautdifferenz and Produktzuschlag are decided before the FR chain, and the
+     20261019 cells carry both segments beside the count. The finding is
+     terminal: the row answers with the Referenz phrase only. */
+  withRefCard(() => {
+    const ws = refRow({ 60: '2.5', 64: '5', 65: '10' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Referenz wird 2x abgerechnet');
+  });
+});
+
+test('processDachser: the sum need not include the row\'s own bracket cell', () => {
+  /* 120 kg is the <=150 kg bracket, so the tariff copy is 20.00 while the two
+     whole copies are 10.00 + 15.00. Counting the delta instead would read 5.00
+     and find nothing (20261019 row 336). */
+  withRefCard(() => {
+    const ws = refRow({ 52: '5', 53: '120', 54: '120', 58: '25', 59: '20' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Referenz wird 2x abgerechnet');
+  });
+});
+
+test('processDachser: three whole copies read as 3x', () => {
+  /* 55 = 15 + 20 + 20, the only three-price decomposition of zone 1. */
+  withRefCard(() => {
+    const ws = refRow({ 52: '45', 58: '55' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Referenz wird 3x abgerechnet');
+  });
+});
+
+test('processDachser: an ambiguous decomposition stays silent', () => {
+  /* 30 is both 10 + 20 and 15 + 15: two decompositions at the smallest count of
+     2, so the decomposition is not unique and the row keeps the weight wording
+     instead of picking one. */
+  withRefCard(() => {
+    const ws = refRow({ 52: '20', 58: '30' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
+  });
+});
+
+test('processDachser: five whole copies read as 5x, six stay silent', () => {
+  /* 95 = 15 + 20 + 20 + 20 + 20 is the only five-copy reading (20261019 row
+     429), and 120 = 6 x 20 the only six-copy one, so a cap of 6 reads 6x. */
+  withRefCard(() => {
+    assert.equal(e.processDachser(refRow({ 52: '85', 58: '95' }), R, REF_COLS),
+      'Referenz wird 5x abgerechnet');
+    assert.equal(e.processDachser(refRow({ 52: '95', 58: '120' }), R, REF_COLS),
+      'Frachtdifferenz');
+  });
+});
+
+test('processDachser: a PLZ prefix missing from the zone table stays silent', () => {
+  withRefCard(() => {
+    const ws = refRow({ 52: '30', 57: '99999', 58: '40' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
+  });
+});
+
+test('processDachser: a non-domestic lane never carries the Referenz note', () => {
+  /* 20261019 row 201 (DE->PL) is the Sonderfahrt 110 witness; its tariff copy
+     is a lane price, not a zone price, so the domestic count must not fire. */
+  withRefCard(() => {
+    const ws = refRow({ 52: '111.53', 56: 'PL', 57: '35-025', 58: '162.7', 59: '51.17' });
+    assert.equal(e.processDachser(ws, R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  });
+});
+
+test('processDachser: a tariff copy off the ladder stays silent', () => {
+  /* The 25.00 sum would decompose, but 10.50 is not a zone 1 ladder cell. */
+  withRefCard(() => {
+    const ws = refRow({ 52: '24.9', 58: '35.4', 59: '10.5' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
+  });
+});
+
+test('processDachser: the Referenz arm never steals a flagged row', () => {
+  /* Each of these rows would pass the count gate, but the earlier branch owns
+     the note: multi-consignment, the ZW intermediate consignee, and K1AS. */
+  withRefCard(() => {
+    assert.equal(e.processDachser(refRow({ 62: '2' }), R, REF_COLS),
+      'hätte gebündelt werden können?');
+    assert.equal(e.processDachser(refRow({ 61: 'ZW' }), R, REF_COLS),
+      'Differenz aufgrund abweichender Zwischenempfänger 01067');
+    assert.equal(e.processDachser(refRow({ 63: 'K1AS' }), R, REF_COLS),
+      'Sonderfahrt');
+  });
+});
+
+test('processDachser: a weight above the card\'s last bracket stays silent', () => {
+  /* Brutto kg 200 has no ladder row (the synthetic card ends at 150), so there
+     is no cell to compare the tariff copy against and the arm stays off. */
+  withRefCard(() => {
+    const ws = refRow({ 53: '200', 54: '200', 58: '35', 59: '20' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
+  });
+});
+
+test('processDachser: a freight below the tariff copy stays silent', () => {
+  /* fr_dl 5 under fr_tar 15 is a credit, not a second billed copy: the count
+     stays off and the row keeps its weight wording. */
+  withRefCard(() => {
+    const ws = refRow({ 52: '-10', 53: '100', 54: '100', 58: '5', 59: '15' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Differenz aufgrund abweichender Gewichte');
+  });
+});
+
+test('processDachser: a copy is accepted at exactly 0.08 off, not at 0.09', () => {
+  /* 20261019 row 458 needs the whole 0.08; 0.11 would change row 474's count. */
+  withRefCard(() => {
+    assert.equal(e.processDachser(refRow({ 52: '15.08', 58: '25.08' }), R, REF_COLS),
+      'Referenz wird 2x abgerechnet');
+    assert.equal(e.processDachser(refRow({ 52: '15.09', 58: '25.09' }), R, REF_COLS),
+      'Frachtdifferenz');
+  });
+});
+
+test('processDachser: without the national card the Referenz note stays off', () => {
+  /* A locked page has no DACHSER_RATECARDS, and an older bundle has no
+     `national` key at all. Both must fall back to the weight wording. */
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(null);
+    assert.equal(e.processDachser(refRow({}), R, REF_COLS), 'Frachtdifferenz');
+    e.setDachserRatecards({ schema: 'dachser-ratecards/v1', new: { brackets: [] }, old: { brackets: [] } });
+    assert.equal(e.processDachser(refRow({}), R, REF_COLS), 'Frachtdifferenz');
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
+test('processDachser: the Referenz table matches the confirmed sheet rows', {
+  skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
+}, () => {
+  /* 17 rows: the 13 the rule must label (20261019 336/363/373/399/429/458/466/
+     467/474/478, 20261013 161/174, 20260903 303) and the 4 that fence it:
+     351 and 20260903 250/270 fail the tariff-copy gate, 201 is not domestic.
+     Each labelled row must answer with the Referenz phrase alone. */
+  const rows = JSON.parse(
+    readFileSync(new URL('./fixtures/dachser-referenz-rows.json', import.meta.url), 'utf8'));
+  const mismatches = [];
+  for (const x of rows) {
+    const ws = makeRow(R, { 50: 10, 51: '98.91', 52: String(x.fr_dl - x.fr_tar),
+      53: String(x.kg), 54: String(x.kg), 55: x.abg, 56: x.empf, 57: x.plz,
+      58: String(x.fr_dl), 59: String(x.fr_tar) });
+    const out = String(e.processDachser(ws, R, REF_COLS) || '');
+    const want = x.want === 'none' ? undefined : 'Referenz wird ' + x.want.slice(1) + 'x abgerechnet';
+    const ok = want === undefined
+      ? !/Referenz wird \d+x abgerechnet/.test(out)
+      : out === want;
+    if (!ok) {
+      mismatches.push(`${x.tag} r${x.row} plz${x.plz} kg${x.kg} DL=${x.fr_dl} TAR=${x.fr_tar} want=${want || x.want} got=${out || 'none'} (${x.why})`);
+    }
+  }
+  assert.deepEqual(mismatches, [], mismatches.join('\n'));
+});
+
+test('processDachser: a FR Kosten DL that is one zone price is not a duplicate', {
+  skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
+}, () => {
+  /* 20260923 row 126, cell for cell: zone 4 through PLZ 80839, Brutto 483 kg,
+     FR Kosten DL 216.90 and FR Kosten lt. Tarif 105.98 (the row's <=500 kg cell).
+     The freight is the <=1200 kg cell 216.93 within 0.03, so Dachser billed one
+     shipment at its own weight; the sum gate alone would read 3x from 31.60 +
+     49.82 + 135.53 = 216.95, 0.05 inside its bound. The sheet says Mautdifferenz
+     // abweichender Gewichte, and the cascade has to keep reaching it. */
+  const ws = makeRow(R, { 50: 10, 51: '126.6', 52: '110.92', 53: '483',
+    54: '1185', 55: 'DE', 56: 'DE', 57: '80839', 58: '216.9', 59: '105.98',
+    60: '12.22', 62: '1', 63: 'DA01' });
+  const out = String(e.processDachser(ws, R, REF_COLS) || '');
+  assert.equal(out, 'Mautdifferenz // Differenz aufgrund abweichender Gewichte');
+  assert.ok(!/Referenz wird \d+x abgerechnet/.test(out), out);
+});
+
+test('processDachser: the ladder guard silences a FR Kosten DL equal to one copy', () => {
+  /* FR DL 20.00 is the zone 1 <=150 kg cell and 20 = 10 + 10 is a unique two-copy
+     reading, so only the ladder guard keeps this row on its freight wording. */
+  withRefCard(() => {
+    const ws = refRow({ 52: '10', 58: '20', 59: '10' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Frachtdifferenz');
+  });
+});
+
+test('dachser ratecard asset: the national card is nine zones, capped and sound', {
+  skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
+}, () => {
+  /* Guards the builder: a corrupt upper bracket or a lost zero-padded prefix
+     would otherwise surface as a wrong price instead of a missing one. */
+  const nat = e.DACHSER_RATECARDS.national;
+  for (const b of nat.brackets) {
+    assert.deepEqual(Object.keys(b.zones).sort(), ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
+      `bracket <=${b.bis} kg must carry all nine zones`);
+    for (const z of Object.keys(b.zones)) {
+      assert.ok(b.zones[z] < 1000, `zone ${z} at <=${b.bis} kg is ${b.zones[z]}, the workbook lost its decimal separator`);
+    }
+  }
+  /* The supplied workbook loses its decimal separator above capped_at_bis; every
+     bracket from recovered_from_bis on was repaired and must still climb. */
+  assert.ok(nat.recovered_from_bis > nat.capped_at_bis,
+    'the recovered band starts after the last source-sound bracket');
+  assert.equal(nat.withheld_from_bis, null, 'the repaired band is kept, nothing is withheld');
+  let prev = null;
+  for (const b of nat.brackets) {
+    if (prev) {
+      for (const z of Object.keys(b.zones)) {
+        assert.ok(b.zones[z] >= prev[z],
+          `zone ${z} drops from ${prev[z]} to ${b.zones[z]} at <=${b.bis} kg`);
+      }
+    }
+    prev = b.zones;
+  }
+  for (const k of Object.keys(nat.plz)) {
+    assert.match(k, /^\d{2}$/, `PLZ prefix ${k} must be zero-padded to two digits`);
+    assert.match(nat.plz[k], /^[1-9]$/, `prefix ${k} must map to a zone digit`);
+  }
+});
+
+test('phraseToKey: a counted Referenz phrase resolves to the template', () => {
+  assert.equal(e.phraseToKey('Referenz wird 2x abgerechnet'), 'tpl_referenzNx');
+  assert.equal(e.phraseToKey('Referenz wird 3x abgerechnet'), 'tpl_referenzNx');
+  assert.equal(e.phraseToKey('Referenz wird x abgerechnet'), null);
+});
+
+test('collectInputsForRow: dachser exports the FR pair without re-keying the row', () => {
+  /* A bundle-trained model needs FR_DL / FR_Tar to replay the Referenz gate,
+     but both are excluded from the uid seed so every historical uid survives. */
+  const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54,
+    empf_plz: 57, fr_dl: 58, fr_tar: 59 };
+  const ws = makeRow(R, { 50: 10, 51: '98.91', 52: '40', 53: '40', 54: '40',
+    57: '01067', 58: '40', 59: '10' });
+  const inputs = e.collectInputsForRow('dachser', ws, R, cols);
+  assert.equal(inputs.fr_dl, '40');
+  assert.equal(inputs.fr_tar, '10');
+  const before = Object.assign({}, inputs);
+  delete before.fr_dl;
+  delete before.fr_tar;
+  const withPair = e.rowUid('dachser', 'sheet', R, inputs);
+  assert.equal(withPair, e.rowUid('dachser', 'sheet', R, before));
+  /* Wackler already exports these keys, so they must not be excluded globally. */
+  assert.notEqual(e.rowUid('wackler', 'sheet', R, { fr_dl: '40', fr_tar: '10' }),
+    e.rowUid('wackler', 'sheet', R, {}));
 });
