@@ -13,10 +13,10 @@ This repository integrates the v5 Anmerkung hardening into `assets/anmerkung.js`
 
 `npm test`:
 
-- 596 tests on a machine with the plaintext `assets/honold-tariff.js` and `assets/dachser-ratecards.js`
-- 596 passed
+- 601 tests on a machine with the plaintext `assets/honold-tariff.js` and `assets/dachser-ratecards.js`
+- 601 passed
 - 0 failed
-- 10 of the 596 need a local plaintext asset. The 4 Honold workbook replays (20379045, 20381523, 20380293, 20382640) skip without `assets/honold-tariff.js`; the 6 Dachser card tests (the Sonderfahrt/bisherigen 50-row table, the 110 pin for 20261019 row 201, the K1AU card test, the Referenz table, the FR Kosten DL one-zone-price guard, the national-card asset guard) skip without `assets/dachser-ratecards.js`. A clone with neither reports 586 passed, 10 skipped.
+- 10 of the 601 need a local plaintext asset. The 4 Honold workbook replays (20379045, 20381523, 20380293, 20382640) skip without `assets/honold-tariff.js`; the 6 Dachser card tests (the Sonderfahrt/bisherigen 50-row table, the 110 pin for 20261019 row 201, the K1AU card test, the Referenz table, the FR Kosten DL one-zone-price guard, the national-card asset guard) skip without `assets/dachser-ratecards.js`. A clone with neither reports 591 passed, 10 skipped.
 
 The integration manifest is refreshed against the current tracked source.
 

@@ -7,8 +7,9 @@
    this loader decrypts it with a team passphrase (asked once, kept in
    localStorage) and defines WACKLER_RATECARD / WACKLER_NATIONAL_RATECARD
    on the page, then tells the engine via wacklerRatecardsReady().
-   The passphrase is shared with the Honold tariff loader, so one unlock
-   control covers both.
+   The passphrase is shared with the Honold and Dachser loaders, and the
+   Rates card (assets/tariff-status.js) owns the single unlock control;
+   this loader only reports the state of its two datasets.
    Without the passphrase the engine runs normally — Wackler costing
    simply stays off (its existing graceful no-op).
    ══════════════════════════════════════════════════════════════ */
@@ -65,34 +66,6 @@
     return wired ? ['ready', ''] : ['unwired', 'engine-hook-missing'];
   }
 
-  function showUnlockButton() {
-    if (document.getElementById('tariffUnlockBtn')) return;
-    var btn = document.createElement('button');
-    btn.id = 'tariffUnlockBtn';
-    btn.type = 'button';
-    /* The lock is the affordance, so it stays in the label as a role marker rather
-       than decoration; one control covers both datasets, which share a passphrase. */
-    btn.textContent = '🔒 Unlock tariff data';
-    btn.title = 'Enter the team passphrase to load the encrypted tariff data';
-    btn.setAttribute('aria-label', 'Unlock tariff data with the team passphrase');
-    /* Styling lives in anmerkung.css / anmerkung-pro.css, next to the rest of the
-       page's controls. Building it here with inline cssText put this one control
-       outside the design system: it kept its own radius and font under the pro
-       skin and could not follow the theme. */
-    btn.className = 'wackler-unlock-btn';
-    btn.onclick = function () {
-      var p = prompt('Tariff passphrase:');
-      if (!p) return;
-      try { localStorage.setItem(LS_KEY, p); } catch (e) {}
-      location.reload();
-    };
-    /* The Rates card is where a user learns which datasets are locked, so the control
-       belongs there; a page without that card keeps the floating fallback. */
-    var row = document.getElementById('tariffActions');
-    if (row && typeof row.insertBefore === 'function') row.insertBefore(btn, row.firstChild);
-    else document.body.appendChild(btn);
-  }
-
   async function boot() {
     var pass = null;
     try {
@@ -108,7 +81,7 @@
         }
       }
     } catch (e) {}
-    if (!pass) { reportBoth('locked', ''); showUnlockButton(); return; }
+    if (!pass) { reportBoth('locked', ''); return; }
     /* An insecure origin has no crypto.subtle, so decryption cannot run. That is
        not a passphrase problem: keep the key and stay quiet. */
     if (!(root.crypto && root.crypto.subtle)) { reportBoth('insecure', 'no-crypto'); return; }
@@ -136,7 +109,6 @@
       if (e && e.name === 'OperationError') {
         try { localStorage.removeItem(LS_KEY); } catch (e2) {}
         reportBoth('locked', 'wrong-passphrase');
-        showUnlockButton();
       } else {
         reportBoth('error', 'bad-artifact');
       }

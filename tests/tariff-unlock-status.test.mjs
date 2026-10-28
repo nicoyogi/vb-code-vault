@@ -58,20 +58,9 @@ function makeDialog() {
   };
 }
 
-function makeActionsRow() {
-  /* Close is the existing child, so an insert at firstChild proves the unlock
-     control precedes it in the action row. */
-  const closeStub = { textContent: 'Close' };
-  const inserted = [];
-  const row = { id: 'tariffActions', firstChild: closeStub };
-  return { row, closeStub, inserted };
-}
-
-function makeContext(store, fetchImpl, opts = {}) {
+function makeContext(store, fetchImpl) {
   const appended = [];
   const byId = new Map();
-  const actions = opts.tariffActions ? makeActionsRow() : null;
-  if (actions) byId.set('tariffActions', actions.row);
   byId.set('tariffStatus', makeChip(DECLARED));
   byId.set('tariffStatusValue', { textContent: '' });
   byId.set('tariffStatusDetail', { textContent: '' });
@@ -86,23 +75,8 @@ function makeContext(store, fetchImpl, opts = {}) {
     byId.set(`tariffRowState-${k}`, { textContent: '' });
     byId.set(`tariffRowWhy-${k}`, { textContent: '' });
   });
-  /* A successful insertion puts the element in the document, so the second loader
-     must find it by id and stay quiet instead of adding a second control. */
-  if (actions) {
-    actions.row.insertBefore = (el, ref) => {
-      actions.inserted.push([el, ref]);
-      if (el.id) byId.set(el.id, el);
-    };
-  }
   const document = {
     getElementById: (id) => byId.get(id) || null,
-    createElement: () => {
-      const el = {
-        id: '', className: '', onclick: null, attrs: {},
-        setAttribute: (k, v) => { el.attrs[k] = String(v); },
-      };
-      return el;
-    },
     body: {
       appendChild: (el) => {
         appended.push(el);
@@ -132,7 +106,7 @@ function makeContext(store, fetchImpl, opts = {}) {
     /* assets/dachser-ratecard-loader.js calls root.addEventListener unguarded. */
     addEventListener: () => {},
   });
-  return { context, appended, byId, inserted: actions ? actions.inserted : [], row: actions && actions.row };
+  return { context, appended, byId };
 }
 
 function load(name, context) {
@@ -179,14 +153,14 @@ test('unlock status: the dialog rows follow the real loaders', async () => {
   const locked = makeContext(new Map());
   load('tariff-status.js', locked.context);
   loadLoaders(locked.context);
-  await until(() => locked.appended.length === 1);
+  await until(() => DECLARED.split(' ').every((k) => snap(locked.context).states[k].state === 'locked'));
 
   DECLARED.split(' ').forEach((k) => {
     assert.equal(rowState(locked.context, k), 'locked');
     assert.equal(rowWord(locked.context, k), 'locked');
   });
   assert.equal(foot(locked.context).hidden, false);
-  assert.match(foot(locked.context).textContent, /Unlock tariff data/);
+  assert.equal(foot(locked.context).textContent, 'Locked datasets stay off until they are unlocked.');
 });
 
 test('unlock status: a valid passphrase loads all four datasets', async () => {
@@ -211,20 +185,19 @@ test('unlock status: a valid passphrase loads all four datasets', async () => {
   assert.equal(hookCalls, 1);
 });
 
-test('unlock status: no passphrase locks every dataset behind the one button', async () => {
+test('unlock status: no passphrase locks every dataset and creates no button', async () => {
   const store = new Map();
   const { context, appended } = makeContext(store);
   load('tariff-status.js', context);
   loadLoaders(context);
 
-  await until(() => appended.length === 1);
+  await until(() => DECLARED.split(' ').every((k) => snap(context).states[k].state === 'locked'));
 
   const result = snap(context);
   ['wackler-intl', 'wackler-national', 'honold', 'dachser']
     .forEach((k) => assert.equal(result.states[k].state, 'locked'));
   assert.equal(result.aggregate, 'locked');
-  assert.equal(appended.length, 1);
-  assert.equal(appended[0].id, 'tariffUnlockBtn');
+  assert.equal(appended.length, 0);
 });
 
 test('unlock status: a wrong passphrase is reported, and the key is dropped', async () => {
@@ -243,8 +216,7 @@ test('unlock status: a wrong passphrase is reported, and the key is dropped', as
   assert.equal(result.states.honold.detail, 'wrong-passphrase');
   assert.equal(result.aggregate, 'locked');
   assert.equal(store.has(SHARED_KEY), false);
-  assert.equal(appended.length, 1);
-  assert.equal(appended[0].id, 'tariffUnlockBtn');
+  assert.equal(appended.length, 0);
 });
 
 test('unlock status: a Honold bundle the engine cannot consume is error/bundle-empty, never ready', async () => {
@@ -427,45 +399,30 @@ test('unlock status: a hook that returns false is unwired, never ready', async (
   assert.equal(result.aggregate, 'error');
 });
 
-test('unlock status: the unlock control lands in the Rates card action row', async () => {
-  const { context, appended, inserted, row } = makeContext(new Map(), null, { tariffActions: true });
+test('unlock status: the loaders create no unlock control on the locked path', async () => {
+  /* The control is static markup in anmerkung.html; a loader that still creates or
+     appends one would duplicate it on every page that ships the card. */
+  const { context, appended } = makeContext(new Map());
+  load('tariff-status.js', context);
   loadLoaders(context);
 
-  await until(() => inserted.length === 1);
+  await until(() => DECLARED.split(' ').every((k) => snap(context).states[k].state === 'locked'));
 
-  /* Both loaders run; the row branch must create the single shared control and
-     leave the body append as a fallback only. */
-  assert.equal(inserted.length, 1);
-  assert.equal(inserted[0][0].id, 'tariffUnlockBtn');
-  assert.equal(inserted[0][0].textContent, '🔒 Unlock tariff data');
-  assert.equal(inserted[0][0].title, 'Enter the team passphrase to load the encrypted tariff data');
-  assert.equal(inserted[0][0].attrs['aria-label'], 'Unlock tariff data with the team passphrase');
-  assert.equal(inserted[0][1], row.firstChild);
   assert.equal(appended.length, 0);
-});
-
-test('unlock status: a page without the Rates card keeps the floating fallback', async () => {
-  const { context, appended, inserted } = makeContext(new Map());
-  loadLoaders(context);
-
-  await until(() => appended.length === 1);
-
-  assert.equal(inserted.length, 0);
-  assert.equal(appended.length, 1);
-  assert.equal(appended[0].id, 'tariffUnlockBtn');
+  assert.equal(context.document.getElementById('tariffUnlockBtn'), null);
 });
 
 test('unlock status: without the helper the loaders behave exactly as before', async () => {
-  /* No passphrase: the card cannot load, the single unlock button appears. */
+  /* No passphrase: the card cannot load and the loaders create no control. */
   const locked = makeContext(new Map());
   loadLoaders(locked.context);
-  await until(() => locked.appended.length === 1);
-  assert.equal(locked.appended.length, 1);
-  assert.equal(locked.appended[0].id, 'tariffUnlockBtn');
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(locked.appended.length, 0);
+  assert.equal(locked.context.document.getElementById('tariffUnlockBtn'), null);
   assert.equal(locked.context.WACKLER_RATECARD, undefined);
   assert.equal(typeof locked.context.TariffStatus, 'undefined');
 
-  /* With a passphrase: the card loads and no button is shown, still no throw. */
+  /* With a passphrase: the card loads, still no control, no throw. */
   const loaded = makeContext(new Map([[SHARED_KEY, FAKE]]));
   loadLoaders(loaded.context);
   await until(() => loaded.context.WACKLER_RATECARD && loaded.context.HONOLD_TARIFF);

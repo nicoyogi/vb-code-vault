@@ -57,6 +57,15 @@ function makeRow() {
   };
 }
 
+function makeUnlockBtn() {
+  const listeners = {};
+  return {
+    hidden: true,
+    addEventListener: (type, fn) => { listeners[type] = fn; },
+    click: () => listeners.click(),
+  };
+}
+
 function makeAnnounce() {
   const attrs = new Map();
   let text = '';
@@ -69,9 +78,10 @@ function makeAnnounce() {
   };
 }
 
-function renderContext(declared) {
+function renderContext(declared, extra = {}, opts = {}) {
   const chip = makeChip(declared);
   const dlg = makeDialog();
+  const unlockBtn = makeUnlockBtn();
   const els = {
     tariffStatus: chip,
     tariffStatusValue: { textContent: '' },
@@ -80,6 +90,7 @@ function renderContext(declared) {
     dlgTariff: dlg,
     tariffFoot: { hidden: true, textContent: '' },
   };
+  if (opts.unlock !== false) els.tariffUnlockBtn = unlockBtn;
   KEYS.forEach((k) => {
     els['tariffRow-' + k] = makeRow();
     els['tariffRowState-' + k] = { textContent: '' };
@@ -89,8 +100,9 @@ function renderContext(declared) {
   const ctx = load({
     document: { getElementById: (id) => els[id] || null },
     addEventListener: (type, fn) => { listeners[type] = fn; },
+    ...extra,
   });
-  return { ctx, ts: ctx.TariffStatus, chip, dlg, els, listeners };
+  return { ctx, ts: ctx.TariffStatus, chip, dlg, els, listeners, unlockBtn };
 }
 
 const rowState = (els, k) => els['tariffRow-' + k].getAttribute('data-state');
@@ -282,12 +294,93 @@ test('the footer names the unlock control while a dataset is locked', () => {
   assert.equal(els.tariffFoot.textContent, '');
   ts.set('honold', 'locked', '');
   assert.equal(els.tariffFoot.hidden, false);
-  assert.match(els.tariffFoot.textContent, /Unlock tariff data/);
+  assert.equal(els.tariffFoot.textContent, 'Locked datasets stay off until they are unlocked.');
   ts.set('honold', 'locked', 'wrong-passphrase');
   assert.equal(els.tariffFoot.hidden, false);
   ts.set('honold', 'ready', '');
   assert.equal(els.tariffFoot.hidden, true);
   assert.equal(els.tariffFoot.textContent, '');
+});
+
+test('three loaded and one rejected keeps the hint and the unlock control visible', () => {
+  /* The reported screenshot: a rejected passphrase is the state a user can fix,
+     so the control has to be there even though the other datasets loaded. */
+  const { ts, els } = renderContext(ALL);
+  ['wackler-intl', 'wackler-national', 'honold'].forEach((k) => ts.set(k, 'ready', ''));
+  ts.set('dachser', 'locked', 'wrong-passphrase');
+  assert.equal(els.tariffFoot.hidden, false);
+  assert.equal(els.tariffFoot.textContent, 'Locked datasets stay off until they are unlocked.');
+  assert.equal(els.tariffUnlockBtn.hidden, false);
+});
+
+test('the unlock control follows the blocked predicate, not the aggregate', () => {
+  const { ts, els } = renderContext(ALL);
+  KEYS.forEach((k) => ts.set(k, 'ready', ''));
+  assert.equal(els.tariffUnlockBtn.hidden, true);
+  assert.equal(els.tariffFoot.hidden, true);
+  /* A loader reports 'locked' with no detail on its first boot, so the state
+     alone has to offer the control. */
+  ts.set('dachser', 'locked', '');
+  assert.equal(els.tariffUnlockBtn.hidden, false);
+  /* A broken artifact or a missing one cannot be fixed by retyping the key, so
+     offering the control would promise something the page cannot do. */
+  ts.set('dachser', 'error', 'bad-artifact');
+  assert.equal(els.tariffUnlockBtn.hidden, true);
+  ts.set('dachser', 'unavailable', '');
+  assert.equal(els.tariffUnlockBtn.hidden, true);
+});
+
+test('a document without the unlock control still renders and does not throw', () => {
+  const { ts, els } = renderContext(ALL, {}, { unlock: false });
+  assert.equal(els.tariffUnlockBtn, undefined);
+  assert.doesNotThrow(() => ts.set('dachser', 'locked', ''));
+  assert.equal(els.tariffFoot.hidden, false);
+});
+
+test('the wired unlock stores the typed passphrase and reloads', () => {
+  const store = new Map();
+  let reloads = 0;
+  const { unlockBtn } = renderContext(ALL, {
+    prompt: () => 'typed-passphrase',
+    localStorage: {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      setItem: (k, v) => store.set(k, String(v)),
+    },
+    location: { reload: () => { reloads++; } },
+  });
+  unlockBtn.click();
+  assert.equal(store.get('anmerkung_tariff_pass'), 'typed-passphrase');
+  assert.equal(reloads, 1);
+});
+
+test('an empty prompt stores nothing and does not reload', () => {
+  const store = new Map();
+  let reloads = 0;
+  const { unlockBtn } = renderContext(ALL, {
+    prompt: () => '',
+    localStorage: {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      setItem: (k, v) => store.set(k, String(v)),
+    },
+    location: { reload: () => { reloads++; } },
+  });
+  unlockBtn.click();
+  assert.equal(store.size, 0);
+  assert.equal(reloads, 0);
+});
+
+test('a storage write that throws reloads nothing, so the page does not return locked', () => {
+  /* Storage disabled: the write throws, and a reload would land on the same lock. */
+  let reloads = 0;
+  const { ts, unlockBtn } = renderContext(ALL, {
+    prompt: () => 'typed-passphrase',
+    localStorage: { setItem: () => { throw new Error('storage disabled'); } },
+    location: { reload: () => { reloads++; } },
+  });
+  ts.set('dachser', 'locked', '');
+  assert.equal(unlockBtn.hidden, false);
+  assert.doesNotThrow(() => unlockBtn.click());
+  assert.equal(reloads, 0);
 });
 
 test('the chip opens the dialog once and tracks aria-expanded', () => {
@@ -331,14 +424,34 @@ test('the static dialog rows are exactly the declared datasets, in order', () =>
       assert.ok(dialog.includes(`id="${prefix}-${k}"`), `anmerkung.html has no id="${prefix}-${k}"`);
     }
   }
-  /* The loaders insert the unlock control into this row at runtime, so the markup
-     needs exactly one row and must not ship a second, static button. */
   assert.equal(Array.from(dialog.matchAll(/id="tariffActions"/g)).length, 1);
   const actions = dialog.match(/id="tariffActions"[\s\S]*?<\/div>/)[0];
   assert.match(actions, /<button[^>]*>\s*Close\s*<\/button>/, 'the Close button is not inside #tariffActions');
   assert.ok(dialog.includes('id="tariffFoot"'), 'anmerkung.html has no id="tariffFoot"');
-  assert.ok(!dialog.includes('tariffUnlockBtn'), 'the unlock control is created by the loaders, not markup');
-  assert.ok(!dialog.includes('Unlock tariff data'), 'the unlock label belongs to the loaders, not markup');
+  /* The control is static markup now, so the page ships exactly one and it is
+     already hidden until a dataset is blocked. */
+  assert.equal(Array.from(dialog.matchAll(/id="tariffUnlockBtn"/g)).length, 1,
+    'anmerkung.html must carry exactly one #tariffUnlockBtn');
+  const unlockAt = actions.indexOf('id="tariffUnlockBtn"');
+  const closeAt = actions.indexOf('Close');
+  assert.ok(unlockAt >= 0, 'the unlock control is not inside #tariffActions');
+  assert.ok(unlockAt < closeAt, 'the unlock control must precede the Close button');
+  const unlockTag = actions.match(/<button[^>]*id="tariffUnlockBtn"[^>]*>/)[0];
+  assert.match(unlockTag, /\bhidden\b/, 'the unlock control must start hidden');
+  /* Drops the accessible name back to the emoji if the label goes missing. */
+  assert.match(unlockTag, /aria-label="Unlock tariff data with the team passphrase"/,
+    'the unlock control must carry its accessible name');
+  assert.match(actions, /id="tariffUnlockBtn"[^>]*>[^<]*Unlock tariff data/);
+  /* The handler is wired in assets/tariff-status.js; inline JS would escape the
+     null-guarded wire path and the CSP. */
+  assert.ok(!/\bonclick\b/.test(unlockTag), 'the unlock control must not carry an onclick attribute');
+  /* tariff-status.js must boot first: without it every report() no-ops and
+     settle() marks all four datasets missing, so the chip shows "problem". */
+  const statusAt = html.indexOf('<script src="assets/tariff-status.js"');
+  for (const loader of ['wackler-ratecard-loader.js', 'honold-tariff-loader.js', 'dachser-ratecard-loader.js']) {
+    assert.ok(statusAt >= 0 && statusAt < html.indexOf(`<script src="assets/${loader}"`),
+      `assets/tariff-status.js must load before assets/${loader}`);
+  }
   /* Focus lands on the heading, so the dialog carries exactly one autofocus and it
      sits on the tabindex="-1" anchor, never on the Close button. */
   assert.equal(Array.from(dialog.matchAll(/\bautofocus\b/g)).length, 1, 'anmerkung.html must carry exactly one autofocus in #dlgTariff');

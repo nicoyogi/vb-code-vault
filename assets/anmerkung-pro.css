@@ -1257,30 +1257,22 @@ body.theme-pro.theme-light #main > .btn-preview { color: #1e40af; }
   }
 }
 
-/* ── WACKLER RATE UNLOCK ── */
-/* Same control under the pro skin: matches .tester-btn / .preview-close, which are
-   this page's small-button language (7px radius, Inter, --surface3) rather than the
-   mystic pill. */
-body.theme-pro .wackler-unlock-btn {
+/* ── TARIFF UNLOCK ── */
+/* The Rates card's control (assets/tariff-status.js) under the pro skin: matches
+   .tester-btn / .preview-close, which are this page's small-button language (7px
+   radius, Syne, --surface3 fill) rather than the mystic pill. Border and text color
+   come from the base rule, so the accent treatment survives here. */
+body.theme-pro .tariff-unlock-btn {
   min-height: 44px;
   padding: 10px 16px;
   border-radius: 7px;
-  border: 1px solid var(--border2);
   background: var(--surface3);
-  color: var(--text2);
   font-family: var(--syne);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0;
 }
-body.theme-pro > .wackler-unlock-btn {
-  box-shadow: 0 6px 18px rgba(0,0,0,.22);
-}
-body.theme-pro .wackler-unlock-btn:hover {
-  color: var(--text);
-  border-color: var(--accent);
-  background: var(--surface2);
-}
-body.theme-pro.theme-light > .wackler-unlock-btn {
-  box-shadow: 0 6px 18px rgba(15,23,42,.12);
+/* The pro fill is more specific than the base hover, so the tint is restated here. */
+body.theme-pro .tariff-unlock-btn:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
