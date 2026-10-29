@@ -1026,10 +1026,12 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar){
      4x off S=180 and 5x off S=90. The Brutto kg basis is an assumption, not a
      measurement: FR Kosten lt. Tarif is the Brutto-priced column at the call
      site, so the lane is read there too, while daRatecardSonderfahrtS and
-     daRatecardMatch use Volumen kg DL. Unproven either way: 61 international
-     released rows carry a Brutto different from Volumen kg DL, none has FR
-     Kosten lt. Tarif within 0.02 of a lane at either bracket, and the one
-     witness has both weights at 179. */
+     daRatecardMatch use Volumen kg DL. Unproven either way: over the ten dated
+     workbooks 290 released non-domestic rows have both weights above 0, 68 of
+     them carry a Brutto different from Volumen kg DL (67 by 0.05 or more, 25 in
+     a different bracket), 21 of the 25 sit within 0.02 of a lane at the Brutto
+     bracket and none at the DL bracket, and none of the 68 yields a count under
+     either basis. The one witness has both weights at 179. */
   const nl=daRatecardLanes(cards.nw,kg,cc), nm=[];
   for(const k in nl){const q=nl[k];
     if(q>0&&Math.abs(q-frTar)<=DA_NAT_PRICE_TOL+1e-9&&nm.indexOf(q)<0)nm.push(q);}

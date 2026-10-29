@@ -11,8 +11,8 @@
  "files": [
   {
    "path": "assets/anmerkung.js",
-   "bytes": 397814,
-   "sha256": "28107a66c146c94708b5f2622ac52458d77bcbbd400b6aff4a196202d0048198"
+   "bytes": 398008,
+   "sha256": "cf4d4e9de467915218fed8a550e869a5d8a95d0876628e504e88fd3b0697d621"
   },
   {
    "path": "tests/harness/load-engine.mjs",

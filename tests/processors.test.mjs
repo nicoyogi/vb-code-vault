@@ -3292,8 +3292,10 @@ test('processDachser: the copies can sit on a Sonderfahrt add-on', () => {
      68.81 (the NEW PL1 lane at 151-200 kg). 227.60 - 90 = 137.60 against
      2 x 68.81 = 137.62, residual 0.02, so the add-on is counted in the copies.
      At 227.70 the residual is exactly 0.08 and still fires; at 227.71 it is 0.09
-     and the row keeps the bisherigen wording. Mutation: testing FR_DL alone
-     instead of FR_DL - S leaves the witness on that wording. */
+     and the row keeps the bisherigen wording. The 227.70 boundary is a synthetic
+     pin: on the real card OLD PL1 801-900 prices 227.77, inside the 0.08 ladder
+     tolerance, so the guard fires first. Mutation: testing FR_DL alone instead
+     of FR_DL - S leaves the witness on that wording. */
   withIntlCard(() => {
     const abg = { 52: '158.79', 53: '179', 54: '179', 56: 'PL', 57: '41-250',
       58: '227.6', 59: '68.81' };
@@ -3312,8 +3314,9 @@ test('processDachser: two add-ons that give different counts stay silent', () =>
      175 kg with FR Kosten DL 539.84 then decomposes off two S values:
      539.84 - 180 = 359.84 = 4 x 89.96, and 539.84 - 90 = 449.84 against
      5 x 89.96 = 449.80, residual 0.04. The counts disagree, so the arm declines
-     and the row keeps its wording, exactly as daNationalCopies does. Mutation:
-     returning the first matching S reads "Referenz wird 4x abgerechnet". */
+     and the row keeps its wording; daNationalCopies differs, since it returns the
+     smallest unique count and never inspects a larger one. Mutation: returning
+     the first matching S reads "Referenz wird 4x abgerechnet". */
   const card = { ...INTL_CARD, new: { brackets: [{ von: 1, bis: 2000,
     lanes: { ...INTL_LANES, 'IT Italien 1': 89.96 } }] } };
   const saved = e.DACHSER_RATECARDS;
