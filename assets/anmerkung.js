@@ -1028,10 +1028,12 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar){
      site, so the lane is read there too, while daRatecardSonderfahrtS and
      daRatecardMatch use Volumen kg DL. Unproven either way: over the ten dated
      workbooks 290 released non-domestic rows have both weights above 0, 68 of
-     them carry a Brutto different from Volumen kg DL (67 by 0.05 or more, 25 in
-     a different bracket), 21 of the 25 sit within 0.02 of a lane at the Brutto
-     bracket and none at the DL bracket, and none of the 68 yields a count under
-     either basis. The one witness has both weights at 179. */
+     them carry a Brutto different from Volumen kg DL (67 by 0.05 or more, 25
+     whose two weights resolve to different brackets, one of them because the
+     Brutto weight falls in no bracket), 21 of the 25 sit within 0.02 of a
+     lane at the Brutto bracket on either card (15 on the NEW card), and none
+     at the DL bracket, and none of the 68 yields a count under either basis.
+     The one witness has both weights at 179. */
   const nl=daRatecardLanes(cards.nw,kg,cc), nm=[];
   for(const k in nl){const q=nl[k];
     if(q>0&&Math.abs(q-frTar)<=DA_NAT_PRICE_TOL+1e-9&&nm.indexOf(q)<0)nm.push(q);}
