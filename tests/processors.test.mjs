@@ -3347,6 +3347,32 @@ test('processDachser: the add-on counts only NEW-card copies', () => {
   }
 });
 
+test('processDachser: the add-on copies must price the tariff copy itself', () => {
+  /* The add-on arm collects the NEW card's lane prices within 0.02 of FR Kosten
+     lt. Tarif, not the pooled match the bare count used: 68.81 has the OLD lane
+     68.80 within 0.02 and the NEW lane 68.78 outside it, so the pooled match is
+     68.80 while the NEW card carries no copy of the tariff itself. FR Kosten DL
+     227.56 off S=90 is 137.56, two whole copies of 68.80 within 0.08, so reading
+     the pooled match fires; the row keeps its previous wording. Mutation:
+     returning match[0] instead of the NEW-card filter reads "Referenz wird 2x
+     abgerechnet". */
+  const card = { ...INTL_CARD,
+    new: { brackets: [{ von: 1, bis: 2000,
+      lanes: { ...INTL_LANES, 'PL Polen': 68.78 } }] },
+    old: { brackets: [{ von: 1, bis: 2000,
+      lanes: { ...INTL_LANES, 'RO Rumänien': 219.96, 'PL Polen': 68.8 } }] } };
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(card);
+    assert.equal(e.evalInContext('daReferenzCountIntl("DE","PL",179,227.56,68.81)'), 0);
+    assert.equal(e.processDachser(intlRow({ 52: '158.75', 53: '179', 54: '179',
+      56: 'PL', 57: '41-250', 58: '227.56', 59: '68.81' }), R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
 test('processDachser: an add-on remainder that is itself a lane stays silent', () => {
   /* DE to CZ, Brutto 4: the NEW card prices the CZ lane at 70.46, and 140.97 is
      two copies of it, but 140.97 is also the CZ lane at the 4501-5000 bracket.

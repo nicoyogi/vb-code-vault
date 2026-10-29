@@ -1014,17 +1014,22 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar){
      151-200 kg). The price is the NEW card's alone: the OLD card would also read
      20260730 row 67 as 259 - 180 = 2 x 39.52, a row the bundling arm masks today.
      S is an untested list membership, not a read of the row: the one witness is
-     20261013 row 275, whose cell named Sonderfahrt beside a separate EXP-block
-     Produktzuschlag, with the sibling rows 271/272/276 fixing 90 for that lane.
-     What would falsify it: a fire whose row carries no 90/110/120/150/180 in EXP
-     or SNK, or a fire on a non-K1AU row whose truth names a non-special-trip
-     finding. Two S values that give different counts are silence, as in
-     daNationalCopies: NEW 151-200 kg IT Italien 1 prices 89.96, so DE to IT at
-     175 kg and 539.84 reads 4x off S=180 and 5x off S=90. The lane here is
-     priced at Brutto kg, the call site's column, while daRatecardSonderfahrtS
-     and daRatecardMatch read the row at Volumen kg DL; this arm stays on Brutto
-     because its price must equal FR Kosten lt. Tarif, which is itself priced at
-     Brutto. */
+     20261013 row 275, whose cell before the fix named Sonderfahrt beside a
+     separate EXP-block Produktzuschlag (backup
+     D:/TESTER/_backup/Soll-Ist-Vergleich 20261013.xlsx.20261028-152213.xlsx),
+     with the sibling rows 271/272/276 fixing 90 for that lane. What would
+     falsify it: a fire whose row carries no 90/110/120/150/180 in EXP or SNK, or
+     a fire on a non-K1AU row whose truth names a non-special-trip finding. Two S
+     values that give different counts are silence; daNationalCopies differs,
+     returning the smallest unique count and never inspecting a larger one. NEW
+     151-200 kg IT Italien 1 prices 89.96, so DE to IT at 175 kg and 539.84 reads
+     4x off S=180 and 5x off S=90. The Brutto kg basis is an assumption, not a
+     measurement: FR Kosten lt. Tarif is the Brutto-priced column at the call
+     site, so the lane is read there too, while daRatecardSonderfahrtS and
+     daRatecardMatch use Volumen kg DL. Unproven either way: 61 international
+     released rows carry a Brutto different from Volumen kg DL, none has FR
+     Kosten lt. Tarif within 0.02 of a lane at either bracket, and the one
+     witness has both weights at 179. */
   const nl=daRatecardLanes(cards.nw,kg,cc), nm=[];
   for(const k in nl){const q=nl[k];
     if(q>0&&Math.abs(q-frTar)<=DA_NAT_PRICE_TOL+1e-9&&nm.indexOf(q)<0)nm.push(q);}
