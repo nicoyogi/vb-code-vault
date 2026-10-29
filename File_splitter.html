@@ -497,24 +497,49 @@
     return k || 'SHEET';
   }
 
-  // Canonical bucket first, then any legacy bucket for the same key: a canonical
-  // bucket that knows other vendors must not hide a legacy pick.
+  // Exports and PRIO rows spell one forwarder differently, so a pick is identified by this fold.
+  function forwarderPickKey(name) {
+    return String(name ?? '').normalize('NFKC').toUpperCase()
+      .replace(/Ä/g, 'AE').replace(/Ö/g, 'OE').replace(/Ü/g, 'UE')
+      .replace(/\s+/g, ' ').trim();
+  }
+
+  // Folded pick in the canonical bucket, then a legacy raw-name entry, then any
+  // legacy bucket for the same key. A system with any pick leaves unseen vendors unticked.
   function savedForwarderState(systemName, forwarderName) {
     const key = forwarderStateKey(systemName);
-    const canonical = forwarderState[key];
-    if (canonical && typeof canonical[forwarderName] === 'boolean') return canonical[forwarderName];
+    const pick = forwarderPickKey(forwarderName);
+    const buckets = [forwarderState[key]];
     for (const name of Object.keys(forwarderState)) {
-      if (name === key || forwarderStateKey(name) !== key) continue;
-      const bucket = forwarderState[name];
-      if (bucket && typeof bucket[forwarderName] === 'boolean') return bucket[forwarderName];
+      if (name !== key && forwarderStateKey(name) === key) buckets.push(forwarderState[name]);
     }
-    return true;
+    for (const bucket of buckets) {
+      if (!bucket) continue;
+      if (typeof bucket[pick] === 'boolean') return bucket[pick]; // a folded write outranks an older raw name
+      for (const raw of Object.keys(bucket)) {
+        if (typeof bucket[raw] === 'boolean' && forwarderPickKey(raw) === pick) return bucket[raw];
+      }
+    }
+    const hasPick = b => !!b && Object.keys(b).some(k => typeof b[k] === 'boolean');
+    return buckets.some(hasPick) ? false : true;
+  }
+
+  // A fresh bucket only knows the vendors the user touched, so a loaded card must win over the curated default.
+  function seedForwarderChecked(systems, sysName, forwarderName, group, exclude) {
+    const key = forwarderStateKey(sysName);
+    const pick = forwarderPickKey(forwarderName);
+    for (const s of systems) {
+      if (s === exclude || s.group !== group || forwarderStateKey(s.name) !== key) continue;
+      const f = (s.forwarders || []).find(f => forwarderPickKey(f.name) === pick);
+      if (f) return f.checked;
+    }
+    return savedForwarderState(sysName, forwarderName);
   }
 
   function saveForwarderState(systemName, forwarderName, checked) {
     const key = forwarderStateKey(systemName);
     if (!forwarderState[key]) forwarderState[key] = Object.create(null);
-    forwarderState[key][forwarderName] = checked;
+    forwarderState[key][forwarderPickKey(forwarderName)] = checked;
     try { localStorage.setItem(FORWARDER_KEY, JSON.stringify(forwarderState)); } catch (e) { /* storage unavailable */ }
   }
 
@@ -522,10 +547,10 @@
   // land on every card in that bucket or they show contradictory checklists.
   function syncForwarderPick(systems, systemName, forwarderName, checked) {
     const key = forwarderStateKey(systemName);
+    const pick = forwarderPickKey(forwarderName);
     for (const s of systems) {
       if (forwarderStateKey(s.name) !== key) continue;
-      const f = (s.forwarders || []).find(f => f.name === forwarderName);
-      if (f) f.checked = checked;
+      for (const f of s.forwarders || []) if (forwarderPickKey(f.name) === pick) f.checked = checked;
     }
   }
 
@@ -543,15 +568,16 @@
   // Split out of syncForwarderPickboxes so the row match is testable without a DOM.
   function forwarderRowMatches(row, key, forwarderName) {
     const card = row.closest && row.closest('.system');
-    return !!card && card.dataset.sysKey === key && row.dataset.name === forwarderName;
+    return !!card && card.dataset.sysKey === key
+      && forwarderPickKey(row.dataset.name) === forwarderPickKey(forwarderName);
   }
 
   function refreshSystemForwarders(sys) {
-    const prevChecked = new Map((sys.forwarders || []).map(f => [f.name, f.checked]));
-    sys.forwarders = tallyForwarders(sys.rows).map(f => ({
-      ...f,
-      checked: prevChecked.has(f.name) ? prevChecked.get(f.name) : savedForwarderState(sys.name, f.name)
-    }));
+    const prevChecked = new Map((sys.forwarders || []).map(f => [forwarderPickKey(f.name), f.checked]));
+    sys.forwarders = tallyForwarders(sys.rows).map(f => {
+      const pick = forwarderPickKey(f.name);
+      return { ...f, checked: prevChecked.has(pick) ? prevChecked.get(pick) : seedForwarderChecked(systems, sys.name, f.name, sys.group, sys) };
+    });
   }
 
   function applyPrioToSystems(allowNew = true) {
@@ -1298,7 +1324,7 @@
           } else {
             const sysName = dedupeName(en.base, en.group);
             systems.push({ id: 'sys' + (sysSeq++), name: sysName, fileName: file.name, baseRows: en.rows, rows: en.rows,
-              forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: savedForwarderState(sysName, f.name) })), group: en.group });
+              forwarders: tallyForwarders(en.rows).map(f => ({ ...f, checked: seedForwarderChecked(systems, sysName, f.name, en.group) })), group: en.group });
           }
         }
       }

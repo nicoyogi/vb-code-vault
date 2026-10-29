@@ -641,11 +641,86 @@ test('upload guard: dropzone and PRIO uploads keep their own bad-type message (p
   ]);
 });
 
-test('savedForwarderState: an unseen system and an unseen forwarder default to checked', () => {
+test('savedForwarderState: a fresh system defaults to checked, a curated one defaults an unseen forwarder to unchecked', () => {
   const t = loadSplitter(); // own store: these tests write forwarder state
   assert.equal(t.savedForwarderState('FNP', 'DHL'), true);    // fresh store, nothing saved
-  t.saveForwarderState('FNP', 'DHL', false);                  // FNP is now a known system
-  assert.equal(t.savedForwarderState('FNP', 'Kuehne'), true); // unseen forwarder in a known system
+  t.saveForwarderState('FNP', 'DHL', false);                  // FNP is now a curated system
+  assert.equal(t.savedForwarderState('FNP', 'Kuehne'), false); // never-seen forwarder in a curated system
+  assert.equal(t.savedForwarderState('KSP', 'Kuehne'), true);  // another system has no picks, so still fresh
+});
+
+test('savedForwarderState: a legacy bucket alone also curates the system', () => {
+  const t = loadSplitter({ seed: { [FORWARDER_KEY]: '{"FNP_2":{"DHL":false}}' } });
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), false);    // legacy pick still read
+  assert.equal(t.savedForwarderState('FNP', 'Kuehne'), false); // unseen, but the legacy bucket curates FNP
+  assert.equal(t.savedForwarderState('KSP', 'Kuehne'), true);  // other system stays fresh
+});
+
+test('savedForwarderState: a bucket with no boolean picks is not curated', () => {
+  const t = loadSplitter({ seed: { [FORWARDER_KEY]: '{"FNP":{"DHL":null}}' } });
+  assert.equal(t.savedForwarderState('FNP', 'Kuehne'), true); // junk value does not curate the system
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), true);    // and the junk entry is not a pick
+});
+
+test('seedForwarderChecked: a loaded card in the bucket wins over the curated store', () => {
+  const t = loadSplitter();
+  const systems = [{ name: 'FNP', group: 'tariff', forwarders: [
+    { name: 'DHL', checked: true },
+    { name: 'Kuehne', checked: false },
+  ] }];
+  t.saveForwarderState('FNP', 'Kuehne', false);
+  assert.equal(t.savedForwarderState('FNP', 'DHL'), false); // counterfactual: the store alone drops DHL
+  assert.equal(t.seedForwarderChecked(systems, 'FNP (1)', 'DHL', 'tariff'), true);    // the loaded card keeps it
+  assert.equal(t.seedForwarderChecked(systems, 'FNP (1)', 'Kuehne', 'tariff'), false);
+  assert.equal(t.seedForwarderChecked(systems, 'FNP (1)', 'dhl', 'tariff'), true);    // spelling variant
+  assert.equal(t.seedForwarderChecked(systems, 'FNP (1)', 'DHL', 'factual'), false);  // other group falls back to the store
+  assert.equal(t.seedForwarderChecked(systems, 'KSP', 'DHL', 'tariff'), true);        // fresh system
+});
+
+test('seedForwarderChecked: exclude skips the card being refreshed', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP', 'DHL', false);
+  const card = { name: 'FNP', group: 'tariff', forwarders: [{ name: 'DHL', checked: true }] };
+  const sibling = { name: 'FNP_2', group: 'tariff', forwarders: [{ name: 'DHL', checked: false }] };
+  assert.equal(t.seedForwarderChecked([card, sibling], 'FNP', 'DHL', 'tariff'), true);        // first match is the card
+  assert.equal(t.seedForwarderChecked([card, sibling], 'FNP', 'DHL', 'tariff', card), false); // excluded -> sibling
+  assert.equal(t.seedForwarderChecked([card], 'FNP', 'DHL', 'tariff', card), false);          // nothing left -> store
+});
+
+test('forwarderPickKey: folds case, whitespace and umlauts, and keeps cities apart', () => {
+  const t = loadSplitter();
+  const nuernberg = 'SCHENKER DEUTSCHLAND AG, NUERNBERG';
+  assert.equal(t.forwarderPickKey('Schenker Deutschland AG, Nürnberg'), nuernberg);
+  assert.equal(t.forwarderPickKey('  schenker   deutschland ag, NUERNBERG '), nuernberg);
+  assert.equal(t.forwarderPickKey('Schenker Deutschland AG, Nuernberg'), nuernberg);
+  assert.equal(t.forwarderPickKey('Kühne + Nagel'), t.forwarderPickKey('Kuehne + Nagel'));
+  assert.equal(t.forwarderPickKey('Straße'), 'STRASSE');
+  assert.notEqual(t.forwarderPickKey('Schenker Deutschland AG, Bremen'), nuernberg);
+});
+
+test('savedForwarderState: a saved pick covers every spelling variant of the forwarder', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP', 'Schenker Deutschland AG, Nürnberg', false);
+  assert.equal(t.savedForwarderState('FNP', 'schenker deutschland ag, NUERNBERG'), false);
+  assert.equal(t.savedForwarderState('FNP', 'Schenker Deutschland AG, Nuernberg'), false);
+});
+
+test('saveForwarderState: the stored key is the folded vendor name', () => {
+  const t = loadSplitter();
+  t.saveForwarderState('FNP', 'Kühne + Nagel,  Berlin', false);
+  assert.deepEqual(plain(JSON.parse(t.localStorage.getItem(FORWARDER_KEY))),
+    { FNP: { 'KUEHNE + NAGEL, BERLIN': false } });
+});
+
+test('saveForwarderState: a folded write outranks an older raw-name entry for the same vendor', () => {
+  const t = loadSplitter({ seed: { [FORWARDER_KEY]: JSON.stringify({ FNP: { 'Schenker Deutschland AG, Nürnberg': false } }) } });
+  assert.equal(t.savedForwarderState('FNP', 'Schenker Deutschland AG, NUERNBERG'), false); // legacy read
+  t.saveForwarderState('FNP', 'Schenker Deutschland AG, NUERNBERG', true);
+  assert.equal(t.savedForwarderState('FNP', 'Schenker Deutschland AG, Nürnberg'), true);
+  assert.equal(t.savedForwarderState('FNP', 'Schenker Deutschland AG, NUERNBERG'), true);
+  assert.deepEqual(plain(JSON.parse(t.localStorage.getItem(FORWARDER_KEY))), {
+    FNP: { 'Schenker Deutschland AG, Nürnberg': false, 'SCHENKER DEUTSCHLAND AG, NUERNBERG': true },
+  });
 });
 
 test('saveForwarderState: false round-trips and lands under fileSplitter.forwarders as an object', () => {
@@ -662,7 +737,7 @@ test('saveForwarderState: state is per system - the same vendor in another syste
   assert.equal(t.savedForwarderState('KSP', 'DHL'), true);  // other system, same vendor name
 });
 
-test('refreshSystemForwarders: seeds each vendor from saved state, unseen vendors stay checked', () => {
+test('refreshSystemForwarders: seeds each vendor from saved state, an unseen vendor in a curated system stays unchecked', () => {
   const t = loadSplitter();
   t.saveForwarderState('FNP', 'DHL', false);
   const sys = {
@@ -672,7 +747,7 @@ test('refreshSystemForwarders: seeds each vendor from saved state, unseen vendor
   t.refreshSystemForwarders(sys);
   assert.deepEqual(plain(sys.forwarders), [
     { name: 'DHL', count: 1, checked: false },
-    { name: 'Kuehne', count: 1, checked: true },
+    { name: 'Kuehne', count: 1, checked: false },
   ]);
 });
 
@@ -686,7 +761,21 @@ test('refreshSystemForwarders: an in-session toggle outranks the saved value', (
   };
   t.refreshSystemForwarders(sys);
   assert.equal(sys.forwarders.find(f => f.name === 'DHL').checked, true);
-  assert.equal(sys.forwarders.find(f => f.name === 'Kuehne').checked, true);
+  assert.equal(sys.forwarders.find(f => f.name === 'Kuehne').checked, false); // unseen in a curated system
+});
+
+test('refreshSystemForwarders: a PRIO-added spelling variant inherits the in-session pick', () => {
+  const t = loadSplitter();
+  const sys = {
+    name: 'FNP',
+    forwarders: [{ name: 'Kühne + Nagel', count: 1, checked: false }],
+    rows: [['Kühne + Nagel', 's', 'r', 'd', [], ''], ['Kuehne + Nagel', 's', 'r', 'd', [], '']],
+  };
+  t.refreshSystemForwarders(sys);
+  assert.deepEqual(plain(sys.forwarders), [
+    { name: 'Kuehne + Nagel', count: 1, checked: false },
+    { name: 'Kühne + Nagel', count: 1, checked: false },
+  ]);
 });
 
 test('forwarder persistence: a corrupted store is replaced, and __proto__ does not pollute', () => {
@@ -745,7 +834,7 @@ test('forwarder persistence: a pre-existing raw-name bucket stays readable, and 
   t.saveForwarderState('FNP Soll-Ist', 'Kuehne', false);
   assert.deepEqual(plain(JSON.parse(t.localStorage.getItem(FORWARDER_KEY))), {
     'FNP Soll-Ist': { DHL: false },
-    FNP: { Kuehne: false },
+    FNP: { KUEHNE: false },
   });
 });
 
@@ -828,6 +917,17 @@ test('syncForwarderPick: one pick reaches every card in the bucket and leaves th
   assert.equal(systems[1].forwarders.find(f => f.name === 'Kuehne').checked, false);
 });
 
+test('syncForwarderPick: one pick reaches every spelling variant of the forwarder', () => {
+  const t = loadSplitter();
+  const systems = [{ name: 'FNP', forwarders: [
+    { name: 'Kühne + Nagel', checked: true },
+    { name: 'Kuehne + Nagel', checked: true },
+    { name: 'Schenker, Bremen', checked: true },
+  ] }];
+  t.syncForwarderPick(systems, 'FNP', 'KUEHNE + NAGEL', false);
+  assert.deepEqual(systems[0].forwarders.map(f => f.checked), [false, false, true]);
+});
+
 test('forwarderRowMatches: only the named forwarder row inside the matching card', () => {
   const t = loadSplitter();
   const card = { dataset: { sysKey: 'FNP' } };
@@ -837,6 +937,15 @@ test('forwarderRowMatches: only the named forwarder row inside the matching card
   assert.equal(t.forwarderRowMatches(row('DHL', card), 'FNP', 'DHL'), true);
   assert.equal(t.forwarderRowMatches(row('DHL', card), 'KSP', 'DHL'), false);            // other card
   assert.equal(t.forwarderRowMatches(row('Kuehne', card), 'FNP', 'DHL'), false);         // other vendor
+});
+
+test('forwarderRowMatches: a spelling variant of the picked row matches', () => {
+  const t = loadSplitter();
+  const card = { dataset: { sysKey: 'FNP' } };
+  const row = { dataset: { name: 'Schenker Deutschland AG, Nürnberg' }, closest: () => card };
+  assert.equal(t.forwarderRowMatches(row, 'FNP', 'SCHENKER DEUTSCHLAND AG, NUERNBERG'), true);
+  assert.equal(t.forwarderRowMatches(row, 'KSP', 'SCHENKER DEUTSCHLAND AG, NUERNBERG'), false);
+  assert.equal(t.forwarderRowMatches(row, 'FNP', 'Schenker Deutschland AG, Bremen'), false);
 });
 
 // The harness DOM is a no-op proxy, so a node that keeps its own properties is
