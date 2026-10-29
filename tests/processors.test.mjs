@@ -3026,11 +3026,12 @@ test('processDachser: without the ratecards a K1AU |FR-90| row keeps the doppelt
    international one they are the non-DE country's lane prices at the row's own
    Brutto bracket: 20261013 row 29 reads 2x because 2 x 219.96 (the RO lane) is
    439.92 against its 440.00. The copies may also sit on top of a Sonderfahrt
-   add-on: 20261013 row 275 reads 2x because 227.60 - 90 = 137.60 = 2 x 68.81
-   (the NEW PL1 lane at 151-200 kg). The arm is terminal either way, so the note
-   stands alone and fires only when no earlier FR branch owns the row.
+   add-on: 20261013 row 275 reads 2x because 227.60 - 90 = 137.60 against
+   2 x 68.81 = 137.62, residual 0.02 (the NEW PL1 lane at 151-200 kg). The arm
+   is terminal either way, so the note stands alone and fires only when no
+   earlier FR branch owns the row.
 
-   Seven gates carry the rule and all are pinned below: the tariff copy must sit
+   Eight gates carry the rule and all are pinned below: the tariff copy must sit
    on the ladder of the row's own weight bracket (20261013 row 351 decomposes but
    fails here), the decomposition must be unique at the smallest count (ambiguity
    is silence, not a guess), a domestic FR Kosten DL must not itself be one zone
@@ -3040,8 +3041,9 @@ test('processDachser: without the ratecards a K1AU |FR-90| row keeps the doppelt
    international FR Kosten DL must not itself be a lane price at any bracket (DE
    to CZ: 140.97 is two copies of the 70.46 lane and also the lane at a heavier
    bracket), and the add-on reading prices its copies off the NEW card alone
-   (20260730 row 67 duplicates on the OLD card only) and refuses a remainder that
-   is itself a lane price.
+   (20260730 row 67 duplicates on the OLD card only), refuses a remainder that
+   is itself a lane price, and refuses two S values that give different counts
+   (the IT lane below).
 
    The synthetic cards give the gates room: the national zone 1 prices 10/15/20
    across the three brackets, zone 2 30/40/15, zone 3 10/10/10 (one distinct
@@ -3287,11 +3289,11 @@ test('processDachser: the lane count starts at two copies', () => {
 
 test('processDachser: the copies can sit on a Sonderfahrt add-on', () => {
   /* 20261013 row 275: DE to PL, Brutto 179, FR Kosten DL 227.60, tariff copy
-     68.81 (the NEW PL1 lane at 151-200 kg). 227.60 - 90 = 137.60 = 2 x 68.81
-     within 0.02, so the add-on is counted in the copies. At 227.70 the residual
-     is exactly 0.08 and still fires; at 227.71 it is 0.09 and the row keeps the
-     bisherigen wording. Mutation: testing FR_DL alone instead of FR_DL - S
-     leaves the witness on that wording. */
+     68.81 (the NEW PL1 lane at 151-200 kg). 227.60 - 90 = 137.60 against
+     2 x 68.81 = 137.62, residual 0.02, so the add-on is counted in the copies.
+     At 227.70 the residual is exactly 0.08 and still fires; at 227.71 it is 0.09
+     and the row keeps the bisherigen wording. Mutation: testing FR_DL alone
+     instead of FR_DL - S leaves the witness on that wording. */
   withIntlCard(() => {
     const abg = { 52: '158.79', 53: '179', 54: '179', 56: 'PL', 57: '41-250',
       58: '227.6', 59: '68.81' };
@@ -3302,6 +3304,28 @@ test('processDachser: the copies can sit on a Sonderfahrt add-on', () => {
     assert.equal(e.processDachser(intlRow({ ...abg, 52: '158.9', 58: '227.71' }), R, REF_COLS),
       'Dachser berechnet die Kosten nach dem bisherigen Tarif');
   });
+});
+
+test('processDachser: two add-ons that give different counts stay silent', () => {
+  /* The Dachser NEW card prices IT Italien 1 at 89.96 in the 151-200 kg bracket
+     (measured on the real card, pinned here with a synthetic lane). DE to IT at
+     175 kg with FR Kosten DL 539.84 then decomposes off two S values:
+     539.84 - 180 = 359.84 = 4 x 89.96, and 539.84 - 90 = 449.84 against
+     5 x 89.96 = 449.80, residual 0.04. The counts disagree, so the arm declines
+     and the row keeps its wording, exactly as daNationalCopies does. Mutation:
+     returning the first matching S reads "Referenz wird 4x abgerechnet". */
+  const card = { ...INTL_CARD, new: { brackets: [{ von: 1, bis: 2000,
+    lanes: { ...INTL_LANES, 'IT Italien 1': 89.96 } }] } };
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(card);
+    assert.equal(e.evalInContext('daReferenzCountIntl("DE","IT",175,539.84,89.96)'), 0);
+    assert.equal(e.processDachser(intlRow({ 52: '449.88', 53: '175', 54: '175',
+      56: 'IT', 57: '20100', 58: '539.84', 59: '89.96' }), R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  } finally {
+    e.setDachserRatecards(saved);
+  }
 });
 
 test('processDachser: the add-on counts only NEW-card copies', () => {

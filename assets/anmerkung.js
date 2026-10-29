@@ -1010,22 +1010,34 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar){
   for(let n=2;n<=DA_NAT_MAX_COPIES;n++)
     if(Math.abs(frDl-n*match[0])<=DA_NAT_COPY_TOL+1e-9)return n;
   /* The copies can also sit on top of a Sonderfahrt add-on: 20261013 row 275,
-     227.60 - 90 = 137.60 = 2 x 68.81 (NEW PL1 at 151-200 kg). The price is the
-     NEW card's alone: the OLD card would also read 20260730 row 67 as 259 - 180
-     = 2 x 39.52, a row the bundling arm masks today. */
+     227.60 - 90 = 137.60 against 2 x 68.81 = 137.62, residual 0.02 (NEW PL1 at
+     151-200 kg). The price is the NEW card's alone: the OLD card would also read
+     20260730 row 67 as 259 - 180 = 2 x 39.52, a row the bundling arm masks today.
+     S is an untested list membership, not a read of the row: the one witness is
+     20261013 row 275, whose cell named Sonderfahrt beside a separate EXP-block
+     Produktzuschlag, with the sibling rows 271/272/276 fixing 90 for that lane.
+     What would falsify it: a fire whose row carries no 90/110/120/150/180 in EXP
+     or SNK, or a fire on a non-K1AU row whose truth names a non-special-trip
+     finding. Two S values that give different counts are silence, as in
+     daNationalCopies: NEW 151-200 kg IT Italien 1 prices 89.96, so DE to IT at
+     175 kg and 539.84 reads 4x off S=180 and 5x off S=90. The lane here is
+     priced at Brutto kg, the call site's column, while daRatecardSonderfahrtS
+     and daRatecardMatch read the row at Volumen kg DL; this arm stays on Brutto
+     because its price must equal FR Kosten lt. Tarif, which is itself priced at
+     Brutto. */
   const nl=daRatecardLanes(cards.nw,kg,cc), nm=[];
   for(const k in nl){const q=nl[k];
-    if(q>0&&Math.abs(q-match[0])<=DA_NAT_PRICE_TOL+1e-9&&nm.indexOf(q)<0)nm.push(q);}
+    if(q>0&&Math.abs(q-frTar)<=DA_NAT_PRICE_TOL+1e-9&&nm.indexOf(q)<0)nm.push(q);}
   if(nm.length!==1)return 0;
-  const p=nm[0];
+  const p=nm[0], counts=[];
   for(const S of DA_SONDERFAHRT_S){
     const base=frDl-S;
     if(!(base>0))continue;
     if(daLaneOnLadder(cards,cc,base))continue;
     for(let n=2;n<=DA_NAT_MAX_COPIES;n++)
-      if(Math.abs(base-n*p)<=DA_NAT_COPY_TOL+1e-9)return n;
+      if(Math.abs(base-n*p)<=DA_NAT_COPY_TOL+1e-9&&counts.indexOf(n)<0){counts.push(n);break;}
   }
-  return 0;
+  return counts.length===1?counts[0]:0;
 }
 
 /* Decide the FR wording from the rate cards, replacing the lane/EXP proxy the
