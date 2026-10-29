@@ -1,17 +1,18 @@
 {
  "schema": "vb-code-vault/anmerkung-integration/v1",
  "source": "current repository tree",
+ "hash_basis": "LF-normalised bytes",
  "anmerkung_hardening": "v5",
  "regression": {
-  "tests": 601,
-  "passed": 601,
+  "tests": 635,
+  "passed": 635,
   "failed": 0
  },
  "files": [
   {
    "path": "assets/anmerkung.js",
-   "bytes": 389580,
-   "sha256": "60353d4d2d7b7d88e8de8014e73aa52d2a69f986363e969be75721c5a8fcc7e0"
+   "bytes": 398139,
+   "sha256": "c7f5dcec862bf464bad7c29282bcedf30b4b846b144a0ab14e6c2515f343f125"
   },
   {
    "path": "tests/harness/load-engine.mjs",
@@ -31,7 +32,7 @@
   {
    "path": "docs/anmerkung/INTEGRATION_v5.md",
    "bytes": 1685,
-   "sha256": "5fd65feee315f0882daaa85eb322704df97855b0f384e32bef56767525605914"
+   "sha256": "4b99b26307cde61c48f2703a2888ed6bf6bacc8595d85c868a0fecc9dc2bcd7d"
   },
   {
    "path": "assets/dachser-ratecard-loader.js",
@@ -60,8 +61,8 @@
   },
   {
    "path": "tests/fixtures/dachser-referenz-rows.json",
-   "bytes": 3522,
-   "sha256": "687be24d4848a571d1988f63b849d1f207e1fe66b41944ec27c32bd0c7b18d8e"
+   "bytes": 3993,
+   "sha256": "8b8740c9d7601e1084e8dd8251ea76dbfea5d9f006afba529e410f09b6d20f31"
   },
   {
    "path": "tests/fixtures/honold-20379045-rows.json",

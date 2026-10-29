@@ -330,6 +330,7 @@ const PHRASES={
   zusammengefassteAbrechnung: 'zusammengefasste Abrechnung',
   zoneKorrekt:                'Zone korrekt berechnet?',
   einfuhrzoll:                'Einfuhrzollabfertigung',
+  transitabfertigung:         'Transitabfertigung, ok?',
   kalkKostenZustellung:       'Kalk. Kosten Zustellung',
   abholtermin:                'Abholterminvereinbarung',
   treibstof:                  'Differenz treibstof',
@@ -770,6 +771,11 @@ function resolveDachser(ws,range){
     tz:       fc('TZ','Differenz'),
     /* ZABF (Zollabfertigung) - the Import-Zollabfertigung tariff line. */
     zabf_diff:fc('ZABF','Differenz'),
+    /* T1 (Transitabfertigung) - a billed transit clearance whose tariff base is
+       blank or 0 has no backing: 20261027 row 139 bills 50 against a 0 base. */
+    t1_dl:    fc('T1','Kosten DL'),
+    t1_tar:   fc('T1','Kosten lt. Tarif'),
+    t1_diff:  fc('T1','Differenz'),
     c38l_diff:fc('38L','Differenz'),
     c502_dl:  fc('502','Kosten DL'),
     c503_dl:  fc('503','Kosten DL'),
@@ -793,6 +799,7 @@ function resolveDachser(ws,range){
     anz_sdg:  fc('','Anz. Sdg'),
     empf_plz: fc('','Empf.-PLZ'),
     empf_ort: fc('','Empf.-Ort'),
+    recip:    fc('','Empf.-Name'),
     /* Zwischenempfänger (intermediate consignee) address — the actual
        deviating-hub location the ZW note should report, as opposed to the
        shipment's final Empf.-PLZ/Ort. Row 2 is blank for these two columns,
@@ -880,7 +887,7 @@ function daAnyLaneNear(lanes,value){for(const k in lanes)if(daNearly(lanes[k],va
    two-digit PLZ-prefix -> zone table, carried in the same encrypted bundle as
    the two international cards. Without the passphrase the global is absent and
    the Referenz branch below stays off, like Sonderfahrt / bisherigen. */
-const DA_NAT_PRICE_TOL=0.02;  // tariff copy vs the ladder cell of the row's own bracket
+const DA_NAT_PRICE_TOL=0.02;  // tariff copy vs the ladder cell of the row's own bracket, and vs a country lane price there
 const DA_NAT_COPY_TOL=0.08;   // 0.08 on the residual of the whole sum, not per summand; fixed at the default money tolerance, not the adjustable Dachser threshold
 const DA_NAT_MAX_COPIES=5;    // 20261019 row 429 is five whole copies; ambiguity is silence
 
@@ -942,17 +949,17 @@ function daNationalCopies(nat,zone,total){
   }
   return 0;
 }
-/* Whole zone prices that make up FR Kosten DL, or 0 when the row is not this
-   case. The count is the number of summands itself, not one copy on top of a
-   tariff copy: 20261019 row 429 reads 5x because five zone prices reach its
-   190.50. Gate 1 is the tariff copy on the row's own bracket cell, gate 2 rules
-   out a FR Kosten DL that is itself one zone price (20260923 row 126). Not a
-   general reading of "Referenz wird Nx abgerechnet": three truth-labelled rows
-   are non-domestic (20260904 row 6, 20261013 rows 29 and 275), out of reach. */
+/* Whole prices that make up FR Kosten DL, or 0 when the row is not this case:
+   domestic from the PLZ zone ladder, international from the country's lane prices
+   at its own Brutto bracket. The tariff copy sits on the domestic zone ladder or
+   on one unique lane price, and the freight is N whole copies, either bare or on
+   top of a Sonderfahrt add-on. 20261013 row 29 witnesses the bare half: 2 x
+   219.96 (RO) = 439.92 against 440.00. Out of reach by freight/tariff ratio:
+   20260904 r6 14.14, 20261027 r156 1.56, r157 1.30. */
 function daReferenzCount(empfPlz,abgLand,empfLand,kg,frDl,frTar){
   const nat=daNationalCard();
   if(!nat)return 0;
-  if(abgLand!=='DE'||empfLand!=='DE')return 0;
+  if(abgLand!=='DE'||empfLand!=='DE')return daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar);
   const zone=daNationalZone(empfPlz);
   if(!zone)return 0;
   const price=daNationalPrice(nat,zone,kg);
@@ -960,6 +967,86 @@ function daReferenzCount(empfPlz,abgLand,empfLand,kg,frDl,frTar){
   if(Math.abs(frTar-price)>DA_NAT_PRICE_TOL+1e-9)return 0;
   if(daNationalOnLadder(nat,zone,frDl))return 0;
   return daNationalCopies(nat,zone,frDl);
+}
+/* FR Kosten DL that is itself one lane price of the country at any bracket on
+   either card: one shipment billed at its own weight, not a duplicate. The
+   domestic half's daNationalOnLadder, for a country lane (DE to CZ: 140.97 on a
+   120 kg row whose lane prices 70.46). Fail closed: no lane hit, no guard. */
+function daLaneOnLadder(cards,cc,value){
+  for(const card of [cards.nw,cards.od])
+    for(const b of card.brackets){
+      const lanes=b.lanes||{};
+      for(const k in lanes){
+        const p=lanes[k];
+        if(p>0&&p<99999&&k.split(' ')[0].toUpperCase().startsWith(cc)&&Math.abs(p-value)<=DA_NAT_COPY_TOL+1e-9)return true;
+      }
+    }
+  return false;
+}
+/* The same count on a non-domestic row: the non-DE country's lane prices at the
+   row's own Brutto bracket, on both cards. A lane price that matches the tariff
+   copy must be unique, the freight must be N whole copies of it, and the freight
+   must not itself be a lane price at any bracket (daLaneOnLadder). The copies may
+   also sit on a Sonderfahrt add-on (20261013 row 275), and then the price is read
+   off the NEW card only (20260730 row 67 is the OLD-card fence). Gated on the
+   national card although it reads only the two international cards, so a bundle
+   without one keeps the cascade. Lane naming by PLZ is not attempted, the table
+   carries country lanes only. */
+function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar){
+  const cards=daRatecardCards();
+  if(!cards)return 0;
+  const cc=(empfLand&&empfLand!=='DE')?empfLand:(abgLand||'');
+  if(!cc||cc==='DE')return 0;
+  if(!(frTar>0&&frDl>frTar))return 0;
+  const match=[];
+  for(const card of [cards.nw,cards.od]){
+    const lanes=daRatecardLanes(card,kg,cc);
+    for(const k in lanes){const p=lanes[k];
+      if(p>0&&p<99999&&  // 99999 = the card's no-rate sentinel
+         Math.abs(p-frTar)<=DA_NAT_PRICE_TOL+1e-9&&match.indexOf(p)<0)match.push(p);}
+  }
+  if(match.length!==1)return 0;
+  if(daLaneOnLadder(cards,cc,frDl))return 0;
+  for(let n=2;n<=DA_NAT_MAX_COPIES;n++)
+    if(Math.abs(frDl-n*match[0])<=DA_NAT_COPY_TOL+1e-9)return n;
+  /* The copies can also sit on top of a Sonderfahrt add-on: 20261013 row 275,
+     227.60 - 90 = 137.60 against 2 x 68.81 = 137.62, residual 0.02 (NEW PL1 at
+     151-200 kg). The price is the NEW card's alone: the OLD card would also read
+     20260730 row 67 as 259 - 180 = 2 x 39.52, a row the bundling arm masks today.
+     S is an untested list membership, not a read of the row: the one witness is
+     20261013 row 275, whose cell before the fix named Sonderfahrt beside a
+     separate EXP-block Produktzuschlag (backup
+     D:/TESTER/_backup/Soll-Ist-Vergleich 20261013.xlsx.20261028-152213.xlsx),
+     with the sibling rows 271/272/276 fixing 90 for that lane. What would
+     falsify it: a fire whose row carries no 90/110/120/150/180 in EXP or SNK, or
+     a fire on a non-K1AU row whose truth names a non-special-trip finding. Two S
+     values that give different counts are silence; daNationalCopies differs,
+     returning the smallest unique count and never inspecting a larger one. NEW
+     151-200 kg IT Italien 1 prices 89.96, so DE to IT at 175 kg and 539.84 reads
+     4x off S=180 and 5x off S=90. The Brutto kg basis is an assumption, not a
+     measurement: FR Kosten lt. Tarif is the Brutto-priced column at the call
+     site, so the lane is read there too, while daRatecardSonderfahrtS and
+     daRatecardMatch use Volumen kg DL. Unproven either way: over the ten dated
+     workbooks 290 released non-domestic rows have both weights above 0, 68 of
+     them carry a Brutto different from Volumen kg DL (67 by 0.05 or more, 25
+     whose two weights resolve to different brackets, one of them because the
+     Brutto weight falls in no bracket), 21 of the 25 sit within 0.02 of a
+     lane at the Brutto bracket on either card (15 on the NEW card), and none
+     at the DL bracket, and none of the 68 yields a count under either basis.
+     The one witness has both weights at 179. */
+  const nl=daRatecardLanes(cards.nw,kg,cc), nm=[];
+  for(const k in nl){const q=nl[k];
+    if(q>0&&Math.abs(q-frTar)<=DA_NAT_PRICE_TOL+1e-9&&nm.indexOf(q)<0)nm.push(q);}
+  if(nm.length!==1)return 0;
+  const p=nm[0], counts=[];
+  for(const S of DA_SONDERFAHRT_S){
+    const base=frDl-S;
+    if(!(base>0))continue;
+    if(daLaneOnLadder(cards,cc,base))continue;
+    for(let n=2;n<=DA_NAT_MAX_COPIES;n++)
+      if(Math.abs(base-n*p)<=DA_NAT_COPY_TOL+1e-9&&counts.indexOf(n)<0){counts.push(n);break;}
+  }
+  return counts.length===1?counts[0]:0;
 }
 
 /* Decide the FR wording from the rate cards, replacing the lane/EXP proxy the
@@ -1217,6 +1304,18 @@ function daEvalZABF(ws,r,cols){
   if(!hasErr(cellNum(ws,r,cols.zabf_diff),T_DACHSER))return'';
   return P.einfuhrzoll;
 }
+/* T1 (Transitabfertigung) - the transit-clearance tariff line. Corpus: of 41 released
+   rows billing a T1 line, 38 have T1 tariff == T1 cost (nothing to say) and 2 bill 100
+   against a 50 base, which the auditor leaves silent. Only 20261027 row 139 bills
+   50 against a 0 base and reads "Transitabfertigung, ok?". Reading T1 as
+   transit clearance is the auditor's mapping, not a documented rule. */
+function daEvalT1(ws,r,cols){
+  if(cols.t1_diff<0||cols.t1_dl<0||cols.t1_tar<0)return'';
+  const dl=cellNum(ws,r,cols.t1_dl),base=cellNum(ws,r,cols.t1_tar),diff=cellNum(ws,r,cols.t1_diff);
+  if(!hasErr(diff,T_DACHSER)||!hasErr(dl,T_DACHSER))return'';
+  if(hasErr(base,T_DACHSER))return'';
+  return P.transitabfertigung;
+}
 /* Zwischenempfänger note location: prefer the dedicated KI_ZW_PLZ/KI_ZW_ORT
    ("Zwischenempfänger" intermediate-consignee) columns — these carry the
    actual deviating hub address (e.g. "77600 BUSSY SAINT MARTIN") that the
@@ -1254,6 +1353,7 @@ function processDachser(ws,r,cols){
          anzSdg=parseInt(cellStr(ws,r,anzSdgCol))||0,
          empfPlz=cellStr(ws,r,empfPlzCol),
          empfOrt=cellStr(ws,r,empfOrtCol).toUpperCase(),
+         recip=cols.recip>=0?cellStr(ws,r,cols.recip):'',
          abgLand=cols.abg_land>=0?cellStr(ws,r,cols.abg_land).toUpperCase().trim():'',
          empfLand=cols.empf_land>=0?cellStr(ws,r,cols.empf_land).toUpperCase().trim():'',
          isTarifZero=daIsTarifZero(ws,r,cols.tarif);
@@ -1281,14 +1381,7 @@ function processDachser(ws,r,cols){
          would otherwise emit. The Fremdnummer / VORHOLUNG fallbacks below stay
          reachable for domestic blank-tarif rows. */
       if(abgLand&&abgLand!=='DE')return 'kein Tarif für '+abgLand;
-      if(empfLand&&empfLand!=='DE')return 'kein Tarif für '+empfLand;
-      /* Domestic lane above the rate-card ceiling: the Dachser weight table stops
-         at 10000 kg, so there is no tariff to compare against and the auditor
-         asks "Kein Tarif für DE >10 to, ok?". Bundle 2026-10-08 row f027ef05
-         (TARIF blank, Brutto 11573, FR=566.52) expects it ahead of the
-         Fremdnummer fallback below. */
       const brutto=cols.brutto>=0?cellNum(ws,r,cols.brutto):(cols.vkg>=0?cellNum(ws,r,cols.vkg):0);
-      if(brutto>10000)return 'Kein Tarif für DE >10 to, ok?';
       const hasOtherDiff=
         (cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T))||
         (cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))||
@@ -1301,6 +1394,22 @@ function processDachser(ws,r,cols){
         (cols.sam>=0&&hasErr(cellNum(ws,r,cols.sam),T))||
         (cols.sbfu>=0&&hasErr(cellNum(ws,r,cols.sbfu),T))||
         (cols.c38l_diff>=0&&hasErr(cellNum(ws,r,cols.c38l_diff),T));
+      /* Amazon's tariff card is not shipped, so this arm is a proxy: an Amazon
+         recipient, a blank TARIF and a second delta line. 20261027 rows 146-151
+         read "kein Tarif für AMAZON DE '37293'" and "AMAZON PL '05'"; 20260923
+         row 193 has no second delta and keeps the Fremdnummer literal below. */
+      if(/amazon/i.test(recip)&&empfLand&&brutto<=10000&&hasOtherDiff){
+        const plzTok=(empfPlz.match(/^\d+/)||[''])[0];
+        if(plzTok)return 'kein Tarif für AMAZON '+empfLand+" '"+plzTok+"'";
+      }
+      if(empfLand&&empfLand!=='DE')return 'kein Tarif für '+empfLand;
+      /* Domestic lane above the rate-card ceiling: the Dachser weight table stops
+         at 10000 kg, so there is no tariff to compare against and the auditor
+         asks "Kein Tarif für DE >10 to, ok?". Bundle 2026-10-08 row f027ef05
+         (TARIF blank, Brutto 11573, FR=566.52) expects it ahead of the
+         Fremdnummer fallback below, and after the country arm above, whose text
+         names DE and would mislabel a non-DE row. */
+      if(brutto>10000)return 'Kein Tarif für DE >10 to, ok?';
       if(!sachkonto&&!servArt&&!hasOtherDiff)return PHRASES.vorholung;
       if(sachkonto&&servArt){
         /* The Fremdnummer is the row's own ReferenzNr. The Beleg it was charged
@@ -1340,6 +1449,7 @@ function processDachser(ws,r,cols){
   res=join(res,daEvalEXP(ws,r,cols));
   res=join(res,daEvalZABF(ws,r,cols));
   if(cols.maut>=0&&hasErr(cellNum(ws,r,cols.maut),T))res=join(res,'Mautdifferenz');
+  res=join(res,daEvalT1(ws,r,cols));
   if(empfOrt==='LONDON'&&/^[A-Z]/i.test(empfPlz)){
     res=join(res,P.zoneKorrekt);
     if(cols.exp<0||!hasErr(cellNum(ws,r,cols.exp),T))res=join(res,P.einfuhrzoll);
@@ -1360,9 +1470,10 @@ function processDachser(ws,r,cols){
           cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0)
       :null;
     const k1auSf=sfS!==null&&Math.abs(sfS-Math.abs(frVal))<=DA_RC_TOL;
-    /* A domestic reference the auditor sees billed more than once: the tariff
-       copy is the national-card price and FR Kosten DL itself is a whole number
-       of zone prices. 0 when the card is locked or the row is not this case.
+    /* A reference the auditor sees billed more than once: the tariff copy is
+       the national zone cell on a domestic row, or a country's lane price on an
+       international one, and FR Kosten DL itself is a whole number of those
+       prices. 0 when the card is locked or the row is not this case.
        The finding is terminal and ranks below bundling / ZW / K1AS / K1AU: when
        it fires the note is the Referenz phrase alone (owner ruling 2026-10-27). */
     const refN=daReferenzCount(empfPlz,abgLand,empfLand,
@@ -3121,6 +3232,8 @@ const TESTER_FIELDS={
     ['c502_dl','502 Kosten DL','str'],['c503_dl','503 Kosten DL','str'],
     ['_referenz3','ReferenzNr3','str'],['referenz','ReferenzNr','str'],['_serv','Serv.-Art','str'],['_sach','Sachkonto','str'],
     ['_plz','Empf.-PLZ','str'],['_ort','Empf.-Ort','str'],['_anzSdg','Anz.Sdg','str'],
+    ['recip','Empf.-Name','str'],
+    ['t1_dl','T1 Kosten DL','num'],['t1_tar','T1 Kosten lt. Tarif','num'],['t1_diff','T1 Differenz','num'],
     ['_zwPlz','KI_ZW_PLZ','str'],['_zwOrt','KI_ZW_ORT','str'],
   ],
   kn:[
@@ -3284,7 +3397,7 @@ function buildSyntheticWs(fw,userVals){
   }
   /* Fill missing cols with -1 so processors know the field is absent. */
   const allKeys={
-    dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','referenz','c502_dl','c503_dl','lg_diff','av_diff'],
+    dachser:['target','stat','tarif','zz','dgr','exp','exp_dl','snk_diff','snk_dl','snk_tar','sbfu','sam','fr','maut','tz','referenz','c502_dl','c503_dl','lg_diff','av_diff','recip','t1_dl','t1_tar','t1_diff'],
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
     wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','colli','brutto','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
@@ -3618,8 +3731,10 @@ const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','
    new to DHL, and zz_diff is new to Honold - Dachser has always hashed that
    cell, so a global exclusion would re-key every historical Dachser ZZ row.
    1.58.0 re-reads Volumen kg DL and reads FR Kosten lt. Tarif for Honold; both
-   are excluded here so that change re-keys nothing. */
-const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz','c196_diff','fr_dl','fr_tar']),dhl:new Set(['el_diff']),honold:new Set(['zz_diff','vkg_dl','fr_tarif'])};
+   are excluded here so that change re-keys nothing. 1.61.0 reads Empf.-Name and
+   the three T1 columns for Dachser, also excluded, or every Dachser row_uid in
+   the 2026-10-28 bundle would change. */
+const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz','c196_diff','fr_dl','fr_tar','recip','t1_dl','t1_tar','t1_diff']),dhl:new Set(['el_diff']),honold:new Set(['zz_diff','vkg_dl','fr_tarif'])};
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
@@ -3649,15 +3764,17 @@ const CANONICAL_INPUT_ORDER={
            /* Last on purpose. For a dachser-only CSV this appends the key after
               every existing column, which is where the fallback already put it.
               A mixed-forwarder CSV shares one positional header row
-              (in_<key>), so the two keys appended below, fr_dl and fr_tar, shift
-              the first-seen keys of the forwarders emitted after dachser by two
-              columns. The header names the key either way, so name-keyed
-              consumers are unaffected. */
+              (in_<key>), so the six keys appended below c196_diff push the
+              first-seen keys of the forwarders emitted after dachser to the
+              right. recip is the exception: K+N has always exported it, so in a
+              dachser+K+N export the K+N recip column moves with dachser's block
+              instead of adding a column. The header names the key either way, so
+              name-keyed consumers are unaffected. */
            'referenz','zabf_diff','c196_diff',
-           /* Two keys, fr_dl and fr_tar, appended after c196_diff. brutto_kg is
-              not in this list at all, so it trails them and moves two columns
-              right in the CSV. */
-           'fr_dl','fr_tar'],
+           /* Six keys appended after c196_diff; brutto_kg is not in this list at
+              all, so it trails them and moves four columns right, or three in a
+              dachser+K+N export where K+N's recip merges into the block above. */
+           'fr_dl','fr_tar','recip','t1_dl','t1_tar','t1_diff'],
   kn:['stat','tarif','fr_diff','exp_diff','mt_diff','tz_diff',
       'snk_dl','snk_diff',
       'referenz','recip','vkg','vkg_dl',
@@ -4062,10 +4179,12 @@ function collectInputsForRow(fw,ws,r,cols){
     get('exp_diff',cols.exp);get('exp_dl',cols.exp_dl);
     get('maut_diff',cols.maut);get('sbfu_diff',cols.sbfu);get('tz_diff',cols.tz);
     get('c38l_diff',cols.c38l_diff);get('zabf_diff',cols.zabf_diff);
+    get('t1_dl',cols.t1_dl);get('t1_tar',cols.t1_tar);get('t1_diff',cols.t1_diff);
     get('lg_diff',cols.lg_diff);get('av_diff',cols.av_diff);
     get('c502_dl',cols.c502_dl);get('c503_dl',cols.c503_dl);
     get('c196_diff',cols.c196_diff);
     get('referenz',cols.referenz);
+    get('recip',cols.recip);
     const placeIf=(k,idx)=>{if(idx===undefined||idx<0)return;o[k]=cellStr(ws,r,idx);};
     placeIf('referenz3',cols.referenz3>=0?cols.referenz3:DA_COL_REFERENZ3);
     placeIf('empf_plz',cols.empf_plz>=0?cols.empf_plz:DA_COL_EMPF_PLZ);
@@ -5189,7 +5308,7 @@ const INPUT_GLOSSARY={
   tarif             :'Total Kosten lt. Tarif: booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
   fr_diff           :'FR Differenz: freight-charge delta vs tariff (numeric, signed).',
   fr_tarif          :'FR Kosten lt. Tarif: the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier. On Honold rows it is the current-tariff freight for the lane: blank / 0 means the current table prices no rate for that Empf.-Land and the note is "Kein Tarif für \'<LAND>\'", and otherwise its amount at the billed bracket decides whether the lane diverged from the OLD table.',
-  fr_tar            :'FR Kosten lt. Tarif (Dachser): the tariff copy of the freight (numeric). On a domestic row it is compared with the national card\'s cell for the row\'s Empf.-PLZ zone and Brutto kg bracket; when it matches, FR Kosten DL itself is tested as 2 to 5 whole zone prices, and a unique decomposition reads "Referenz wird Nx abgerechnet" alone.',
+  fr_tar            :'FR Kosten lt. Tarif (Dachser): the tariff copy of the freight (numeric). On a domestic row it is compared with the national card\'s cell for the row\'s Empf.-PLZ zone and Brutto kg bracket; on an international one, with the non-DE country\'s lane price at the row\'s Brutto bracket on either card. When it matches, FR Kosten DL itself is tested as 2 to 5 whole zone or lane prices, and a unique decomposition reads "Referenz wird Nx abgerechnet" alone. On an international row the copies may also sit on top of a Sonderfahrt add-on: FR Kosten DL minus one of 180/150/120/90/110 is then the 2 to 5 whole copies of the NEW card\'s lane price, and that lane price must be the only one at the bracket within 0.02 of the tariff copy.',
   fr_dl             :'FR Kosten DL: the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it decides the note: equal to the OLD tariff rate that Empf.-Land publishes for the bracket the row\'s Volumen kg falls in means the previous tariff is still being billed, and equal to an OLD rate from another bracket while Volumen kg DL sits in yet another joins both phrases.',
   exp_diff          :'EXP Differenz: express/priority surcharge delta (numeric, signed).',
   exp_dl            :'EXP Kosten DL: DL-side express cost (Dachser-only signal).',
@@ -5205,6 +5324,9 @@ const INPUT_GLOSSARY={
   sbfu_diff         :'SBFU Differenz: SBfU certificate delta (Dachser).',
   lg_diff           :'LG Differenz: storage-fee delta (Dachser).',
   av_diff           :'AV Differenz: failed-pickup-attempt delta (Dachser).',
+  t1_dl             :'T1 Kosten DL: transit-clearance cost actually billed (Dachser). Reading a T1 line as Transitabfertigung is the auditor\'s mapping with one witness, not a documented rule.',
+  t1_tar            :'T1 Kosten lt. Tarif: the tariff copy of the T1 line (Dachser). Blank / 0 means the transit clearance has no tariff backing at all.',
+  t1_diff           :'T1 Differenz: transit-clearance delta (Dachser). Over threshold with a blank / 0 tariff base reads "Transitabfertigung, ok?".',
   el_diff           :'EL Differenz: extended-liability surcharge delta (DHL).',
   pal_diff          :'PAL Differenz: non-stackable surcharge (DHL).',
   ow_diff           :'OW Differenz: overweight surcharge (DHL).',
@@ -5223,7 +5345,7 @@ const INPUT_GLOSSARY={
   anz_sdg           :'Anz.Sdg: number of shipments on the row (Dachser).',
   referenz          :'ReferenzNr: Sendungs-Referenznummer. A "," in the value is the bundling signal (K+N / Wackler). On Dachser it is the shipment\'s own "Fremdnummer", interpolated verbatim into the already-billed note ("Fremdnummer <value> bereits berechnet in RE00123xxx, ok?").',
   referenz3         :'ReferenzNr3: Dachser-specific tertiary reference column (used in trigger trace).',
-  recip             :'Empf.-Name: recipient name. "amazon" substring triggers Amazon-tier branches in K+N.',
+  recip             :'Empf.-Name: recipient name. "amazon" substring triggers Amazon-tier branches in K+N. On Dachser it gates the blank-tariff Amazon arm, which names the recipient and its route when the tariff card is missing.',
   empf_plz          :'Empf.-PLZ: recipient ZIP code. 88499 is the Wackler return hub. On a Wackler international export lane it disambiguates multi-zone countries (CH/FR/ES/PL…).',
   empf_ort          :'Empf.-Ort: recipient city. RIEDLINGEN is the Wackler return hub city.',
   ki_zw_plz         :'KI_ZW_PLZ: Zwischenempfänger (intermediate-consignee) ZIP code (Dachser). The actual deviating hub daZWNote reports on a REFERENZ3=ZW row, distinct from, and preferred over, Empf.-PLZ.',
@@ -5248,7 +5370,7 @@ const FORWARDER_SPEC={
     processor:'processDachser',
     resolver :'resolveDachser',
     gate     :'Stat_Freigabe == 10',
-    notes    :'Header-resolved reads (findCol, with DA_COL_* fixed-index fallback) for ReferenzNr3/Empf.-PLZ/Ort/Anz.Sdg/Serv.-Art/Sachkonto. The ZW note additionally resolves KI_ZW_PLZ/KI_ZW_ORT (Zwischenempfänger hub address), falling back to Empf.-PLZ/Ort when absent. Threshold T_DACHSER applied via hasErr() to every *_diff cell.',
+    notes    :'Header-resolved reads (findCol, with DA_COL_* fixed-index fallback) for ReferenzNr3/Empf.-PLZ/Ort/Anz.Sdg/Serv.-Art/Sachkonto, plus Empf.-Name, Brutto kg and the T1 (Kosten DL / Kosten lt. Tarif / Differenz) group. The ZW note additionally resolves KI_ZW_PLZ/KI_ZW_ORT (Zwischenempfänger hub address), falling back to Empf.-PLZ/Ort when absent. A blank TARIF with an Amazon Empf.-Name, a numeric Empf.-PLZ prefix, at most 10 t and a second delta line reads "kein Tarif für AMAZON <Empf.-Land>" plus the PLZ prefix, standing in for a tariff card that is not shipped. Threshold T_DACHSER applied via hasErr() to every *_diff cell.',
   },
   kn:{
     processor:'processKN',

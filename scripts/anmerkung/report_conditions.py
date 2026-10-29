@@ -165,6 +165,7 @@ story.append(section_table([
      "Fremdnummer &lt;row's ReferenzNr&gt; bereits berechnet in RE00123xxx, ok? (falls back to the 5034xxx placeholder when ReferenzNr is empty; the Beleg it was charged in stays a placeholder, it names a document outside this workbook)"),
     ("empty TARIF + FR trigger + departure country non-DE", "kein Tarif für &lt;Land&gt;"),
     ("empty TARIF + FR trigger + domestic lane above 10 t (Brutto kg &gt; 10000)", "Kein Tarif für DE &gt;10 to, ok?"),
+    ("empty TARIF + FR trigger + Empf.-Name contains &quot;amazon&quot; + Empf.-Land set + Brutto kg &le; 10000 + at least one other diff line + an Empf.-PLZ with leading digits", "kein Tarif für AMAZON &lt;Empf.-Land&gt; '&lt;PLZ digits&gt;' (named from the recipient and route because Amazon's tariff card is not shipped; checked between the departure-country and the destination-country arms)"),
     ("FR, MT and TZ all &lt; &minus;T while Volumen kg = 0 and Volumen kg DL = 0 (the invoice bills the shipment together with another one)", "zusammengefasste Abrechnung (early return, checked after the blank-TARIF block)"),
 ]))
 story.append(P("1.1 Direct-cost labels (each fires independently)", h3))
@@ -179,6 +180,7 @@ story.append(section_table([
     ("DGR Differenz over threshold (skipped when TARIF is zero)", "Gefahrgut-Zuschlag"),
     ("EXP Differenz over threshold", "Produktzuschlag, or Terminzuschlag when EXP Kosten DL = 95"),
     ("ZABF Differenz over threshold", "Einfuhrzollabfertigung"),
+    ("T1 Kosten DL and T1 Differenz both over T, with T1 Kosten lt. Tarif at or under T (a blank, a 0 and a missing base cell are the same case)", "Transitabfertigung, ok? (joined right after Mautdifferenz; 20261027 row 139 is the only unbacked T1 row in the corpus, and reading a T1 line as transit clearance is the auditor's mapping, not a documented rule)"),
     ("SBFU Differenz over threshold", "SBfU-Bescheinigung f. Umsatzsteuerzwecke"),
     ("C38L Differenz over threshold", "Maut von/bis NL"),
 ]))
@@ -221,7 +223,7 @@ story.append(section_table([
     ("REFERENZ3 = ZW (deviating intermediate consignee)", "Differenz aufgrund abweichender Zwischenempfänger &lt;PLZ Ort&gt;"),
     ("SERV_ART = K1AS", "Sonderfahrt"),
     ("SERV_ART = K1AU and |FR − 90| ≤ 0.1", "\"Sonderfahrt\" 90 EUR doppelt berechnet?"),
-    ("domestic (DE to DE) row whose FR Kosten lt. Tarif is the national-card cell for its Empf.-PLZ zone and Brutto kg bracket, and whose FR Kosten DL is 2 to 5 whole zone prices of that zone with a unique decomposition at the smallest number of summands, and is not itself one zone price of that zone (one zone price is one shipment billed at its own weight, not a duplicate: 20260923 row 126); terminal, so the phrase stands alone and bundling / ZW / K1AS / K1AU outrank it", "Referenz wird Nx abgerechnet (N = the summands)"),
+    ("domestic (DE to DE) row whose FR Kosten lt. Tarif is the national-card cell for its Empf.-PLZ zone and Brutto kg bracket, or non-domestic row whose FR Kosten lt. Tarif is a lane price of the non-DE country at its Brutto kg bracket on either card; in both cases FR Kosten DL must be 2 to 5 whole such prices with a unique decomposition at the smallest number of summands, and on a domestic row must not itself be one zone price (one zone price is one shipment billed at its own weight, not a duplicate: 20260923 row 126), while on an international row the lane price matching the tariff copy must be unique across both cards, and FR Kosten DL must also not itself be a lane price of that country at any bracket on either card (DE to CZ: 140.97 is the 451-500 kg lane as well as two copies of 70.46), and on an international row the copies may also sit on top of a Sonderfahrt add-on (FR Kosten DL minus 180, 150, 120, 90 or 110 is then 2 to 5 whole copies of the NEW card's lane price at the row's bracket, that price must be the only one within 0.02 of the tariff copy, and the remainder must not itself be a lane price, and only one S may yield a count (two S values that give different counts read silence); 20261013 row 275 is the witness, 20260730 row 67 the OLD-card fence); terminal, so the phrase stands alone and bundling / ZW / K1AS / K1AU outrank it", "Referenz wird Nx abgerechnet (N = the summands)"),
     ("weights known, same tier, T &lt; FR &lt; 1.0, |Brutto kg &minus; Volumen kg DL| &ge; 0.05, no other label", "Differenz aufgrund abweichender Gewichte"),
     ("weights equal or same tier; FR &gt; 1 on an international lane (non-DE origin or destination)", "Sonderfahrt, or Dachser berechnet die Kosten nach dem bisherigen Tarif &mdash; decided by the rate cards: (FR Kosten DL &minus; S) landing on a NEW-card cell for S in 180/150/120/90/110 gives Sonderfahrt, otherwise FR Kosten lt. Tarif landing on an OLD-card cell (timed by 1.15 on imports) gives the bisherigen wording. Ratecards are encrypted (assets/dachser-ratecards.enc.json); without the passphrase the bisherigen wording stands."),
     ("weights equal or same tier; FR &gt; 1 (or ≥ 0.05 with no other label); ZZ diff = 35", "Fracht Differenz (ZZ=35)"),
@@ -236,10 +238,10 @@ story.append(section_table([
     ("SNK_DL = 14 + SNK diff over T (footer)", "Abholterminvereinbarung"),
     ("row has no other label, only TZ over T", "Differenz treibstof"),
 ]))
-story.append(P("Referenz-count constants (national card + PLZ zone table)", h3))
+story.append(P("Referenz-count constants (national card + PLZ zone table, and the two international cards)", h3))
 story.append(const_table([
-    ("FR Kosten lt. Tarif vs the zone ladder cell of the row's weight bracket", k("DA_NAT_PRICE_TOL")),
-    ("0.08 on the residual of the whole sum, not per summand (any bracket of the zone)", k("DA_NAT_COPY_TOL")),
+    (Paragraph("FR Kosten lt. Tarif vs the zone ladder cell of the row's weight bracket, or vs a lane price of the non-DE country at that bracket", body), k("DA_NAT_PRICE_TOL")),
+    (Paragraph("0.08 on the residual of the whole sum, not per summand (any bracket of the zone or of the country's lanes)", body), k("DA_NAT_COPY_TOL")),
     ("summands searched: N runs 2 to this bound", k("DA_NAT_MAX_COPIES")),
 ]))
 

@@ -38,3 +38,20 @@ test('changelog: the badge version and the first modal row agree', () => {
       `entry "${e.ver}" has an empty item`);
   }
 });
+
+test('changelog: every release appears once, newest first', () => {
+  /* A release relabelled instead of prepended leaves two identical rows and no
+     entry for the older version. Nothing else in the suite read the sequence,
+     so 1.61.0 shipped twice and 1.60.0 vanished. */
+  const vers = changelog.entries.map(entry => entry.ver);
+  assert.equal(new Set(vers).size, vers.length,
+    `a release number appears twice: ${vers.filter((v, i) => vers.indexOf(v) !== i).join(', ')}`);
+  const parts = v => v.split('.').map(Number);
+  for (let i = 1; i < vers.length; i++) {
+    const [a1, a2, a3] = parts(vers[i - 1]);
+    const [b1, b2, b3] = parts(vers[i]);
+    const newestFirst = a1 !== b1 ? a1 > b1 : a2 !== b2 ? a2 > b2 : a3 > b3;
+    assert.ok(newestFirst,
+      `entries must run newest first, but ${vers[i - 1]} comes before ${vers[i]}`);
+  }
+});

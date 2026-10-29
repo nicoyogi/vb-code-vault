@@ -174,6 +174,78 @@ test('rowUid: a key added for one forwarder does not re-key that key for the oth
     'Honold vkg_dl and fr_tarif are 1.58.0 exports and must stay out of the uid seed');
 });
 
+test('rowUid: 1.61.0 Dachser exports stay out of the seed, so bundle uids still join', () => {
+  /* The 2026-10-28 bundle's row_uid values are the join key for every historical
+     Dachser corpus, so recip and the three T1 columns are excluded for Dachser
+     only. K+N has always hashed its own recip, so a global exclusion would
+     re-key every historical K+N row. */
+  const SHEET = 'Soll-Ist-Vergleich best. Beleg';
+  const row139 = {
+    stat: '10', tarif: '172.18', fr_diff: '-20.91', fr_dl: '118.3', fr_tar: '139.21',
+    brutto_kg: '124', vkg: '0', vkg_dl: '62', snk_dl: '5.92', snk_diff: '5.92',
+    snk_tarif: '', zz_diff: '', exp_diff: '', exp_dl: '', maut_diff: '-9.03',
+    sbfu_diff: '', tz_diff: '-0.29', zabf_diff: '', referenz: '1060382694',
+    referenz3: '', empf_plz: '71380', empf_ort: 'Ilijas', anz_sdg: '1',
+    serv_art: 'DA01', sachkonto: 'X', ki_zw_plz: '', ki_zw_ort: '',
+    abg_land: 'DE', empf_land: 'BA',
+  };
+  assert.equal(e.rowUid('dachser', SHEET, 139, row139), 'be966e20');
+  assert.equal(
+    e.rowUid('dachser', SHEET, 139, { ...row139, t1_dl: '50', t1_tar: '0', t1_diff: '50' }),
+    'be966e20',
+    'the T1 columns must not re-key row 139',
+  );
+  const row146 = {
+    stat: '10', tarif: '', fr_diff: '299.4', fr_dl: '299.4', fr_tar: '',
+    brutto_kg: '1794,584', vkg: '0', vkg_dl: '1795', snk_dl: '', snk_diff: '',
+    snk_tarif: '', zz_diff: '', exp_diff: '', exp_dl: '', maut_diff: '52.82',
+    sbfu_diff: '', tz_diff: '53.89', zabf_diff: '', referenz: '2545154269',
+    referenz3: '', empf_plz: '37293', empf_ort: 'Herleshausen', anz_sdg: '1',
+    serv_art: 'K1AV', sachkonto: '612100', ki_zw_plz: '', ki_zw_ort: '',
+    abg_land: 'DE', empf_land: 'DE',
+  };
+  assert.equal(e.rowUid('dachser', SHEET, 146, row146), 'd825bf88');
+  assert.equal(
+    e.rowUid('dachser', SHEET, 146, { ...row146, recip: 'Amazon - XDT6' }),
+    'd825bf88',
+    'the Empf.-Name export must not re-key row 146',
+  );
+  assert.notEqual(
+    e.rowUid('kn', 'Sheet1', 5, { stat: '10', recip: 'Amazon - XDT6' }),
+    e.rowUid('kn', 'Sheet1', 5, { stat: '10', recip: 'Contoso GmbH' }),
+    'K+N has always hashed recip, so the exclusion must stay Dachser-only',
+  );
+});
+
+test('rowUid: the two international Referenz rows keep their bundle uids', () => {
+  /* Both rows carry "Referenz wird Nx abgerechnet" in the sheet. Row 29's
+     phrase was underivable until 1.61.1; row 156's still is not (freight/tariff
+     ratio 1.56), so that cell stands on the sheet alone. Their uids are the join
+     key the 2026-10-28 bundle already ships. The maps are the sheets' own cells;
+     the read-only FR pair, recip and the T1 columns are excluded for Dachser. */
+  const SHEET = 'Soll-Ist-Vergleich best. Beleg';
+  assert.equal(e.rowUid('dachser', SHEET, 29, {
+    stat: '10', tarif: '275.28', fr_diff: '220.04', fr_dl: '440', fr_tar: '219.96',
+    brutto_kg: '443', vkg: '0', vkg_dl: '443', snk_dl: '22', snk_diff: '11',
+    snk_tarif: '11', zz_diff: '', exp_diff: '', exp_dl: '', maut_diff: '22.87',
+    sbfu_diff: '1', tz_diff: '39.61', c38l_diff: '', zabf_diff: '', t1_dl: '',
+    t1_tar: '', t1_diff: '', av_diff: '', c196_diff: '', referenz: '1060368108',
+    recip: 'ALCOR INVEST 2000 S.R.L', referenz3: '', empf_plz: '077085',
+    empf_ort: 'DOBROESTI', anz_sdg: '1', serv_art: '', sachkonto: '',
+    ki_zw_plz: '', ki_zw_ort: '', abg_land: 'DE', empf_land: 'RO',
+  }), '57722bcb');
+  assert.equal(e.rowUid('dachser', SHEET, 156, {
+    stat: '10', tarif: '481.92', fr_diff: '205.07', fr_dl: '573', fr_tar: '367.93',
+    brutto_kg: '541,141', vkg: '0', vkg_dl: '79', snk_dl: '28.67',
+    snk_diff: '28.67', snk_tarif: '', zz_diff: '', exp_diff: '', exp_dl: '',
+    maut_diff: '-5.24', sbfu_diff: '', tz_diff: '36.9', zabf_diff: '',
+    t1_dl: '', t1_tar: '', t1_diff: '', referenz: '1060386794',
+    recip: 'Primulator AS', referenz3: '', empf_plz: '0694', empf_ort: 'Oslo',
+    anz_sdg: '1', serv_art: 'DA01', sachkonto: 'X', ki_zw_plz: '', ki_zw_ort: '',
+    abg_land: 'DE', empf_land: 'NO',
+  }), 'fbae511d');
+});
+
 /* ── collectInputsForRow — the export must carry every cell the engine gates on ── */
 
 test('collectInputsForRow: wackler exports weight/lane signals, dachser the 502/503 storage cells', () => {
