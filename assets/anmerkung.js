@@ -952,10 +952,10 @@ function daNationalCopies(nat,zone,total){
 /* Whole prices that make up FR Kosten DL, or 0 when the row is not this case:
    domestic from the PLZ zone ladder, international from the country's lane prices
    at its own Brutto bracket. The tariff copy sits on the domestic zone ladder or
-   on one unique lane price, and the freight is N whole copies. 20261013 row 29
-   witnesses the international half: 2 x 219.96 (RO) = 439.92 against 440.00. Out
-   of reach by freight/tariff ratio: 20260904 r6 14.14, 20261013 r275 3.31,
-   20261027 r156 1.56, r157 1.30. */
+   on one unique lane price, and the freight is N whole copies, either bare or on
+   top of a Sonderfahrt add-on. 20261013 row 29 witnesses the bare half: 2 x
+   219.96 (RO) = 439.92 against 440.00. Out of reach by freight/tariff ratio:
+   20260904 r6 14.14, 20261027 r156 1.56, r157 1.30. */
 function daReferenzCount(empfPlz,abgLand,empfLand,kg,frDl,frTar){
   const nat=daNationalCard();
   if(!nat)return 0;
@@ -986,7 +986,9 @@ function daLaneOnLadder(cards,cc,value){
 /* The same count on a non-domestic row: the non-DE country's lane prices at the
    row's own Brutto bracket, on both cards. A lane price that matches the tariff
    copy must be unique, the freight must be N whole copies of it, and the freight
-   must not itself be a lane price at any bracket (daLaneOnLadder). Gated on the
+   must not itself be a lane price at any bracket (daLaneOnLadder). The copies may
+   also sit on a Sonderfahrt add-on (20261013 row 275), and then the price is read
+   off the NEW card only (20260730 row 67 is the OLD-card fence). Gated on the
    national card although it reads only the two international cards, so a bundle
    without one keeps the cascade. Lane naming by PLZ is not attempted, the table
    carries country lanes only. */
@@ -1007,6 +1009,22 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar){
   if(daLaneOnLadder(cards,cc,frDl))return 0;
   for(let n=2;n<=DA_NAT_MAX_COPIES;n++)
     if(Math.abs(frDl-n*match[0])<=DA_NAT_COPY_TOL+1e-9)return n;
+  /* The copies can also sit on top of a Sonderfahrt add-on: 20261013 row 275,
+     227.60 - 90 = 137.60 = 2 x 68.81 (NEW PL1 at 151-200 kg). The price is the
+     NEW card's alone: the OLD card would also read 20260730 row 67 as 259 - 180
+     = 2 x 39.52, a row the bundling arm masks today. */
+  const nl=daRatecardLanes(cards.nw,kg,cc), nm=[];
+  for(const k in nl){const q=nl[k];
+    if(q>0&&Math.abs(q-match[0])<=DA_NAT_PRICE_TOL+1e-9&&nm.indexOf(q)<0)nm.push(q);}
+  if(nm.length!==1)return 0;
+  const p=nm[0];
+  for(const S of DA_SONDERFAHRT_S){
+    const base=frDl-S;
+    if(!(base>0))continue;
+    if(daLaneOnLadder(cards,cc,base))continue;
+    for(let n=2;n<=DA_NAT_MAX_COPIES;n++)
+      if(Math.abs(base-n*p)<=DA_NAT_COPY_TOL+1e-9)return n;
+  }
   return 0;
 }
 
@@ -5269,7 +5287,7 @@ const INPUT_GLOSSARY={
   tarif             :'Total Kosten lt. Tarif: booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
   fr_diff           :'FR Differenz: freight-charge delta vs tariff (numeric, signed).',
   fr_tarif          :'FR Kosten lt. Tarif: the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier. On Honold rows it is the current-tariff freight for the lane: blank / 0 means the current table prices no rate for that Empf.-Land and the note is "Kein Tarif für \'<LAND>\'", and otherwise its amount at the billed bracket decides whether the lane diverged from the OLD table.',
-  fr_tar            :'FR Kosten lt. Tarif (Dachser): the tariff copy of the freight (numeric). On a domestic row it is compared with the national card\'s cell for the row\'s Empf.-PLZ zone and Brutto kg bracket; on an international one, with the non-DE country\'s lane price at the row\'s Brutto bracket on either card. When it matches, FR Kosten DL itself is tested as 2 to 5 whole zone or lane prices, and a unique decomposition reads "Referenz wird Nx abgerechnet" alone.',
+  fr_tar            :'FR Kosten lt. Tarif (Dachser): the tariff copy of the freight (numeric). On a domestic row it is compared with the national card\'s cell for the row\'s Empf.-PLZ zone and Brutto kg bracket; on an international one, with the non-DE country\'s lane price at the row\'s Brutto bracket on either card. When it matches, FR Kosten DL itself is tested as 2 to 5 whole zone or lane prices, and a unique decomposition reads "Referenz wird Nx abgerechnet" alone. On an international row the copies may also sit on top of a Sonderfahrt add-on: FR Kosten DL minus one of 180/150/120/90/110 is then the 2 to 5 whole copies of the NEW card\'s lane price, and that lane price must be the only one at the bracket within 0.02 of the tariff copy.',
   fr_dl             :'FR Kosten DL: the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it decides the note: equal to the OLD tariff rate that Empf.-Land publishes for the bracket the row\'s Volumen kg falls in means the previous tariff is still being billed, and equal to an OLD rate from another bracket while Volumen kg DL sits in yet another joins both phrases.',
   exp_diff          :'EXP Differenz: express/priority surcharge delta (numeric, signed).',
   exp_dl            :'EXP Kosten DL: DL-side express cost (Dachser-only signal).',

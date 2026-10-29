@@ -3025,27 +3025,30 @@ test('processDachser: without the ratecards a K1AU |FR-90| row keeps the doppelt
    20261019 row 429 reads 5x because five zone 2 prices reach its 190.50. On an
    international one they are the non-DE country's lane prices at the row's own
    Brutto bracket: 20261013 row 29 reads 2x because 2 x 219.96 (the RO lane) is
-   439.92 against its 440.00. The arm is terminal either way, so the note stands
-   alone and fires only when no earlier FR branch owns the row.
+   439.92 against its 440.00. The copies may also sit on top of a Sonderfahrt
+   add-on: 20261013 row 275 reads 2x because 227.60 - 90 = 137.60 = 2 x 68.81
+   (the NEW PL1 lane at 151-200 kg). The arm is terminal either way, so the note
+   stands alone and fires only when no earlier FR branch owns the row.
 
-   Five gates carry the rule and all are pinned below: the tariff copy must sit
+   Seven gates carry the rule and all are pinned below: the tariff copy must sit
    on the ladder of the row's own weight bracket (20261013 row 351 decomposes but
    fails here), the decomposition must be unique at the smallest count (ambiguity
    is silence, not a guess), a domestic FR Kosten DL must not itself be one zone
    price (20260923 row 126: one shipment at its own weight, not a duplicate), an
    international lane price matching the tariff copy must be unique across both
-   cards (XX Testland carries 40 and 40.01 against a 40.00 copy), and an
+   cards (XX Testland carries 40 and 40.01 against a 40.00 copy), an
    international FR Kosten DL must not itself be a lane price at any bracket (DE
    to CZ: 140.97 is two copies of the 70.46 lane and also the lane at a heavier
-   bracket).
+   bracket), and the add-on reading prices its copies off the NEW card alone
+   (20260730 row 67 duplicates on the OLD card only) and refuses a remainder that
+   is itself a lane price.
 
    The synthetic cards give the gates room: the national zone 1 prices 10/15/20
    across the three brackets, zone 2 30/40/15, zone 3 10/10/10 (one distinct
    price, so a two-copy reading can never be unique), and one bracket per
-   international card carries the country lanes the tests fence on. Four
+   international card carries the country lanes the tests fence on. Three
    truth-labelled cells stay out of reach by their freight/tariff ratio: 20260904
-   row 6 (9x, 14.14), 20261013 row 275 (2x, 3.31), 20261027 row 156 (4x, 1.56)
-   and row 157 (6x, 1.30). */
+   row 6 (9x, 14.14), 20261027 row 156 (4x, 1.56) and row 157 (6x, 1.30). */
 const REF_COLS = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54,
   abg_land: 55, empf_land: 56, empf_plz: 57, fr_dl: 58, fr_tar: 59, maut: 60,
   referenz3: 61, anz_sdg: 62, serv_art: 63, exp: 64, exp_dl: 65 };
@@ -3282,6 +3285,85 @@ test('processDachser: the lane count starts at two copies', () => {
   });
 });
 
+test('processDachser: the copies can sit on a Sonderfahrt add-on', () => {
+  /* 20261013 row 275: DE to PL, Brutto 179, FR Kosten DL 227.60, tariff copy
+     68.81 (the NEW PL1 lane at 151-200 kg). 227.60 - 90 = 137.60 = 2 x 68.81
+     within 0.02, so the add-on is counted in the copies. At 227.70 the residual
+     is exactly 0.08 and still fires; at 227.71 it is 0.09 and the row keeps the
+     bisherigen wording. Mutation: testing FR_DL alone instead of FR_DL - S
+     leaves the witness on that wording. */
+  withIntlCard(() => {
+    const abg = { 52: '158.79', 53: '179', 54: '179', 56: 'PL', 57: '41-250',
+      58: '227.6', 59: '68.81' };
+    assert.equal(e.processDachser(intlRow(abg), R, REF_COLS),
+      'Referenz wird 2x abgerechnet');
+    assert.equal(e.processDachser(intlRow({ ...abg, 52: '158.89', 58: '227.7' }), R, REF_COLS),
+      'Referenz wird 2x abgerechnet');
+    assert.equal(e.processDachser(intlRow({ ...abg, 52: '158.9', 58: '227.71' }), R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  });
+});
+
+test('processDachser: the add-on counts only NEW-card copies', () => {
+  /* 20260730 row 67: DE to PL, Brutto 4, FR Kosten DL 259.00, tariff copy 39.52.
+     The OLD card carries 39.52, so 259 - 180 = 79 = 2 x 39.52 and an OLD-card
+     price would read 2x; the NEW card prices that bracket differently, so the
+     count stays off. Mutation: reading the price off both cards fires it. */
+  const card = { ...INTL_CARD, old: { brackets: [{ von: 1, bis: 2000,
+    lanes: { ...INTL_LANES, 'RO Rumänien': 219.96, 'XX Testland 3': 39.52 } }] } };
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(card);
+    const ws = intlRow({ 52: '219.48', 53: '4', 54: '4', 56: 'XX', 57: '12345',
+      58: '259', 59: '39.52' });
+    assert.equal(e.processDachser(ws, R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
+test('processDachser: an add-on remainder that is itself a lane stays silent', () => {
+  /* DE to CZ, Brutto 4: the NEW card prices the CZ lane at 70.46, and 140.97 is
+     two copies of it, but 140.97 is also the CZ lane at the 4501-5000 bracket.
+     With S = 90 the remainder is that lane, so the freight is one shipment at
+     its own weight and the row keeps its wording. Mutation: dropping the base
+     ladder guard reads "Referenz wird 2x abgerechnet". */
+  withIntlCard(() => {
+    const ws = intlRow({ 52: '160.51', 53: '4', 54: '4', 56: 'CZ', 57: '10000',
+      58: '230.97', 59: '70.46' });
+    assert.equal(e.processDachser(ws, R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  });
+});
+
+test('processDachser: six copies on the add-on stay silent', () => {
+  /* Six whole copies would need a cap of 6: 502.86 - 90 = 412.86 = 6 x 68.81,
+     and no count from 2 to 5 reaches it, so the row keeps its wording. Mutation:
+     raising DA_NAT_MAX_COPIES to 6 reads "Referenz wird 6x abgerechnet". */
+  withIntlCard(() => {
+    const ws = intlRow({ 52: '434.05', 53: '179', 54: '179', 56: 'PL',
+      57: '41-250', 58: '502.86', 59: '68.81' });
+    assert.equal(e.processDachser(ws, R, REF_COLS),
+      'Dachser berechnet die Kosten nach dem bisherigen Tarif');
+  });
+});
+
+test('processDachser: the add-on count is terminal and ranks below bundling', () => {
+  /* The witness row also carrying Maut- and Produktzuschlag answers with the
+     Referenz phrase alone, because the finding is terminal; with Anz. Sdg 2 the
+     bundling branch owns the row and the count never shows. Mutation: dropping
+     the terminal return joins the phrase to the earlier segments. */
+  withIntlCard(() => {
+    const ws = intlRow({ 52: '158.79', 53: '179', 54: '179', 56: 'PL', 57: '41-250',
+      58: '227.6', 59: '68.81', 60: '2.5', 64: '5', 65: '10' });
+    assert.equal(e.processDachser(ws, R, REF_COLS), 'Referenz wird 2x abgerechnet');
+    assert.equal(e.processDachser(intlRow({ 52: '158.79', 53: '179', 54: '179',
+      56: 'PL', 57: '41-250', 58: '227.6', 59: '68.81', 62: '2' }), R, REF_COLS),
+      'hätte gebündelt werden können?');
+  });
+});
+
 test('processDachser: a locked card leaves the international row on its cascade', () => {
   /* The arm reads the live global, so a page without the passphrase keeps
      today's wording on the 20261013 row 29 shape. Mutation: a count derived
@@ -3381,10 +3463,11 @@ test('processDachser: the international arm needs the national card present', ()
 test('processDachser: the Referenz table matches the confirmed sheet rows', {
   skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
 }, () => {
-  /* 17 rows: the 13 the rule must label (20261019 336/363/373/399/429/458/466/
-     467/474/478, 20261013 161/174, 20260903 303) and the 4 that fence it:
-     351 and 20260903 250/270 fail the tariff-copy gate, 201 is not domestic.
-     Each labelled row must answer with the Referenz phrase alone. */
+  /* 19 rows: the 14 the rule must label (20261019 336/363/373/399/429/458/466/
+     467/474/478, 20261013 161/174/275, 20260903 303) and the 5 that fence it:
+     351 and 20260903 250/270 fail the tariff-copy gate, 201 is not domestic,
+     and 20260730 67 duplicates only on the OLD card. Each labelled row must
+     answer with the Referenz phrase alone. */
   const rows = JSON.parse(
     readFileSync(new URL('./fixtures/dachser-referenz-rows.json', import.meta.url), 'utf8'));
   const mismatches = [];
