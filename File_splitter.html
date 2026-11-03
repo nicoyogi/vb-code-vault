@@ -630,12 +630,13 @@
     for (const [group, key] of Object.entries(NAMES_KEYS)) {
       let saved = [];
       try { saved = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
-      if (Array.isArray(saved) && saved.some(v => v && v.trim())) {
-        const list = document.querySelector(`.people-list[data-group="${group}"]`);
-        list.innerHTML = '';
-        saved.forEach(v => addPerson(group, v));
-        if (list.children.length === 0) addPerson(group);
-      }
+      const names = Array.isArray(saved) && saved.some(v => typeof v === 'string' && v.trim())
+        ? saved.filter(v => typeof v === 'string')
+        : [];
+      const list = document.querySelector(`.people-list[data-group="${group}"]`);
+      list.innerHTML = '';
+      names.forEach(v => addPerson(group, v));
+      if (list.children.length === 0) addPerson(group);
     }
     halfChecked = Object.fromEntries(
       Object.entries(NAMES_KEYS).map(([group, key]) => {
@@ -648,11 +649,24 @@
   })();
 
   function currentHalf(group) { return halfChecked[group] || (halfChecked[group] = new Set()); }
+  // The set is the truth; the boxes are drawn from it on every render, so a
+  // restore, rename or removal cannot leave a tick and a weight out of step.
+  function syncHalfBoxes() {
+    for (const group of Object.keys(NAMES_KEYS)) {
+      const list = document.querySelector(`.people-list[data-group="${group}"]`);
+      for (const row of Array.from(list.children)) {
+        const input = row.querySelector('.person-input');
+        const half = row.querySelector('.half-input');
+        if (input && half) half.checked = !!input.value.trim() && currentHalf(group).has(input.value.trim());
+      }
+    }
+  }
   // Drop half-day flags whose name is no longer on the list (flags are keyed
   // by name string; a rename or removal would otherwise orphan them).
   function pruneHalf(group) {
     const names = new Set(getNames(group));
     for (const n of [...currentHalf(group)]) if (!names.has(n)) currentHalf(group).delete(n);
+    saveHalfChecked();
   }
   function saveHalfChecked() {
     try {
@@ -1145,6 +1159,7 @@
     const inUse = new Set(validSystems().map(s => s.group));
     document.getElementById('groupTariff').hidden = inUse.size > 0 && !inUse.has('tariff');
     document.getElementById('groupFactual').hidden = !inUse.has('factual');
+    syncHalfBoxes();
     if (step === 2) renderKreditor();
     if (step === 3) renderTotals();
     if (step === 5) renderRecap();
@@ -1484,7 +1499,7 @@
       <label class="person-half" title="Half day"><input type="checkbox" class="half-input" />½</label>
       <button class="rm-btn" onclick="removePerson(this)" title="Remove">×</button>`;
     list.appendChild(row);
-    const input = row.querySelector('input');
+    const input = row.querySelector('.person-input');
     input.value = value;
     if (!value) input.focus();
     const half = row.querySelector('.half-input');
