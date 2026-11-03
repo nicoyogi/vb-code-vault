@@ -1470,3 +1470,39 @@ test('renderTotals: no .total-none when the group total is above zero', () => {
   assert.doesNotMatch(html, /class="total-none"/);
   assert.match(html, /class="total-cols"/);
 });
+
+test('half-day flags: after a reload the ½ box shows what halfChecked holds', () => {
+  const t = loadSplitter({
+    seed: { 'fileSplitter.names': '["Anna","Ben"]', 'fileSplitter.halfNames': '["Anna"]' },
+    peopleDom: true,
+  });
+  assert.deepEqual(t.__peopleRows('tariff').map(r => [r.name, r.half]), [['Anna', true], ['Ben', false]]);
+  assert.deepEqual([...t.currentHalf('tariff')], ['Anna']);
+});
+
+test('half-day flags: renaming a ticked row drops the ½ box and the flag together', () => {
+  const t = loadSplitter({ seed: { 'fileSplitter.names': '["Anna","Ben"]' }, peopleDom: true });
+  const rows = t.__peopleRows('tariff');
+  rows[0].half = true;                                  // tick ½ like a click
+  assert.deepEqual([...t.currentHalf('tariff')], ['Anna']);
+  rows[0].name = 'Cara';                                // then type a different name
+  assert.equal(rows[0].half, false);
+  assert.deepEqual([...t.currentHalf('tariff')], []);
+  assert.equal(t.localStorage.getItem('fileSplitter.halfNames'), '[]');
+});
+
+test('restoreNames: a stored list with non-string entries keeps only the names', () => {
+  const t = loadSplitter({ seed: { 'fileSplitter.names': '["Anna",42]' }, peopleDom: true });
+  assert.deepEqual(t.__peopleRows('tariff').map(r => r.name), ['Anna']);
+  assert.equal(t.__peopleRows('factual').length, 1);
+});
+
+test('half-day flags: an empty list still offers a ½ box on its first row', () => {
+  const t = loadSplitter({ peopleDom: true });
+  const rows = t.__peopleRows('tariff');
+  assert.equal(rows.length, 1);
+  rows[0].name = 'Anna';
+  rows[0].half = true;
+  assert.equal(rows[0].half, true);
+  assert.deepEqual([...t.currentHalf('tariff')], ['Anna']);
+});
