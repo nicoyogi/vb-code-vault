@@ -295,7 +295,7 @@ A bump is not free: [`showChangelogOnUpdate()`](assets/anmerkung.js) keys off th
 
 When you do bump, in one commit:
 
-1. Set `version` and `entries[0].ver` in the changelog, and prepend the entry with `ver`, `date`, and `items` - one item per rule or branch, prefixed with the forwarder name (`"Wackler - …"`).
+1. Set `version` and `entries[0].ver` in the changelog, and prepend the entry with `ver`, `date`, and `items` - one item per rule or branch, prefixed with the forwarder name (`"Wackler - …"`). Keep each item simple and to the point: one to three sentences on what changes for the user, a witness row at most. Audit counts, row inventories, internal symbol names and rejected alternatives belong in `docs/anmerkung/` and the commit message, not in the modal.
 2. Rebuild [`docs/anmerkung/conditions-report.pdf`](docs/anmerkung/conditions-report.pdf) with `python scripts/anmerkung/report_conditions.py` if the cascade changed.
 3. Refresh the test counts and file hashes in [`docs/anmerkung/integration-manifest.json`](docs/anmerkung/integration-manifest.json), the test counts in [`docs/anmerkung/INTEGRATION_v5.md`](docs/anmerkung/INTEGRATION_v5.md) and [`README.md`](README.md#tests). Nothing generates these; it is a manual step.
 4. Leave `sw.js`'s `VERSION` alone. Edit its `CORE` precache array only if the set of cached assets genuinely changed.
