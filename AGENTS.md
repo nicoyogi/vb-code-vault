@@ -32,7 +32,11 @@ Never a major. The split is amendment vs new unit, not bugfix vs feature: a new 
 arrives in a `fix(anmerkung):` commit and still takes a minor.
 
 A bump is not free. `showChangelogOnUpdate()` keys off the version string, so every bump pops
-the "What's new" modal for every returning user.
+the "What's new" modal for every returning user. Write that entry for the person reading the
+modal, not for the reviewer: one to three sentences, about 250 characters, naming the forwarder,
+what the row now reads, and the condition that triggers it. A witness row is worth keeping, a
+list of them is not. Audit counts, row inventories, internal symbol names and the rejected
+alternatives belong in `docs/anmerkung/` and the commit message.
 
 README's `Version policy` section under Contributing is normative; this is the summary. When
 you do bump, move `version`, `entries[0].ver`, and the new entry in one commit, rebuild
