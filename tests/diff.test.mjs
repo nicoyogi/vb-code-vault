@@ -426,6 +426,17 @@ test('buildTrainingSummary: shared vs varying inputs across a pattern', () => {
     'keys missing from some rows are omitted');
 });
 
+test('diffEvidenceFingerprint: the four Honold MT/TG keys fold locale text', () => {
+  /* A raw-string compare here let the missing mt_dl / mt_tar / mt_diff / tg_diff regex
+     entry survive review: "10,71" and "10.71" must hash to one evidence value. */
+  for (const k of ['mt_dl', 'mt_tar', 'mt_diff', 'tg_diff']) {
+    assert.equal(
+      e.evalInContext(`diffEvidenceFingerprint({${k}:'10,71'})`),
+      e.evalInContext(`diffEvidenceFingerprint({${k}:'10.71'})`),
+      `${k} must fold 10,71 and 10.71 into one canonical evidence value`);
+  }
+});
+
 test('buildTrainingSummary: a_vs_b fallback when the engine was not evaluated', () => {
   const s = e.buildTrainingSummary([
     rec({ engine_label: '', engine_missing_phrase_keys: [], engine_missing_phrases: [],
@@ -588,6 +599,13 @@ test('buildPhraseEmitterIndex: maps phrase keys to emitting functions, covers th
      must name both or the catalog under-reports the emitters. */
   assert.deepStrictEqual(A(idx.tpl_keinTarifLand), ['processDachser', 'processHonold'],
     'tpl_keinTarifLand is emitted by Dachser and, since 1.58.0, by Honold');
+  /* The MT group has its own no-tariff wording (the /^kein tarif/ anchor never reaches
+     "Kein Maut Tarif"), and the Tauschgebühr phrase is a catalog key rather than a
+     literal, so both have to name their emitter or the catalog under-reports it. */
+  assert.deepStrictEqual(A(idx.tpl_keinMautTarifLand), ['processHonold'],
+    'the MT no-tariff wording is Honold-only');
+  assert.deepStrictEqual(A(idx.tauschgebuehrDiff), ['processHonold'],
+    'Differenz Tauschgebühr, ok? is emitted by processHonold');
   for (const key of Object.keys(e.PHRASES)) {
     assert.ok(Array.isArray(idx[key]), 'every catalog key present: ' + key);
   }
@@ -705,6 +723,19 @@ test('phraseKeysFor: no ?: sentinel for noisy catalog phrases', () => {
 
 test('phraseToKey: the 196 note resolves to its catalog key', () => {
   assert.equal(e.phraseToKey('Kalk. Kosten Zustellung'), 'kalkKostenZustellung');
+});
+
+test('phraseToKey: the two Honold phrases 1.62.0 emits resolve to their own keys', () => {
+  /* Both are what the engine writes into the cell, so a bundle phrase has to key back
+     to the same catalog entry or the diff reads a matching cell as a mismatch. The FR
+     Kein-Tarif template must not swallow the MT wording on the way. */
+  assert.equal(e.phraseToKey("Kein Maut Tarif für 'LT'"), 'tpl_keinMautTarifLand');
+  assert.equal(e.phraseToKey("Kein Maut Tarif für 'AT'"), 'tpl_keinMautTarifLand');
+  assert.equal(e.phraseToKey("Kein Tarif für 'SI'"), 'tpl_keinTarifLand',
+    'the freight wording keeps its own key');
+  assert.equal(e.phraseToKey('Differenz Tauschgebühr, ok?'), 'tauschgebuehrDiff');
+  assert.equal(e.phraseToKey('  differenz tauschgebühr, OK? '), 'tauschgebuehrDiff',
+    'trimmed and case-folded like every other key');
 });
 
 test('PHRASES catalog: normPhrase folding never merges two distinct branches (known exception: Kontierung case pair)', () => {

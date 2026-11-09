@@ -394,6 +394,7 @@ const PHRASES={
   frachtDiff:                 'Frachtdifferenz',
   // Honold
   honoldBisherigerTarif:      'Honold berechnet die Kosten nach dem bisherigen Tarif',
+  tauschgebuehrDiff:          'Differenz Tauschgebühr, ok?',
 };
 /* Expose under shorter alias for compactness inside processors. */
 const P=PHRASES;
@@ -472,6 +473,12 @@ const PHRASE_TEMPLATES=[
   {key:'tpl_keinTarifLand',regex:/^kein tarif f[uü]r/i,
    example:'Kein Tarif für \'SI\'',
    processors:['processDachser','processHonold']},
+  /* The MT group has its own no-tariff wording, and the FR template above does not
+     match it: "Kein Maut Tarif" is a middling word the /^kein tarif/ anchor never
+     reaches. Honold-only, since no other forwarder reads an MT Kosten lt. Tarif pair. */
+  {key:'tpl_keinMautTarifLand',regex:/^kein maut tarif f[uü]r/i,
+   example:'Kein Maut Tarif für \'AT\'',
+   processors:['processHonold']},
   {key:'zwPrefix',         regex:/^differenz aufgrund abweichender zwischenempf/i,
    example:'Differenz aufgrund abweichender Zwischenempfänger 12345 Berlin',
    processor:'processDachser'},
@@ -2884,6 +2891,8 @@ function buildReason(fw,ws,r,cols){
     push('STAT',num(cols.stat));push('FR_DL',num(cols.fr_dl));
     push('ZZ',num(cols.zz));
     push('VKG',num(cols.vkg));pushZero('VKG_DL',cols.vkg_dl);pushZero('FR_TARIF',cols.fr_tar);
+    pushZero('MT_DL',cols.mt_dl);pushZero('MT_TARIF',cols.mt_tar);
+    pushZero('MT_DIFF',cols.mt_diff);pushZero('TG',cols.tg_diff);
     const land=cellStr(ws,r,cols.empf_land);if(land)parts.push('LAND='+land);
   }
   return parts.join(' | ');
@@ -2933,6 +2942,10 @@ function resolveHonold(ws,range){
     vkg:      fc('','Volumen kg'),
     vkg_dl:   fc('','Volumen kg DL'),
     fr_tar:   fc('FR','Kosten lt. Tarif'),
+    mt_dl:    fc('MT','Kosten DL'),
+    mt_tar:   fc('MT','Kosten lt. Tarif'),
+    mt_diff:  fc('MT','Differenz'),
+    tg_diff:  fc('TG','Differenz'),
     empf_land:fc('','Empf.-Land'),
     empf_plz: fc('','Empf.-PLZ'),
   };
@@ -2941,7 +2954,15 @@ function resolveHonold(ws,range){
    (the GB Großbrittanien 2 column) while the rest is whole cents, so equality is
    a 0.005 tolerance; the <= boundary covers round-half-up. */
 const HONOLD_RATE_TOL=0.005;
-/* Three rules, decided from FR Kosten DL and FR Kosten lt. Tarif.
+/* Freight materiality floor: an FR difference this small is rounding dust, not an
+   undercharge, so the fallback weight phrase stays off. The binding bound is the lower
+   one: 0.5 sits above the only dust gap that reaches it (0.11) and far below the
+   smallest difference the fallback arm reports (3.74, 20381521 NEU row 19). The 0.64
+   rows are claimed by the previous-tariff arm before the floor is consulted. */
+const HONOLD_FR_FLOOR=0.5;
+/* Five rules decide the note, from FR Kosten DL / FR Kosten lt. Tarif and the MT and
+   TG cost groups (no MT / TG group on the layout resolves those columns to -1 and the
+   matching arm is off).
    A ZZ cost line can be a second delivery attempt billed on its own: its Differenz
    cell is that attempt's Kosten DL minus its tariff cost, and with FR Kosten DL
    blank / 0 over the Dachser tolerance the whole note is "2. Zustellung". A blank / 0
@@ -2951,6 +2972,18 @@ const HONOLD_RATE_TOL=0.005;
    OLD matrix cannot say anything about a lane the current one does not price. It reads
    neither Volumen kg nor the OLD matrix, so it sits after the FR / ZZ branch and before
    the Volumen kg gate; an absent column (cols.fr_tar < 0) turns it off.
+   The MT group asks the same question of the toll line: MT Kosten lt. Tarif blank / 0
+   while MT Kosten DL is charged means the toll has no tariff behind it, and the note is
+   "Kein Maut Tarif für '<LAND>'" - terminal, and RUL2 fixes that as the rule: on the only
+   row where both notes were derivable the auditor wrote the toll phrase alone, which is
+   positive evidence that it suppresses the freight note. 20384083 NEU row 6 is the proof
+   (LT, FR Kosten DL 83.77 = the LT rate of the 200 kg bracket its 183 kg falls in, so the
+   previous-tariff arm would otherwise fire, and the auditor wrote the toll phrase only). It needs the column pair, a
+   charged MT Kosten DL and a country; an absent MT group (cols.mt_dl < 0 or
+   cols.mt_tar < 0) and a blank Empf.-Land each turn it off. The FR Kein-Tarif arm above
+   still returns first, so a row without a priced FR lane reads that phrase instead
+   (20382640 row 8, SI), and it cannot co-occur with Mautdifferenz: a toll tariff of ~0
+   makes the toll Differenz positive.
    Otherwise the OLD tariff is read by rate. The row keeps the previous-tariff note when
    FR equals an OLD rate for its Empf.-Land in the Bis bracket its Volumen kg falls in -
    membership across every zone of the country, because the row carries the country but
@@ -2966,10 +2999,22 @@ const HONOLD_RATE_TOL=0.005;
    96.13 on 20382640 row 4) keeps the note weight-only. That divergence test is a PROXY
    for the current matrix, which is not shipped: it reads the wrong answer on a lane whose
    OLD and current rates agree at the billed bracket but diverge at the bracket the billed
-   amount came from. A FR matching no OLD rate anywhere is a weight difference.
+   amount came from. A FR matching no OLD rate anywhere is a weight difference, unless the
+   FR is within HONOLD_FR_FLOOR (0.50) of the row's own FR Kosten lt. Tarif: a difference
+   that small is rounding dust, not an undercharge, and the fallback weight phrase becomes
+   empty instead. The floor never erases a claimed base (previous tariff / both), and it
+   needs a priced tariff cell - an absent cols.fr_tar column, and a blank / 0 FR Kosten lt.
+   Tarif, each keep the weight phrase.
    Known bound: one amount collides exactly between the OLD and the current table
    (PL1 OLD@10000 = current@8000 = 858.93), so a current-tariff charge at a different
    weight on that lane would read as the old tariff.
+   Two additive arms then join whatever the freight rule decided, in this order:
+   "Mautdifferenz" when MT Differenz is below -HONOLD_RATE_TOL - a toll line billed under
+   its tariff is an undercharge, one billed above it is not one of these rows - then
+   "Differenz Tauschgebühr, ok?" when a TG Differenz clears T_DACHSER (0.08 by default,
+   sign-insensitive). Both read through hasErr() against the Dachser tolerance, each is off
+   on a layout without its column, and neither stands in for the freight verdict: they join
+   it.
    Without the decrypted tariff the row is SKIPPED (null), never blanked: the engine
    must not overwrite a note it cannot re-derive; a tariff with tiers but no zones or
    codes, with a country key that is not two uppercase letters, or whose zone arrays
@@ -2987,6 +3032,9 @@ function processHonold(ws,r,cols){
   const frtOk=cols.fr_tar>=0;
   const frt=frtOk?cellNum(ws,r,cols.fr_tar):0;
   if(frtOk&&land&&Math.abs(frt)<=HONOLD_RATE_TOL)return "Kein Tarif für '"+land+"'";
+  if(cols.mt_tar>=0&&cols.mt_dl>=0&&land
+     &&Math.abs(cellNum(ws,r,cols.mt_tar))<=HONOLD_RATE_TOL
+     &&hasErr(cellNum(ws,r,cols.mt_dl),T_DACHSER))return "Kein Maut Tarif für '"+land+"'";
   const tv=honoldTierIdx(cols.vkg>=0?cellNum(ws,r,cols.vkg):0);
   if(tv===null)return P.abweichGewichte;
   /* The country cell is workbook-controlled, so the zone list is taken only when it
@@ -3007,9 +3055,14 @@ function processHonold(ws,r,cols){
   const td=honoldTierIdx(vdl);
   const diverged=frtOk&&oldAtTv.length>0&&oldAtTv.every(v=>Math.abs(v-frt)>HONOLD_RATE_TOL);
   const prevDl=oldAnywhere&&vdl>0&&td!==tv&&diverged;
-  if(prevBilled)return P.honoldBisherigerTarif;
-  if(prevDl)return join(P.abweichGewichte,P.honoldBisherigerTarif);
-  return P.abweichGewichte;
+  let res;
+  if(prevBilled)res=P.honoldBisherigerTarif;
+  else if(prevDl)res=join(P.abweichGewichte,P.honoldBisherigerTarif);
+  else if(frtOk&&Math.abs(frt)>HONOLD_RATE_TOL&&Math.abs(fr-frt)<=HONOLD_FR_FLOOR)res='';
+  else res=P.abweichGewichte;
+  if(cols.mt_diff>=0&&cellNum(ws,r,cols.mt_diff)<-HONOLD_RATE_TOL)res=join(res,P.mautDiff);
+  if(cols.tg_diff>=0&&hasErr(cellNum(ws,r,cols.tg_diff),T_DACHSER))res=join(res,P.tauschgebuehrDiff);
+  return res;
 }
 
 /* Run rules across the workbook without mutating files. Returns in-memory results + stats. */
@@ -3266,6 +3319,8 @@ const TESTER_FIELDS={
   honold:[
     ['stat','Stat_Freigabe','num'],['fr_dl','FR Kosten DL','num'],
     ['fr_tar','FR Kosten lt. Tarif','num'],
+    ['mt_dl','MT Kosten DL','num'],['mt_tar','MT Kosten lt. Tarif','num'],
+    ['mt_diff','MT Differenz','num'],['tg_diff','TG Differenz','num'],
     ['zz','ZZ Differenz','num'],
     ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
     ['empf_land','Empf.-Land','str'],
@@ -3318,6 +3373,9 @@ const TESTER_PRESETS={
     {name:'ZZ second delivery (20381523 row 4)',values:{stat:10,vkg:157,zz:35.08}},
     {name:'OLD rate from another bracket, DL weight in a third (20382640 row 5, AT)',values:{stat:10,fr_dl:58.46,vkg:'124,358',vkg_dl:'62,18',fr_tar:41.36,empf_land:'AT'}},
     {name:'No current tariff for the lane (20382640 row 8, SI)',values:{stat:10,fr_dl:733.31,vkg:727,vkg_dl:0,fr_tar:0,empf_land:'SI'}},
+    {name:'Toll undercharged (20384083 row 11, AT, MT -2.20)',values:{stat:10,fr_dl:36.5,vkg:'103,6',vkg_dl:'51,8',fr_tar:46.97,mt_dl:2.21,mt_tar:4.41,mt_diff:-2.2,empf_land:'AT'}},
+    {name:'Tauschgebühr differs (20384083 row 9, CH, TG +0.77)',values:{stat:10,fr_dl:647.61,vkg:'2677,13',vkg_dl:183,fr_tar:764.01,mt_dl:25.76,mt_tar:32.78,mt_diff:-7.02,tg_diff:0.77,empf_land:'CH'}},
+    {name:'No tariff behind the toll line (20384083 row 6, LT)',values:{stat:10,fr_dl:83.77,vkg:183,vkg_dl:183,fr_tar:83.77,mt_dl:10.71,mt_tar:0,empf_land:'LT'}},
   ],
 };
 
@@ -3401,7 +3459,7 @@ function buildSyntheticWs(fw,userVals){
     kn:['target','stat','tarif','recip','referenz','vkg','vkg_dl','kost','sach','fr','exp','toll','snk_dl','snk_diff','fuel'],
     dhl:['target','stat','tarif','sach','kost','addr','stack','weight','conv','irr','neut','sign','snk','diff','maut','surc','over','tz'],
     wackler:['target','stat','tarif','avis_diff','snk_diff','fr','fr_tar','fr_dl','maut','tz','referenz','colli','brutto','vkg','vkg_dl','empf_plz','empf_ort','kostenstelle','sachkonto'],
-    honold:['target','stat','fr_dl','fr_tar','zz','vkg','vkg_dl','empf_land','empf_plz'],
+    honold:['target','stat','fr_dl','fr_tar','zz','vkg','vkg_dl','empf_land','empf_plz','mt_dl','mt_tar','mt_diff','tg_diff'],
   }[fw]||[];
   for(const k of allKeys)if(cols[k]===undefined)cols[k]=-1;
   return{ws,cols};
@@ -3733,8 +3791,9 @@ const UID_EXCLUDED_INPUT_KEYS=new Set(['abg_land','empf_land','abg_plz','zone','
    1.58.0 re-reads Volumen kg DL and reads FR Kosten lt. Tarif for Honold; both
    are excluded here so that change re-keys nothing. 1.61.0 reads Empf.-Name and
    the three T1 columns for Dachser, also excluded, or every Dachser row_uid in
-   the 2026-10-28 bundle would change. */
-const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz','c196_diff','fr_dl','fr_tar','recip','t1_dl','t1_tar','t1_diff']),dhl:new Set(['el_diff']),honold:new Set(['zz_diff','vkg_dl','fr_tarif'])};
+   the 2026-10-28 bundle would change. 1.62.0 reads the MT and TG cells for
+   Honold, excluded the same way. */
+const UID_EXCLUDED_INPUT_KEYS_BY_FW={dachser:new Set(['referenz','c196_diff','fr_dl','fr_tar','recip','t1_dl','t1_tar','t1_diff']),dhl:new Set(['el_diff']),honold:new Set(['zz_diff','vkg_dl','fr_tarif','mt_dl','mt_tar','mt_diff','tg_diff'])};
 function rowUid(forwarder,sheet,row,inputs,sourceTag){
   const seedParts=[forwarder||'',sheet||'',String(row||'')];
   if(sourceTag)seedParts.push('@'+sourceTag);
@@ -3792,7 +3851,7 @@ const CANONICAL_INPUT_ORDER={
            'kostenstelle','sachkonto'],
   honold:['stat','fr_dl','vkg','empf_land','empf_plz','zz_diff',
            /* Last on purpose, like dachser's referenz: existing CSV columns stay put. */
-           'vkg_dl','fr_tarif'],
+           'vkg_dl','fr_tarif','mt_dl','mt_tar','mt_diff','tg_diff'],
 };
 
 /* Build the ordered key list for a CSV: union of (canonical for each
@@ -4237,6 +4296,8 @@ function collectInputsForRow(fw,ws,r,cols){
     get('empf_land',cols.empf_land);get('empf_plz',cols.empf_plz);
     get('zz_diff',cols.zz);
     get('vkg_dl',cols.vkg_dl);get('fr_tarif',cols.fr_tar);
+    get('mt_dl',cols.mt_dl);get('mt_tar',cols.mt_tar);
+    get('mt_diff',cols.mt_diff);get('tg_diff',cols.tg_diff);
   }
   return o;
 }
@@ -4857,7 +4918,7 @@ function canonicalEvidenceValue(key,v){
   if(v==null)return '';
   const s=String(v).trim();
   if(!s)return '';
-  if(/^(stat|tarif|fr_diff|fr_tarif|fr_dl|fr_tar|exp_diff|exp_dl|mt_diff|maut_diff|tz_diff|snk_diff|snk_dl|snk_tarif|zz_diff|sam_diff|dgr_diff|sbfu_diff|lg_diff|av_diff|c38l_diff|pal_diff|ow_diff|yo_diff|yl_diff|nd_diff|sf_diff|ac_diff|nx_diff|os_diff|avis_diff|vkg|vkg_dl|brutto_kg|anz_sdg|anz_colli)$/.test(key)){
+  if(/^(stat|tarif|fr_diff|fr_tarif|fr_dl|fr_tar|exp_diff|exp_dl|mt_diff|mt_dl|mt_tar|tg_diff|maut_diff|tz_diff|snk_diff|snk_dl|snk_tarif|zz_diff|sam_diff|dgr_diff|sbfu_diff|lg_diff|av_diff|c38l_diff|pal_diff|ow_diff|yo_diff|yl_diff|nd_diff|sf_diff|ac_diff|nx_diff|os_diff|avis_diff|vkg|vkg_dl|brutto_kg|anz_sdg|anz_colli)$/.test(key)){
     const n=Number(s.replace(/\s/g,'').replace(/,/g,'.').replace(/[^0-9eE+.\-]/g,''));
     if(Number.isFinite(n))return String(n);
   }
@@ -5312,7 +5373,10 @@ const INPUT_GLOSSARY={
   fr_dl             :'FR Kosten DL: the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it decides the note: equal to the OLD tariff rate that Empf.-Land publishes for the bracket the row\'s Volumen kg falls in means the previous tariff is still being billed, and equal to an OLD rate from another bracket while Volumen kg DL sits in yet another joins both phrases.',
   exp_diff          :'EXP Differenz: express/priority surcharge delta (numeric, signed).',
   exp_dl            :'EXP Kosten DL: DL-side express cost (Dachser-only signal).',
-  mt_diff           :'MT/Maut Differenz: toll delta (numeric, signed).',
+  mt_diff           :'MT/Maut Differenz: toll delta (numeric, signed). On Honold rows a value below -HONOLD_RATE_TOL (0.005) adds "Mautdifferenz" to the note, because a toll line billed under its tariff is an undercharge; one billed above it is not that finding.',
+  mt_dl             :'MT Kosten DL: the toll actually billed on the row (numeric). On Honold rows a charge over the Dachser tolerance with no tariff behind it reads "Kein Maut Tarif für \'<LAND>\'".',
+  mt_tar            :'MT Kosten lt. Tarif: the toll the tariff prescribes (numeric). On Honold rows blank / 0 means the toll has no tariff backing at all; that arm also needs the charged MT Kosten DL and a non-empty Empf.-Land.',
+  tg_diff           :'TG Differenz: Tauschgebühr (handling-fee) delta (numeric, signed). On Honold rows anything over T_DACHSER (0.08 by default, sign-insensitive) adds "Differenz Tauschgebühr, ok?" last in the note, after Mautdifferenz.',
   maut_diff         :'Maut Differenz: toll delta (numeric, signed). Same signal as mt_diff for non-DHL forwarders.',
   tz_diff           :'TZ Differenz: fuel surcharge delta (numeric, signed).',
   snk_diff          :'SNK Differenz: surcharge delta (numeric, signed). Compared against forwarder threshold.',
@@ -5339,7 +5403,7 @@ const INPUT_GLOSSARY={
   os_diff           :'OS Differenz: oversize piece surcharge (DHL).',
   avis_diff         :'AVIS Differenz: Wackler-only avisierung delta. Codes ±7.5/±8.5/±6.5/±8.7 each map to a specific phrase. AVIS=1 has its own phrase.',
   vkg               :'Volumen kg: gross/volume weight on the audit row (numeric). On Honold rows it picks the Bis bracket FR Kosten DL is compared against, both for the previous-tariff match and for the divergence test against FR Kosten lt. Tarif.',
-  vkg_dl            :'Volumen kg DL: DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table. On Honold rows it only confirms that the DL weight sits in a bracket other than Volumen kg\'s, which the previous-tariff-from-another-bracket arm needs; it never decides the note on its own.',
+  vkg_dl            :'Volumen kg DL: DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table. On Honold rows it only confirms that the DL weight sits in a bracket other than Volumen kg\'s, which the previous-tariff-from-another-bracket arm needs; it never decides the note on its own. Kept out of the row_uid seed, so a row keeps its id across engine versions.',
   anz_colli         :'Anz. Colli: package count. For Wackler rows with at least 7 Colli, chargeable weight is max(Anz. Colli × 285, Volumen kg, Brutto kg).',
   brutto_kg          :'Brutto kg: gross weight used in Wackler chargeable-weight calculation when Anz. Colli is at least 7.',
   anz_sdg           :'Anz.Sdg: number of shipments on the row (Dachser).',
@@ -5394,7 +5458,7 @@ const FORWARDER_SPEC={
     processor:'processHonold',
     resolver :'resolveHonold',
     gate     :'Stat_Freigabe == 10, and the OLD tariff must be unlocked and complete (tiers, zone rates, country codes); rows are skipped, not blanked, otherwise',
-    notes    :'Three rules, decided from FR Kosten DL and FR Kosten lt. Tarif. A ZZ cost line can be a second delivery attempt billed on its own: when its Differenz clears the Dachser difference threshold (T_DACHSER, 0.08 by default) and FR Kosten DL is blank / 0, the whole note is "2. Zustellung"; a row that carries freight as well as a ZZ charge is decided by the rules below. A layout without a ZZ group resolves that column to -1 and the branch is off. FR Kosten lt. Tarif blank / 0 with an Empf.-Land reads "Kein Tarif für \'<LAND>\'" and nothing else: the current tariff prices no lane for that country, so the OLD matrix cannot speak to it. Otherwise the OLD tariff (assets/honold-tariff.enc.json) is read by rate: the row keeps the previous-tariff note when FR Kosten DL equals a zone rate published for its Empf.-Land in the Bis bracket its Volumen kg falls in. Every zone of the country is a candidate, because the row carries the country but not the zone, and a country\'s zone columns can repeat one amount across neighbouring brackets (the AT tail from 6500 kg up is flat, GB3 repeats at 450/500, MD at 50/100), which is harmless because only the bracket the row\'s own Volumen kg falls in is compared. A second arm joins both phrases: FR Kosten DL is an OLD amount for the country from another bracket, Volumen kg DL is present in a bracket other than Volumen kg\'s, and the lane moved on - every OLD rate the country publishes at the billed bracket differs from the row\'s own FR Kosten lt. Tarif, a proxy for the current matrix, which is not shipped. Volumen kg DL is read only by that arm. A blank / 0 FR, a missing / 0 Volumen kg, a destination country the tariff does not publish, or an FR that matches no zone rate at all is a weight difference.',
+    notes    :'Five rules, decided from FR Kosten DL / FR Kosten lt. Tarif and the MT and TG cost groups; a layout without a ZZ, MT or TG group resolves that column to -1 and the matching arm is off. A ZZ cost line can be a second delivery attempt billed on its own: when its Differenz clears the Dachser difference threshold (T_DACHSER, 0.08 by default) and FR Kosten DL is blank / 0, the whole note is "2. Zustellung"; a row that carries freight as well as a ZZ charge is decided by the rules below. FR Kosten lt. Tarif blank / 0 with an Empf.-Land reads "Kein Tarif für \'<LAND>\'" and nothing else: the current tariff prices no lane for that country, so the OLD matrix cannot speak to it. MT Kosten lt. Tarif blank / 0 with a charged MT Kosten DL (over T_DACHSER) and an Empf.-Land reads "Kein Maut Tarif für \'<LAND>\'" and nothing else, and RUL2 fixes that as the rule: on the only row where both notes were derivable the auditor wrote the toll phrase alone, which is positive evidence that it suppresses the freight note. 20384083 NEU row 6 is the proof: its FR Kosten DL 83.77 is the LT rate of the 200 kg bracket its 183 kg falls in, so the previous-tariff arm would otherwise fire, and the auditor wrote the toll phrase only. The FR Kein-Tarif arm still returns before it (20382640 row 8, SI: both tariffs are 0 and the row reads Kein Tarif). Otherwise the OLD tariff (assets/honold-tariff.enc.json) is read by rate: the row keeps the previous-tariff note when FR Kosten DL equals a zone rate published for its Empf.-Land in the Bis bracket its Volumen kg falls in. Every zone of the country is a candidate, because the row carries the country but not the zone, and a country\'s zone columns can repeat one amount across neighbouring brackets (the AT tail from 6500 kg up is flat, GB3 repeats at 450/500, MD at 50/100), which is harmless because only the bracket the row\'s own Volumen kg falls in is compared. A second arm joins both phrases: FR Kosten DL is an OLD amount for the country from another bracket, Volumen kg DL is present in a bracket other than Volumen kg\'s, and the lane moved on - every OLD rate the country publishes at the billed bracket differs from the row\'s own FR Kosten lt. Tarif, a proxy for the current matrix, which is not shipped. Volumen kg DL is read only by that arm. A blank / 0 FR is a weight difference and the FR / ZZ branch takes it before the floor, and a missing / 0 Volumen kg is one too. A destination country the tariff does not publish, or an FR that matches no zone rate at all, is a weight difference unless the FR is within HONOLD_FR_FLOOR (0.50) of a priced FR Kosten lt. Tarif: that is rounding dust, and the fallback weight phrase becomes empty. The floor never erases a previous-tariff or both-phrase reading, and it needs a priced tariff cell - an absent FR Kosten lt. Tarif column, and a blank / 0 cell, each keep the weight phrase. Two additive arms then join onto the freight verdict: "Mautdifferenz" when MT Differenz is below -HONOLD_RATE_TOL, then "Differenz Tauschgebühr, ok?" when a TG Differenz is over T_DACHSER (sign-insensitive).',
   },
 };
 
@@ -5809,7 +5873,7 @@ function buildEngineSourceDoc(){
     WACKLER_XTIER_NEAR_BAND,WACKLER_BUENDEL_PARTIAL,WACKLER_COLLI_KG,WACKLER_SAME_WEIGHT_BAND,
     WACKLER_BUENDEL_NEAR_BAND,WACKLER_BUENDEL_MIN_REFS,
     DA_NAT_PRICE_TOL,DA_NAT_COPY_TOL,DA_NAT_MAX_COPIES,
-    HONOLD_RATE_TOL,
+    HONOLD_RATE_TOL,HONOLD_FR_FLOOR,
   };
   const lines=['# Engine source: v'+VERSION,'',
     '> Extracted live via `Function.prototype.toString()` at export time: this IS the running engine, not a copy.',

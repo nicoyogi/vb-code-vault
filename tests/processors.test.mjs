@@ -1899,6 +1899,15 @@ const HONOLD_COLS_ZZ = { ...HONOLD_COLS, zz: 55 };
    reads 0 for a missing column and 0 means "no current tariff" (Kein Tarif). */
 const HONOLD_COLS_FRT = { ...HONOLD_COLS, vkg_dl: 54, fr_tar: 56 };
 const HONOLD_COLS_FRT_ZZ = { ...HONOLD_COLS_FRT, zz: 55 };
+/* The 1.62.0 maps: the MT group at 57-59 and the TG Differenz at 60. The four maps
+   above stay untouched on purpose - they are the absent-column suite for these two
+   arms, the way HONOLD_COLS / _ZZ are for the 1.58.0 ones, because cellNum() reads 0
+   for a missing column and 0 is the Kein-Maut-Tarif signal. */
+const HONOLD_COLS_FULL = { ...HONOLD_COLS_FRT, mt_dl: 57, mt_tar: 58, mt_diff: 59, tg_diff: 60 };
+const HONOLD_COLS_FULL_ZZ = { ...HONOLD_COLS_FULL, zz: 55 };
+/* The fixture fields the replays read. A row that lost one of them would silently
+   replay as 0 / absent, so every replay asserts the set before the tariff gate. */
+const HONOLD_FIXTURE_KEYS = ['vkg_dl', 'fr_tarif', 'mt_dl', 'mt_tar', 'mt_diff', 'tg_diff'];
 /* resolveHonold finds its columns in the header rows (2 and 3) of the sheet, so the
    resolver test needs a sheet with headers, not just a data row. */
 const SHEET_RANGE = { s: { r: 0, c: 0 }, e: { r: 3, c: 60 } };
@@ -1908,6 +1917,8 @@ const HONOLD_DIFF = 'Differenz aufgrund abweichender Gewichte';
    previous-tariff phrase, joined with the catalog separator (20382640 rows 5, 7, 9,
    12, 13 and 16). */
 const HONOLD_BOTH = 'Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif';
+const HONOLD_MAUT = 'Mautdifferenz';
+const HONOLD_TG = 'Differenz Tauschgebühr, ok?';
 const REF_TIERS = JSON.parse(readFileSync(
   new URL('./fixtures/honold-20379045-rows.json', import.meta.url), 'utf8')).tiers;
 /* The rule needs the OLD tariff's zone rates, which are business data. This matrix
@@ -1980,6 +1991,30 @@ test('resolveHonold: resolves Volumen kg DL and FR Kosten lt. Tarif, and reports
   const old = e.resolveHonold(noTarif, SHEET_RANGE);
   assert.equal(old.fr_tar, -1, 'an absent FR Kosten lt. Tarif column must not resolve');
   assert.equal(old.vkg_dl, 23);
+});
+
+test('resolveHonold: the MT group and the TG Differenz resolve, and report -1 without them', () => {
+  /* Both 1.62.0 arms read a header pair the 1.58.0 maps never needed, so the resolver
+     is the only place the four columns can be wrong - and a wrong index reads a
+     neighbour's number. findCol matches the row-2 cost-group code plus the row-3
+     sub-label, first column wins. */
+  const groups = makeRow(1, { 0: 'Anmerkung', 10: 'Stat_Freigabe', 30: 'MT', 31: 'MT', 32: 'MT', 36: 'TG' });
+  Object.assign(groups, makeRow(2, { 0: 'Anmerkung', 10: 'Stat_Freigabe',
+    30: 'Kosten DL', 31: 'Kosten lt. Tarif', 32: 'Differenz', 36: 'Differenz' }));
+  const cols = e.resolveHonold(groups, SHEET_RANGE);
+  assert.equal(cols.mt_dl, 30);
+  assert.equal(cols.mt_tar, 31);
+  assert.equal(cols.mt_diff, 32);
+  assert.equal(cols.tg_diff, 36);
+  /* A layout without the groups: the four columns are absent, which is what keeps
+     both arms off rather than reading 0 out of column -1. */
+  const noGroups = makeRow(1, { 0: 'Anmerkung', 10: 'Stat_Freigabe', 20: 'ZZ' });
+  Object.assign(noGroups, makeRow(2, { 0: 'Anmerkung', 10: 'Stat_Freigabe', 20: 'Differenz' }));
+  const without = e.resolveHonold(noGroups, SHEET_RANGE);
+  for (const key of ['mt_dl', 'mt_tar', 'mt_diff', 'tg_diff']) {
+    assert.equal(without[key], -1, 'an absent ' + key + ' column must not resolve');
+  }
+  assert.equal(without.zz, 20, 'the ZZ group still resolves on that layout');
 });
 
 test('processHonold: without the decrypted tariff the row is skipped (null), never blanked', () => {
@@ -2266,32 +2301,51 @@ test('processHonold: 20379045 row 90 (FR 335.28 = AT@1300, 447 kg, Volumen kg DL
 });
 
 test('collectInputsForRow: Honold exports the zone inputs, the DL weight and the row tariff', () => {
-  const row = makeRow(R, { 50: 10, 51: '127.25', 52: '600', 53: 'AT', 54: '999', 55: 35.08, 56: '120' });
-  const inputs = e.collectInputsForRow('honold', row, R, HONOLD_COLS_FRT_ZZ);
+  const row = makeRow(R, { 50: 10, 51: '127.25', 52: '600', 53: 'AT', 54: '999', 55: 35.08,
+    56: '120', 57: '2.34', 58: '3.51', 59: '-1.17', 60: '0.39' });
+  const inputs = e.collectInputsForRow('honold', row, R, HONOLD_COLS_FULL_ZZ);
   assert.equal(inputs.fr_dl, '127.25');
   assert.equal(inputs.vkg, '600');
   assert.equal(inputs.empf_land, 'AT');
   assert.equal(inputs.zz_diff, '35.08');
   assert.equal(inputs.vkg_dl, '999');
   assert.equal(inputs.fr_tarif, '120');
+  /* 1.62.0 reads the MT group and the TG delta, so a replay or training consumer
+     needs them as inputs too. */
+  assert.equal(inputs.mt_dl, '2.34');
+  assert.equal(inputs.mt_tar, '3.51');
+  assert.equal(inputs.mt_diff, '-1.17');
+  assert.equal(inputs.tg_diff, '0.39');
   /* A pre-1.58.0 layout resolves neither column, so the keys stay absent rather than
      exporting an empty string that a training consumer would read as a real 0. */
   const legacy = e.collectInputsForRow('honold', row, R, HONOLD_COLS_ZZ);
   assert.ok(!('vkg_dl' in legacy), 'an absent Volumen kg DL column is not an input');
   assert.ok(!('fr_tarif' in legacy), 'an absent FR Kosten lt. Tarif column is not an input');
+  /* Same rule for the four 1.62.0 keys on a layout without the groups. */
+  for (const key of ['mt_dl', 'mt_tar', 'mt_diff', 'tg_diff']) {
+    assert.ok(!(key in legacy), 'an absent ' + key + ' column is not an input');
+  }
 });
 
 test('rowUid: the two inputs 1.58.0 added stay out of the Honold uid seed', () => {
   /* A uid seeds on the collected inputs, so hashing the two newly-read cells would
      re-key every historical Honold training row. Both are in
      UID_EXCLUDED_INPUT_KEYS_BY_FW.honold, so a row minted before 1.58.0 keeps its uid. */
-  const row = makeRow(R, { 50: 10, 51: '127.25', 52: '600', 53: 'AT', 54: '999', 56: '120' });
-  const inputs = e.collectInputsForRow('honold', row, R, HONOLD_COLS_FRT);
+  const row = makeRow(R, { 50: 10, 51: '127.25', 52: '600', 53: 'AT', 54: '999',
+    56: '120', 57: '2.34', 58: '3.51', 59: '-1.17', 60: '0.39' });
+  const inputs = e.collectInputsForRow('honold', row, R, HONOLD_COLS_FULL);
   const legacySeed = { stat: '10', fr_dl: '127.25', vkg: '600', empf_land: 'AT' };
   assert.equal(e.rowUid('honold', 'Sheet1', 5, inputs),
     e.rowUid('honold', 'Sheet1', 5, legacySeed));
   assert.equal(
     e.rowUid('honold', 'Sheet1', 5, { ...legacySeed, vkg_dl: '999', fr_tarif: '120' }),
+    e.rowUid('honold', 'Sheet1', 5, legacySeed));
+  /* The four 1.62.0 keys are excluded the same way: a row minted before the MT / TG
+     arms keeps its uid, or the 2026-10-28 bundle could not be joined again. */
+  assert.equal(
+    e.rowUid('honold', 'Sheet1', 5, {
+      ...legacySeed, mt_dl: '2.34', mt_tar: '3.51', mt_diff: '-1.17', tg_diff: '0.39',
+    }),
     e.rowUid('honold', 'Sheet1', 5, legacySeed));
   assert.notEqual(e.rowUid('honold', 'Sheet1', 5, inputs),
     e.rowUid('honold', 'Sheet1', 5, { ...legacySeed, vkg: '601' }));
@@ -2379,6 +2433,24 @@ test('buildReason: the Honold trace carries the DL weight and the row tariff, ze
   assert.ok(!legacy.includes('VKG_DL'), legacy);
   assert.ok(!legacy.includes('FR_TARIF'), legacy);
   assert.ok(!e.buildReason('honold', ws, R, HONOLD_COLS).includes('ZZ='));
+  /* The 1.62.0 tokens sit between the row tariff and LAND, in cost-group order
+     (MT Kosten DL, MT Kosten lt. Tarif, MT Differenz, TG Differenz), and they
+     print their zeros for the same reason FR_TARIF does: MT_TARIF=0 IS the
+     Kein-Maut-Tarif decision (20384083 row 6). */
+  const full = makeRow(R, { 50: 10, 51: '127.25', 52: '600', 53: 'AT', 54: '999',
+    55: 35.08, 56: '120', 57: '2.34', 58: '3.51', 59: '-1.2', 60: '0.39' });
+  const fullReason = e.buildReason('honold', full, R, HONOLD_COLS_FULL_ZZ);
+  assert.match(fullReason,
+    /FR_TARIF=120 \| MT_DL=2\.34 \| MT_TARIF=3\.51 \| MT_DIFF=-1\.2 \| TG=0\.39 \| LAND=AT/,
+    fullReason);
+  const zeroRow = makeRow(R, { 50: 10, 51: '88.62', 52: '340,64', 53: 'AT', 54: '0', 56: '88.51',
+    57: 0, 58: 0, 59: 0, 60: 0 });
+  assert.match(e.buildReason('honold', zeroRow, R, HONOLD_COLS_FULL),
+    /MT_DL=0 \| MT_TARIF=0 \| MT_DIFF=0 \| TG=0 \| LAND=AT/);
+  /* Absent groups print none of the four. */
+  for (const token of ['MT_DL', 'MT_TARIF', 'MT_DIFF', 'TG=']) {
+    assert.ok(!legacy.includes(token), token + ' on a layout without the group');
+  }
 });
 
 test('phrase catalog: both Honold phrases resolve to stable keys', () => {
@@ -2388,6 +2460,207 @@ test('phrase catalog: both Honold phrases resolve to stable keys', () => {
      reuses that catalog key instead of adding a duplicate value. */
   assert.equal(e.phraseToKey('Differenz aufgrund abweichender Gewichte'),
     'abweichGewichte');
+});
+
+/* ── 1.62.0: the MT and TG cost groups ─────────────────────────────────────
+   A toll line billed under its tariff, a toll line with no tariff behind it,
+   a Tauschgebühr delta, and the freight materiality floor. Every case below
+   reads the same base row (CZ, FR 50.00, 600 kg, FR Kosten lt. Tarif 120.00),
+   which no OLD rate matches, so the freight verdict is the weight phrase and
+   any extra phrase in the result came from the arm under test. */
+const HONOLD_BASE = { 50: 10, 51: '50', 52: '600', 53: 'CZ', 56: '120' };
+
+test('processHonold: MT Differenz below the tolerance adds Mautdifferenz, above it does not', () => {
+  /* 20382640 rows 4, 9 and 16 and 20384083 row 13 are the shape: MT Kosten DL
+     sits below MT Kosten lt. Tarif. 20381523 row 44 is the contrast - MT +6.62,
+     a toll billed ABOVE its tariff, which is not this finding. The arm is
+     additive: the freight verdict stays in front of it. */
+  const row = (diff) => makeRow(R, { ...HONOLD_BASE, 57: '2.34', 58: '3.51', 59: diff });
+  assert.equal(e.processHonold(row('-1.17'), R, HONOLD_COLS_FULL),
+    HONOLD_DIFF + ' // ' + HONOLD_MAUT);
+  assert.equal(e.processHonold(row('1.17'), R, HONOLD_COLS_FULL), HONOLD_DIFF, 'toll over tariff');
+  assert.equal(e.processHonold(row('0'), R, HONOLD_COLS_FULL), HONOLD_DIFF, 'no toll delta at all');
+});
+
+test('processHonold: the Mautdifferenz bound is -HONOLD_RATE_TOL, not -0.08', () => {
+  /* Half a cent, the same tolerance the OLD-rate match uses: -0.005 is the
+     boundary (strictly below it fires) and 0.004 of rounding dust is silent. */
+  const row = (diff) => makeRow(R, { ...HONOLD_BASE, 57: '2.34', 58: '3.51', 59: diff });
+  assert.equal(e.processHonold(row('-0.004'), R, HONOLD_COLS_FULL), HONOLD_DIFF);
+  assert.equal(e.processHonold(row('-0.005'), R, HONOLD_COLS_FULL), HONOLD_DIFF);
+  assert.equal(e.processHonold(row('-0.006'), R, HONOLD_COLS_FULL),
+    HONOLD_DIFF + ' // ' + HONOLD_MAUT);
+});
+
+test('processHonold: a TG Differenz over the Dachser threshold adds the Tauschgebühr phrase', () => {
+  /* 20379045 row 7 carries TG Differenz 3.08. The gate is T_DACHSER (0.08 by
+     default) and sign-insensitive, like the ZZ and TZ arms: 0.08 is at the
+     threshold, 0.09 and -0.09 are over it. */
+  const row = (diff) => makeRow(R, { ...HONOLD_BASE, 60: diff });
+  assert.equal(e.processHonold(row('3.08'), R, HONOLD_COLS_FULL),
+    HONOLD_DIFF + ' // ' + HONOLD_TG);
+  assert.equal(e.processHonold(row('0.08'), R, HONOLD_COLS_FULL), HONOLD_DIFF);
+  assert.equal(e.processHonold(row('0.09'), R, HONOLD_COLS_FULL),
+    HONOLD_DIFF + ' // ' + HONOLD_TG);
+  assert.equal(e.processHonold(row('-0.09'), R, HONOLD_COLS_FULL),
+    HONOLD_DIFF + ' // ' + HONOLD_TG);
+});
+
+test('processHonold: MT Kosten lt. Tarif of 0 with a charged toll line -> Kein Maut Tarif for the land', () => {
+  /* 20384083 row 6 (LT): the stub tariff has no LT zone at all, so the row would
+     be silent without this arm, but the toll line is charged (10.71) with no
+     tariff behind it. On the only row where both notes were derivable the auditor
+     wrote the toll phrase alone, which is positive evidence that it suppresses
+     the freight note, and RUL2 fixes that as the rule. The note names the
+     country, exactly like the FR Kein-Tarif arm. */
+  const row = (over) => makeRow(R, { 50: 10, 51: '83.77', 52: '183', 53: 'LT', 54: '183',
+    56: '83.77', 57: '10.71', 58: '0', ...over });
+  assert.equal(e.processHonold(row({}), R, HONOLD_COLS_FULL), "Kein Maut Tarif für 'LT'");
+  /* A blank tariff cell is the same state as 0 (cellNum reads both as 0), and
+     the land is trimmed and upper-cased before it is printed. */
+  assert.equal(e.processHonold(row({ 58: '' }), R, HONOLD_COLS_FULL), "Kein Maut Tarif für 'LT'");
+  assert.equal(e.processHonold(row({ 53: ' lt ' }), R, HONOLD_COLS_FULL), "Kein Maut Tarif für 'LT'");
+  /* It reads neither Volumen kg nor the OLD matrix, so it returns before the Volumen kg
+     gate: a row without a weight still reads the toll phrase alone. */
+  const noWeight = makeRow(R, { 50: 10, 51: '83.77', 53: 'LT', 56: '83.77', 57: '10.71', 58: '0' });
+  assert.equal(e.processHonold(noWeight, R, HONOLD_COLS_FULL), "Kein Maut Tarif für 'LT'");
+});
+
+test('processHonold: the FR Kein-Tarif arm wins over Kein Maut Tarif', () => {
+  /* 20382640 row 8 (SI) is both at once: FR Kosten lt. Tarif 0 and MT Kosten
+     lt. Tarif 0, with 48.52 of toll billed. The freight verdict is the wider
+     one, so the row reads Kein Tarif. */
+  const ws = makeRow(R, { 50: 10, 51: '733.31', 52: '727', 53: 'SI', 54: '0',
+    56: '0', 57: '48.52', 58: '0' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS_FULL), "Kein Tarif für 'SI'");
+});
+
+test('processHonold: Kein Maut Tarif needs the column pair, a land and a real charge', () => {
+  /* cellNum() reads 0 for an absent column, so without the cols>=0 guard every
+     in-scope row would read Kein Maut Tarif. The charge is gated by the Dachser
+     threshold (0.08, not over it), and a blank country has no name to print. */
+  const row = (over) => makeRow(R, { 50: 10, 51: '83.77', 52: '183', 53: 'LT', 54: '183',
+    56: '83.77', 57: '10.71', 58: '0', ...over });
+  assert.equal(e.processHonold(row({}), R, HONOLD_COLS_FRT), '',
+    'no MT group on the layout: the arm is off and the FR dust stays empty');
+  assert.equal(e.processHonold(row({}), R, { ...HONOLD_COLS_FULL, mt_tar: -1 }), '',
+    'only one half of the pair present: the arm is off too');
+  assert.equal(e.processHonold(row({ 53: '' }), R, HONOLD_COLS_FULL), '', 'blank land');
+  assert.equal(e.processHonold(row({}), R, { ...HONOLD_COLS_FULL, empf_land: -1 }), '', 'absent land');
+  assert.equal(e.processHonold(row({ 57: '0' }), R, HONOLD_COLS_FULL), '', 'no toll charge');
+  assert.equal(e.processHonold(row({ 57: '0.08' }), R, HONOLD_COLS_FULL), '', 'at the threshold');
+  assert.equal(e.processHonold(row({ 57: '0.09' }), R, HONOLD_COLS_FULL), "Kein Maut Tarif für 'LT'");
+  /* With the arm off the freight note is untouched, not merely free of the toll
+     phrase: the same row on the weight base reads that phrase when the group is
+     absent from the layout, or when the charge sits inside the tolerance. */
+  const base = (over) => makeRow(R, { ...HONOLD_BASE, 57: '10.71', 58: '0', ...over });
+  assert.equal(e.processHonold(base({}), R, HONOLD_COLS_FRT), HONOLD_DIFF, 'no MT group');
+  assert.equal(e.processHonold(base({ 57: '0.08' }), R, HONOLD_COLS_FULL), HONOLD_DIFF, 'inside T_DACHSER');
+});
+
+test('processHonold: Kein Maut Tarif is terminal, so the floor never sees such a row', () => {
+  /* The shape: a toll line with no tariff behind it on a row whose freight is silent,
+     so the toll phrase is the whole note. Turning either half of the pair off puts the
+     silent / floored result back, which is what proves the arm is the only input. */
+  const row = makeRow(R, { 50: 10, 51: '83.77', 52: '183', 53: 'LT', 54: '183',
+    56: '83.77', 57: '10.71', 58: '0' });
+  assert.equal(e.processHonold(row, R, HONOLD_COLS_FULL), "Kein Maut Tarif für 'LT'");
+  assert.equal(e.processHonold(row, R, { ...HONOLD_COLS_FULL, mt_tar: -1 }), '');
+  assert.equal(e.processHonold(row, R, { ...HONOLD_COLS_FULL, mt_dl: -1 }), '');
+});
+
+test('processHonold: Kein Maut Tarif drops a claimed freight base, terminal like the FR arm', () => {
+  /* A row with an untariffed toll lane AND a real freight difference reads the toll
+     phrase only: RUL2 makes the arm terminal because on the only row where both notes
+     were derivable the auditor wrote the toll phrase alone, so the freight note goes.
+     20384083 NEU row 6 is that shape - its FR 83.77 is the OLD LT rate of the 200 kg
+     bracket its 183 kg falls in, and the auditor's cell carries the toll phrase alone.
+     These three rows pin each base the freight arm can claim - previous tariff, weight
+     difference, and the weight phrase from a missing Volumen kg - and the last two assert
+     that turning the tariff half off puts the base back. */
+  const previous = makeRow(R, { 50: 10, 51: '127.25', 52: '600', 53: 'AT', 56: '140',
+    57: '10.71', 58: '0' });
+  assert.equal(e.processHonold(previous, R, HONOLD_COLS_FULL), "Kein Maut Tarif für 'AT'");
+  const weight = makeRow(R, { ...HONOLD_BASE, 57: '10.71', 58: '0' });
+  assert.equal(e.processHonold(weight, R, HONOLD_COLS_FULL), "Kein Maut Tarif für 'CZ'");
+  const noWeight = makeRow(R, { 50: 10, 51: '50', 53: 'CZ', 56: '120', 57: '10.71', 58: '0' });
+  assert.equal(e.processHonold(noWeight, R, HONOLD_COLS_FULL), "Kein Maut Tarif für 'CZ'");
+  assert.equal(e.processHonold(previous, R, { ...HONOLD_COLS_FULL, mt_tar: -1 }), HONOLD_OLD);
+  assert.equal(e.processHonold(weight, R, { ...HONOLD_COLS_FULL, mt_tar: -1 }), HONOLD_DIFF);
+});
+
+test('processHonold: the floor silences 20382640 NEU row 11 (FR 88.62 vs tariff 88.51)', () => {
+  /* The row that motivated the floor: 340.64 kg is bracket 6, where AT publishes
+     no OLD rate, and Volumen kg DL is 0, so the fallback used to write a weight
+     difference over an 0.11 rounding difference. MT and TG are flat on the row
+     (8.82/8.82/0 and 24.50/24.50/0), so the note is empty. */
+  const ws = makeRow(R, { 50: 10, 51: '88.62', 52: '340,64', 53: 'AT', 54: '0', 56: '88.51',
+    57: '8.82', 58: '8.82', 59: '0', 60: '0' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS_FULL), '');
+});
+
+test('processHonold: the floor never erases a claimed base', () => {
+  /* The floor replaces only the fallback weight phrase. A row whose freight
+     already reads previous tariff or both phrases keeps its reading, and the two
+     additive arms still join a floored base. */
+  const billed = makeRow(R, { 50: 10, 51: '127.25', 52: '600', 53: 'AT', 56: '127.30' });
+  assert.equal(e.processHonold(billed, R, HONOLD_COLS_FULL), HONOLD_OLD,
+    'previous tariff within the floor still reads previous tariff');
+  const both = makeRow(R, { 50: 10, 51: '103.2', 52: '600', 53: 'AT', 54: '400', 56: '103.15' });
+  assert.equal(e.processHonold(both, R, HONOLD_COLS_FULL), HONOLD_BOTH,
+    'both phrases within the floor still read both');
+  const floored = makeRow(R, { ...HONOLD_BASE, 56: '49.89', 57: '2.34', 58: '3.51', 59: '-1.17' });
+  assert.equal(e.processHonold(floored, R, HONOLD_COLS_FULL), HONOLD_MAUT,
+    'an additive arm on a floored base keeps its own phrase, without a leading separator');
+});
+
+test('processHonold: the floor sits at 0.50 - 0.11 silent, 0.51 and 3.74 not', () => {
+  /* The measured window is [0.11, 0.64) of rounding dust against a smallest
+     legitimate difference of 3.74. CZ publishes one OLD rate (46.88 at 350 kg)
+     and the row's 600 kg is bracket 10, so no OLD match can decide these rows. */
+  const row = (frt) => makeRow(R, { 50: 10, 51: '50', 52: '600', 53: 'CZ', 56: frt });
+  assert.equal(e.processHonold(row('49.89'), R, HONOLD_COLS_FULL), '', '0.11 below its tariff');
+  assert.equal(e.processHonold(row('49.49'), R, HONOLD_COLS_FULL), HONOLD_DIFF, '0.51');
+  assert.equal(e.processHonold(row('46.26'), R, HONOLD_COLS_FULL), HONOLD_DIFF, '3.74');
+});
+
+test('processHonold: a layout without FR Kosten lt. Tarif keeps the weight phrase', () => {
+  /* The floor needs the column. cellNum() would read 0 for it, and 0 is within the
+     floor, so an unguarded floor would blank every in-scope row on a pre-1.58.0
+     export. Without the column the fallback stays the weight phrase. */
+  const ws = makeRow(R, { 50: 10, 51: '50', 52: '600', 53: 'CZ' });
+  assert.equal(e.processHonold(ws, R, { ...HONOLD_COLS_FULL, fr_tar: -1 }), HONOLD_DIFF);
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS), HONOLD_DIFF, 'legacy map unchanged');
+});
+
+test('processHonold: the floor needs a priced tariff cell, not just the column', () => {
+  /* A blank / 0 FR Kosten lt. Tarif with no Empf.-Land misses the Kein-Tarif arm, so
+     the row reaches the floor with a tariff of 0. That is no price, so the floor
+     does not silence the weight phrase - column presence alone is not enough. */
+  const blank = makeRow(R, { 50: 10, 51: '0.30', 52: '600' });
+  const zero = makeRow(R, { 50: 10, 51: '0.30', 52: '600', 56: '0' });
+  assert.equal(e.processHonold(blank, R, HONOLD_COLS_FULL), HONOLD_DIFF);
+  assert.equal(e.processHonold(zero, R, HONOLD_COLS_FULL), HONOLD_DIFF);
+});
+
+test('processHonold: a layout without the MT and TG groups reads as before', () => {
+  /* The cells are on the sheet; the map decides whether they are read. This is the
+     pre-1.62.0 layout, and it must produce the old single phrase. */
+  const ws = makeRow(R, { ...HONOLD_BASE, 57: '2.34', 58: '3.51', 59: '-3.54', 60: '3.08' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS_FRT_ZZ), HONOLD_DIFF);
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS), HONOLD_DIFF);
+});
+
+test('processHonold: both additive arms join the freight verdict, toll before Tauschgebühr', () => {
+  /* 20382640 row 7 is the shape: weight phrase, previous tariff, Mautdifferenz,
+     then Differenz Tauschgebühr. Order matters because the workbook cell is a
+     string; the comparison elsewhere is set-based, the cell is not. */
+  const ws = makeRow(R, { 50: 10, 51: '103.2', 52: '600', 53: 'AT', 54: '400', 56: '120.00',
+    57: '5.85', 58: '9.37', 59: '-3.52', 60: '0.39' });
+  assert.equal(e.processHonold(ws, R, HONOLD_COLS_FULL),
+    [HONOLD_BOTH, HONOLD_MAUT, HONOLD_TG].join(' // '));
+  const floored = makeRow(R, { ...HONOLD_BASE, 56: '49.89', 59: '-3.54', 60: '3.08' });
+  assert.equal(e.processHonold(floored, R, HONOLD_COLS_FULL), [HONOLD_MAUT, HONOLD_TG].join(' // '));
 });
 
 /* ── 20379045 Soll-Ist-Vergleich: the whole table ────────────────────────────
@@ -2407,8 +2680,8 @@ test('processHonold: 20379045 replay agrees on 124/124, no mismatches', (t) => {
     new URL('./fixtures/honold-20379045-rows.json', import.meta.url), 'utf8'));
   assert.equal(fx.rows.length, 124);
   assert.deepEqual(fx.outliers, []);
-  assert.ok(fx.rows.every((x) => 'vkg_dl' in x && 'fr_tarif' in x),
-    'every row carries the two columns 1.58.0 reads');
+  assert.ok(fx.rows.every((x) => HONOLD_FIXTURE_KEYS.every((k) => k in x)),
+    'every row carries the columns the engine reads');
   if (!REAL_HONOLD) {
     t.diagnostic('replay skipped: assets/honold-tariff.js absent');
     t.skip('assets/honold-tariff.js is not on disk');
@@ -2419,8 +2692,9 @@ test('processHonold: 20379045 replay agrees on 124/124, no mismatches', (t) => {
     const mismatches = [];
     for (const x of fx.rows) {
       const ws = makeRow(R, { 50: x.stat, 51: x.fr_dl, 52: x.vkg, 53: x.land,
-                              54: x.vkg_dl, 56: x.fr_tarif });
-      if (e.processHonold(ws, R, HONOLD_COLS_FRT) !== x.truth) mismatches.push(x.row);
+                              54: x.vkg_dl, 56: x.fr_tarif,
+                              57: x.mt_dl, 58: x.mt_tar, 59: x.mt_diff, 60: x.tg_diff });
+      if (e.processHonold(ws, R, HONOLD_COLS_FULL) !== x.truth) mismatches.push(x.row);
     }
     assert.deepEqual(mismatches, []);
   } finally {
@@ -2431,15 +2705,16 @@ test('processHonold: 20379045 replay agrees on 124/124, no mismatches', (t) => {
 /* 20381523 is the workbook that arrived with the 2026-10-19 bundle: it adds a ZZ
    cost group, and its row 4 is the standalone-ZZ row. Row 44 is the FR-rate-in-another-
    bracket row the 2026-10-20 ruling flipped, and the five cross-bracket rows 9, 12, 15,
-   21 and 35 - the 2026-10-12 policy list - are previous-tariff rows in engine and sheet.
-   Mismatches: none. */
+   21 and 35 - the 2026-10-12 policy list - are previous-tariff rows in engine and sheet;
+   9 and 12 additionally carry a Tauschgebühr delta, which is the additive arm on top of
+   that verdict, not a change to it. Mismatches: none. */
 test('processHonold: 20381523 replay agrees on 41/41, no mismatches', (t) => {
   const fx = JSON.parse(readFileSync(
     new URL('./fixtures/honold-20381523-rows.json', import.meta.url), 'utf8'));
   assert.equal(fx.rows.length, 41);
   assert.deepEqual(fx.outliers, []);
-  assert.ok(fx.rows.every((x) => 'vkg_dl' in x && 'fr_tarif' in x),
-    'every row carries the two columns 1.58.0 reads');
+  assert.ok(fx.rows.every((x) => HONOLD_FIXTURE_KEYS.every((k) => k in x)),
+    'every row carries the columns the engine reads');
   if (!REAL_HONOLD) {
     t.diagnostic('replay skipped: assets/honold-tariff.js absent');
     t.skip('assets/honold-tariff.js is not on disk');
@@ -2450,15 +2725,18 @@ test('processHonold: 20381523 replay agrees on 41/41, no mismatches', (t) => {
     const mismatches = [];
     for (const x of fx.rows) {
       const ws = makeRow(R, { 50: x.stat, 51: x.fr_dl, 52: x.vkg, 53: x.land,
-                              54: x.vkg_dl, 55: x.zz, 56: x.fr_tarif });
-      const out = e.processHonold(ws, R, HONOLD_COLS_FRT_ZZ);
+                              54: x.vkg_dl, 55: x.zz, 56: x.fr_tarif,
+                              57: x.mt_dl, 58: x.mt_tar, 59: x.mt_diff, 60: x.tg_diff });
+      const out = e.processHonold(ws, R, HONOLD_COLS_FULL_ZZ);
       if (out !== x.truth) mismatches.push(x.row);
       /* The six rows the ruling moved must land on the side the sheet already
          takes: previous tariff for the five cross-bracket rows, weight difference
-         for row 44 (FR 143.14 is the 700 kg rate, 337 kg is bracket 6). */
+         for row 44 (FR 143.14 is the 700 kg rate, 337 kg is bracket 6). Rows 9 and
+         12 carry the Tauschgebühr delta (2.31 / 8.47) on top of that verdict. */
       if ([9, 12, 15, 21, 35].includes(x.row)) {
-        assert.equal(out, HONOLD_OLD, `row ${x.row} engine phrase`);
-        assert.equal(x.truth, HONOLD_OLD, `row ${x.row} workbook phrase`);
+        const expected = [9, 12].includes(x.row) ? HONOLD_OLD + ' // ' + HONOLD_TG : HONOLD_OLD;
+        assert.equal(out, expected, `row ${x.row} engine phrase`);
+        assert.equal(x.truth, expected, `row ${x.row} workbook phrase`);
       }
       if (x.row === 44) {
         assert.equal(out, HONOLD_DIFF);
@@ -2478,7 +2756,8 @@ test('processHonold: 20381523 replay agrees on 41/41, no mismatches', (t) => {
    (FR 46.97 is the AT rate of bracket 2, the bracket 127.661 kg falls in). Its DL
    weight (64.16 kg) does sit in bracket 1, so the own-bracket match is what keeps the
    note single-phrase - the 1.58.0 DL arm must not promote it. Inline because 8 rows
-   are not worth a fixture. */
+   are not worth a fixture, and its MT / TG Differenz cells are 0 or blank on every
+   row, so the two 1.62.0 arms are off here however the columns are read. */
 test('processHonold: 20380293 replay agrees on 7/7', (t) => {
   const rows = [
     { row: 4, stat: 10, fr_dl: 46.97, vkg: '127,661', vkg_dl: '64,16', fr_tarif: 41.36, land: 'AT', truth: HONOLD_OLD },
@@ -2502,7 +2781,7 @@ test('processHonold: 20380293 replay agrees on 7/7', (t) => {
     for (const x of rows) {
       const ws = makeRow(R, { 50: x.stat, 51: x.fr_dl, 52: x.vkg, 53: x.land,
                               54: x.vkg_dl, 56: x.fr_tarif });
-      if (e.processHonold(ws, R, HONOLD_COLS_FRT) !== x.truth) mismatches.push(x.row);
+      if (e.processHonold(ws, R, HONOLD_COLS_FULL) !== x.truth) mismatches.push(x.row);
     }
     assert.deepEqual(mismatches, []);
   } finally {
@@ -2510,12 +2789,15 @@ test('processHonold: 20380293 replay agrees on 7/7', (t) => {
   }
 });
 
-/* 20382640 is the 2026-10-27 bundle's source pair. Every row is pinned exactly, because
-   this sheet is where the two new arms were observed: rows 5, 7, 9, 12, 13 and 16 are
-   the truth's both-phrase rows, 4 and 11 stay weight-only (row 4 because IT@450 96.13 is
-   ALSO the current tariff at 250 kg, row 11 because Volumen kg DL is 0), 6, 14, 15, 19
-   and 20 keep the previous-tariff phrase from the own-bracket match, row 8 reads Kein
-   Tarif for SI, and the three Stat_Freigabe 30 rows carry no note. Mismatches: none. */
+/* 20382640 is the 2026-10-27 bundle's source pair, re-baselined against the corrected
+   sheet and the 1.62.0 arms. Every row is pinned exactly, because this sheet is where
+   most of them were observed: rows 5, 7, 9, 12, 13 and 16 carry both freight phrases,
+   and all but row 5 add the toll and / or Tauschgebühr phrase on top; row 4 is now
+   weight plus Mautdifferenz (MT -3.54) while its freight half stays weight-only (IT@450
+   96.13 is ALSO the current tariff at 250 kg); row 11 stays weight-only (Volumen kg DL
+   is 0 and MT / TG are flat); 6, 14, 15, 19 and 20 keep the previous-tariff phrase from
+   the own-bracket match; row 8 reads Kein Tarif for SI even though its MT tariff is 0
+   too; and the three Stat_Freigabe 30 rows carry no note. Mismatches: none. */
 test('processHonold: 20382640 replay agrees on 17/17, no mismatches', (t) => {
   const fx = JSON.parse(readFileSync(
     new URL('./fixtures/honold-20382640-rows.json', import.meta.url), 'utf8'));
@@ -2523,15 +2805,17 @@ test('processHonold: 20382640 replay agrees on 17/17, no mismatches', (t) => {
   assert.equal(fx.source, '20382640 Soll-Ist-Vergleich.xlsx');
   assert.equal(fx.rows.length, 17);
   assert.deepEqual(fx.outliers, []);
-  assert.ok(fx.rows.every((x) => 'vkg_dl' in x && 'fr_tarif' in x),
-    'every row carries the two columns 1.58.0 reads');
+  assert.ok(fx.rows.every((x) => HONOLD_FIXTURE_KEYS.every((k) => k in x)),
+    'every row carries the columns the engine reads');
   /* The workbook's own Anmerkung cell per row, cross-checked against the fixture so a
      hand-edit of the expected strings fails here before the tariff gate. */
+  const onlyMaut = HONOLD_BOTH + ' // ' + HONOLD_MAUT;
+  const allThree = onlyMaut + ' // ' + HONOLD_TG;
   const expected = {
-    4: HONOLD_DIFF, 5: HONOLD_BOTH, 6: HONOLD_OLD, 7: HONOLD_BOTH,
-    8: "Kein Tarif für 'SI'", 9: HONOLD_BOTH, 10: null, 11: HONOLD_DIFF,
-    12: HONOLD_BOTH, 13: HONOLD_BOTH, 14: HONOLD_OLD, 15: HONOLD_OLD,
-    16: HONOLD_BOTH, 17: null, 18: null, 19: HONOLD_OLD, 20: HONOLD_OLD,
+    4: HONOLD_DIFF + ' // ' + HONOLD_MAUT, 5: HONOLD_BOTH, 6: HONOLD_OLD, 7: allThree,
+    8: "Kein Tarif für 'SI'", 9: onlyMaut, 10: null, 11: HONOLD_DIFF,
+    12: allThree, 13: allThree, 14: HONOLD_OLD, 15: HONOLD_OLD,
+    16: onlyMaut, 17: null, 18: null, 19: HONOLD_OLD, 20: HONOLD_OLD,
   };
   assert.deepEqual(fx.rows.map((x) => x.row), Object.keys(expected).map(Number));
   for (const x of fx.rows) assert.equal(x.truth, expected[x.row], `row ${x.row} workbook cell`);
@@ -2546,24 +2830,28 @@ test('processHonold: 20382640 replay agrees on 17/17, no mismatches', (t) => {
     const got = new Map();
     for (const x of fx.rows) {
       const ws = makeRow(R, { 50: x.stat, 51: x.fr_dl, 52: x.vkg, 53: x.land,
-                              54: x.vkg_dl, 56: x.fr_tarif });
-      const out = e.processHonold(ws, R, HONOLD_COLS_FRT);
+                              54: x.vkg_dl, 56: x.fr_tarif,
+                              57: x.mt_dl, 58: x.mt_tar, 59: x.mt_diff, 60: x.tg_diff });
+      const out = e.processHonold(ws, R, HONOLD_COLS_FULL);
       got.set(x.row, out);
       if (out !== x.truth) mismatches.push({ row: x.row, got: out, truth: x.truth });
     }
     assert.deepEqual(mismatches, []);
     /* Per-row groups, so a future rule that lands on the right string for the wrong
        reason still has to account for each shape. */
-    for (const row of [5, 7, 9, 12, 13, 16]) assert.equal(got.get(row), HONOLD_BOTH, 'row ' + row);
-    for (const row of [4, 11]) assert.equal(got.get(row), HONOLD_DIFF, 'row ' + row);
+    for (const row of [7, 12, 13]) assert.equal(got.get(row), allThree, 'row ' + row);
+    for (const row of [9, 16]) assert.equal(got.get(row), onlyMaut, 'row ' + row);
+    assert.equal(got.get(5), HONOLD_BOTH, 'row 5 (no MT / TG delta)');
+    assert.equal(got.get(4), HONOLD_DIFF + ' // ' + HONOLD_MAUT, 'row 4');
+    assert.equal(got.get(11), HONOLD_DIFF, 'row 11');
     for (const row of [6, 14, 15, 19, 20]) assert.equal(got.get(row), HONOLD_OLD, 'row ' + row);
     assert.equal(got.get(8), "Kein Tarif für 'SI'", 'row 8');
     for (const row of [10, 17, 18]) assert.equal(got.get(row), null, 'row ' + row);
     /* Row 4 is the all-differ contrast: IT 39012 bills 55.76, an OLD rate at the DL
        bracket, and IT@450 is 96.13 while the row's FR Kosten lt. Tarif is ALSO 96.13 -
-       the tariff at 250 kg is unchanged, so the lane did not diverge and the note stays
-       the weight phrase. Asserted against the joined phrase explicitly. */
-    assert.equal(got.get(4), HONOLD_DIFF, 'row 4 (IT@450 96.13) is weight-only');
+       the tariff at 250 kg is unchanged, so the lane did not diverge and the freight
+       half stays the weight phrase. The Mautdifferenz in front of nothing is the toll
+       arm joining a weight verdict, not a freight verdict of its own. */
     assert.notEqual(got.get(4), HONOLD_BOTH, 'row 4 must not join the previous-tariff phrase');
   } finally {
     e.setHonoldTariff(HONOLD_SYNTH);
@@ -3624,4 +3912,11 @@ test('collectInputsForRow: dachser exports the FR pair without re-keying the row
   /* Wackler already exports these keys, so they must not be excluded globally. */
   assert.notEqual(e.rowUid('wackler', 'sheet', R, { fr_dl: '40', fr_tar: '10' }),
     e.rowUid('wackler', 'sheet', R, {}));
+  /* Same scope check for the four Honold MT / TG keys 1.62.0 excluded: the exclusion
+     is per-forwarder, so a Dachser uid still answers to a key that happens to carry
+     one of those names. */
+  for (const key of ['mt_dl', 'mt_tar', 'mt_diff', 'tg_diff']) {
+    assert.notEqual(e.rowUid('dachser', 'sheet', R, { [key]: '1' }),
+      e.rowUid('dachser', 'sheet', R, {}), key + ' must not be excluded for dachser');
+  }
 });

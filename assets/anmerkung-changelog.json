@@ -1,6 +1,13 @@
 {
-  "version": "1.61.2",
+  "version": "1.62.0",
   "entries": [
+    {
+      "ver": "1.62.0",
+      "date": "2026-11-09",
+      "items": [
+        "Honold - a toll line billed under its tariff adds \"Mautdifferenz\", a Tauschgebühr delta adds \"Differenz Tauschgebühr, ok?\", an untariffed toll charge reads \"Kein Maut Tarif für '<LAND>'\", and freight within 0.50 of its own tariff that matched no older rate reads nothing."
+      ]
+    },
     {
       "ver": "1.61.2",
       "date": "2026-10-29",
