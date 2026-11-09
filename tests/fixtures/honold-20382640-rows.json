@@ -57,7 +57,11 @@
    "land": "IT",
    "vkg_dl": "223",
    "fr_tarif": 96.13,
-   "truth": "Differenz aufgrund abweichender Gewichte"
+   "mt_dl": 5.32,
+   "mt_tar": 8.86,
+   "mt_diff": -3.54,
+   "tg_diff": null,
+   "truth": "Differenz aufgrund abweichender Gewichte // Mautdifferenz"
   },
   {
    "row": 5,
@@ -67,6 +71,10 @@
    "land": "AT",
    "vkg_dl": "62,18",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -77,6 +85,10 @@
    "land": "AT",
    "vkg_dl": "156,59",
    "fr_tarif": 369,
+   "mt_dl": 35.28,
+   "mt_tar": 35.28,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -87,7 +99,11 @@
    "land": "CH",
    "vkg_dl": "183",
    "fr_tarif": 156.13,
-   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 5.85,
+   "mt_tar": 9.37,
+   "mt_diff": -3.52,
+   "tg_diff": 0.39,
+   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif // Mautdifferenz // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 8,
@@ -97,6 +113,10 @@
    "land": "SI",
    "vkg_dl": "0",
    "fr_tarif": 0,
+   "mt_dl": 48.52,
+   "mt_tar": 0,
+   "mt_diff": 48.52,
+   "tg_diff": null,
    "truth": "Kein Tarif für 'SI'"
   },
   {
@@ -107,7 +127,11 @@
    "land": "CH",
    "vkg_dl": "183",
    "fr_tarif": 494.63,
-   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 25.76,
+   "mt_tar": 28.1,
+   "mt_diff": -2.34,
+   "tg_diff": null,
+   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif // Mautdifferenz"
   },
   {
    "row": 10,
@@ -117,6 +141,10 @@
    "land": "ES",
    "vkg_dl": "0",
    "fr_tarif": 128.82,
+   "mt_dl": 5.89,
+   "mt_tar": 5.89,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": null
   },
   {
@@ -127,6 +155,10 @@
    "land": "AT",
    "vkg_dl": "0",
    "fr_tarif": 77.95,
+   "mt_dl": 8.82,
+   "mt_tar": 8.82,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Differenz aufgrund abweichender Gewichte"
   },
   {
@@ -137,7 +169,11 @@
    "land": "CH",
    "vkg_dl": "51,8",
    "fr_tarif": 87.65,
-   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 2.34,
+   "mt_tar": 3.51,
+   "mt_diff": -1.17,
+   "tg_diff": 0.77,
+   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif // Mautdifferenz // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 13,
@@ -147,7 +183,11 @@
    "land": "CH",
    "vkg_dl": "107,83",
    "fr_tarif": 112.67,
-   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 3.51,
+   "mt_tar": 5.85,
+   "mt_diff": -2.34,
+   "tg_diff": 1.16,
+   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif // Mautdifferenz // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 14,
@@ -157,6 +197,10 @@
    "land": "CZ",
    "vkg_dl": "52,6",
    "fr_tarif": 31.93,
+   "mt_dl": 2.45,
+   "mt_tar": 2.45,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -167,6 +211,10 @@
    "land": "SK",
    "vkg_dl": "54,85",
    "fr_tarif": 39.93,
+   "mt_dl": 2.45,
+   "mt_tar": 2.45,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -177,7 +225,11 @@
    "land": "PL",
    "vkg_dl": "89,2",
    "fr_tarif": 49.46,
-   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 5.36,
+   "mt_tar": 10.71,
+   "mt_diff": -5.35,
+   "tg_diff": null,
+   "truth": "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif // Mautdifferenz"
   },
   {
    "row": 17,
@@ -187,6 +239,10 @@
    "land": "IT",
    "vkg_dl": "226",
    "fr_tarif": 55.76,
+   "mt_dl": 5.32,
+   "mt_tar": 5.32,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": null
   },
   {
@@ -197,6 +253,10 @@
    "land": "IT",
    "vkg_dl": "104,5",
    "fr_tarif": 191.17,
+   "mt_dl": 15.95,
+   "mt_tar": 15.95,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": null
   },
   {
@@ -207,6 +267,10 @@
    "land": "PL",
    "vkg_dl": "32",
    "fr_tarif": 26.22,
+   "mt_dl": 5.36,
+   "mt_tar": 5.36,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -217,6 +281,10 @@
    "land": "CZ",
    "vkg_dl": "25",
    "fr_tarif": 28.24,
+   "mt_dl": 2.45,
+   "mt_tar": 2.45,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   }
  ]

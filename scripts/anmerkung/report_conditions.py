@@ -37,7 +37,7 @@ for name in [
     "WACKLER_XTIER_NEAR_BAND", "WACKLER_BUENDEL_PARTIAL",
     "WACKLER_COLLI_KG", "WACKLER_SAME_WEIGHT_BAND",
     "WACKLER_BUENDEL_NEAR_BAND", "WACKLER_BUENDEL_MIN_REFS",
-    "WACKLER_TZ_RATE_TOL", "HONOLD_RATE_TOL",
+    "WACKLER_TZ_RATE_TOL", "HONOLD_RATE_TOL", "HONOLD_FR_FLOOR",
     "DA_NAT_PRICE_TOL", "DA_NAT_COPY_TOL", "DA_NAT_MAX_COPIES",
 ]:
     m = re.search(rf"const\s+{name}\s*=\s*([^;]+);", src)
@@ -408,12 +408,22 @@ story.append(P(
     "The tariff matrix is business data and ships encrypted (<code>assets/honold-tariff.enc.json</code>); "
     "until it is decrypted the engine "
     "<i>skips</i> Honold rows (null) rather than blanking an existing note it cannot re-derive. "
-    "Three rules, decided from FR Kosten DL and FR Kosten lt. Tarif. "
+    "Five rules, decided from FR Kosten DL / FR Kosten lt. Tarif, the MT and TG cost groups, and the "
+    "freight materiality floor; a layout without a ZZ, MT or TG group resolves that column to -1 and the "
+    "matching arm is off. "
     "A ZZ cost line is a second delivery attempt billed on its own: when its Differenz clears the Dachser "
     "difference threshold (T_DACHSER, " f"{k('T_DACHSER')} by default) and FR Kosten DL is blank / 0, the whole note is "
     "&quot;2. Zustellung&quot;. A row that carries freight as well as a ZZ charge is decided by the rules below. "
     "FR Kosten lt. Tarif blank / 0 with an Empf.-Land reads &quot;Kein Tarif für '&lt;LAND&gt;'&quot; and nothing else: "
     "the current tariff prices no lane for that country, so the OLD matrix cannot speak to it. "
+    "MT Kosten lt. Tarif blank / 0 with a charged MT Kosten DL and an Empf.-Land reads "
+    "&quot;Kein Maut Tarif für '&lt;LAND&gt;'&quot; and nothing else: on the only row where both notes were "
+    "derivable the auditor wrote the toll phrase alone, which is why the arm is terminal. A later cell "
+    "carrying both phrases would mean the arm is wrong for that row and should be made additive. "
+    "20384083 NEU row 6 is the proof: its FR Kosten DL 83.77 is the LT rate of the "
+    "200 kg bracket its 183 kg falls in, so the previous-tariff arm would otherwise fire. "
+    "The FR Kein-Tarif arm still returns before it (20382640 row 8, "
+    "SI); the charge is gated by T_DACHSER. "
     "Otherwise FR Kosten DL is matched against the OLD tariff. The row keeps the previous-tariff note when it "
     "equals a zone rate published for its Empf.-Land in the Bis bracket its Volumen kg falls in (every zone of "
     "the country is a candidate, because the row carries the country but not the zone, and a country's zone "
@@ -425,22 +435,38 @@ story.append(P(
     "Volumen kg's, and every OLD rate the country publishes at the billed bracket differs from the row's own "
     "FR Kosten lt. Tarif by more than " f"{k('HONOLD_RATE_TOL')} - a proxy for the current matrix, which is not shipped, "
     "so a lane whose OLD and current rates agree at the billed bracket but diverge at the bracket the billed "
-    "amount came from can read wrong. Volumen kg DL is read only by that arm; it is never a tier of its own."
+    "amount came from can read wrong. Volumen kg DL is read only by that arm; it is never a tier of its own. "
+    "An FR that matches no OLD rate anywhere is a weight difference, unless it sits within "
+    f"{k('HONOLD_FR_FLOOR')} of the row's own FR Kosten lt. Tarif: a gap that small is rounding dust, not an "
+    "undercharge, and the fallback weight phrase becomes empty (20382640 NEU row 11, 88.62 against 88.51). "
+    "The floor never erases a claimed base (previous tariff / both), and it needs a priced tariff cell: "
+    "an absent FR Kosten lt. Tarif column, and a blank / 0 cell, each keep the weight phrase. Two "
+    "additive arms then join onto whatever the freight rule decided: &quot;Mautdifferenz&quot; when MT "
+    "Differenz is below -HONOLD_RATE_TOL (a toll line "
+    "billed under its tariff is an undercharge, one billed above it is not), then &quot;Differenz "
+    "Tauschgebühr, ok?&quot; when a TG Differenz clears the Dachser difference threshold "
+    "(T_DACHSER, " f"{k('T_DACHSER')} by default, sign-insensitive). Each is off on a layout without its "
+    "column, and neither stands in for the freight verdict."
 ))
 story.append(section_table([
     ("the OLD tariff is locked / incomplete, or Stat_Freigabe is not 10", "row skipped (null, no note written)"),
     (f"ZZ Differenz above the Dachser difference threshold ({k('T_DACHSER')} by default) and FR Kosten DL blank / 0", "2. Zustellung"),
     ("FR Kosten DL blank / 0 without that ZZ fee", "Differenz aufgrund abweichender Gewichte"),
     ("FR Kosten lt. Tarif blank / 0 and an Empf.-Land is present (an absent column leaves the rule off)", "Kein Tarif für '&lt;LAND&gt;'"),
+    ("MT Kosten lt. Tarif blank / 0 with MT Kosten DL over T_DACHSER and an Empf.-Land present (terminal, like the FR phrase: 20384083 row 6 drops the previous-tariff note it would otherwise carry, because its FR 83.77 is the LT rate of the 200 kg bracket its 183 kg falls in; 20382640 row 8 SI reads the FR phrase only)", "Kein Maut Tarif für '&lt;LAND&gt;'"),
     ("no / 0 Volumen kg", "Differenz aufgrund abweichender Gewichte"),
     ("FR Kosten DL equals an OLD-tariff rate for the row's Empf.-Land in the Bis bracket its Volumen kg falls in", "Honold berechnet die Kosten nach dem bisherigen Tarif"),
     ("FR Kosten DL equals an OLD-tariff rate of another bracket, Volumen kg DL > 0 sits in yet another bracket, and every OLD rate at the billed bracket differs from FR Kosten lt. Tarif", "Differenz aufgrund abweichender Gewichte // Honold berechnet die Kosten nach dem bisherigen Tarif"),
     ("FR Kosten DL matches no OLD-tariff rate for the row's Empf.-Land, or the country has no zone column", "Differenz aufgrund abweichender Gewichte"),
+    (f"fallback weight case whose FR Kosten DL sits within {k('HONOLD_FR_FLOOR')} of a priced FR Kosten lt. Tarif (rounding dust, not an undercharge; 20382640 NEU row 11 reads 88.62 against 88.51), and the base is not already claimed by the previous-tariff or both-phrase arm", "no note (empty cell)"),
+    ("MT Differenz below -HONOLD_RATE_TOL, joined onto the freight verdict (a toll line billed under its tariff; 20384083 row 4)", "Mautdifferenz"),
+    ("TG Differenz whose absolute value clears T_DACHSER, joined after Mautdifferenz (sign-insensitive; 20379045 row 7)", "Differenz Tauschgebühr, ok?"),
 ]))
 story.append(P("Honold constants", h3))
 story.append(const_table([
     ("Weight brackets", "Bis column of the OLD tariff (50 … 10 000, last row open above)"),
     ("Rate equality tolerance (OLD-tariff match and the KEIN zero test)", k("HONOLD_RATE_TOL")),
+    ("Freight materiality floor (silences the fallback weight phrase)", k("HONOLD_FR_FLOOR")),
 ]))
 
 story.append(PageBreak())

@@ -57,6 +57,10 @@
    "land": "SK",
    "vkg_dl": "55",
    "fr_tarif": 55.45,
+   "mt_dl": 4.91,
+   "mt_tar": 4.91,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -67,6 +71,10 @@
    "land": "CZ",
    "vkg_dl": "87",
    "fr_tarif": 48.57,
+   "mt_dl": 4.91,
+   "mt_tar": 4.91,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -77,7 +85,11 @@
    "land": "CH",
    "vkg_dl": "203",
    "fr_tarif": 84.44,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 3.51,
+   "mt_tar": 3.51,
+   "mt_diff": 0,
+   "tg_diff": 0.77,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 7,
@@ -87,7 +99,11 @@
    "land": "CH",
    "vkg_dl": "100",
    "fr_tarif": 185.47,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 11.71,
+   "mt_tar": 11.71,
+   "mt_diff": 0,
+   "tg_diff": 3.08,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 8,
@@ -97,7 +113,11 @@
    "land": "CH",
    "vkg_dl": "522",
    "fr_tarif": 131.55,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 7.02,
+   "mt_tar": 7.02,
+   "mt_diff": 0,
+   "tg_diff": 1.16,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 9,
@@ -107,7 +127,11 @@
    "land": "CH",
    "vkg_dl": "238",
    "fr_tarif": 96.52,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 3.51,
+   "mt_tar": 3.51,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 10,
@@ -117,7 +141,11 @@
    "land": "CH",
    "vkg_dl": "246",
    "fr_tarif": 84.44,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 3.51,
+   "mt_tar": 3.51,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 11,
@@ -127,7 +155,11 @@
    "land": "CH",
    "vkg_dl": "249",
    "fr_tarif": 80.4,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 3.51,
+   "mt_tar": 3.51,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 12,
@@ -137,7 +169,11 @@
    "land": "CH",
    "vkg_dl": "244",
    "fr_tarif": 80.4,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 3.51,
+   "mt_tar": 3.51,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 13,
@@ -147,6 +183,10 @@
    "land": "CH",
    "vkg_dl": "65",
    "fr_tarif": 40.34,
+   "mt_dl": 1.17,
+   "mt_tar": 1.17,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -157,6 +197,10 @@
    "land": "AT",
    "vkg_dl": "3836",
    "fr_tarif": 707.37,
+   "mt_dl": 88.21,
+   "mt_tar": 88.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -167,6 +211,10 @@
    "land": "AT",
    "vkg_dl": "691",
    "fr_tarif": 126.05,
+   "mt_dl": 15.44,
+   "mt_tar": 15.44,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -177,7 +225,11 @@
    "land": "CH",
    "vkg_dl": "893",
    "fr_tarif": 158.85,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 10.54,
+   "mt_tar": 10.54,
+   "mt_diff": 0,
+   "tg_diff": 1.54,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 17,
@@ -187,7 +239,11 @@
    "land": "CH",
    "vkg_dl": "0",
    "fr_tarif": 519.5,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 28.1,
+   "mt_tar": 28.1,
+   "mt_diff": 0,
+   "tg_diff": 3.08,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 18,
@@ -197,7 +253,11 @@
    "land": "CH",
    "vkg_dl": "1979",
    "fr_tarif": 519.5,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 28.1,
+   "mt_tar": 28.1,
+   "mt_diff": 0,
+   "tg_diff": 3.08,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 19,
@@ -207,7 +267,11 @@
    "land": "CH",
    "vkg_dl": "1176",
    "fr_tarif": 291.63,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 14.05,
+   "mt_tar": 14.05,
+   "mt_diff": 0,
+   "tg_diff": 2.31,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 20,
@@ -217,7 +281,11 @@
    "land": "CH",
    "vkg_dl": "164",
    "fr_tarif": 69.07,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 2.34,
+   "mt_tar": 2.34,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 21,
@@ -227,7 +295,11 @@
    "land": "CH",
    "vkg_dl": "345",
    "fr_tarif": 91.2,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 4.68,
+   "mt_tar": 4.68,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 22,
@@ -237,6 +309,10 @@
    "land": "AT",
    "vkg_dl": "55",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -247,6 +323,10 @@
    "land": "AT",
    "vkg_dl": "125",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -257,6 +337,10 @@
    "land": "AT",
    "vkg_dl": "1706",
    "fr_tarif": 408.44,
+   "mt_dl": 39.7,
+   "mt_tar": 39.7,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -267,6 +351,10 @@
    "land": "AT",
    "vkg_dl": "79",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -277,6 +365,10 @@
    "land": "AT",
    "vkg_dl": "68",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -287,6 +379,10 @@
    "land": "AT",
    "vkg_dl": "140",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -297,6 +393,10 @@
    "land": "AT",
    "vkg_dl": "152",
    "fr_tarif": 51.48,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -307,6 +407,10 @@
    "land": "AT",
    "vkg_dl": "54",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -317,6 +421,10 @@
    "land": "AT",
    "vkg_dl": "112",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -327,6 +435,10 @@
    "land": "SK",
    "vkg_dl": "67",
    "fr_tarif": 39.93,
+   "mt_dl": 2.45,
+   "mt_tar": 2.45,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -337,7 +449,11 @@
    "land": "CH",
    "vkg_dl": "1824",
    "fr_tarif": 659.17,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 40.98,
+   "mt_tar": 40.98,
+   "mt_diff": 0,
+   "tg_diff": 12.71,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 33,
@@ -347,7 +463,11 @@
    "land": "CH",
    "vkg_dl": "1184",
    "fr_tarif": 291.63,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 14.05,
+   "mt_tar": 14.05,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 34,
@@ -357,6 +477,10 @@
    "land": "CH",
    "vkg_dl": "167",
    "fr_tarif": 78.93,
+   "mt_dl": 2.34,
+   "mt_tar": 2.34,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -367,6 +491,10 @@
    "land": "AT",
    "vkg_dl": "984",
    "fr_tarif": 161.02,
+   "mt_dl": 22.05,
+   "mt_tar": 22.05,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -377,6 +505,10 @@
    "land": "AT",
    "vkg_dl": "90",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -387,6 +519,10 @@
    "land": "AT",
    "vkg_dl": "513",
    "fr_tarif": 112.06,
+   "mt_dl": 13.23,
+   "mt_tar": 13.23,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -397,6 +533,10 @@
    "land": "AT",
    "vkg_dl": "93",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -407,6 +547,10 @@
    "land": "AT",
    "vkg_dl": "280",
    "fr_tarif": 63.28,
+   "mt_dl": 6.62,
+   "mt_tar": 6.62,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -417,6 +561,10 @@
    "land": "AT",
    "vkg_dl": "1960",
    "fr_tarif": 435.47,
+   "mt_dl": 44.11,
+   "mt_tar": 44.11,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -427,6 +575,10 @@
    "land": "AT",
    "vkg_dl": "108",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -437,6 +589,10 @@
    "land": "AT",
    "vkg_dl": "109",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -447,6 +603,10 @@
    "land": "AT",
    "vkg_dl": "151",
    "fr_tarif": 51.48,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -457,6 +617,10 @@
    "land": "AT",
    "vkg_dl": "89",
    "fr_tarif": 112.06,
+   "mt_dl": 13.23,
+   "mt_tar": 13.23,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -467,6 +631,10 @@
    "land": "AT",
    "vkg_dl": "301",
    "fr_tarif": 77.95,
+   "mt_dl": 8.82,
+   "mt_tar": 8.82,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -477,6 +645,10 @@
    "land": "AT",
    "vkg_dl": "334",
    "fr_tarif": 77.95,
+   "mt_dl": 8.82,
+   "mt_tar": 8.82,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -487,6 +659,10 @@
    "land": "AT",
    "vkg_dl": "112",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -497,6 +673,10 @@
    "land": "AT",
    "vkg_dl": "145",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -507,6 +687,10 @@
    "land": "AT",
    "vkg_dl": "93",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -517,6 +701,10 @@
    "land": "AT",
    "vkg_dl": "158",
    "fr_tarif": 51.48,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -527,6 +715,10 @@
    "land": "AT",
    "vkg_dl": "142",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -537,6 +729,10 @@
    "land": "AT",
    "vkg_dl": "95",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -547,6 +743,10 @@
    "land": "AT",
    "vkg_dl": "75",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -557,6 +757,10 @@
    "land": "AT",
    "vkg_dl": "182",
    "fr_tarif": 51.48,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -567,6 +771,10 @@
    "land": "AT",
    "vkg_dl": "242",
    "fr_tarif": 63.17,
+   "mt_dl": 6.62,
+   "mt_tar": 6.62,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -577,6 +785,10 @@
    "land": "AT",
    "vkg_dl": "283",
    "fr_tarif": 63.28,
+   "mt_dl": 6.62,
+   "mt_tar": 6.62,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -587,7 +799,11 @@
    "land": "CH",
    "vkg_dl": "633",
    "fr_tarif": 346.2,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 16.39,
+   "mt_tar": 16.39,
+   "mt_diff": 0,
+   "tg_diff": 4.62,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 58,
@@ -597,6 +813,10 @@
    "land": "CH",
    "vkg_dl": "209",
    "fr_tarif": 131.55,
+   "mt_dl": 7.02,
+   "mt_tar": 7.02,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -607,7 +827,11 @@
    "land": "CH",
    "vkg_dl": "250",
    "fr_tarif": 80.4,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 3.51,
+   "mt_tar": 3.51,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 60,
@@ -617,6 +841,10 @@
    "land": "AT",
    "vkg_dl": "103",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -627,6 +855,10 @@
    "land": "AT",
    "vkg_dl": "110",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -637,6 +869,10 @@
    "land": "AT",
    "vkg_dl": "94",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -647,6 +883,10 @@
    "land": "AT",
    "vkg_dl": "238",
    "fr_tarif": 63.17,
+   "mt_dl": 6.62,
+   "mt_tar": 6.62,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -657,6 +897,10 @@
    "land": "AT",
    "vkg_dl": "75",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -667,6 +911,10 @@
    "land": "AT",
    "vkg_dl": "93",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -677,6 +925,10 @@
    "land": "AT",
    "vkg_dl": "63",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -687,6 +939,10 @@
    "land": "AT",
    "vkg_dl": "61",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -697,6 +953,10 @@
    "land": "AT",
    "vkg_dl": "91",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -707,6 +967,10 @@
    "land": "AT",
    "vkg_dl": "74",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -717,6 +981,10 @@
    "land": "AT",
    "vkg_dl": "92",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -727,6 +995,10 @@
    "land": "AT",
    "vkg_dl": "92",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -737,6 +1009,10 @@
    "land": "AT",
    "vkg_dl": "91",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -747,6 +1023,10 @@
    "land": "AT",
    "vkg_dl": "63",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -757,6 +1037,10 @@
    "land": "AT",
    "vkg_dl": "93",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -767,6 +1051,10 @@
    "land": "AT",
    "vkg_dl": "74",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -777,6 +1065,10 @@
    "land": "AT",
    "vkg_dl": "63",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -787,6 +1079,10 @@
    "land": "AT",
    "vkg_dl": "75",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -797,6 +1093,10 @@
    "land": "AT",
    "vkg_dl": "64",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -807,6 +1107,10 @@
    "land": "AT",
    "vkg_dl": "73",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -817,6 +1121,10 @@
    "land": "AT",
    "vkg_dl": "91",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -827,6 +1135,10 @@
    "land": "AT",
    "vkg_dl": "62",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -837,6 +1149,10 @@
    "land": "AT",
    "vkg_dl": "62",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -847,6 +1163,10 @@
    "land": "AT",
    "vkg_dl": "62",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -857,6 +1177,10 @@
    "land": "AT",
    "vkg_dl": "77",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -867,6 +1191,10 @@
    "land": "AT",
    "vkg_dl": "93",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -877,6 +1205,10 @@
    "land": "AT",
    "vkg_dl": "89",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -887,6 +1219,10 @@
    "land": "AT",
    "vkg_dl": "63",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -897,7 +1233,11 @@
    "land": "CH",
    "vkg_dl": "0",
    "fr_tarif": 125.52,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 5.85,
+   "mt_tar": 5.85,
+   "mt_diff": 0,
+   "tg_diff": 1.16,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 89,
@@ -907,6 +1247,10 @@
    "land": "CH",
    "vkg_dl": "0",
    "fr_tarif": 78.93,
+   "mt_dl": 2.34,
+   "mt_tar": 2.34,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -917,6 +1261,10 @@
    "land": "AT",
    "vkg_dl": "0",
    "fr_tarif": 90.88,
+   "mt_dl": 28.67,
+   "mt_tar": 11.03,
+   "mt_diff": 17.64,
+   "tg_diff": 0,
    "truth": "Differenz aufgrund abweichender Gewichte"
   },
   {
@@ -927,6 +1275,10 @@
    "land": "AT",
    "vkg_dl": "0",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -937,6 +1289,10 @@
    "land": "AT",
    "vkg_dl": "0",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -947,6 +1303,10 @@
    "land": "AT",
    "vkg_dl": "0",
    "fr_tarif": 51.48,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -957,6 +1317,10 @@
    "land": "AT",
    "vkg_dl": "0",
    "fr_tarif": 51.48,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -967,6 +1331,10 @@
    "land": "AT",
    "vkg_dl": "0",
    "fr_tarif": 63.17,
+   "mt_dl": 6.62,
+   "mt_tar": 6.62,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -977,7 +1345,11 @@
    "land": "CH",
    "vkg_dl": "1788",
    "fr_tarif": 402.86,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 21.07,
+   "mt_tar": 21.07,
+   "mt_diff": 0,
+   "tg_diff": 3.08,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 97,
@@ -987,7 +1359,11 @@
    "land": "CH",
    "vkg_dl": "674",
    "fr_tarif": 153.52,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 8.2,
+   "mt_tar": 8.2,
+   "mt_diff": 0,
+   "tg_diff": 1.16,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 98,
@@ -997,7 +1373,11 @@
    "land": "CH",
    "vkg_dl": "435",
    "fr_tarif": 366.19,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 17.56,
+   "mt_tar": 17.56,
+   "mt_diff": 0,
+   "tg_diff": 2.31,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 99,
@@ -1007,6 +1387,10 @@
    "land": "CH",
    "vkg_dl": "346",
    "fr_tarif": 91.2,
+   "mt_dl": 4.68,
+   "mt_tar": 4.68,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1017,7 +1401,11 @@
    "land": "CH",
    "vkg_dl": "237",
    "fr_tarif": 80.4,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 3.51,
+   "mt_tar": 3.51,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 101,
@@ -1027,6 +1415,10 @@
    "land": "CH",
    "vkg_dl": "126",
    "fr_tarif": 51.28,
+   "mt_dl": 2.34,
+   "mt_tar": 2.34,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1037,7 +1429,11 @@
    "land": "CH",
    "vkg_dl": "1052",
    "fr_tarif": 279.14,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 12.88,
+   "mt_tar": 12.88,
+   "mt_diff": 0,
+   "tg_diff": 0.77,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 103,
@@ -1047,6 +1443,10 @@
    "land": "CH",
    "vkg_dl": "63",
    "fr_tarif": 40.34,
+   "mt_dl": 1.17,
+   "mt_tar": 1.17,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1057,7 +1457,11 @@
    "land": "CH",
    "vkg_dl": "688",
    "fr_tarif": 291.63,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 14.05,
+   "mt_tar": 14.05,
+   "mt_diff": 0,
+   "tg_diff": 2.7,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 105,
@@ -1067,7 +1471,11 @@
    "land": "CH",
    "vkg_dl": "237",
    "fr_tarif": 96.52,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 3.51,
+   "mt_tar": 3.51,
+   "mt_diff": 0,
+   "tg_diff": 0.39,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 106,
@@ -1077,6 +1485,10 @@
    "land": "AT",
    "vkg_dl": "334",
    "fr_tarif": 77.95,
+   "mt_dl": 8.82,
+   "mt_tar": 8.82,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1087,6 +1499,10 @@
    "land": "AT",
    "vkg_dl": "493",
    "fr_tarif": 112.06,
+   "mt_dl": 13.23,
+   "mt_tar": 13.23,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1097,6 +1513,10 @@
    "land": "AT",
    "vkg_dl": "126",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1107,6 +1527,10 @@
    "land": "AT",
    "vkg_dl": "888",
    "fr_tarif": 146.48,
+   "mt_dl": 19.85,
+   "mt_tar": 19.85,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1117,6 +1541,10 @@
    "land": "AT",
    "vkg_dl": "338",
    "fr_tarif": 77.95,
+   "mt_dl": 8.82,
+   "mt_tar": 8.82,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1127,6 +1555,10 @@
    "land": "AT",
    "vkg_dl": "122",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1137,6 +1569,10 @@
    "land": "AT",
    "vkg_dl": "69",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1147,6 +1583,10 @@
    "land": "AT",
    "vkg_dl": "210",
    "fr_tarif": 63.17,
+   "mt_dl": 6.62,
+   "mt_tar": 6.62,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1157,6 +1597,10 @@
    "land": "AT",
    "vkg_dl": "110",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1167,6 +1611,10 @@
    "land": "CH",
    "vkg_dl": "113",
    "fr_tarif": 51.28,
+   "mt_dl": 2.34,
+   "mt_tar": 2.34,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1177,6 +1625,10 @@
    "land": "CH",
    "vkg_dl": "108",
    "fr_tarif": 51.28,
+   "mt_dl": 2.34,
+   "mt_tar": 2.34,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1187,7 +1639,11 @@
    "land": "CH",
    "vkg_dl": "237",
    "fr_tarif": 138.22,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 7.02,
+   "mt_tar": 7.02,
+   "mt_diff": 0,
+   "tg_diff": 1.16,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 118,
@@ -1197,7 +1653,11 @@
    "land": "CH",
    "vkg_dl": "4183",
    "fr_tarif": 670.7,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 50.95,
+   "mt_tar": 50.95,
+   "mt_diff": 0,
+   "tg_diff": 4.24,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   },
   {
    "row": 119,
@@ -1207,6 +1667,10 @@
    "land": "CH",
    "vkg_dl": "857",
    "fr_tarif": 166.99,
+   "mt_dl": 10.54,
+   "mt_tar": 10.54,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1217,6 +1681,10 @@
    "land": "CH",
    "vkg_dl": "143",
    "fr_tarif": 61.57,
+   "mt_dl": 2.34,
+   "mt_tar": 2.34,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1227,6 +1695,10 @@
    "land": "AT",
    "vkg_dl": "418",
    "fr_tarif": 295.25,
+   "mt_dl": 28.67,
+   "mt_tar": 28.67,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1237,6 +1709,10 @@
    "land": "AT",
    "vkg_dl": "90",
    "fr_tarif": 32.14,
+   "mt_dl": 2.21,
+   "mt_tar": 2.21,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1247,6 +1723,10 @@
    "land": "AT",
    "vkg_dl": "240",
    "fr_tarif": 63.17,
+   "mt_dl": 6.62,
+   "mt_tar": 6.62,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1257,6 +1737,10 @@
    "land": "AT",
    "vkg_dl": "118",
    "fr_tarif": 41.36,
+   "mt_dl": 4.41,
+   "mt_tar": 4.41,
+   "mt_diff": 0,
+   "tg_diff": null,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1267,6 +1751,10 @@
    "land": "AT",
    "vkg_dl": "206",
    "fr_tarif": 77.95,
+   "mt_dl": 8.82,
+   "mt_tar": 8.82,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1277,6 +1765,10 @@
    "land": "AT",
    "vkg_dl": "837",
    "fr_tarif": 146.48,
+   "mt_dl": 19.85,
+   "mt_tar": 19.85,
+   "mt_diff": 0,
+   "tg_diff": 0,
    "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
   },
   {
@@ -1287,7 +1779,11 @@
    "land": "CH",
    "vkg_dl": "666",
    "fr_tarif": 161.3,
-   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif"
+   "mt_dl": 8.2,
+   "mt_tar": 8.2,
+   "mt_diff": 0,
+   "tg_diff": 1.16,
+   "truth": "Honold berechnet die Kosten nach dem bisherigen Tarif // Differenz Tauschgebühr, ok?"
   }
  ]
 }
