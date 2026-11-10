@@ -17,5 +17,7 @@
   { "tag": "0903", "row": 250, "abg": "DE", "empf": "DE", "plz": "73312", "kg": 484, "fr_dl": 174.8, "fr_tar": 135.03, "want": "none", "why": "fence: tariff copy is not a zone 1 ladder cell at all, and Anz. Sdg 2 keeps the bundling note" },
   { "tag": "0903", "row": 270, "abg": "DE", "empf": "DE", "plz": "73312", "kg": 150, "fr_dl": 97.3, "fr_tar": 66.11, "want": "none", "why": "fence: tariff copy is not a zone 1 ladder cell at all, and Anz. Sdg 2 keeps the bundling note" },
   { "tag": "1019", "row": 201, "abg": "DE", "empf": "PL", "plz": "35-025", "kg": 60, "fr_dl": 162.7, "fr_tar": 51.17, "want": "none", "why": "fence: non-domestic lane (DE->PL, Sonderfahrt 110)" },
-  { "tag": "0730", "row": 67, "abg": "DE", "empf": "PL", "plz": "54-610", "kg": 4, "fr_dl": 259, "fr_tar": 39.52, "want": "none", "why": "fence: 259 - 180 = 79 = 2 x 39.52 on the OLD card only; the NEW card's 4 kg PL price is not 39.52" }
+  { "tag": "0730", "row": 67, "abg": "DE", "empf": "PL", "plz": "54-610", "kg": 4, "fr_dl": 259, "fr_tar": 39.52, "want": "none", "why": "fence: 259 - 180 = 79 = 2 x 39.52 on the OLD card only; the NEW card's 4 kg PL price is not 39.52" },
+  { "tag": "1105", "row": 24, "abg": "DE", "empf": "FR", "plz": "25220", "kg": 109.393, "vkg_dl": 51, "fr_dl": 176, "fr_tar": 97.06, "want": "R2", "why": "2 x 97.06 (OLD FR2 at the Brutto bracket) is 194.12, but the DL bracket 51-100 kg prices 88.02 and 2 x 88.02 = 176.04, 0.04 off" },
+  { "tag": "1105", "row": 123, "abg": "DE", "empf": "DE", "plz": "04347", "kg": 2262.134, "fr_dl": 916.66, "fr_tar": 458.33, "want": "R2", "why": "composite: 916.66 = 2 x 458.33 exactly, while 458.33 is no national cell (zone 7 at bis 2400 kg prices 319.37)" }
 ]

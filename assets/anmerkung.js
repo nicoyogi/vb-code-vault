@@ -961,19 +961,37 @@ function daNationalCopies(nat,zone,total){
    at its own Brutto bracket. The tariff copy sits on the domestic zone ladder or
    on one unique lane price, and the freight is N whole copies, either bare or on
    top of a Sonderfahrt add-on. 20261013 row 29 witnesses the bare half: 2 x
-   219.96 (RO) = 439.92 against 440.00. Out of reach by freight/tariff ratio:
-   20260904 r6 14.14, 20261027 r156 1.56, r157 1.30. */
-function daReferenzCount(empfPlz,abgLand,empfLand,kg,frDl,frTar){
+   219.96 (RO) = 439.92 against 440.00. A domestic row whose tariff copy is not
+   the cell of its own bracket falls back to the composite reading: FR Kosten DL
+   as N whole copies of the row's own FR Kosten lt. Tarif (20261105 row 123,
+   2 x 458.33 = 916.66). Out of reach by freight/tariff ratio: 20260904 r6
+   14.14, 20261027 r156 1.56, r157 1.30. */
+function daReferenzCount(empfPlz,abgLand,empfLand,kg,frDl,frTar,vkgDl){
   const nat=daNationalCard();
   if(!nat)return 0;
-  if(abgLand!=='DE'||empfLand!=='DE')return daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar);
+  if(abgLand!=='DE'||empfLand!=='DE')return daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar,vkgDl);
   const zone=daNationalZone(empfPlz);
   if(!zone)return 0;
-  const price=daNationalPrice(nat,zone,kg);
-  if(!(price>0&&frTar>0&&frDl>frTar))return 0;
-  if(Math.abs(frTar-price)>DA_NAT_PRICE_TOL+1e-9)return 0;
+  if(!(frTar>0&&frDl>frTar))return 0;
   if(daNationalOnLadder(nat,zone,frDl))return 0;
-  return daNationalCopies(nat,zone,frDl);
+  const price=daNationalPrice(nat,zone,kg);
+  if(!(price>0))return 0;
+  if(Math.abs(frTar-price)<=DA_NAT_PRICE_TOL+1e-9)
+    return daNationalCopies(nat,zone,frDl);
+  /* The composite tariff, used only where the ladder copy check above fails:
+     20261105 row 123 (DE to DE, PLZ 04347) has FR Kosten DL 916.66, exactly
+     2 x its FR Kosten lt. Tarif 458.33, while 458.33 is no cell of any zone
+     (zone 7 at bis 2400 kg prices 319.37). It reads the auditor's own tariff
+     column instead of a price list, which is weaker evidence, so the bound is
+     the catalog's 0.02 price tolerance, not a fitted window: this row's own
+     residual is 0, and 0.02 is the tightest bound that excludes the known near
+     fit (20260923 r389, residual 0.04, masked by the bundling arm). The cap
+     stays 2..5; it fires on one row of 2218 in the local corpus and on none of
+     the 238 bundle regressions. The price fence above keeps it off every weight
+     the card does not price, so a row above the last bracket stays silent. */
+  for(let n=2;n<=DA_NAT_MAX_COPIES;n++)
+    if(Math.abs(frDl-n*frTar)<=DA_NAT_PRICE_TOL+1e-9)return n;
+  return 0;
 }
 /* FR Kosten DL that is itself one lane price of the country at any bracket on
    either card: one shipment billed at its own weight, not a duplicate. The
@@ -999,7 +1017,7 @@ function daLaneOnLadder(cards,cc,value){
    national card although it reads only the two international cards, so a bundle
    without one keeps the cascade. Lane naming by PLZ is not attempted, the table
    carries country lanes only. */
-function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar){
+function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar,vkgDl){
   const cards=daRatecardCards();
   if(!cards)return 0;
   const cc=(empfLand&&empfLand!=='DE')?empfLand:(abgLand||'');
@@ -1033,27 +1051,59 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar){
      4x off S=180 and 5x off S=90. The Brutto kg basis is an assumption, not a
      measurement: FR Kosten lt. Tarif is the Brutto-priced column at the call
      site, so the lane is read there too, while daRatecardSonderfahrtS and
-     daRatecardMatch use Volumen kg DL. Unproven either way: over the ten dated
-     workbooks 290 released non-domestic rows have both weights above 0, 68 of
-     them carry a Brutto different from Volumen kg DL (67 by 0.05 or more, 25
-     whose two weights resolve to different brackets, one of them because the
-     Brutto weight falls in no bracket), 21 of the 25 sit within 0.02 of a
-     lane at the Brutto bracket on either card (15 on the NEW card), and none
-     at the DL bracket, and none of the 68 yields a count under either basis.
-     The one witness has both weights at 179. */
+     daRatecardMatch use Volumen kg DL. A row whose copies resolve at the DL
+     bracket is read there by the second copy-fit below, which is how
+     20261105 row 24 (Brutto 109.393, VKG_DL 51) gets its 2: 2 x 88.02 at
+     51-100 kg. Over the ten
+     workbooks of the previous bundles 290 released non-domestic rows have both
+     weights above 0, 68 of them carry a Brutto different from Volumen kg DL (67
+     by 0.05 or more, 25 whose two weights resolve to different brackets, one of
+     them because the Brutto weight falls in no bracket), and 21 of the 25 sit
+     within 0.02 of a lane at the Brutto bracket on either card (15 on the NEW
+     card). The 20261013 row 275 witness has both weights at 179. */
   const nl=daRatecardLanes(cards.nw,kg,cc), nm=[];
   for(const k in nl){const q=nl[k];
     if(q>0&&Math.abs(q-frTar)<=DA_NAT_PRICE_TOL+1e-9&&nm.indexOf(q)<0)nm.push(q);}
-  if(nm.length!==1)return 0;
-  const p=nm[0], counts=[];
-  for(const S of DA_SONDERFAHRT_S){
-    const base=frDl-S;
-    if(!(base>0))continue;
-    if(daLaneOnLadder(cards,cc,base))continue;
-    for(let n=2;n<=DA_NAT_MAX_COPIES;n++)
-      if(Math.abs(base-n*p)<=DA_NAT_COPY_TOL+1e-9&&counts.indexOf(n)<0){counts.push(n);break;}
+  if(nm.length===1){
+    const p=nm[0], counts=[];
+    for(const S of DA_SONDERFAHRT_S){
+      const base=frDl-S;
+      if(!(base>0))continue;
+      if(daLaneOnLadder(cards,cc,base))continue;
+      for(let n=2;n<=DA_NAT_MAX_COPIES;n++)
+        if(Math.abs(base-n*p)<=DA_NAT_COPY_TOL+1e-9&&counts.indexOf(n)<0){counts.push(n);break;}
+    }
+    if(counts.length>1)return 0;  /* two S values that disagree are silence */
+    if(counts.length===1)return counts[0];
   }
-  return counts.length===1?counts[0]:0;
+  /* A second copy-fit at the Volumen kg DL bracket, run whenever the
+     Brutto-bracket readings produce no count: the loop has no bracket-
+     difference gate, so a same-bracket row reaches it too. 20261105 row 24
+     (DE to FR) has FR Kosten lt. Tarif 97.06, the OLD FR2 lane of its Brutto
+     bracket 101-150 kg and unique across both cards, but 176.00 is no whole
+     multiple of it (2 x 97.06 = 194.12). The DL bracket 51-100 kg prices 88.02
+     on the NEW card, and 2 x 88.02 = 176.04 sits 0.04 inside DA_NAT_COPY_TOL.
+     A lane counts only when it is the one price at that bracket within 0.02 of
+     FR_DL / n, and the whole sum must then hold inside 0.08; the Brutto-bracket
+     uniqueness gate and the lane guard above run before this, so a row they
+     turn away stays away. Fences: 20261105 row 23 (565 kg, VKG_DL 282) fits on
+     neither basis - the DL bracket 251-300 prices NEW FR1 144.89 (2 x = 289.78,
+     6.52 short of FR Kosten DL 296.30) and OLD 140.67 (281.34, 14.96 short) -
+     and 20260730 row 67 duplicates only on the OLD card. The two corpus rows
+     this basis also fits, 20260917 r113 and 20261013 r259, carry no SERV_ART
+     and the Brutto-bracket tariff-copy gate above turns both away before the DL
+     loop: r113's 243.17 matches no lane at its bracket, while r259's 63.17
+     matches two (NEW PL2 63.16 and OLD PL3 63.17). */
+  for(let n=2;n<=DA_NAT_MAX_COPIES;n++){
+    const target=frDl/n, hits=[];
+    for(const card of [cards.nw,cards.od]){
+      const lanes=daRatecardLanes(card,vkgDl,cc);
+      for(const k in lanes){const q=lanes[k];
+        if(q>0&&q<99999&&Math.abs(q-target)<=DA_NAT_PRICE_TOL+1e-9&&hits.indexOf(q)<0)hits.push(q);}
+    }
+    if(hits.length===1&&Math.abs(frDl-n*hits[0])<=DA_NAT_COPY_TOL+1e-9)return n;
+  }
+  return 0;
 }
 
 /* Decide the FR wording from the rate cards, replacing the lane/EXP proxy the
@@ -1277,11 +1327,17 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
           /* No separate SNK tariff base: SNK_DL is the 2.Zustellung bundle itself,
              so the auditor names the amount as billed, without the flat 5 EUR admin
              deduction. An integer amount loses the cents (row 23 reads "921", not
-             "921,00"). Bundle 2026-10-19 rows 22/23/155. */
+             "921,00"). Bundle 2026-10-19 rows 22/23/155.
+
+             SNK_DL over 500 is the same bound the branch above reads. Every truth
+             cell naming a 2.Zustellung amount is over it (936.15, 931.15, 921,
+             1163.45, 1099.45); 20261105 row 140 (SNK_DL 76.07, no tariff base,
+             K1AV, Sachkonto 612110) carries a cents residual 71.07 that is no
+             whole 65 multiple and wants the plain Laderaum phrase instead. */
           if(snkDl>500&&(snkTar===0||snkTar===tarifBase))
             return(daIsNonInteger(snkDl)?daFormatDe(snkDl):String(Math.round(snkDl)))
               +' Kosten für 2.Zustellung etc. ok?';
-          if(daIsNonInteger(residual))return daFormatDe(residual)+' Kosten für 2.Zustellung etc. ok?';
+          if(snkDl>500&&daIsNonInteger(residual))return daFormatDe(residual)+' Kosten für 2.Zustellung etc. ok?';
         }
         return'Differenz Laderaumkostenentwicklung';
       }
@@ -1375,6 +1431,11 @@ function processDachser(ws,r,cols){
          FR=47.2, EXP=10, MAUT=1.15, SERV=DA01, SACH=612100 → expected
          "Fremdnummer xxx bereits berechnet in RExxx, ok?" alone, with every other classification
          suppressed).
+     A third flavor names the freight itself: a non-DE Empf.-Land with no other
+     delta line and an FR Kosten DL that IS one of the special-trip add-ons
+     (180/150/120/90/110, within 0.02) reads "Sonderfahrt" - 20261105 row 8, DE
+     to FR, FR_DL 90, where the add-on is the whole freight line and no ratecard
+     residual exists to read.
      Returns early so the standard Produktzuschlag/Mautdifferenz/Gewichte cascade
      doesn't pile irrelevant labels onto these accounting rows. */
   if(cols.tarif>=0&&cols.fr>=0){
@@ -1409,7 +1470,29 @@ function processDachser(ws,r,cols){
         const plzTok=(empfPlz.match(/^\d+/)||[''])[0];
         if(plzTok)return 'kein Tarif für AMAZON '+empfLand+" '"+plzTok+"'";
       }
-      if(empfLand&&empfLand!=='DE')return 'kein Tarif für '+empfLand;
+      if(empfLand&&empfLand!=='DE'){
+        /* The add-on itself: 20261105 row 8 (DE to FR, TARIF blank, FR Differenz
+           90, FR Kosten DL 90) is a special trip the sheet names "Sonderfahrt".
+           FR_DL - 90 = 0 lands on no FR lane (the cheap 101-150 kg lane prices
+           95.01), so no ratecard arm can read it, and the country return below
+           would answer "kein Tarif für FR". The bound is 0.02, the catalog's
+           price tolerance (DA_NAT_PRICE_TOL), not a fitted window: this row's
+           residual is 0. A domestic row has no country to name, so it never
+           reaches this arm; a second delta line makes the row an accounting
+           artifact and keeps the wording below, and 90.03 off the add-on is
+           outside the bound. */
+        const frDl=cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0;
+        /* hasOtherDiff does not read the ZABF, T1 and C196 columns, so a row
+           with a customs- or transit-clearance line would otherwise pass as a
+           trip. Those three count as delta lines here, and nowhere else. */
+        const bookingLine=
+          (cols.zabf_diff>=0&&hasErr(cellNum(ws,r,cols.zabf_diff),T))||
+          (cols.t1_diff>=0&&hasErr(cellNum(ws,r,cols.t1_diff),T))||
+          (cols.c196_diff>=0&&hasErr(cellNum(ws,r,cols.c196_diff),T));
+        if(!hasOtherDiff&&!bookingLine&&frDl>0&&DA_SONDERFAHRT_S.some(S=>Math.abs(frDl-S)<=DA_NAT_PRICE_TOL+1e-9))
+          return P.sonderfahrt;
+        return 'kein Tarif für '+empfLand;
+      }
       /* Domestic lane above the rate-card ceiling: the Dachser weight table stops
          at 10000 kg, so there is no tariff to compare against and the auditor
          asks "Kein Tarif für DE >10 to, ok?". Bundle 2026-10-08 row f027ef05
@@ -1480,13 +1563,19 @@ function processDachser(ws,r,cols){
     /* A reference the auditor sees billed more than once: the tariff copy is
        the national zone cell on a domestic row, or a country's lane price on an
        international one, and FR Kosten DL itself is a whole number of those
-       prices. 0 when the card is locked or the row is not this case.
+       prices. Two fallbacks read the same count elsewhere: on a domestic row
+       whose copy is not the cell of the row's own priced bracket, N whole
+       copies of the row's own FR Kosten lt. Tarif; on an international row, a
+       second copy-fit at the Volumen kg DL bracket. 0 when the card is locked,
+       the row is not this case, or, on a domestic row, the weight has no priced
+       bracket.
        The finding is terminal and ranks below bundling / ZW / K1AS / K1AU: when
        it fires the note is the Referenz phrase alone (owner ruling 2026-10-27). */
     const refN=daReferenzCount(empfPlz,abgLand,empfLand,
       cols.brutto>=0?cellNum(ws,r,cols.brutto):0,
       cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0,
-      cols.fr_tar>=0?cellNum(ws,r,cols.fr_tar):0);
+      cols.fr_tar>=0?cellNum(ws,r,cols.fr_tar):0,
+      cols.vkg_dl>=0?cellNum(ws,r,cols.vkg_dl):0);
     /* "could have been bundled" dominates the ZW / doppelt90 branches: a freight
        line carrying more than one consignment (Anz. Sdg > 1) is the auditor's
        primary FR finding even when the row also flags a deviating intermediate
@@ -5369,7 +5458,7 @@ const INPUT_GLOSSARY={
   tarif             :'Total Kosten lt. Tarif: booked tariff baseline (numeric). Empty / "-" / 0 means no tariff backing.',
   fr_diff           :'FR Differenz: freight-charge delta vs tariff (numeric, signed).',
   fr_tarif          :'FR Kosten lt. Tarif: the tariff freight the rate card prescribes (numeric) = rate(tariffTier, zone). Reverse-looked-up against the rate card to name the "Wackler rechnet für <kg> ab" tier. On Honold rows it is the current-tariff freight for the lane: blank / 0 means the current table prices no rate for that Empf.-Land and the note is "Kein Tarif für \'<LAND>\'", and otherwise its amount at the billed bracket decides whether the lane diverged from the OLD table.',
-  fr_tar            :'FR Kosten lt. Tarif (Dachser): the tariff copy of the freight (numeric). On a domestic row it is compared with the national card\'s cell for the row\'s Empf.-PLZ zone and Brutto kg bracket; on an international one, with the non-DE country\'s lane price at the row\'s Brutto bracket on either card. When it matches, FR Kosten DL itself is tested as 2 to 5 whole zone or lane prices, and a unique decomposition reads "Referenz wird Nx abgerechnet" alone. On an international row the copies may also sit on top of a Sonderfahrt add-on: FR Kosten DL minus one of 180/150/120/90/110 is then the 2 to 5 whole copies of the NEW card\'s lane price, and that lane price must be the only one at the bracket within 0.02 of the tariff copy.',
+  fr_tar            :'FR Kosten lt. Tarif (Dachser): the tariff copy of the freight (numeric). On a domestic row it is compared with the national card\'s cell for the row\'s Empf.-PLZ zone and Brutto kg bracket; on an international one, with the non-DE country\'s lane price at the row\'s Brutto bracket on either card. When it matches, FR Kosten DL itself is tested as 2 to 5 whole zone or lane prices, and a unique decomposition reads "Referenz wird Nx abgerechnet" alone. A domestic row at a bracket the card prices, whose tariff copy is not the cell of the row\'s own bracket, falls back to the composite reading: FR Kosten DL as 2 to 5 whole copies of this column within 0.02, under the same five-copy cap (20261105 row 123, 2 x 458.33 = 916.66 against a zone 7 cell of 319.37); a row above the card\'s last bracket has no ladder price to fence that reading and stays silent. On an international row the copies may also sit on top of a Sonderfahrt add-on: FR Kosten DL minus one of 180/150/120/90/110 is then the 2 to 5 whole copies of the NEW card\'s lane price, and that lane price must be the only one at the bracket within 0.02 of the tariff copy. A second copy-fit at the Volumen kg DL bracket runs when the Brutto-bracket readings produce no count (20261105 row 24, 2 x 88.02 = 176.04).',
   fr_dl             :'FR Kosten DL: the freight actually billed (numeric). On Wackler rows = rate(billedTier, zone) = fr_tarif + fr_diff; differs from fr_tarif on an over/undercharge, and is used to derive fr_tarif when the Kosten lt. Tarif column is absent. On Honold rows it decides the note: equal to the OLD tariff rate that Empf.-Land publishes for the bracket the row\'s Volumen kg falls in means the previous tariff is still being billed, and equal to an OLD rate from another bracket while Volumen kg DL sits in yet another joins both phrases.',
   exp_diff          :'EXP Differenz: express/priority surcharge delta (numeric, signed).',
   exp_dl            :'EXP Kosten DL: DL-side express cost (Dachser-only signal).',
@@ -5403,7 +5492,7 @@ const INPUT_GLOSSARY={
   os_diff           :'OS Differenz: oversize piece surcharge (DHL).',
   avis_diff         :'AVIS Differenz: Wackler-only avisierung delta. Codes ±7.5/±8.5/±6.5/±8.7 each map to a specific phrase. AVIS=1 has its own phrase.',
   vkg               :'Volumen kg: gross/volume weight on the audit row (numeric). On Honold rows it picks the Bis bracket FR Kosten DL is compared against, both for the previous-tariff match and for the divergence test against FR Kosten lt. Tarif.',
-  vkg_dl            :'Volumen kg DL: DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table. On Honold rows it only confirms that the DL weight sits in a bracket other than Volumen kg\'s, which the previous-tariff-from-another-bracket arm needs; it never decides the note on its own. Kept out of the row_uid seed, so a row keeps its id across engine versions.',
+  vkg_dl            :'Volumen kg DL: DL-side volume weight (numeric). Compared against vkg via the per-forwarder weight-tier table. On Honold rows it only confirms that the DL weight sits in a bracket other than Volumen kg\'s, which the previous-tariff-from-another-bracket arm needs; it never decides the note on its own. On Dachser rows it supplies the last fallback for a non-domestic "Referenz wird Nx abgerechnet" count: the copies are read off the country\'s lane prices at this bracket when neither Brutto-bracket reading resolves (20261105 row 24, 51 kg against a Brutto 109.393). On Honold rows it is also kept out of the row_uid seed, so a row keeps its id across engine versions.',
   anz_colli         :'Anz. Colli: package count. For Wackler rows with at least 7 Colli, chargeable weight is max(Anz. Colli × 285, Volumen kg, Brutto kg).',
   brutto_kg          :'Brutto kg: gross weight used in Wackler chargeable-weight calculation when Anz. Colli is at least 7.',
   anz_sdg           :'Anz.Sdg: number of shipments on the row (Dachser).',
