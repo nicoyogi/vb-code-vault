@@ -1,6 +1,16 @@
 {
-  "version": "1.62.0",
+  "version": "1.63.0",
   "entries": [
+    {
+      "ver": "1.63.0",
+      "date": "2026-11-10",
+      "items": [
+        "Dachser - a row with no tariff anywhere in it now reads \"Sonderfahrt\" when its FR Kosten DL is one of the special-trip add-ons itself (180/150/120/90/110 within 0.02) and no other delta line is on the row. 20261105 row 8 (DE to FR) is the witness: FR Kosten DL 90, whose own FR_DL minus 90 lands on no lane, so the country note \"kein Tarif für FR\" used to answer instead.",
+        "Dachser - \"Referenz wird Nx abgerechnet\" now also counts a domestic row whose FR Kosten DL is 2 to 5 whole copies of its own FR Kosten lt. Tarif when that copy is not the cell of the row's own bracket (20261105 row 123, 2 x 458.33 = 916.66).",
+        "Dachser - the same note now also fits the copies at the Volumen kg DL bracket when the Brutto-bracket readings produce no count (20261105 row 24, 2 x 88.02 = 176.04 against a billed 176.00).",
+        "Dachser - the cents-residual \"<amount> Kosten für 2.Zustellung etc. ok?\" arm now needs an SNK Kosten DL over 500 EUR, the bound the branch above it already read, so a small residual is the Laderaum finding again (20261105 row 140, SNK 76.07 with no tariff base, 76.07 minus 5 = 71.07). Every row that names a 2.Zustellung amount bills over 500 EUR."
+      ]
+    },
     {
       "ver": "1.62.0",
       "date": "2026-11-09",
