@@ -4,15 +4,15 @@
  "hash_basis": "LF-normalised bytes",
  "anmerkung_hardening": "v5",
  "regression": {
-  "tests": 672,
-  "passed": 672,
+  "tests": 685,
+  "passed": 685,
   "failed": 0
  },
  "files": [
   {
    "path": "assets/anmerkung.js",
-   "bytes": 411928,
-   "sha256": "d8799afbae2bcc9f688b8f7f8e0575be539d3dd1d9fdc82c127799f52df314b6"
+   "bytes": 412800,
+   "sha256": "8789c93095cf9aff84d8b1ebfd85f3c6fce98bc19349c0763470ccf21e7d1219"
   },
   {
    "path": "tests/harness/load-engine.mjs",
@@ -32,7 +32,7 @@
   {
    "path": "docs/anmerkung/INTEGRATION_v5.md",
    "bytes": 1716,
-   "sha256": "2a091c543effd456d33060d273813e22f163c571cf267ece2237409c78d5a0ba"
+   "sha256": "04873845ed0f3ab7700c2bb5caa307599b0ef266f892d0370820c45ed06cc342"
   },
   {
    "path": "assets/dachser-ratecard-loader.js",

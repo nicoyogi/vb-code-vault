@@ -738,6 +738,18 @@ test('phraseToKey: the two Honold phrases 1.62.0 emits resolve to their own keys
     'trimmed and case-folded like every other key');
 });
 
+test('phraseToKey: the 1.64.0 DHL phrases resolve to their own keys', () => {
+  /* The engine writes these into the cell, so a bundle phrase must key back to the same
+     catalog entry or the diff reads a matching cell as a mismatch. The comma is the only
+     thing separating the fixed address spelling from the non-11 "Address Correction ok?". */
+  assert.equal(e.phraseToKey('Differenz demand surcharge, ok?'), 'demandSurchargeDifference');
+  assert.equal(e.phraseToKey('Address correction, ok?'), 'addressCorrectionOk');
+  assert.equal(e.phraseToKey('Address Correction ok?'), 'addressCorrectionQ');
+  // The catalogue value was corrected, so the retired spelling must stay mappable or an
+  // older bundle keys its address-correction cell as a "?:" sentinel.
+  assert.equal(e.phraseToKey('Addres Correction, ok?'), 'addressCorrectionOk');
+});
+
 test('PHRASES catalog: normPhrase folding never merges two distinct branches (known exception: Kontierung case pair)', () => {
   const seen = new Map(); const collisions = [];
   for (const [k, v] of Object.entries(e.PHRASES)) {

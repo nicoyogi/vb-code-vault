@@ -368,9 +368,12 @@ const PHRASES={
   limitedQuantities:          'Limited quantities ok?',
   elevatedRisk:               'Elevated Risk, ok?',
   elevatedRestricted:         'Eelevated risk ok? // Restricted destination ok?',
-  addressCorrectionOk:        'Addres Correction, ok?',
+  addressCorrectionOk:        'Address correction, ok?',
+  /* non-11 AC delta: no workbook witness yet (every AC Differenz in the corpus is 11 or 0),
+     keep this wording until one appears. */
   addressCorrectionQ:         'Address Correction ok?',
   demandSurcharge:            'demand surcharge ok?',
+  demandSurchargeDifference:  'Differenz demand surcharge, ok?',
   oversizePiece:              'Oversize piece ok?',
   // Wackler
   fremdnummer:                'Fremdnummer xxx bereits berechnet in RExxx, ok?',
@@ -455,6 +458,7 @@ const PHRASE_LITERALS={
   'differenztreibstof'            :'lit_differenzTreibstofWackler', /* Wackler legacy fuel wording — superseded by PHRASES.differenzEnergiezuschlag; kept so older slot-A exports that used "DifferenzTreibstof" still resolve to a stable key */
   'differenzenergiezuschlag'      :'differenzEnergiezuschlag',      /* Wackler legacy no-space fuel wording — the canonical phrase is now "Differenz Energiezuschlag" (with a space, matching the auditor's ground truth); this maps the older glued spelling onto the SAME catalog key so historic exports stay mappable */
   '"zusatzkosten 250 €", ok?'    :'zusatzkosten250',               /* Wackler legacy QUOTED spelling (Sep cells 10367543 r30/r222, not editable). The quotes are formatting, not a second finding, so it folds onto the catalog key rather than a synthetic lit_ id; the unquoted October spelling is PHRASES.zusatzkosten250 */
+  'addres correction, ok?'        :'addressCorrectionOk',          /* DHL: the old misspelled spelling stays mappable after 1.64.0 corrected it to "Address correction, ok?", so older bundles and exports do not key it as ?: */
 };
 
 /* Phrases that interpolate runtime values. The key identifies the
@@ -1730,7 +1734,7 @@ function processKN(ws,r,cols){
 
 /* DHL Express */
 function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),addr:fc('FR','Differenz'),el:fc('EL','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz')};}
-function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer xxx bereits berechnet in RExxx, ok?.';}let res='';if(KONTIERUNG_ENABLED&&cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(KONTIERUNG_ENABLED&&cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.el,'EXTENDED LIABILITY, ok?'],[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'Differenz overweight, ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===5){res=join(res,'DIRECT SIGNATURE , ok?');block=true;}else if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}if(!block){const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Addres Correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}[[cols.maut,'Mautdifferenz'],[cols.surc,'demand surcharge ok?'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
+function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer xxx bereits berechnet in RExxx, ok?.';}let res='';if(KONTIERUNG_ENABLED&&cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(KONTIERUNG_ENABLED&&cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.el,'EXTENDED LIABILITY, ok?'],[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'Differenz overweight, ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===5){res=join(res,'DIRECT SIGNATURE , ok?');block=true;}else if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}const nx=cols.surc>=0?cellNum(ws,r,cols.surc):0;if(cols.surc>=0&&hasErr(nx,T))res=join(res,nx<0?'Differenz demand surcharge, ok?':'demand surcharge ok?');const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Address correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}if(!block){[[cols.maut,'Mautdifferenz'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
 
 /* Wackler */
 /* Weight tier breakpoints (kg "bis" upper bounds) — taken DIRECTLY from the supplied
@@ -5487,8 +5491,8 @@ const INPUT_GLOSSARY={
   yl_diff           :'YL Differenz: non-conveyable irregular piece (DHL).',
   nd_diff           :'ND Differenz: neutral delivery (DHL).',
   sf_diff           :'SF Differenz: direct-signature surcharge (DHL).',
-  ac_diff           :'AC Differenz: address-correction surcharge (DHL). Value 11 = "Addres Correction, ok?", others = "Address Correction ok?".',
-  nx_diff           :'NX Differenz: generic demand surcharge (DHL).',
+  ac_diff           :'AC Differenz: address-correction surcharge (DHL). Value 11 reads "Address correction, ok?" on any row, blocker or not; other deltas over T_DHL read "Address Correction ok?".',
+  nx_diff           :'NX Differenz: demand surcharge delta (DHL). Read on every released row; negative over T_DHL reads "Differenz demand surcharge, ok?", positive over T_DHL keeps "demand surcharge ok?".',
   os_diff           :'OS Differenz: oversize piece surcharge (DHL).',
   avis_diff         :'AVIS Differenz: Wackler-only avisierung delta. Codes ±7.5/±8.5/±6.5/±8.7 each map to a specific phrase. AVIS=1 has its own phrase.',
   vkg               :'Volumen kg: gross/volume weight on the audit row (numeric). On Honold rows it picks the Bis bracket FR Kosten DL is compared against, both for the previous-tariff match and for the divergence test against FR Kosten lt. Tarif.',
@@ -5535,7 +5539,7 @@ const FORWARDER_SPEC={
     processor:'processDHL',
     resolver :'resolveDHL',
     gate     :'Stat_Freigabe == 10',
-    notes    :'Fremdnummer dup early-return. Blocker set (EL/FR/PAL/OW/YO/YL/ND/SF/SNK) suppresses the secondary set (AC/MT/NX/OS).',
+    notes    :'Fremdnummer dup early-return. Blocker set (EL/FR/PAL/OW/YO/YL/ND/SF/SNK) suppresses MT/OS only; AC and NX are read on every released row, NX sign-split: below -T_DHL reads "Differenz demand surcharge, ok?", above +T_DHL keeps "demand surcharge ok?".',
   },
   wackler:{
     processor:'processWackler',

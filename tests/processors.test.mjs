@@ -615,9 +615,83 @@ test('processDHL: conveyable multiple-of-15 -> piece-weight wording', () => {
   assert.equal(e.processDHL(ws, R, DHL_COLS), 'Non conveyable piece-weight ok?');
 });
 
-test('processDHL: no block triggers, AC=11 -> "Addres Correction, ok?"', () => {
+test('processDHL: no block triggers, AC=11 -> "Address correction, ok?"', () => {
+  // 1.64.0 corrected the spelling: second s, lowercase c, comma. 840257 row 66 is the witness.
   const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 62: '11' });
-  assert.equal(e.processDHL(ws, R, DHL_COLS), 'Addres Correction, ok?');
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'Address correction, ok?');
+});
+
+test('processDHL: AC=11 behind a weight blocker still reads "Address correction, ok?"', () => {
+  // 840257 row 66: FR -4 and AC 11 together.
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 54: '5', 62: '11' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS),
+    'Differenz aufgrund von abweichendem Gewicht/Volumen // Address correction, ok?');
+});
+
+test('processDHL: non-11 AC delta behind a weight blocker also survives the gate', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 54: '5', 62: '5' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS),
+    'Differenz aufgrund von abweichendem Gewicht/Volumen // Address Correction ok?');
+});
+
+test('processDHL: negative NX cells only -> "Differenz demand surcharge, ok?"', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 64: '-5' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'Differenz demand surcharge, ok?');
+});
+
+test('processDHL: negative NX behind a weight blocker joins the note (840257 row 53)', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 54: '-12.02', 64: '-0.8' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS),
+    'Differenz aufgrund von abweichendem Gewicht/Volumen // Differenz demand surcharge, ok?');
+});
+
+test('processDHL: positive NX keeps "demand surcharge ok?" (840258 row 48)', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 64: '0.3' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'demand surcharge ok?');
+});
+
+test('processDHL: positive NX behind a weight blocker also survives the gate', () => {
+  // No truth row covers this shape; the note follows the column, so the positive arm
+  // leaves the gate with the negative one. 840258 rows 48/52/138 are the positive
+  // witnesses, all unblocked.
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 54: '5', 64: '5' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS),
+    'Differenz aufgrund von abweichendem Gewicht/Volumen // demand surcharge ok?');
+});
+
+test('processDHL: MT stays behind the block gate (823340 rows 191/288)', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 54: '5', 63: '20' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'Differenz aufgrund von abweichendem Gewicht/Volumen');
+});
+
+test('processDHL: OS stays behind the block gate', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 54: '5', 65: '20' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'Differenz aufgrund von abweichendem Gewicht/Volumen');
+});
+
+test('processDHL: MT and OS still fire, in that order, with no blocker', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 63: '20', 65: '20' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'Mautdifferenz // Oversize piece ok?');
+});
+
+test('processDHL: MT follows the surcharge arm now (reorder pinned, no witness row)', () => {
+  // NX left the block gate above the MT/OS group, so an unblocked row with both reads
+  // surcharge first. No workbook row exercises the pair; this pins the order.
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 63: '20', 64: '5' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS), 'demand surcharge ok? // Mautdifferenz');
+});
+
+test('processDHL: 840257 row 66 reads weight, surcharge, address in that order', () => {
+  const ws = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 54: '-4', 62: '11', 64: '-0.3' });
+  assert.equal(e.processDHL(ws, R, DHL_COLS),
+    'Differenz aufgrund von abweichendem Gewicht/Volumen // Differenz demand surcharge, ok? // Address correction, ok?');
+});
+
+test('processDHL: the demand-surcharge sign split keeps hasErr strict, no epsilon', () => {
+  const at = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 64: '-0.04' });
+  assert.equal(e.processDHL(at, R, DHL_COLS), '', 'T_DHL is 0.04 and the test is strict >');
+  const over = makeRow(R, { 50: 10, 51: '100', 52: 'S', 53: 'K', 64: '-0.05' });
+  assert.equal(e.processDHL(over, R, DHL_COLS), 'Differenz demand surcharge, ok?');
 });
 
 test('processDHL: only a fuel delta -> "Differenz treibstof"', () => {

@@ -1,6 +1,14 @@
 {
-  "version": "1.63.0",
+  "version": "1.64.0",
   "entries": [
+    {
+      "ver": "1.64.0",
+      "date": "2026-11-11",
+      "items": [
+        "DHL Express - the demand surcharge note now survives any blocker on the same row: a negative NX delta reads \"Differenz demand surcharge, ok?\", a positive one keeps \"demand surcharge ok?\". 840257 row 53 is the witness.",
+        "DHL Express - an address-correction delta now joins a row that already carries another note, and AC = 11 reads \"Address correction, ok?\" instead of the misspelled \"Addres Correction, ok?\"."
+      ]
+    },
     {
       "ver": "1.63.0",
       "date": "2026-11-10",

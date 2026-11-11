@@ -287,7 +287,9 @@ story.append(PageBreak())
 story.append(P("3. DHL Express — processDHL", h2))
 story.append(P(
     "Gate: Stat = 10. Uses a <b>blocking chain</b>: the first group (EL/FR/PAL/OW/YO/YL/ND/SF + SNK) sets "
-    "<code>block</code>, and only when nothing blocked does the AC/MT/NX/OS group fire."
+    "<code>block</code>. AC and NX are read on every released row and are not suppressed by it; only the "
+    "MT/OS group still needs nothing blocked. NX is sign-split: a delta below -T reads "
+    "&quot;Differenz demand surcharge, ok?&quot; and a delta above +T keeps &quot;demand surcharge ok?&quot;."
 ))
 story.append(section_table([
     ("TARIF present but value 0 (raw contains '0' or is '-')", "Fremdnummer xxx bereits berechnet in RExxx, ok?."),
@@ -305,10 +307,11 @@ story.append(section_table([
     ("SNK = 30", "Elevated Risk, ok?"),
     ("SNK = 60", "Eelevated risk ok? // Restricted destination ok?"),
     ("SNK over T, code not matched", "SNK Differenz"),
-    ("below-block group — AC = 11", "Addres Correction, ok?"),
-    ("below-block group — AC over T", "Address Correction ok?"),
+    ("AC = 11 (any row, blocker or not)", "Address correction, ok?"),
+    ("AC over T, not 11 (any row)", "Address Correction ok?"),
+    ("NX below -T (any row)", "Differenz demand surcharge, ok?"),
+    ("NX over +T (any row)", "demand surcharge ok?"),
     ("below-block group — MT over T", "Mautdifferenz"),
-    ("below-block group — NX over T", "demand surcharge ok?"),
     ("below-block group — OS over T", "Oversize piece ok?"),
     ("no other label, TZ over T only", "Differenz treibstof"),
 ]))
