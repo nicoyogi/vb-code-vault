@@ -76,11 +76,12 @@ row reads as `bisherigen`. It is read-only, and `--rows` prints the exact string
 The script resolves the `Anmerkung` column from the header row itself, refuses a path under
 `Before\`, copies the workbook to `D:\TESTER\_backup\` before writing, and re-reads the saved
 file so a silent miss cannot be reported as success. The rewrite is openpyxl-based, so it also
-drops `calcChain` and turns empty-string cells into true blanks on other sheets; both are
-invisible in Excel, and the backup keeps the original bytes. Never change `assets/anmerkung.js`
-to match a wrong sheet: the sheet is the thing that gets corrected. The audit notes under
-`docs/anmerkung/` stay as the as-found record; they are the evidence for the ruling, not a
-work list to rewrite afterwards.
+drops `calcChain`, turns empty-string cells into true blanks on other sheets, and drops the
+workbook's shared-strings part so those strings get inlined instead (the 840258 zip goes from
+13 parts to 9); none of it shows in Excel, and the backup keeps the original bytes. Never
+change `assets/anmerkung.js` to match a wrong sheet: the sheet is the thing that gets
+corrected. The audit notes under `docs/anmerkung/` stay as the as-found record; they are the
+evidence for the ruling, not a work list to rewrite afterwards.
 
 ## Vault notes
 
