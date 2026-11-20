@@ -4,20 +4,20 @@
   "hash_basis": "LF-normalised bytes",
   "anmerkung_hardening": "v5",
   "regression": {
-    "tests": 701,
-    "passed": 701,
+    "tests": 703,
+    "passed": 703,
     "failed": 0
   },
   "files": [
     {
       "path": "assets/anmerkung.js",
-      "bytes": 414605,
-      "sha256": "f50c4dfb18529c163550b4b85a09cdb7ceef779d1e0d4904dc1b720ee79d9a42"
+      "bytes": 414738,
+      "sha256": "8241057ca5d67147fa02243795bc9cb44f3b0f283e9484c06db197be77493443"
     },
     {
       "path": "tests/harness/load-engine.mjs",
-      "bytes": 15209,
-      "sha256": "ded74fbbd94bb15c2cdb32bf2c9ff257e6a8c87f02c1703c6a8c3149d7881e85"
+      "bytes": 15223,
+      "sha256": "fe47d3d348f375c1e78ed42a53633597ce43e1f821e491aa8ba2deda12f97fe8"
     },
     {
       "path": "tests/anmerkung-v5.test.mjs",
@@ -32,7 +32,7 @@
     {
       "path": "docs/anmerkung/INTEGRATION_v5.md",
       "bytes": 1716,
-      "sha256": "815bbfa6b7265608e80e73fc02cf80a2f865d0ff6ef0ffc8c35bf30e20578cf4"
+      "sha256": "037faaff72014d59b1aad0e1fb92affb3a426a24584d5fa5055414db6f4ff892"
     },
     {
       "path": "assets/dachser-ratecard-loader.js",
@@ -96,8 +96,8 @@
     },
     {
       "path": "tests/aussertariflich.test.mjs",
-      "bytes": 15107,
-      "sha256": "a660e27e54dcd81ca955a6a6cf36cc37bfa96205283c54a4adc28efb19739aab"
+      "bytes": 18835,
+      "sha256": "54e1145dc5540560867510b64ed3bf364d0d81c3301551291065dd150c60def1"
     }
   ]
 }

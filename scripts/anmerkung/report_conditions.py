@@ -138,7 +138,8 @@ story.append(P(
     "<code>join</code>). Some rules <i>return early</i> or block later rules, because a single finding "
     "(e.g. a duplicate Fremdnummer booking) makes every other delta on the row spurious. Whatever the "
     "processor returns, a released row whose <b>ReferenzNr</b> is on the shipped Außertariflich approval "
-    "list reads <b>OK</b> and nothing else; DHL and Honold have no <b>ReferenzNr</b> and never match."
+    "list reads <b>OK</b> and nothing else. All five forwarders read the <b>ReferenzNr</b> column; no "
+    "DHL or Honold reference is on the list yet, so neither of those two flips a row."
 ))
 story.append(P("Thresholds", h3))
 story.append(const_table([
