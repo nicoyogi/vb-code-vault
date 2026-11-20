@@ -3307,11 +3307,15 @@ test('processDachser: FR wording comes from the rate cards, not the EXP lane pro
 
 /* ── Dachser FR wording: the full ratecard table ──────────────────────────────
    The three production sheets carry 50 rows the auditor marks Sonderfahrt or
-   "bisherigen Tarif". The fixture is those rows' inputs (country pair, weight,
-   FR_DL, FR_Tar, FR Differenz) plus the verdict the user confirmed. It pins the
-   whole table so a future card regeneration or a tolerance tweak cannot quietly
-   move a row, and it documents the 13 rows where the sheet's own wording is
-   wrong (marked SF here, confirmed by the user against the cards).
+   "bisherigen Tarif". The fixture is those rows' inputs (origin town, country
+   pair, weight, FR_DL, FR_Tar, FR Differenz) plus the verdict the user
+   confirmed. It pins the whole table so a future card regeneration or a
+   tolerance tweak cannot quietly move a row. It documents the 13 rows where
+   the sheet's own wording is wrong (marked SF here, confirmed by the user
+   against the cards), and the 12 Geislingen rows the later Dornstadt ruling
+   supersedes (marked DT here: FR_DL on a NEW lane, FR_Tar on an OLD lane).
+   The 20260923 row 16 and 20261006 row 23 LV exports stay BS: the NEW card has
+   no LV column, so only one half resolves.
 
    Skipped when the local ratecard plaintext is absent: a plain clone ships only
    the encrypted bundle, so the fixture cannot be evaluated there. */
@@ -3321,9 +3325,10 @@ test('processDachser: Sonderfahrt / bisherigen matches the confirmed 50-row tabl
   const rows = JSON.parse(
     readFileSync(new URL('./fixtures/dachser-sonderfahrt-rows.json', import.meta.url), 'utf8'));
   const cols = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54, abg_land: 55,
-                 empf_land: 56, fr_dl: 57, fr_tar: 58 };
+                 empf_land: 56, fr_dl: 57, fr_tar: 58, abg_ort: 59 };
   const SF = 'Sonderfahrt';
   const BS = 'Dachser berechnet die Kosten nach dem bisherigen Tarif';
+  const DT = 'Dachser berechnet Dornstadt Tarif';
   const mismatches = [];
   for (const x of rows) {
     const ws = makeRow(R, {
@@ -3331,15 +3336,135 @@ test('processDachser: Sonderfahrt / bisherigen matches the confirmed 50-row tabl
       52: String(x.fr_diff ?? 1),
       53: String(x.kg), 54: String(x.kg),
       55: x.abg, 56: x.empf,
-      57: String(x.fr_dl ?? 0), 58: String(x.fr_tar ?? 0),
+      57: String(x.fr_dl ?? 0), 58: String(x.fr_tar ?? 0), 59: x.ort,
     });
     const out = String(e.processDachser(ws, R, cols) || '');
-    const got = out.includes(SF) ? 'SF' : (out.includes(BS) ? 'BS' : 'OTHER');
+    const got = out.includes(SF) ? 'SF' : (out.includes(DT) ? 'DT' : (out.includes(BS) ? 'BS' : 'OTHER'));
     if (got !== x.truth) {
       mismatches.push(`${x.tag} r${x.row} ${x.abg}->${x.empf} kg${x.kg} DL=${x.fr_dl} TAR=${x.fr_tar} want=${x.truth} got=${got}`);
     }
   }
   assert.deepEqual(mismatches, [], mismatches.join('\n'));
+});
+
+/* ── Dachser Geislingen / Dornstadt wording ──────────────────────────────────
+   A Geislingen export whose FR halves split across the two cards (FR_DL on a
+   NEW lane, FR_Tar on an OLD lane) reads "Dachser berechnet Dornstadt Tarif".
+   The synthetic cards give the arm one FR lane per side at the witness weight,
+   so these tests run on a clone without the plaintext ratecard. */
+const DORNSTADT = 'Dachser berechnet Dornstadt Tarif';
+const BISHERIGEN = 'Dachser berechnet die Kosten nach dem bisherigen Tarif';
+const DORNSTADT_CARD = {
+  schema: 'dachser-ratecards/v1',
+  new: { brackets: [{ von: 1, bis: 100, lanes: { 'FR Frankreich 1': 69.65 } }] },
+  old: { brackets: [{ von: 1, bis: 100, lanes: { 'FR Frankreich 1': 67.62 } }] },
+};
+const DORNSTADT_COLS = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54,
+  abg_land: 55, empf_land: 56, fr_dl: 57, fr_tar: 58, abg_ort: 59 };
+function dornstadtRow(cells) {
+  return makeRow(R, Object.assign({
+    50: 10, 51: '98.91', 52: '2.08', 53: '39', 54: '39',
+    55: 'DE', 56: 'FR', 57: '69.7', 58: '67.62', 59: 'Geislingen/Steige',
+  }, cells));
+}
+function withDornstadtCard(fn) {
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(DORNSTADT_CARD);
+    return fn();
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+}
+
+test('processDachser: a Geislingen export with FR halves on different cards reads Dornstadt Tarif', () => {
+  /* 20261105 row 12: DE to FR, kg 39, FR_DL 69.70 (NEW FR1 69.65) and FR_Tar
+     67.62 (OLD FR1 67.62). The synthetic card carries those two lane prices. */
+  withDornstadtCard(() => {
+    assert.equal(e.processDachser(dornstadtRow({}), R, DORNSTADT_COLS), DORNSTADT);
+  });
+});
+
+test('processDachser: every corpus spelling of the Geislingen origin fires', () => {
+  /* The arm is a substring test, not a word-boundary one: the corpus carries
+     "Geislingen", "GEISLINGEN", "Geislingen/Steige" and "GEISLINGEN AN DER
+     STEIGE". A Dornstadt origin is the sibling town and must stay out. */
+  withDornstadtCard(() => {
+    for (const ort of ['Geislingen', 'GEISLINGEN', 'Geislingen/Steige',
+                       'GEISLINGEN AN DER STEIGE', '  Geislingen  ']) {
+      assert.equal(e.processDachser(dornstadtRow({ 59: ort }), R, DORNSTADT_COLS),
+        DORNSTADT, ort);
+    }
+    for (const ort of ['Dornstadt', 'Eislingen', '']) {
+      assert.equal(e.processDachser(dornstadtRow({ 59: ort }), R, DORNSTADT_COLS),
+        BISHERIGEN, JSON.stringify(ort));
+    }
+  });
+});
+
+test('processDachser: the Dornstadt arm needs both the NEW and the OLD half', () => {
+  /* FR_DL on a NEW lane alone is also an ordinary weight reading, and FR_Tar on
+     an OLD lane alone is the plain bisherigen case. Only the pair is the
+     Dornstadt split. */
+  withDornstadtCard(() => {
+    assert.equal(e.processDachser(dornstadtRow({ 58: '50' }), R, DORNSTADT_COLS), BISHERIGEN);
+    assert.equal(e.processDachser(dornstadtRow({ 57: '50' }), R, DORNSTADT_COLS), BISHERIGEN);
+  });
+});
+
+test('processDachser: Sonderfahrt wins over the Geislingen origin', () => {
+  /* 20260923 row 296 numbers with a Geislingen origin. The card carries both
+     halves of the Dornstadt test too (NEW 340.90, OLD 185.38), so only the arm
+     order keeps the answer on Sonderfahrt: 340.9 - 150 = 190.9 lands on the
+     NEW PL lane. */
+  const card = {
+    schema: 'dachser-ratecards/v1',
+    new: { brackets: [{ von: 1, bis: 1000,
+      lanes: { 'PL Polen': 190.9, 'PL Polen 2': 340.9 } }] },
+    old: { brackets: [{ von: 1, bis: 1000, lanes: { 'PL Polen': 185.38 } }] },
+  };
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(card);
+    const ws = makeRow(R, { 50: 10, 51: '98.91', 52: '155.52', 53: '639', 54: '639',
+                            55: 'DE', 56: 'PL', 57: '340.9', 58: '185.38',
+                            59: 'Geislingen/Steige' });
+    assert.equal(e.processDachser(ws, R, DORNSTADT_COLS), 'Sonderfahrt');
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
+test('processDachser: a locked ratecard keeps the previous wording for a Geislingen row', () => {
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(null);
+    assert.equal(e.processDachser(dornstadtRow({}), R, DORNSTADT_COLS), BISHERIGEN);
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
+test('processDachser: without the Abg.-Ort column the Dornstadt arm stays off', () => {
+  /* This is why the 50-row table passed before the origin column was wired:
+     no abg_ort means an empty origin, so the arm is silent. */
+  withDornstadtCard(() => {
+    assert.equal(e.processDachser(dornstadtRow({}), R, { ...DORNSTADT_COLS, abg_ort: -1 }),
+      BISHERIGEN);
+  });
+});
+
+test('processDachser: a Geislingen import from CH does not take the export arm', () => {
+  /* The lane is keyed on the non-DE leg. CH to DE keys on CH, which the card
+     carries no lane for, so the FR lanes of the witness cannot fire. */
+  withDornstadtCard(() => {
+    assert.equal(e.processDachser(dornstadtRow({ 55: 'CH', 56: 'DE' }), R, DORNSTADT_COLS),
+      BISHERIGEN);
+  });
+});
+
+test('phraseToKey: the Dornstadt phrase resolves to its catalog key', () => {
+  assert.equal(e.phraseToKey(DORNSTADT), 'daDornstadtTarif');
 });
 
 test('processDachser: DA_SONDERFAHRT_S carries the 110 add-on', () => {

@@ -1,6 +1,13 @@
 {
-  "version": "1.65.0",
+  "version": "1.66.0",
   "entries": [
+    {
+      "ver": "1.66.0",
+      "date": "2026-11-20",
+      "items": [
+        "Dachser - an Abg.-Ort of Geislingen whose FR Kosten DL matches the new Dornstadt lane and whose FR Kosten lt. Tarif matches the old Geislingen lane at the row's Volumen kg DL bracket now reads \"Dachser berechnet Dornstadt Tarif\". 20261105 row 12 is the witness."
+      ]
+    },
     {
       "ver": "1.65.0",
       "date": "2026-11-20",

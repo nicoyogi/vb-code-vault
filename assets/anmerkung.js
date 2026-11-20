@@ -327,6 +327,7 @@ const PHRASES={
   frachtzuAbschlag:           'Differenz Frachtzu/ abschlag',
   frachtDifferenz:            'Fracht Differenz',
   daBisherigerTarif:          'Dachser berechnet die Kosten nach dem bisherigen Tarif',
+  daDornstadtTarif:           'Dachser berechnet Dornstadt Tarif',
   zusammengefassteAbrechnung: 'zusammengefasste Abrechnung',
   zoneKorrekt:                'Zone korrekt berechnet?',
   einfuhrzoll:                'Einfuhrzollabfertigung',
@@ -822,6 +823,7 @@ function resolveDachser(ws,range){
     ki_zw_plz:fc('','KI_ZW_PLZ'),
     ki_zw_ort:fc('','KI_ZW_ORT'),
     abg_land: fcAny('Abg.-Land','Absenderland','Versandland'),
+    abg_ort:  fc('','Abg.-Ort'),
     empf_land:fcAny('Empf.-Land','Empfängerland','Bestimmungsland','Zielland','Ländercode','Country','Land'),
   };
 }
@@ -1112,6 +1114,11 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar,vkgDl){
   return 0;
 }
 
+/* The Abg.-Ort spellings the corpus carries: "Geislingen", "Geislingen/Steige",
+   "GEISLINGEN", "GEISLINGEN AN DER STEIGE". Matched on the origin town text, not
+   the PLZ. */
+function daIsGeislingenOrigin(ort){return /geislingen/i.test(String(ort||''));}
+
 /* Decide the FR wording from the rate cards, replacing the lane/EXP proxy the
    2026-10-08 bundle shipped (DE origin + non-DE destination + EXP over
    threshold → Sonderfahrt). That proxy matched 1 of the 5 Sonderfahrt rows on
@@ -1128,7 +1135,7 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar,vkgDl){
    bisherigen — no surcharge was added and the tariff was read off the OLD
    card, so FR_Tar lands on it directly:
 
-     20260923 r5    FR_Tar  71.13                OLD FR2 @1-50    =  71.13 (exact)
+     20260923 r292  FR_Tar  68.88  (DE to PL)    OLD PL2 @151-200 =  68.88
 
    On imports the OLD figure carries the import surcharge, so the comparison is
    against the OLD lane x 1.15 — and only on imports:
@@ -1136,9 +1143,20 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar,vkgDl){
      20260923 r384  FR_Tar  86.77  (CH to DE)    OLD CH1 75.45 x 1.15 = 86.77
 
    The lane is chosen by country (Empf.-Land, or Abg.-Land when that side is the
-   non-DE leg) and by the row's Volumen-kg-DL bracket. Returns null when the cards
-   are locked or neither branch matches, so the caller keeps its previous wording. */
-function daRatecardMatch(abgLand,empfLand,kg,frDl,frTar){
+   non-DE leg) and by the row's Volumen-kg-DL bracket. The last arm is Geislingen
+   (Abg.-Ort): FR_DL on a NEW-card lane and FR_Tar on an OLD-card lane there is
+   Dornstadt pricing on a Geislingen lane, so the precedence is Sonderfahrt, then
+   Geislingen/Dornstadt, then plain OLD. The Geislingen witness, a DE to FR
+   export:
+
+     20261105 r12   FR_Tar  67.62  (DE to FR)    OLD FR1          =  67.62
+                    FR_DL   69.70                 NEW FR1          =  69.65
+
+   Both halves are required: FR_DL alone also sits on a NEW lane for ordinary
+   weight readings (the DE->NO rows), so only the OLD-card tariff copy tells the
+   Dornstadt case apart. Returns null when the cards are locked or no branch
+   matches, so the caller keeps its previous wording. */
+function daRatecardMatch(abgLand,empfLand,kg,frDl,frTar,abgOrt){
   const cards=daRatecardCards();
   if(!cards||!(kg>0))return null;
   /* Country key: the non-DE leg carries the lane. Imports (non-DE origin into
@@ -1154,6 +1172,12 @@ function daRatecardMatch(abgLand,empfLand,kg,frDl,frTar){
       if(base>0&&daAnyLaneNear(nl,base))return P.sonderfahrt;
     }
   }
+  /* Both halves are required: FR_DL alone also lands on a NEW lane for weight
+     readings (the DE->NO rows), which must not be relabelled. A Geislingen row
+     is always an export, so no DA_IMPORT_MULT here. Both matches are looked up
+     at the same bracket and resolve to the same lane in all 2,218 rows of the
+     local released corpus, so a cross-lane pairing is unreachable today. */
+  if(frDl>0&&frTar>0&&daIsGeislingenOrigin(abgOrt)&&daAnyLaneNear(nl,frDl)&&daAnyLaneNear(ol,frTar))return P.daDornstadtTarif;
   if(frTar>0){
     if(daAnyLaneNear(ol,frTar))return P.daBisherigerTarif;
     /* The import rollover multiplies the OLD base; it applies to imports only. */
@@ -1424,6 +1448,7 @@ function processDachser(ws,r,cols){
          empfOrt=cellStr(ws,r,empfOrtCol).toUpperCase(),
          recip=cols.recip>=0?cellStr(ws,r,cols.recip):'',
          abgLand=cols.abg_land>=0?cellStr(ws,r,cols.abg_land).toUpperCase().trim():'',
+         abgOrt=cols.abg_ort>=0?cellStr(ws,r,cols.abg_ort):'',
          empfLand=cols.empf_land>=0?cellStr(ws,r,cols.empf_land).toUpperCase().trim():'',
          isTarifZero=daIsTarifZero(ws,r,cols.tarif);
 
@@ -1648,7 +1673,7 @@ function processDachser(ws,r,cols){
              Sonderfahrt add-on landing on the NEW card, or FR_Tar landing on the
              OLD card. When the cards are locked, or neither branch matches, the
              note keeps the previous wording rather than guessing. */
-          const rcNote=intlLane?daRatecardMatch(abgLand,empfLand,v2,cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0,cols.fr_tar>=0?cellNum(ws,r,cols.fr_tar):0):null;
+          const rcNote=intlLane?daRatecardMatch(abgLand,empfLand,v2,cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0,cols.fr_tar>=0?cellNum(ws,r,cols.fr_tar):0,abgOrt):null;
           res=join(res,intlLane?(rcNote||P.daBisherigerTarif):(zzVal===35?P.frachtDifferenz:P.frachtDiff));
         }
         else if(frVal<-1.0&&!res)res=join(res,'Differenz aufgrund abweichender Gewichte');
