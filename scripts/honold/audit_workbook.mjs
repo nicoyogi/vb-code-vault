@@ -4,9 +4,10 @@
  *
  * Same harness as scripts/dachser/audit_workbook.mjs: scripts/dachser/dump_sheet.py hands
  * the sheet over as the A1-keyed worksheet the engine expects, the columns are resolved
- * through `resolveHonold`, and `processHonold` runs (wrapped in `rowAnmerkung`, which approves
- * nothing here: Honold has no ReferenzNr column) over every released row. It answers a
- * user-declared "workbook error" with the engine's own phrase instead of a hand reading.
+ * through `resolveHonold` (ReferenzNr included, though no Honold reference is on the shipped
+ * approval list today), and `processHonold` runs wrapped in `rowAnmerkung`, so an approved
+ * reference reads `OK` as it does in the app. It answers a user-declared "workbook error"
+ * with the engine's own phrase instead of a hand reading.
  *
  *   node scripts/honold/audit_workbook.mjs --date 20380293
  *   node scripts/honold/audit_workbook.mjs --date 20380293 --rows 4

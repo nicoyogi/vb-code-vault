@@ -1735,7 +1735,7 @@ function processKN(ws,r,cols){
 }
 
 /* DHL Express */
-function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),addr:fc('FR','Differenz'),el:fc('EL','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz')};}
+function resolveDHL(ws,range){const fc=(h2,h3)=>findCol(ws,range,h2,h3);return{target:fc('','Anmerkung'),stat:fc('','Stat_Freigabe'),tarif:fc('Total','Kosten lt. Tarif'),sach:fc('','SACHKONTO'),kost:fc('','KOSTENSTELLE'),referenz:fc('','ReferenzNr'),addr:fc('FR','Differenz'),el:fc('EL','Differenz'),stack:fc('PAL','Differenz'),weight:fc('OW','Differenz'),conv:fc('YO','Differenz'),irr:fc('YL','Differenz'),neut:fc('ND','Differenz'),sign:fc('SF','Differenz'),snk:fc('SNK','Differenz'),diff:fc('AC','Differenz'),maut:fc('MT','Differenz'),surc:fc('NX','Differenz'),over:fc('OS','Differenz'),tz:fc('TZ','Differenz')};}
 function processDHL(ws,r,cols){const T=T_DHL;if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return null;if(cols.tarif>=0){const raw=cellStr(ws,r,cols.tarif),v=cellNum(ws,r,cols.tarif);if(raw&&v===0&&(raw.includes('0')||raw==='-'))return'Fremdnummer xxx bereits berechnet in RExxx, ok?.';}let res='';if(KONTIERUNG_ENABLED&&cols.sach>=0&&!cellStr(ws,r,cols.sach))res=join(res,'kontierung?');if(KONTIERUNG_ENABLED&&cols.kost>=0&&!cellStr(ws,r,cols.kost))res=join(res,'kontierung?');let block=false;[[cols.el,'EXTENDED LIABILITY, ok?'],[cols.addr,'Differenz aufgrund von abweichendem Gewicht/Volumen'],[cols.stack,'nicht stapelbar ok?'],[cols.weight,'Differenz overweight, ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const yo=cols.conv>=0?cellNum(ws,r,cols.conv):0;if(cols.conv>=0){if(yo>0&&yo%15===0){res=join(res,'Non conveyable piece-weight ok?');block=true;}else if(hasErr(yo,T)){res=join(res,'non conveyable piece ok?');block=true;}}[[cols.irr,'Non-conveyable piece irregular ok?'],[cols.neut,'Neutral delivery ok?'],[cols.sign,'Direct signature ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T)){res=join(res,m);block=true;}});const snk=cols.snk>=0?cellNum(ws,r,cols.snk):0;if(cols.snk>=0){if(snk===5){res=join(res,'DIRECT SIGNATURE , ok?');block=true;}else if(snk===25){res=join(res,'Limited quantities ok?');block=true;}else if(snk===30){res=join(res,'Elevated Risk, ok?');block=true;}else if(snk===60){res=join(res,'Eelevated risk ok? // Restricted destination ok?');block=true;}else if(hasErr(snk,T)){res=join(res,'SNK Differenz');block=true;}}const nx=cols.surc>=0?cellNum(ws,r,cols.surc):0;if(cols.surc>=0&&hasErr(nx,T))res=join(res,nx<0?'Differenz demand surcharge, ok?':'demand surcharge ok?');const ac=cols.diff>=0?cellNum(ws,r,cols.diff):0;if(cols.diff>=0){if(ac===11)res=join(res,'Address correction, ok?');else if(hasErr(ac,T))res=join(res,'Address Correction ok?');}if(!block){[[cols.maut,'Mautdifferenz'],[cols.over,'Oversize piece ok?']].forEach(([c,m])=>{if(c>=0&&hasErr(cellNum(ws,r,c),T))res=join(res,m);});}if(res===''&&cols.tz>=0&&hasErr(cellNum(ws,r,cols.tz),T))res='Differenz treibstof';return res;}
 
 /* Wackler */
@@ -2948,7 +2948,7 @@ let _atRefs=null,_atSet=null;
 function approvedReference(ws,r,cols){
   const refs=window.AUSSERTARIFLICH&&window.AUSSERTARIFLICH.refs;
   if(!Array.isArray(refs)||!refs.length)return'';
-  if(!cols||!(cols.referenz>=0))return''; /* DHL and Honold have no ReferenzNr column */
+  if(!cols||!(cols.referenz>=0))return''; /* no ReferenzNr column on this layout */
   const tokens=cellStr(ws,r,cols.referenz).match(/\d{6,20}/g);
   if(!tokens)return'';
   if(refs!==_atRefs){_atRefs=refs;_atSet=new Set(refs);}
@@ -3055,6 +3055,7 @@ function resolveHonold(ws,range){
   return{
     target:   fc('','Anmerkung'),
     stat:     fc('','Stat_Freigabe'),
+    referenz: fc('','ReferenzNr'),
     fr_dl:    fc('FR','Kosten DL'),
     zz:       fc('ZZ','Differenz'),   /* -1 on every Honold layout before 20381523 */
     vkg:      fc('','Volumen kg'),
@@ -3422,6 +3423,7 @@ const TESTER_FIELDS={
     ['snk','SNK Differenz','num'],['diff','AC Differenz','num'],['maut','MT Differenz','num'],
     ['surc','NX Differenz','num'],['over','OS Differenz','num'],['tz','TZ Differenz','num'],
     ['kost','KOSTENSTELLE','str'],['sach','SACHKONTO','str'],
+    ['referenz','ReferenzNr','str'],
   ],
   wackler:[
     ['stat','Stat_Freigabe','num'],['tarif','Tarif (raw)','str'],['target','Existing Anmerkung','str'],
@@ -3442,6 +3444,7 @@ const TESTER_FIELDS={
     ['zz','ZZ Differenz','num'],
     ['vkg','Volumen kg','num'],['vkg_dl','Volumen kg DL','num'],
     ['empf_land','Empf.-Land','str'],
+    ['referenz','ReferenzNr','str'],
   ],
 };
 
