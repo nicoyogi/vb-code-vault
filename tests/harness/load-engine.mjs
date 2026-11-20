@@ -262,7 +262,7 @@ export function loadEngine() {
     // and the matcher behind it, so a test can exercise the list directly
     'rowAnmerkung', 'approvedReference',
     // column resolution, for tools that audit a real workbook (scripts/dachser/audit_workbook.mjs)
-    'resolveDachser',
+    'resolveDachser', 'resolveDHL',
     // honold tariff helpers
     'resolveHonold', 'honoldTariff', 'honoldTierIdx',
     // tier helpers

@@ -19,8 +19,20 @@ flips on a blank cell                 0   every flip replaced a note the process
 ```
 
 The three sheets without a `Lieferschein` header are `Veranstaltungen PCM 2026`, `Tarife` and
-`DPD Selbstanlieferung`; they contribute no reference. DHL Express and Honold expose no
-`ReferenzNr` column at all, so they cannot match and their 3 and 13 workbooks stay at flip 0.
+`DPD Selbstanlieferung`; they contribute no reference. DHL Express and Honold carry a
+`ReferenzNr` column like the other three forwarders (row 3 on every one of their workbooks), and
+the engine reads it, but none of the 717 DHL and 772 Honold references scanned is on the approval
+list, so their 3 and 13 workbooks stay at flip 0.
+
+**Correction 2026-11-20.** An earlier revision of this note said DHL Express and Honold expose no
+`ReferenzNr` column at all, and the engine comment agreed. That was wrong: the Honold workbook
+`20379045 Soll-Ist-Vergleich.xlsx` and the DHL workbook `STRR000840258 Soll-Ist-Vergleich.xlsx`
+both carry `ReferenzNr` in row 3, column E. The rule was unreachable for them only because
+`resolveDHL` and `resolveHonold` never mapped the column, so `cols.referenz` was undefined and
+`approvedReference` returned `''`. Both resolvers now read it, and the Tester has the field. The
+measurement behind the zero stands: 717 of 717 DHL rows and 558 of 558 Honold rows carry a
+reference (772 of them, some rows bundled), and 0 of both are on the shipped list. Nothing
+changes for either forwarder until one appears; the flip totals above are unchanged.
 
 ## The carrier filter
 
@@ -132,7 +144,8 @@ notes, and they are the pair that pins the matching rule:
 
 Row 63 is the witness for a full bundle, row 67 for the fail-closed half match. A row whose
 cell is `-`, blank, 5 digits or 21+ digits never matches, and a layout with no `ReferenzNr`
-column (`cols.referenz < 0`, the DHL and Honold shape) is never read at all.
+column (`cols.referenz < 0`) is never read at all. No workbook in the corpus is such a layout;
+that guard is the safety net for one that drops the column.
 
 ## The three owner rulings
 
@@ -199,11 +212,14 @@ release does not do.
 
 ## Verification
 
-- `npm test`: 701 tests, 701 pass, 0 fail, 0 skipped with the plaintext rate cards present.
-  A clone without them reports 690 passed, 11 skipped.
+- `npm test`: 703 tests, 703 pass, 0 fail, 0 skipped with the plaintext rate cards present.
+  A clone without them reports 692 passed, 11 skipped.
 - `npm run verify:anmerkung`: all PASS.
 - Replay of the 11 Dachser dailies, 2 K+N workbooks, 15 Wackler workbooks, 3 DHL workbooks and
   13 Honold workbooks: `flip 43, unexpected 0`, 35 Dachser / 1 K+N / 7 Wackler / 0 DHL / 0 Honold.
+- `resolveDHL` and `resolveHonold` resolve the `ReferenzNr` column on all 3 and all 13 of their
+  workbooks (the correction above); the auto-detect score rises by 1 for each of them on every
+  sheet and no sheet's detected forwarder changes.
 - Every one of the 43 references that a flip depends on is still in the asset after the carrier
   filter: diffing the old and new reference sets gives 100 removed, 0 added, 0 flip references
   missing.

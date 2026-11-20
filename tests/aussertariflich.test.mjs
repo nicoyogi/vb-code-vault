@@ -96,12 +96,87 @@ test('approvedReference: no asset and an empty list behave as 1.64.0', () => {
 });
 
 test('approvedReference: a layout without a ReferenzNr column never matches', () => {
-  /* resolveDHL and resolveHonold return no `referenz` key at all; a workbook
-     whose header is missing resolves to -1. Neither may read another column. */
+  /* The safety net for a future layout that drops the column: an absent key and a
+     resolved -1 both have to stay silent, never read a neighbouring cell. */
   e.setAussertariflich(['2544666780']);
   const ws = makeRow(R, { 50: '10', 51: '2544666780', 56: '2544666780' });
   assert.equal(e.approvedReference(ws, R, { target: 5, stat: 50 }), '');
   assert.equal(e.approvedReference(ws, R, dachserCols({ referenz: -1 })), '');
+});
+
+/* ── DHL and Honold read ReferenzNr too ── */
+
+/* Both carrier layouts resolve their columns from row 2 and row 3 headers, so the
+   resolver test needs a sheet and not just a data row. ReferenzNr sits at column E
+   (index 4) on both, the way the real workbooks carry it. */
+const LAYOUT = { s: { r: 0, c: 0 }, e: { r: 3, c: 12 } };
+function layout(row2, row3, data) {
+  const ws = makeRow(1, row2);
+  Object.assign(ws, makeRow(2, row3));
+  Object.assign(ws, makeRow(R, data));
+  return ws;
+}
+const HEAD3 = { 0: 'Anmerkung', 4: 'ReferenzNr', 10: 'Stat_Freigabe' };
+/* addr (FR Differenz) over T_DHL is a real DHL finding. */
+const dhlLayout = (referenz) =>
+  layout({ 12: 'FR' }, { ...HEAD3, 12: 'Differenz' }, { 4: referenz, 10: '10', 12: '5' });
+/* A blank FR Kosten DL is the Honold weight phrase, so it needs no rate card beyond
+   a ready tariff. */
+const honoldLayout = (referenz) =>
+  layout({ 12: 'FR' }, { ...HEAD3, 12: 'Kosten DL' }, { 4: referenz, 10: '10' });
+/* The smallest tariff honoldTariff() accepts: one country, one zone, one rate. */
+const MIN_TARIFF = { tiers: [100], zones: { 'AT1 Österreich': [918.88] }, codes: { AT: ['AT1 Österreich'] } };
+
+function withMinTariff(fn) {
+  const real = e.HONOLD_TARIFF;
+  e.setHonoldTariff(MIN_TARIFF);
+  try { return fn(); } finally { e.setHonoldTariff(real); }
+}
+
+test('resolveDHL and resolveHonold map ReferenzNr, so a listed reference approves the row', () => {
+  /* Both sheets carry the column (measured 2026-11-20 on STRR000840258 and 20379045,
+     row 3); the rule used to be unreachable for them only because neither resolver
+     read it. Driven by the SHIPPED list, so this is the asset the app ships. */
+  if (!SHIPPED) assert.fail('the shipped approval list did not load');
+  e.setAussertariflich(SHIPPED.refs);
+  const dhlCols = e.resolveDHL(dhlLayout('2544666780'), LAYOUT);
+  assert.equal(dhlCols.referenz, 4, 'resolveDHL reads the ReferenzNr column');
+  const honoldCols = e.resolveHonold(honoldLayout('2544666780'), LAYOUT);
+  assert.equal(honoldCols.referenz, 4, 'resolveHonold reads the ReferenzNr column');
+
+  const dhl = dhlLayout('2544666780');
+  assert.equal(e.processDHL(dhl, R, dhlCols), 'Differenz aufgrund von abweichendem Gewicht/Volumen',
+    'the DHL row has a finding today');
+  assert.equal(e.rowAnmerkung(e.processDHL, dhl, R, dhlCols), 'OK',
+    'a listed reference approves the DHL row');
+
+  withMinTariff(() => {
+    const honold = honoldLayout('2544666780');
+    assert.equal(e.processHonold(honold, R, honoldCols), 'Differenz aufgrund abweichender Gewichte',
+      'the Honold row has a finding today');
+    assert.equal(e.rowAnmerkung(e.processHonold, honold, R, honoldCols), 'OK',
+      'a listed reference approves the Honold row');
+  });
+});
+
+test('resolveDHL and resolveHonold: an unlisted reference keeps the processor phrase', () => {
+  if (!SHIPPED) assert.fail('the shipped approval list did not load');
+  e.setAussertariflich(SHIPPED.refs);
+  const dhlCols = e.resolveDHL(dhlLayout('2544666781'), LAYOUT);
+  const dhl = dhlLayout('2544666781');
+  const dhlBase = e.processDHL(dhl, R, dhlCols);
+  assert.equal(dhlBase, 'Differenz aufgrund von abweichendem Gewicht/Volumen');
+  assert.equal(e.rowAnmerkung(e.processDHL, dhl, R, dhlCols), dhlBase,
+    'the processor phrase, unchanged');
+
+  const honoldCols = e.resolveHonold(honoldLayout('2544666781'), LAYOUT);
+  withMinTariff(() => {
+    const honold = honoldLayout('2544666781');
+    const honoldBase = e.processHonold(honold, R, honoldCols);
+    assert.equal(honoldBase, 'Differenz aufgrund abweichender Gewichte');
+    assert.equal(e.rowAnmerkung(e.processHonold, honold, R, honoldCols), honoldBase,
+      'the processor phrase, unchanged');
+  });
 });
 
 /* ── rowAnmerkung: the wrapper ── */
