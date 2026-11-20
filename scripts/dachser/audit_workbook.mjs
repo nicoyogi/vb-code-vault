@@ -5,7 +5,8 @@
  * The audit note (docs/anmerkung/dachser-sheet-audit-2026-10-09.md) was produced by a
  * scratch harness that dumped each sheet with openpyxl, rebuilt it as the worksheet the
  * engine expects, resolved the columns through `resolveDachser`, and ran `processDachser`
- * over every released row. This is that harness, kept, so the diff is reproducible and a
+ * over every released row, wrapped in `rowAnmerkung` so an out-of-tariff approved reference
+ * reads `OK` as it does in the app. This is that harness, kept, so the diff is reproducible and a
  * user-declared "workbook error" can be answered with the engine's own phrase.
  *
  *   node scripts/dachser/audit_workbook.mjs --date 20261006
@@ -120,7 +121,7 @@ function main() {
     for (const excelRow of rows) {
       const r = excelRow - 1;
       if (r < 3 || r > range.e.r) die(`row ${excelRow} is outside the data rows 4..${range.e.r + 1}`);
-      const engine = e.processDachser(ws, r, cols);
+      const engine = e.rowAnmerkung(e.processDachser, ws, r, cols);
       const sheet = e.cellStr(ws, r, cols.target);
       out.push({ row: excelRow, sheet, engine });
       if (!json) {
@@ -138,7 +139,7 @@ function main() {
   const engineOnly = [];
   let noted = 0, exact = 0, released = 0, skipped = 0, blank = 0;
   for (let r = 3; r <= range.e.r; r++) {
-    const engine = e.processDachser(ws, r, cols);
+    const engine = e.rowAnmerkung(e.processDachser, ws, r, cols);
     if (engine === null) { skipped++; continue; }
     released++;
     const sheet = e.cellStr(ws, r, cols.target);

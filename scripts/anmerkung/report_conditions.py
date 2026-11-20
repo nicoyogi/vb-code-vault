@@ -136,7 +136,9 @@ story.append(P(
     "A delta that clears the threshold is called a &quot;trigger&quot; and contributes a label. All labels a "
     "row gathers are joined with <b>&quot; // &quot;</b> into the <b>Anmerkung</b> cell (deduplicated by "
     "<code>join</code>). Some rules <i>return early</i> or block later rules, because a single finding "
-    "(e.g. a duplicate Fremdnummer booking) makes every other delta on the row spurious."
+    "(e.g. a duplicate Fremdnummer booking) makes every other delta on the row spurious. Whatever the "
+    "processor returns, a released row whose <b>ReferenzNr</b> is on the shipped Außertariflich approval "
+    "list reads <b>OK</b> and nothing else; DHL and Honold have no <b>ReferenzNr</b> and never match."
 ))
 story.append(P("Thresholds", h3))
 story.append(const_table([

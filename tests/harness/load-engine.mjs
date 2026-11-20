@@ -26,6 +26,7 @@ const SRC_RATECARD = join(REPO_ROOT, 'assets', 'wackler-ratecard.js');
 const SRC_NAT_RATECARD = join(REPO_ROOT, 'assets', 'wackler-national-ratecard.js');
 const SRC_HONOLD_TARIFF = join(REPO_ROOT, 'assets', 'honold-tariff.js');
 const SRC_DACHSER_RATECARDS = join(REPO_ROOT, 'assets', 'dachser-ratecards.js');
+const SRC_AUSSERTARIFLICH = join(REPO_ROOT, 'assets', 'aussertariflich.js');
 
 /* The two Wackler ratecard .js files are business data and live local-only since
    b7f3c57 (only assets/wackler-ratecards.enc.json ships, decryptable with the team
@@ -78,6 +79,14 @@ function readDachserRatecardsSource() {
   try { return readFileSync(SRC_DACHSER_RATECARDS, 'utf8'); } catch { return null; }
 }
 const DACHSER_RATECARDS_SRC = readDachserRatecardsSource();
+
+/* The out-of-tariff approval list is generated from the carrier workbook
+   (scripts/anmerkung/extract_aussertariflich.py) and ships with the app. Optional:
+   without it the engine approves no reference and every row keeps its tariff phrase. */
+function readAussertariflichSource() {
+  try { return readFileSync(SRC_AUSSERTARIFLICH, 'utf8'); } catch { return null; }
+}
+const AUSSERTARIFLICH_SRC = readAussertariflichSource();
 
 /* XLSX cell address encoding, matching XLSX.utils.encode_cell({r,c})
    (0-based r/c -> e.g. {r:0,c:0} => "A1", {r:1,c:2} => "C2"). */
@@ -227,6 +236,14 @@ export function loadEngine() {
     /* Non-fatal: the ratecard branches degrade to their previous wording. */
   }
 
+  /* The approval list, mirroring the loader's <script> order: it publishes
+     window.AUSSERTARIFLICH, which rowAnmerkung reads. */
+  try {
+    if (AUSSERTARIFLICH_SRC) vm.runInContext(AUSSERTARIFLICH_SRC, ctx, { filename: 'aussertariflich.js' });
+  } catch (err) {
+    /* Non-fatal: no list means no reference is approved. */
+  }
+
   try {
     vm.runInContext(code, ctx, { filename: 'anmerkung.js' });
   } catch (err) {
@@ -241,6 +258,9 @@ export function loadEngine() {
   const need = [
     // processors
     'processDachser', 'processKN', 'processDHL', 'processWackler', 'processHonold',
+    // the approval wrapper every processor call has to go through, to match the app,
+    // and the matcher behind it, so a test can exercise the list directly
+    'rowAnmerkung', 'approvedReference',
     // column resolution, for tools that audit a real workbook (scripts/dachser/audit_workbook.mjs)
     'resolveDachser',
     // honold tariff helpers
@@ -290,6 +310,18 @@ export function loadEngine() {
      matrix or clear it to exercise the locked/no-card fallback. */
   engine.DACHSER_RATECARDS = sandbox.DACHSER_RATECARDS || null;
   engine.setDachserRatecards = (rc) => { sandbox.DACHSER_RATECARDS = rc || undefined; };
+  /* The out-of-tariff approval list, read lazily by approvedReference, so a test
+     can swap the list in or clear it (`null`) to exercise the unloaded state. The
+     engine caches a Set keyed on the refs array's IDENTITY, so the setter must
+     hand over a fresh array; mutating the current one in place is not observed.
+     Read the current state back through the AUSSERTARIFLICH getter, which follows
+     the swap instead of freezing the value from load time. */
+  engine.setAussertariflich = (refs) => {
+    sandbox.window.AUSSERTARIFLICH = refs ? { refs: refs.slice() } : undefined;
+  };
+  Object.defineProperty(engine, 'AUSSERTARIFLICH', {
+    get: () => sandbox.window.AUSSERTARIFLICH || null,
+  });
   /* The phrase catalog itself, so tests can guard catalog-wide invariants
      (e.g. no two entries may normPhrase-fold onto each other). PHRASES is a
      top-level `const`, which — unlike function declarations — does NOT land

@@ -1,6 +1,13 @@
 {
-  "version": "1.64.0",
+  "version": "1.65.0",
   "entries": [
+    {
+      "ver": "1.65.0",
+      "date": "2026-11-20",
+      "items": [
+        "Dachser, K+N and Wackler - a row whose ReferenzNr is on the Außertariflich approval list now reads \"OK\" and nothing else, whatever its freight, toll or surcharge lines say. A row needs every bundled reference approved. 43 released rows change: 35 Dachser, 1 K+N, 7 Wackler, 19 in 20261019."
+      ]
+    },
     {
       "ver": "1.64.0",
       "date": "2026-11-11",
