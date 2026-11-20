@@ -750,6 +750,14 @@ test('phraseToKey: the 1.64.0 DHL phrases resolve to their own keys', () => {
   assert.equal(e.phraseToKey('Addres Correction, ok?'), 'addressCorrectionOk');
 });
 
+test('phraseToKey: the 1.65.0 OK phrase resolves to the ok key', () => {
+  /* The out-of-tariff wrapper writes the bare string `OK`, and every other catalog value
+     is a sentence, so a trim/case fold is all this key needs - pinned here, next to the
+     other catalog keys, so a fold regression is caught in the file that owns them. */
+  assert.equal(e.phraseToKey('OK'), 'ok');
+  assert.equal(e.phraseToKey('  ok  '), 'ok');
+});
+
 test('PHRASES catalog: normPhrase folding never merges two distinct branches (known exception: Kontierung case pair)', () => {
   const seen = new Map(); const collisions = [];
   for (const [k, v] of Object.entries(e.PHRASES)) {

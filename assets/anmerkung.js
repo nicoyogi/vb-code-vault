@@ -398,6 +398,8 @@ const PHRASES={
   // Honold
   honoldBisherigerTarif:      'Honold berechnet die Kosten nach dem bisherigen Tarif',
   tauschgebuehrDiff:          'Differenz Tauschgebühr, ok?',
+  // Cross-cutting
+  ok:                         'OK',
 };
 /* Expose under shorter alias for compactness inside processors. */
 const P=PHRASES;
@@ -2940,9 +2942,32 @@ function samePhraseSet(a,b){
   for(const x of A)if(!B.has(x))return false;
   return true;
 }
+/* Außertariflich: every ReferenzNr on a row must be on the shipped approval list for it to read `OK`,
+   so a bundle with one unlisted note keeps its findings; keyed on the array's identity so a swap applies. */
+let _atRefs=null,_atSet=null;
+function approvedReference(ws,r,cols){
+  const refs=window.AUSSERTARIFLICH&&window.AUSSERTARIFLICH.refs;
+  if(!Array.isArray(refs)||!refs.length)return'';
+  if(!cols||!(cols.referenz>=0))return''; /* DHL and Honold have no ReferenzNr column */
+  const tokens=cellStr(ws,r,cols.referenz).match(/\d{6,20}/g);
+  if(!tokens)return'';
+  if(refs!==_atRefs){_atRefs=refs;_atSet=new Set(refs);}
+  return tokens.every(t=>_atSet.has(t))?tokens.join(', '):'';
+}
+function rowAnmerkung(fn,ws,r,cols){
+  const out=fn(ws,r,cols);
+  if(out===null)return null; /* out of scope: never write into a skipped row */
+  /* A non-null `out` does not prove the row is in scope, so re-assert the Stat_Freigabe gate
+     here instead of trusting every processor to reject the row: with the accounting-code check
+     switched back on, a stat≠10 row would otherwise turn into OK. The other processors already
+     return null on stat≠10, so this leaves their output untouched. */
+  if(cols.stat>=0&&cellNum(ws,r,cols.stat)!==10)return out;
+  return approvedReference(ws,r,cols)?P.ok:out;
+}
 /* Build a compact "why" string for the reason column. Captures raw values of the cells
    the processor actually reads, per-forwarder. Purely diagnostic — never affects rules. */
-function buildReason(fw,ws,r,cols){
+function buildReason(fw,ws,r,cols,out){
+  if(out===P.ok)return'Außertariflich freigegeben: '+approvedReference(ws,r,cols);
   const parts=[];const push=(k,v)=>{if(v!==''&&v!=null&&v!=='0'&&v!=='-')parts.push(k+'='+v);};
   const pushZero=(k,c)=>{if(c>=0)parts.push(k+'='+cellNum(ws,r,c));};
   const num=c=>c>=0?cellStr(ws,r,c):'';
@@ -3184,7 +3209,7 @@ function runRules(){
     for(let r=3;r<=range.e.r;r++){
       total++;
       const excelRow=r+1;
-      const result=fn(ws,r,cols);
+      const result=rowAnmerkung(fn,ws,r,cols);
       if(result===null){
         /* null === out of scope (Stat_Freigabe ≠ 10). No protected/preserved
            case anymore — the engine always recomputes in-scope rows. */
@@ -3196,7 +3221,7 @@ function runRules(){
       const trigs=splitTriggers(result);
       trigs.forEach(t=>trigCounts.set(t,(trigCounts.get(t)||0)+1));
       if(result){filled++;}else{empty++;}
-      const reason=buildReason(selectedFW,ws,r,cols);
+      const reason=buildReason(selectedFW,ws,r,cols,result);
       reasonMap.set(excelRow,reason);
       previewRows.push({sheet:name,row:excelRow,status:result?'filled':'empty',value:result,reason});
     }
@@ -3438,7 +3463,7 @@ const TESTER_PRESETS={
     {name:'Amazon tariff miss',values:{stat:10,fr:12,recip:'Amazon Logistics',referenz:'single',tarif:'150,00'}},
     {name:'Amazon cross-tier Gewichte',values:{stat:10,fr:22.77,snk_diff:25,recip:'Amazon - BRQ2',referenz:'2542943859',vkg:'434.336',vkg_dl:'494.6',tarif:'223,13',kost:'211FO012',sach:'612100'}},
     {name:'Portal avis 5',values:{stat:10,snk_diff:5,snk_dl:5,tarif:'100,00'}},
-    {name:'Pauschalfracht',values:{stat:10,fr:3980,referenz:'2543011467'}},
+    {name:'Pauschalfracht',values:{stat:10,fr:3980,referenz:'9999999999'}},
     {name:'Differenz avis (-9)',values:{stat:10,snk_diff:-9,tarif:'119,17'}},
     {name:'Portal (SNK diff 25)',values:{stat:10,snk_diff:25,tarif:'223,13'}},
     {name:'SNK_DL=12 B2C-zuschlag',values:{stat:10,fr:7.5,snk_dl:12,snk_diff:3,toll:0.31,fuel:2.02,recip:'Tefal',referenz:'2543116871',vkg:'171,087',vkg_dl:'202,5',tarif:'69,32',kost:'211FO012',sach:'612100'}},
@@ -3568,16 +3593,16 @@ function runTester(){
   const{ws,cols}=buildSyntheticWs(fw,userVals);
   let result;
   try{
-    if(fw==='dachser')result=processDachser(ws,3,cols);
-    else if(fw==='kn')result=processKN(ws,3,cols);
-    else if(fw==='dhl')result=processDHL(ws,3,cols);
-    else if(fw==='honold')result=processHonold(ws,3,cols);
-    else result=processWackler(ws,3,cols);
+    if(fw==='dachser')result=rowAnmerkung(processDachser,ws,3,cols);
+    else if(fw==='kn')result=rowAnmerkung(processKN,ws,3,cols);
+    else if(fw==='dhl')result=rowAnmerkung(processDHL,ws,3,cols);
+    else if(fw==='honold')result=rowAnmerkung(processHonold,ws,3,cols);
+    else result=rowAnmerkung(processWackler,ws,3,cols);
   }catch(e){
     out.innerHTML='<div class="to-label">Error</div><div class="to-null">'+String(e.message||e)+'</div>';
     return;
   }
-  const reason=buildReason(fw,ws,3,cols);
+  const reason=buildReason(fw,ws,3,cols,result);
   const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   let body;
   if(result===null){
@@ -4033,7 +4058,7 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
       let engineNow='',engineMatchesA=true,engineMatchesB=null,enginePd=null,reason='',inputs={};
       if(processor&&colsA){
         try{
-          const p=processor(wsA,r,colsA);
+          const p=rowAnmerkung(processor,wsA,r,colsA);
           engineNow=(p==null?'':String(p));
           /* Engine-drift is a PHRASE-SET comparison, not a raw-string one,
              matching the latest engine rule (v1.11.0): the Anmerkung column is
@@ -4056,7 +4081,7 @@ function diffWorkbooks(wbA,nameA,wbB,nameB,source){
              just with engineNow on the predicted side. */
           engineMatchesB=samePhraseSet(splitTriggers(engineNow),splitTriggers(vB||''));
           enginePd=computePhraseDiff(engineNow,vB);
-          try{reason=buildReason(fw,wsA,r,colsA)||'';}catch(_){reason='';}
+          try{reason=buildReason(fw,wsA,r,colsA,engineNow)||'';}catch(_){reason='';}
           inputs=collectInputsForRow(fw,wsA,r,colsA);
         }catch(e){engineNow='';reason='engine error: '+(e.message||e);}
       }
@@ -5903,6 +5928,7 @@ function engineSourceSections(){
     ['DHL',bucket(/^(processDHL$|resolveDHL$|dhl[A-Z])/)],
     ['Wackler',bucket(/^(processWackler$|resolveWackler$|wackler|isWackler)/)],
     ['Honold',bucket(/^(processHonold$|resolveHonold$|honold|HONOLD)/)],
+    ['Cross-cutting gate',[approvedReference,rowAnmerkung]],
   ];
 }
 
@@ -5928,7 +5954,9 @@ function buildPhraseEmitterIndex(){
     .filter(([,v])=>v)
     .map(([k,v])=>[k,String(v).toLowerCase()]);
   const scanStrings=(low,name)=>{
-    for(const[key,pl]of phraseLow)if(low.includes(pl))add(key,name);
+    /* The length floor keeps a 2-char value like `OK` from substring-matching
+       nearly every function body; the shortest other catalog value is 6 chars. */
+    for(const[key,pl]of phraseLow)if(pl.length>=4&&low.includes(pl))add(key,name);
     /* PHRASE_LITERALS keys are already the lowercased phrase strings. */
     for(const[phrase,id]of Object.entries(PHRASE_LITERALS))
       if(low.includes(phrase))add(id,name);

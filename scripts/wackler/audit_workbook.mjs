@@ -15,7 +15,8 @@
  * Every released row is scored twice: `raw` needs the exact trimmed string, `phrase`
  * compares the `//`-separated phrase list under the engine's own `normPhrase`, so a
  * hand-corrected cell that differs only in spacing or case shows up as an exact
- * difference without counting as a rule disagreement.
+ * difference without counting as a rule disagreement. Every processor call is wrapped in
+ * `rowAnmerkung`, so an out-of-tariff approved reference reads `OK` as it does in the app.
  *
  * Needs `py` (Python 3 with openpyxl): the sheet dump reuses scripts/dachser/dump_sheet.py,
  * which is forwarder-agnostic.
@@ -127,7 +128,7 @@ function main() {
       const rows = wantRows.map((excelRow) => {
         const r = excelRow - 1;
         if (r < 3 || r > range.e.r) die(`row ${excelRow} is outside the data rows 4..${range.e.r + 1}`);
-        const engine = e.processWackler(ws, r, cols);
+        const engine = e.rowAnmerkung(e.processWackler, ws, r, cols);
         const sheet = e.cellStr(ws, r, cols.target);
         if (!json) {
           console.log(`\n${path.split(/[\\/]/).pop()} row ${excelRow}`);
@@ -146,7 +147,7 @@ function main() {
     const phraseDiffs = [];
     let released = 0, exact = 0;
     for (let r = 3; r <= range.e.r; r++) {
-      const engine = e.processWackler(ws, r, cols);
+      const engine = e.rowAnmerkung(e.processWackler, ws, r, cols);
       if (engine === null) continue;
       released++;
       const sheet = e.cellStr(ws, r, cols.target);

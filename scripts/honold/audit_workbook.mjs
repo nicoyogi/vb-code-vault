@@ -4,7 +4,8 @@
  *
  * Same harness as scripts/dachser/audit_workbook.mjs: scripts/dachser/dump_sheet.py hands
  * the sheet over as the A1-keyed worksheet the engine expects, the columns are resolved
- * through `resolveHonold`, and `processHonold` runs over every released row. It answers a
+ * through `resolveHonold`, and `processHonold` runs (wrapped in `rowAnmerkung`, which approves
+ * nothing here: Honold has no ReferenzNr column) over every released row. It answers a
  * user-declared "workbook error" with the engine's own phrase instead of a hand reading.
  *
  *   node scripts/honold/audit_workbook.mjs --date 20380293
@@ -121,7 +122,7 @@ function main() {
     for (const excelRow of rows) {
       const r = excelRow - 1;
       if (r < 3 || r > range.e.r) die(`row ${excelRow} is outside the data rows 4..${range.e.r + 1}`);
-      const engine = e.processHonold(ws, r, cols);
+      const engine = e.rowAnmerkung(e.processHonold, ws, r, cols);
       const sheet = e.cellStr(ws, r, cols.target);
       out.push({ row: excelRow, sheet, engine });
       if (!json) {
@@ -139,7 +140,7 @@ function main() {
   const engineOnly = [];
   let noted = 0, exact = 0, released = 0, skipped = 0, blank = 0;
   for (let r = 3; r <= range.e.r; r++) {
-    const engine = e.processHonold(ws, r, cols);
+    const engine = e.rowAnmerkung(e.processHonold, ws, r, cols);
     if (engine === null) { skipped++; continue; }
     released++;
     const sheet = e.cellStr(ws, r, cols.target);
