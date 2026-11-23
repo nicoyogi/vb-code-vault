@@ -1506,3 +1506,81 @@ test('half-day flags: an empty list still offers a ½ box on its first row', () 
   assert.equal(rows[0].half, true);
   assert.deepEqual([...t.currentHalf('tariff')], ['Anna']);
 });
+
+test('exclusionMarks: per-token hits, dead list, and a row total that matches the old stat', () => {
+  const rows = [
+    ['DHL', '111', 'REF-A', 'D1', []],
+    ['DHL', '111', 'REF-B', 'D2', []],
+    ['DHL', '222', 'REF-C', 'D3', []],
+  ];
+  const m = s.exclusionMarks('111, 999', s.parseKreditors, r => s.normDoc(r[1]), rows);
+  assert.deepEqual(plain(m.listed), ['111', '999']);
+  assert.deepEqual(plain(m.dead), ['999']);
+  assert.equal(m.rows, 2);                       // hits are rows, not tokens
+  // the same token listed twice counts its rows once
+  const dup = s.exclusionMarks('111 111', s.parseKreditors, r => s.normDoc(r[1]), rows);
+  assert.deepEqual(plain(dup.listed), ['111']);
+  assert.equal(dup.rows, 2);
+  // numeric Supplier cells match the typed digits
+  assert.equal(s.exclusionMarks('111', s.parseKreditors, r => s.normDoc(r[1]), [['V', 111, 'R', 'D', []]]).rows, 1);
+  // nothing listed, nothing counted
+  assert.deepEqual(plain(s.exclusionMarks('', s.parseKreditors, r => s.normDoc(r[1]), rows)), { listed: [], dead: [], rows: 0 });
+  assert.deepEqual(plain(s.exclusionMarks('  , ; ', s.parseKreditors, r => s.normDoc(r[1]), rows)), { listed: [], dead: [], rows: 0 });
+});
+
+test('exclusionMarks: Referenz matches case-insensitively, and a value only in another column stays dead', () => {
+  const rows = [['DHL', '111', 'REF-A', 'D1', []]];
+  const ref = s.exclusionMarks('ref-a', s.parseReferenz, r => s.normDoc(r[2]).toLowerCase(), rows);
+  assert.equal(ref.rows, 1);
+  assert.deepEqual(plain(ref.dead), []);
+  // REF-A is in the Reference column, not the Supplier one, so as a Kreditor it excludes nothing
+  const kred = s.exclusionMarks('REF-A', s.parseKreditors, r => s.normDoc(r[1]), rows);
+  assert.deepEqual(plain(kred.dead), ['REF-A']);
+  assert.equal(kred.rows, 0);
+  // rows from two uploads sharing a system name are judged together
+  const both = s.exclusionMarks('222', s.parseKreditors, r => s.normDoc(r[1]),
+    [...rows, ['DHL', '222', 'REF-Z', 'D2', []]]);
+  assert.equal(both.rows, 1);
+  assert.deepEqual(plain(both.dead), []);
+});
+
+test('exclusionSegments: keeps separators so the mirror is character-identical', () => {
+  const segs = s.exclusionSegments('111, 999', new Set(['999']), v => v);
+  assert.deepEqual(plain(segs.map(x => x.text)), ['111', ', ', '999']);
+  assert.deepEqual(plain(segs.map(x => x.dead)), [false, false, true]);
+  // leading/trailing space and a CRLF paste survive unchanged
+  const raw = ' 111\r\n999 ';
+  assert.equal(s.exclusionSegments(raw, new Set(['999']), v => v).map(x => x.text).join(''), raw);
+  // the key normalises the segment, not the rendered text
+  const ref = s.exclusionSegments('REF-1 ref-2', new Set(['ref-1']), v => v.toLowerCase());
+  assert.deepEqual(plain(ref.map(x => [x.text, x.dead])), [['REF-1', true], [' ', false], ['ref-2', false]]);
+  assert.deepEqual(plain(s.exclusionSegments('', new Set(), v => v)), []);
+});
+
+test('exclusionMirrorHtml: only dead segments are wrapped, text is escaped, a trailing newline keeps its line box', () => {
+  assert.equal(s.exclusionMirrorHtml('111, 999', new Set(['999']), v => v),
+    '111, <span class="excl-dead">999</span>');
+  assert.equal(s.exclusionMirrorHtml('<b>', new Set(['<b>']), v => v),
+    '<span class="excl-dead">&lt;b&gt;</span>');
+  assert.equal(s.exclusionMirrorHtml('111', new Set(), v => v), '111');
+  assert.equal(s.exclusionMirrorHtml('', new Set(), v => v), '');
+  // a live segment is escaped too, not just the wrapped ones
+  assert.equal(s.exclusionMirrorHtml('a<b', new Set(), v => v), 'a&lt;b');
+  // a pasted column ends with a newline; without the zero-width space the mirror
+  // is one line box shorter than the textarea and drifts when scrolled
+  assert.equal(s.exclusionMirrorHtml('111\n', new Set(), v => v), '111\n\u200b');
+  // a repeated dead token is wrapped once per occurrence
+  assert.equal(s.exclusionMirrorHtml('999 999', new Set(['999']), v => v), '<span class="excl-dead">999</span> <span class="excl-dead">999</span>');
+});
+
+test('exclusionStatHtml: keeps the existing sentence and appends the unused count in red', () => {
+  assert.equal(s.exclusionStatHtml({ listed: ['a', 'b', 'c'], dead: ['b', 'c'], rows: 1 }, 'Kreditor', 'Kreditors'),
+    '3 Kreditors listed — excludes 1 row. <span class="excl-dead-count">2 unused.</span> <span class="sr-only">Unused: b, c.</span>');
+  assert.equal(s.exclusionStatHtml({ listed: ['a'], dead: [], rows: 7 }, 'Referenz'),
+    '1 Referenz listed — excludes 7 rows.');
+  assert.equal(s.exclusionStatHtml({ listed: [], dead: [], rows: 0 }, 'Referenz'), '');
+  assert.equal(s.exclusionStatHtml({ listed: ['a', 'b'], dead: ['a', 'b'], rows: 0 }, 'Referenz'),
+    '2 Referenz listed — excludes 0 rows. <span class="excl-dead-count">2 unused.</span> <span class="sr-only">Unused: a, b.</span>');
+  // the hidden list goes through escapeHtml like every other value
+  assert.equal(s.exclusionStatHtml({ listed: ['<b>'], dead: ['<b>'], rows: 0 }, 'Referenz'), '1 Referenz listed — excludes 0 rows. <span class="excl-dead-count">1 unused.</span> <span class="sr-only">Unused: &lt;b&gt;.</span>');
+});

@@ -156,9 +156,14 @@
   @media (max-width: 620px) { .excl-cols { flex-direction: column; } }
   .excl-col { flex: 1; min-width: 0; }
   .excl-col label { display: block; font-size: 11.5px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
-  .kred-input { width: 100%; min-height: 64px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: var(--mono); color: var(--text); outline: none; resize: vertical; transition: border-color 0.15s; }
-  .kred-input:focus { border-color: var(--accent); }
+  .kred-input { width: 100%; min-height: 64px; position: relative; z-index: 1; display: block; background: transparent; border: none; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-family: var(--mono); color: transparent; caret-color: var(--text); line-height: 1.5; outline: none; resize: vertical; scrollbar-gutter: stable; tab-size: 4; }
   .excl-col .note-stat { margin-top: 5px; font-size: 11px; }
+  .excl-wrap { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; transition: border-color 0.15s; }
+  .excl-wrap:focus-within { border-color: var(--accent); }
+  .excl-mirror { position: absolute; inset: 0; z-index: 0; overflow: hidden; padding: 8px 10px; font-size: 12px; font-family: var(--mono); line-height: 1.5; color: var(--text); white-space: pre-wrap; overflow-wrap: break-word; tab-size: 4; scrollbar-gutter: stable; pointer-events: none; user-select: none; }
+  .excl-dead, .excl-dead-count { color: var(--danger); }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .kred-input::selection { color: var(--text); }
 
   /* step 4 — split */
   .recap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
@@ -1090,6 +1095,44 @@
     return new Set(String(text || '').split(/[\s,;]+/).map(v => v.trim().toLowerCase()).filter(Boolean));
   }
   function referenzSetFor(name) { return parseReferenz(referenz.get(name)); }
+  // Per listed value: its row hits, the values that hit nothing, and the total.
+  function exclusionMarks(text, parse, cell, rows) {
+    const listed = [...parse(text)];
+    const hits = new Map(listed.map(v => [v, 0]));
+    for (const r of rows) {
+      const k = cell(r);
+      if (hits.has(k)) hits.set(k, hits.get(k) + 1);
+    }
+    let total = 0;
+    const dead = [];
+    for (const v of listed) {
+      const hit = hits.get(v);
+      total += hit;
+      if (!hit) dead.push(v);
+    }
+    return { listed, dead, rows: total };
+  }
+  // The list split into tokens and separators, so the mirror keeps every character.
+  function exclusionSegments(text, dead, key) {
+    return String(text || '').split(/([\s,;]+)/).filter(Boolean)
+      .map(part => ({ text: part, dead: dead.has(key(part)) }));
+  }
+  // The mirror is written through innerHTML, so every segment is escaped.
+  function exclusionMirrorHtml(text, dead, key) {
+    const html = exclusionSegments(text, dead, key)
+      .map(seg => seg.dead ? `<span class="excl-dead">${escapeHtml(seg.text)}</span>` : escapeHtml(seg.text))
+      .join('');
+    // A trailing newline keeps its line box, or the mirror scrolls a line short.
+    return String(text || '').endsWith('\n') ? html + '\u200b' : html;
+  }
+  // The stat sentence, with the unused count appended when a listed value hits nothing.
+  function exclusionStatHtml(marks, noun, nounPlural = noun) {
+    const n = marks.listed.length;
+    if (n === 0) return '';
+    const line = `${n} ${n === 1 ? noun : nounPlural} listed — excludes ${marks.rows} row${marks.rows === 1 ? '' : 's'}.`;
+    return marks.dead.length === 0 ? line
+      : `${line} <span class="excl-dead-count">${marks.dead.length} unused.</span> <span class="sr-only">Unused: ${marks.dead.map(escapeHtml).join(', ')}.</span>`;
+  }
   // Rows a system contributes to the split: the system's Kreditor exclusion
   // (matched against the Supplier column) drops rows first for every group,
   // as does the Referenz exclusion (matched against the Reference column,
@@ -1234,12 +1277,12 @@
         <div class="excl-cols">
           <div class="excl-col">
             <label>Exclude Kreditor (Supplier)</label>
-            <textarea class="kred-input kred-ta" rows="3" placeholder="Kreditor numbers — one per line or comma-separated"></textarea>
+            <div class="excl-wrap"><div class="excl-mirror kred-mirror" aria-hidden="true"></div><textarea class="kred-input kred-ta" rows="3" placeholder="Kreditor numbers — one per line or comma-separated"></textarea></div>
             <div class="note-stat kred-stat"></div>
           </div>
           <div class="excl-col">
             <label>Exclude Referenz (Reference)</label>
-            <textarea class="kred-input ref-ta" rows="3" placeholder="Referenz values — one per line or comma-separated"></textarea>
+            <div class="excl-wrap"><div class="excl-mirror ref-mirror" aria-hidden="true"></div><textarea class="kred-input ref-ta" rows="3" placeholder="Referenz values — one per line or comma-separated"></textarea></div>
             <div class="note-stat ref-stat"></div>
           </div>
         </div>`;
@@ -1248,34 +1291,44 @@
       const kredStat = block.querySelector('.kred-stat');
       const refTa = block.querySelector('.ref-ta');
       const refStat = block.querySelector('.ref-stat');
+      const kredMirror = block.querySelector('.kred-mirror');
+      const refMirror = block.querySelector('.ref-mirror');
 
       kredTa.value = kreditor.get(name) || '';
       refTa.value = referenz.get(name) || '';
 
-      // Live "N listed — excludes M rows" count; cell(r) is the row field the list matches.
-      const updateExclStat = (ta, parse, cell, statEl, noun, nounPlural = noun) => {
-        const excl = parse(ta.value);
-        let hit = 0;
-        for (const sys of systems) if (!sys.error && sys.name === name)
-          for (const r of sys.rows) if (excl.has(cell(r))) hit++;
-        statEl.textContent = excl.size === 0 ? ''
-          : `${excl.size} ${excl.size === 1 ? noun : nounPlural} listed — excludes ${hit} row${hit === 1 ? '' : 's'}.`;
+      // Paints the mirror (dead values in red) and the stat line; cell(r) is the row field the list matches.
+      const updateExcl = (ta, mirror, parse, cell, key, statEl, noun, nounPlural = noun) => {
+        const rows = systems.filter(sys => !sys.error && sys.name === name).flatMap(sys => sys.rows);
+        const marks = exclusionMarks(ta.value, parse, cell, rows);
+        mirror.innerHTML = exclusionMirrorHtml(ta.value, new Set(marks.dead), key);
+        statEl.innerHTML = exclusionStatHtml(marks, noun, nounPlural);
+        mirror.scrollTop = ta.scrollTop;
+        mirror.scrollLeft = ta.scrollLeft;
       };
 
       kredTa.addEventListener('input', () => {
         kreditor.set(name, kredTa.value);
         kreditor.save(name);
-        updateExclStat(kredTa, parseKreditors, r => normDoc(r[1]), kredStat, 'Kreditor', 'Kreditors');
+        updateExcl(kredTa, kredMirror, parseKreditors, r => normDoc(r[1]), v => v, kredStat, 'Kreditor', 'Kreditors');
+      });
+      kredTa.addEventListener('scroll', () => {
+        kredMirror.scrollTop = kredTa.scrollTop;
+        kredMirror.scrollLeft = kredTa.scrollLeft;
       });
 
       refTa.addEventListener('input', () => {
         referenz.set(name, refTa.value);
         referenz.save(name);
-        updateExclStat(refTa, parseReferenz, r => normDoc(r[2]).toLowerCase(), refStat, 'Referenz');
+        updateExcl(refTa, refMirror, parseReferenz, r => normDoc(r[2]).toLowerCase(), v => v.toLowerCase(), refStat, 'Referenz');
+      });
+      refTa.addEventListener('scroll', () => {
+        refMirror.scrollTop = refTa.scrollTop;
+        refMirror.scrollLeft = refTa.scrollLeft;
       });
 
-      updateExclStat(kredTa, parseKreditors, r => normDoc(r[1]), kredStat, 'Kreditor', 'Kreditors');
-      updateExclStat(refTa, parseReferenz, r => normDoc(r[2]).toLowerCase(), refStat, 'Referenz');
+      updateExcl(kredTa, kredMirror, parseKreditors, r => normDoc(r[1]), v => v, kredStat, 'Kreditor', 'Kreditors');
+      updateExcl(refTa, refMirror, parseReferenz, r => normDoc(r[2]).toLowerCase(), v => v.toLowerCase(), refStat, 'Referenz');
       body.appendChild(block);
     }
   }
