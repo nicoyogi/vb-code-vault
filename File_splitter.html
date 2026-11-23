@@ -1090,6 +1090,44 @@
     return new Set(String(text || '').split(/[\s,;]+/).map(v => v.trim().toLowerCase()).filter(Boolean));
   }
   function referenzSetFor(name) { return parseReferenz(referenz.get(name)); }
+  // Per listed value: its row hits, the values that hit nothing, and the total.
+  function exclusionMarks(text, parse, cell, rows) {
+    const listed = [...parse(text)];
+    const hits = new Map(listed.map(v => [v, 0]));
+    for (const r of rows) {
+      const k = cell(r);
+      if (hits.has(k)) hits.set(k, hits.get(k) + 1);
+    }
+    let total = 0;
+    const dead = [];
+    for (const v of listed) {
+      const hit = hits.get(v);
+      total += hit;
+      if (!hit) dead.push(v);
+    }
+    return { listed, dead, rows: total };
+  }
+  // The list split into tokens and separators, so the mirror keeps every character.
+  function exclusionSegments(text, dead, key) {
+    return String(text || '').split(/([\s,;]+)/).filter(Boolean)
+      .map(part => ({ text: part, dead: dead.has(key(part)) }));
+  }
+  // Mirror markup: dead tokens wrapped in .excl-dead, every segment escaped.
+  function exclusionMirrorHtml(text, dead, key) {
+    const html = exclusionSegments(text, dead, key)
+      .map(seg => seg.dead ? `<span class="excl-dead">${escapeHtml(seg.text)}</span>` : escapeHtml(seg.text))
+      .join('');
+    // A trailing newline keeps its line box, or the mirror scrolls a line short.
+    return String(text || '').endsWith('\n') ? html + '\u200b' : html;
+  }
+  // The stat sentence, with the unused count appended when a listed value hits nothing.
+  function exclusionStatHtml(marks, noun, nounPlural = noun) {
+    const n = marks.listed.length;
+    if (n === 0) return '';
+    const line = `${n} ${n === 1 ? noun : nounPlural} listed — excludes ${marks.rows} row${marks.rows === 1 ? '' : 's'}.`;
+    return marks.dead.length === 0 ? line
+      : `${line} <span class="excl-dead-count">${marks.dead.length} unused.</span>`;
+  }
   // Rows a system contributes to the split: the system's Kreditor exclusion
   // (matched against the Supplier column) drops rows first for every group,
   // as does the Referenz exclusion (matched against the Reference column,
