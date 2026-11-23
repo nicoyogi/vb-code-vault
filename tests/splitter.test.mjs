@@ -1564,17 +1564,23 @@ test('exclusionMirrorHtml: only dead segments are wrapped, text is escaped, a tr
     '<span class="excl-dead">&lt;b&gt;</span>');
   assert.equal(s.exclusionMirrorHtml('111', new Set(), v => v), '111');
   assert.equal(s.exclusionMirrorHtml('', new Set(), v => v), '');
+  // a live segment is escaped too, not just the wrapped ones
+  assert.equal(s.exclusionMirrorHtml('a<b', new Set(), v => v), 'a&lt;b');
   // a pasted column ends with a newline; without the zero-width space the mirror
   // is one line box shorter than the textarea and drifts when scrolled
   assert.equal(s.exclusionMirrorHtml('111\n', new Set(), v => v), '111\n\u200b');
+  // a repeated dead token is wrapped once per occurrence
+  assert.equal(s.exclusionMirrorHtml('999 999', new Set(['999']), v => v), '<span class="excl-dead">999</span> <span class="excl-dead">999</span>');
 });
 
 test('exclusionStatHtml: keeps the existing sentence and appends the unused count in red', () => {
   assert.equal(s.exclusionStatHtml({ listed: ['a', 'b', 'c'], dead: ['b', 'c'], rows: 1 }, 'Kreditor', 'Kreditors'),
-    '3 Kreditors listed — excludes 1 row. <span class="excl-dead-count">2 unused.</span>');
+    '3 Kreditors listed — excludes 1 row. <span class="excl-dead-count">2 unused.</span> <span class="sr-only">Unused: b, c.</span>');
   assert.equal(s.exclusionStatHtml({ listed: ['a'], dead: [], rows: 7 }, 'Referenz'),
     '1 Referenz listed — excludes 7 rows.');
   assert.equal(s.exclusionStatHtml({ listed: [], dead: [], rows: 0 }, 'Referenz'), '');
   assert.equal(s.exclusionStatHtml({ listed: ['a', 'b'], dead: ['a', 'b'], rows: 0 }, 'Referenz'),
-    '2 Referenz listed — excludes 0 rows. <span class="excl-dead-count">2 unused.</span>');
+    '2 Referenz listed — excludes 0 rows. <span class="excl-dead-count">2 unused.</span> <span class="sr-only">Unused: a, b.</span>');
+  // the hidden list goes through escapeHtml like every other value
+  assert.equal(s.exclusionStatHtml({ listed: ['<b>'], dead: ['<b>'], rows: 0 }, 'Referenz'), '1 Referenz listed — excludes 0 rows. <span class="excl-dead-count">1 unused.</span> <span class="sr-only">Unused: &lt;b&gt;.</span>');
 });
