@@ -21,8 +21,10 @@ columns D.. carry one lane each, headed by the country label from the header
 row. Each matrix is a list of weight brackets, each bracket a lane->price map.
 
 A third key, `national`, carries the domestic card (nine DE zones by weight
-bracket) plus the two-digit PLZ-prefix -> zone table, which the Referenz count
-needs. It is not a matrix: its columns are zones, not lanes.
+bracket) plus the two-digit PLZ-prefix -> zone tables, which the Referenz count
+needs. It is not a matrix: its columns are zones, not lanes. `plz` is the
+domestic DE table; `intl_plz` / `intl_whole` are the non-domestic ones, from the
+2026 zone workbook with the 2024 sheet filling only the prefixes it lacks.
 """
 import json
 import sys
@@ -62,6 +64,27 @@ ZONES = {
     "path": r"D:\TESTER\Zoneneinteilung_national_international_01.07.24.xlsx",
     "sheet": "DE",
     "source": "Zoneneinteilung_national_international_01.07.24.xlsx",
+}
+# Non-domestic PLZ zones. The 2026 workbook is authoritative; the 2024 sheet it
+# superseded only fills prefixes the new file does not carry. Column numbers are
+# 1-based, matching the sheet headers (`DLEISTER, LAND, PLZ_VON, PLZ_BIS, ZONE,
+# NAME` in the new file, `WE-Land, Zone 3 stellig, ..., Leitcode` in the old one).
+INTL_ZONES = {
+    "path": r"D:\TESTER\DACHSER ZONE.xlsx",
+    "sheet": "Tabelle1",
+    "source": "DACHSER ZONE.xlsx",
+    "land_col": 2,
+    "von_col": 3,
+    "bis_col": 4,
+    "zone_col": 5,
+}
+INTL_ZONES_OLD = {
+    "path": ZONES["path"],
+    "sheet": "Gesamt",
+    "source": ZONES["source"],
+    "land_col": 1,
+    "zone_col": 2,
+    "leit_col": 4,
 }
 # The supplied workbook loses its decimal separator above 2400 kg (DE1 reads
 # 220759 at 2600 kg after 210.91 at 2400). A cell whose step over this factor
@@ -195,13 +218,105 @@ def build_plz_missing(plz):
     return ["%02d" % i for i in range(100) if "%02d" % i not in plz]
 
 
+def build_intl_zones(spec):
+    """First-two-digit PLZ -> zone for the non-domestic lanes. A row with both
+    bounds empty is a whole country; a row with bounds covers every prefix from
+    PLZ_VON to PLZ_BIS. The cells mix ints and text ('00' against 45), so every
+    bound goes through str()/int() rather than an isinstance test."""
+    wb = openpyxl.load_workbook(spec["path"], data_only=True)
+    ws = wb[spec["sheet"]]
+    per, whole = {}, {}
+    for r in range(2, ws.max_row + 1):
+        cc = str(ws.cell(row=r, column=spec["land_col"]).value or "").strip().upper()
+        if not cc:
+            continue
+        zone = str(ws.cell(row=r, column=spec["zone_col"]).value or "").strip()
+        if not zone:
+            sys.exit("%s row %d: empty ZONE" % (spec["source"], r))
+        von = ws.cell(row=r, column=spec["von_col"]).value
+        bis = ws.cell(row=r, column=spec["bis_col"]).value
+        if von in (None, "") and bis in (None, ""):
+            whole[cc] = zone
+            continue
+        try:
+            lo, hi = int(str(von).strip()), int(str(bis).strip())
+        except (TypeError, ValueError):
+            sys.exit("%s row %d: PLZ_VON/PLZ_BIS not a number (%r/%r)"
+                     % (spec["source"], r, von, bis))
+        if lo > hi:
+            sys.exit("%s row %d: PLZ_VON %d above PLZ_BIS %d"
+                     % (spec["source"], r, lo, hi))
+        country = per.setdefault(cc, {})
+        for p in range(lo, hi + 1):
+            country["%02d" % p] = zone
+    return per, whole
+
+
+def build_intl_old(spec):
+    """First-two-digit Leitcode -> zone from the 2024 sheet's Gesamt list. A row
+    whose Leitcode is not exactly two digits is skipped, which drops GB's 124
+    alphanumeric postcodes and ES's AD/GI, and keeps PT's 100 numeric ones."""
+    wb = openpyxl.load_workbook(spec["path"], data_only=True)
+    ws = wb[spec["sheet"]]
+    per = {}
+    for r in range(2, ws.max_row + 1):
+        cc = str(ws.cell(row=r, column=spec["land_col"]).value or "").strip().upper()
+        zone = str(ws.cell(row=r, column=spec["zone_col"]).value or "").strip()
+        leit = ws.cell(row=r, column=spec["leit_col"]).value
+        digits = "" if leit is None else str(leit).strip()
+        if not cc or not zone or len(digits) != 2 or not digits.isdigit():
+            continue
+        per.setdefault(cc, {}).setdefault(digits, zone)
+    return per
+
+
+def merge_intl_zones(new_per, new_whole, old_per):
+    """Merge the two zone workbooks into the engine's two maps plus a source map.
+
+    Precedence, in order:
+      (a) a range row in the new file decides that prefix;
+      (b) a whole-country row in the new file covers every prefix of that
+          country, so the 2024 sheet adds nothing to it;
+      (c) the 2024 sheet fills only the prefixes the new file does not cover.
+    DE is domestic and is dropped from both maps. Countries and prefixes are
+    sorted, so the emitted JSON is deterministic."""
+    plz, whole, source = {}, {}, {}
+    for cc in sorted(new_whole):
+        if cc == "DE":
+            continue
+        whole[cc] = new_whole[cc]
+        source[cc] = INTL_ZONES["source"]
+    for cc in sorted(new_per):
+        if cc == "DE" or cc in whole:
+            continue
+        prefixes = dict(new_per[cc])
+        filled = False
+        for p, z in (old_per.get(cc) or {}).items():
+            if p not in prefixes:
+                prefixes[p] = z
+                filled = True
+        plz[cc] = prefixes
+        source[cc] = "both" if filled else INTL_ZONES["source"]
+    for cc in sorted(old_per):
+        if cc == "DE" or cc in whole or cc in plz:
+            continue
+        plz[cc] = dict(old_per[cc])
+        source[cc] = INTL_ZONES_OLD["source"]
+    return ({cc: dict(sorted(plz[cc].items())) for cc in sorted(plz)},
+            {cc: whole[cc] for cc in sorted(whole)},
+            {cc: source[cc] for cc in sorted(source)})
+
+
 def emit_js(new_card, old_card, national):
     lines = []
     lines.append("/* Dachser ratecards - generated from")
     lines.append("     %s" % new_card["source"])
     lines.append("     %s" % old_card["source"])
     lines.append("   by scripts/dachser/build_ratecards.py. Business data: local only,")
-    lines.append("   gitignored; the public artifact is assets/dachser-ratecards.enc.json. */")
+    lines.append("   gitignored; the public artifact is assets/dachser-ratecards.enc.json.")
+    lines.append("   The non-domestic PLZ zones come from %s," % INTL_ZONES["source"])
+    lines.append("   with %s filling only the" % INTL_ZONES_OLD["source"])
+    lines.append("   prefixes that file does not carry. */")
     lines.append("globalThis.DACHSER_RATECARDS = {")
     lines.append('  schema: "dachser-ratecards/v1",')
     for key, card in (("new", new_card), ("old", old_card)):
@@ -227,6 +342,9 @@ def emit_js(new_card, old_card, national):
     lines.append("    ],")
     lines.append("    plz: %s," % json.dumps(national["plz"], ensure_ascii=False))
     lines.append("    plz_missing: %s," % json.dumps(national["plz_missing"]))
+    lines.append("    intl_plz: %s," % json.dumps(national["intl_plz"], ensure_ascii=False))
+    lines.append("    intl_whole: %s," % json.dumps(national["intl_whole"], ensure_ascii=False))
+    lines.append("    intl_source: %s," % json.dumps(national["intl_source"], ensure_ascii=False))
     lines.append("  },")
     lines.append("};")
     lines.append("")
@@ -244,16 +362,27 @@ def main():
             key, len(cards[key]["brackets"]),
             len(cards[key]["brackets"][0]["lanes"]) if cards[key]["brackets"] else 0))
 
-    for spec in (NATIONAL, ZONES):
+    for spec in (NATIONAL, ZONES, INTL_ZONES):
         if not Path(spec["path"]).exists():
             sys.exit("source workbook not found: %s" % spec["path"])
     national = build_national(NATIONAL)
     national["plz"] = build_plz(ZONES)
     national["plz_missing"] = build_plz_missing(national["plz"])
+    new_per, new_whole = build_intl_zones(INTL_ZONES)
+    (national["intl_plz"], national["intl_whole"],
+     national["intl_source"]) = merge_intl_zones(new_per, new_whole, build_intl_old(INTL_ZONES_OLD))
+    filled = sum(1 for cc in national["intl_plz"] if cc in new_per
+                 for p in national["intl_plz"][cc] if p not in new_per[cc])
     print("nat  %2d brackets (sound to %d kg, recovered from %s kg, withheld from %s), %d PLZ prefixes, missing %s" % (
         len(national["brackets"]), national["capped_at_bis"],
         national["recovered_from_bis"], national["withheld_from_bis"], len(national["plz"]),
         ",".join(national["plz_missing"]) or "none"))
+    print("intl %2d countries by prefix (%d prefixes, %d filled by the 2024 sheet), %d whole-country, %d sources" % (
+        len(national["intl_plz"]), sum(len(m) for m in national["intl_plz"].values()),
+        filled, len(national["intl_whole"]), len(national["intl_source"])))
+    gaps = ["%s:%s" % (cc, "%02d" % i) for cc in sorted(national["intl_plz"])
+            for i in range(100) if "%02d" % i not in national["intl_plz"][cc]]
+    print("     neither workbook carries: %s" % (", ".join(gaps) or "none"))
     OUT.write_text(emit_js(cards["new"], cards["old"], national), encoding="utf-8")
     print("Wrote %s (%d bytes)" % (OUT, OUT.stat().st_size))
 

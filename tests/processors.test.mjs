@@ -3820,8 +3820,8 @@ test('processDachser: the lane count starts at two copies', () => {
      assertion observes the bound. Deleting the guard is what the CZ row above
      catches. */
   withIntlCard(() => {
-    assert.equal(e.evalInContext('daReferenzCountIntl("DE","RO",443,219.98,219.96)'), 0);
-    assert.equal(e.evalInContext('daReferenzCountIntl("DE","RO",443,440,219.96)'), 2);
+    assert.equal(e.evalInContext('daReferenzCountIntl("077085","DE","RO",443,219.98,219.96)'), 0);
+    assert.equal(e.evalInContext('daReferenzCountIntl("077085","DE","RO",443,440,219.96)'), 2);
   });
 });
 
@@ -3860,7 +3860,7 @@ test('processDachser: two add-ons that give different counts stay silent', () =>
   const saved = e.DACHSER_RATECARDS;
   try {
     e.setDachserRatecards(card);
-    assert.equal(e.evalInContext('daReferenzCountIntl("DE","IT",175,539.84,89.96)'), 0);
+    assert.equal(e.evalInContext('daReferenzCountIntl("20100","DE","IT",175,539.84,89.96)'), 0);
     assert.equal(e.processDachser(intlRow({ 52: '449.88', 53: '175', 54: '175',
       56: 'IT', 57: '20100', 58: '539.84', 59: '89.96' }), R, REF_COLS),
       'Dachser berechnet die Kosten nach dem bisherigen Tarif');
@@ -3905,7 +3905,7 @@ test('processDachser: the add-on copies must price the tariff copy itself', () =
   const saved = e.DACHSER_RATECARDS;
   try {
     e.setDachserRatecards(card);
-    assert.equal(e.evalInContext('daReferenzCountIntl("DE","PL",179,227.56,68.81)'), 0);
+    assert.equal(e.evalInContext('daReferenzCountIntl("41-250","DE","PL",179,227.56,68.81)'), 0);
     assert.equal(e.processDachser(intlRow({ 52: '158.75', 53: '179', 54: '179',
       56: 'PL', 57: '41-250', 58: '227.56', 59: '68.81' }), R, REF_COLS),
       'Dachser berechnet die Kosten nach dem bisherigen Tarif');
@@ -4051,14 +4051,155 @@ test('processDachser: the international arm needs the national card present', ()
   }
 });
 
+test('processDachser: the destination zone narrows the international lane pool', () => {
+  /* Three XX lanes, the first two 0.01 apart, so the tariff-copy uniqueness
+     gate silences the whole country pool on its own. The imported table
+     resolves PLZ 10000 to XX1, whose pool carries the 40.00 lane alone; PLZ
+     30000 resolves to a zone holding one lane that copies no 40.00, and PLZ
+     99000 is a prefix the table does not carry. Mutation: ignoring the zone
+     leaves the first row silent. */
+  const zones = { '10': 'XX1', '20': 'XX2', '30': 'XX3' };
+  const lanes = { ...INTL_LANES, 'XX Testland 3': 40.5 };
+  const card = (intl) => {
+    const national = { ...REF_CARD.national };
+    if (intl) national.intl_plz = intl;
+    return { schema: 'dachser-ratecards/v1', national,
+      new: { brackets: [{ von: 1, bis: 2000, lanes }] },
+      old: { brackets: [{ von: 1, bis: 2000, lanes }] } };
+  };
+  const row = (plz) => intlRow({ 56: 'XX', 57: plz, 58: '80', 59: '40' });
+  const REFERENZ = /Referenz wird \d+x abgerechnet/;
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(card({ XX: zones }));
+    assert.equal(e.processDachser(row('10000'), R, REF_COLS),
+      'Referenz wird 2x abgerechnet');
+    assert.doesNotMatch(String(e.processDachser(row('30000'), R, REF_COLS)), REFERENZ);
+    e.setDachserRatecards(card());
+    const noTable = String(e.processDachser(row('10000'), R, REF_COLS));
+    assert.doesNotMatch(noTable, REFERENZ);
+    e.setDachserRatecards(card({ XX: zones }));
+    assert.equal(String(e.processDachser(row('99000'), R, REF_COLS)), noTable);
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
+test('processDachser: a zone naming no lane of its country falls back to the country pool', () => {
+  /* The ES lanes carry the zone in the tail, and 'Spanien 3' is the known
+     defect that names no country head, so the country pool holds two lanes and
+     the 40.00 tariff copy matches one of them: the 07 row reads 2x with no table
+     at all. Zone ES3 names neither lane, so an empty narrowed pool must fall
+     back to the country pool and keep that count. Mutation: returning the empty
+     pool silences the 07 row. */
+  const lanes = { 'ES Spanien 1': 40, 'ES Spanien 2': 50, 'Spanien 3': 60 };
+  const card = (intl) => {
+    const national = { ...REF_CARD.national };
+    if (intl) national.intl_plz = intl;
+    return { schema: 'dachser-ratecards/v1', national,
+      new: { brackets: [{ von: 1, bis: 2000, lanes }] },
+      old: { brackets: [{ von: 1, bis: 2000, lanes }] } };
+  };
+  const row = (plz) => intlRow({ 56: 'ES', 57: plz, 58: '80', 59: '40' });
+  const saved = e.DACHSER_RATECARDS;
+  try {
+    e.setDachserRatecards(card());
+    const noTable = String(e.processDachser(row('07999'), R, REF_COLS));
+    assert.equal(noTable, 'Referenz wird 2x abgerechnet');
+    e.setDachserRatecards(card({ ES: { '07': 'ES3', '01': 'ES1' } }));
+    assert.equal(String(e.processDachser(row('07999'), R, REF_COLS)), noTable);
+    assert.equal(e.processDachser(row('01000'), R, REF_COLS),
+      'Referenz wird 2x abgerechnet');
+  } finally {
+    e.setDachserRatecards(saved);
+  }
+});
+
+test('dachser ratecard lane keys: daLaneZone normalises the head and the tail zone forms', () => {
+  /* Table-driven on the helper itself, no ratecard needed. The cards put the zone
+     digit in the head (AT1 Österreich, PL1 Polen) or in the tail (FR Frankreich 1,
+     ES Spanien 1), and both land on one string. A whole-country key keeps its
+     country code, and the three keys that name no zone of their country return
+     null rather than a guess: Spanien 3 and Ukraine 01 have no two-letter head,
+     and Preismatrix Dornstadt is not a lane. Empty and null input are null too. */
+  const cases = [
+    ['AT1 Österreich', 'AT1'],
+    ['PL1 Polen', 'PL1'],
+    ['CH2 Schweiz', 'CH2'],
+    ['FR Frankreich 1', 'FR1'],
+    ['ES Spanien 1', 'ES1'],
+    ['IT Italien 2', 'IT2'],
+    ['PT Portugal 1', 'PT1'],
+    ['UA Ukraine 02', 'UA2'],
+    ['HR Kroatien nur TKL Zagreb', 'HR'],
+    ['NO Norwegen 3', 'NO3'],
+    ['Spanien 3', null],
+    ['Ukraine 01', null],
+    ['Preismatrix Dornstadt', null],
+    ['', null],
+    [null, null],
+  ];
+  for (const [key, want] of cases) {
+    assert.equal(e.evalInContext('daLaneZone(' + JSON.stringify(key) + ')'), want,
+      'daLaneZone(' + JSON.stringify(key) + ')');
+  }
+});
+
+test('dachser ratecard asset: the international zone table follows the owner ruling and the book precedence', {
+  skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
+}, () => {
+  /* The generated asset, not a synthetic card: the 2026 zone workbook wins, the
+     2024 sheet only fills prefixes the new one lacks, and the owner ruling puts
+     GR 28/29/31/49 in GR2 against the 2024 sheet's GR3. */
+  const nat = e.DACHSER_RATECARDS.national;
+  const per = nat.intl_plz;
+  const whole = nat.intl_whole;
+  assert.ok(per && whole, 'the bundle carries both zone maps');
+  for (const map of [per, whole]) {
+    const codes = Object.keys(map);
+    assert.deepEqual(codes, [...codes].sort(), 'countries are sorted');
+    assert.ok(!codes.includes('DE'), 'DE is domestic and stays out of both maps');
+  }
+  /* JS orders canonical integer-like keys first, so a parsed prefix map can
+     never witness the builder's sort. The emitted text can, and each country is
+     checked inside its own block: the builder sorts per country, so a country
+     whose prefixes start at 01 must not be compared against its predecessor. */
+  const raw = readFileSync(new URL('../assets/dachser-ratecards.js', import.meta.url), 'utf8');
+  const line = raw.split('\n').find((l) => l.startsWith('    intl_plz: '));
+  const blocks = [...line.matchAll(/"([A-Z]{2})": \{([^}]*)\}/g)];
+  assert.equal(blocks.length, Object.keys(per).length, 'every country block is in the emitted text');
+  for (const [, cc, body] of blocks) {
+    const ps = [...body.matchAll(/"(\d{2})":/g)].map((m) => m[1]);
+    assert.deepEqual(ps, [...ps].sort(), cc + ' prefixes ascending in its own block');
+  }
+  let prefixes = 0;
+  for (const cc of Object.keys(per)) {
+    assert.match(cc, /^[A-Z]{2}$/);
+    const keys = Object.keys(per[cc]);
+    prefixes += keys.length;
+    for (const p of keys) {
+      assert.match(p, /^\d{2}$/, cc + ' prefix ' + p);
+      assert.ok(String(per[cc][p]).startsWith(cc), `${cc} ${p} -> ${per[cc][p]}`);
+    }
+  }
+  assert.equal(prefixes, 798);
+  assert.equal(Object.keys(whole).length, 14);
+  assert.equal(Object.keys(per).length, 8);
+  for (const p of ['28', '29', '31', '49']) assert.equal(per.GR[p], 'GR2');
+  assert.equal(per.IT['86'], 'IT2', 'the 2026 sheet gap filled by the 2024 sheet');
+  assert.ok(!('49' in per.IT) && !('99' in per.IT), 'neither workbook carries IT 49/99');
+  assert.equal(Object.keys(per.PT).length, 100);
+});
+
 test('processDachser: the Referenz table matches the confirmed sheet rows', {
   skip: e.DACHSER_RATECARDS ? false : 'needs the local plaintext Dachser ratecard',
 }, () => {
-  /* 19 rows: the 14 the rule must label (20261019 336/363/373/399/429/458/466/
-     467/474/478, 20261013 161/174/275, 20260903 303) and the 5 that fence it:
-     351 and 20260903 250/270 fail the tariff-copy gate, 201 is not domestic,
-     and 20260730 67 duplicates only on the OLD card. Each labelled row must
-     answer with the Referenz phrase alone. */
+  /* 24 rows: the 16 the rule must label (20261019 336/363/373/399/429/458/466/
+     467/474/478, 20261013 161/174/275, 20260903 303, 20261105 24/123) and the 8
+     that fence it: 351 and 20260903 250/270 fail the tariff-copy gate, 201 is
+     not domestic, 20260730 67 duplicates only on the OLD card, and 20260904 6 /
+     20261027 156/157 are out of reach by freight over tariff (14.14, 1.56,
+     1.30). Each labelled row must answer with the Referenz phrase alone. */
   const rows = JSON.parse(
     readFileSync(new URL('./fixtures/dachser-referenz-rows.json', import.meta.url), 'utf8'));
   const mismatches = [];

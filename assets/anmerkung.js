@@ -921,6 +921,51 @@ function daNationalZone(plz){
   const z=nat.plz[p.slice(0,2)];
   return z?String(z):null;
 }
+/* The zone a card lane key names, or null. The cards put the zone digit in the
+   head (AT1 Österreich, PL3 Polen) or in the tail (FR Frankreich 1, GB
+   Großbrittanien 2), so a single tail digit wins when the head is a plain
+   country code: FR Frankreich 1 is FR1, not FR. Three keys return null on
+   purpose: 'Spanien 3' and 'Ukraine 01' name a country with no two-letter head
+   (known card defects, not renamed here), and 'Preismatrix Dornstadt' is not a
+   lane at all. */
+function daLaneZone(k){
+  const t=String(k==null?'':k).trim().split(' ');
+  const head=t[0]||'', tail=t.length>1?t[t.length-1]:'';
+  const d=/^0?([1-9])$/.exec(tail);
+  if(d&&/^[A-Z]{2}$/.test(head))return head+d[1];
+  return /^[A-Z]{2}([1-9])?$/.test(head)?head:null;
+}
+/* The destination zone of a non-domestic row from the imported prefix table, or
+   null when it names none. Here null means "keep the country pool" and never
+   "stay silent"; daNationalZone above is the opposite, its null silences the
+   domestic ladder. Nothing resolves without the table (an older or locked
+   bundle), on an empty or DE destination, or on a PLZ that is not two or more
+   digits: a postal code like 41-250 is rejected on purpose, not read as 41. */
+function daIntlZone(empfLand,plz){
+  const nat=daNationalCard();
+  if(!nat||!nat.intl_plz)return null;
+  const cc=String(empfLand==null?'':empfLand).trim().toUpperCase();
+  if(!cc||cc==='DE')return null;
+  const p=String(plz==null?'':plz).trim();
+  if(!/^\d{2,}$/.test(p))return null;
+  const zones=nat.intl_plz[cc];
+  if(zones&&zones[p.slice(0,2)])return String(zones[p.slice(0,2)]);
+  const w=nat.intl_whole&&nat.intl_whole[cc];
+  return w?String(w):null;
+}
+/* Fail-open narrowing of one card's lane map to a destination zone. The match is
+   a prefix, not equality, because both card orders have to land (AT1 is the head
+   form, FR1 the tail form) and because a whole-country zone such as PL must keep
+   PL1..PL3. A zone that names no lane of that country leaves the pool as it was. */
+function daZonePool(lanes,zone){
+  if(!zone)return lanes;
+  const out={};
+  for(const k in lanes){
+    const z=daLaneZone(k);
+    if(z&&z.startsWith(zone))out[k]=lanes[k];
+  }
+  return Object.keys(out).length?out:lanes;
+}
 function daNationalPrice(nat,zone,kg){
   if(!nat||!(kg>0))return 0;
   for(const b of nat.brackets)if(kg<=b.bis)return(b.zones&&b.zones[zone])||0;
@@ -977,7 +1022,7 @@ function daNationalCopies(nat,zone,total){
 function daReferenzCount(empfPlz,abgLand,empfLand,kg,frDl,frTar,vkgDl){
   const nat=daNationalCard();
   if(!nat)return 0;
-  if(abgLand!=='DE'||empfLand!=='DE')return daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar,vkgDl);
+  if(abgLand!=='DE'||empfLand!=='DE')return daReferenzCountIntl(empfPlz,abgLand,empfLand,kg,frDl,frTar,vkgDl);
   const zone=daNationalZone(empfPlz);
   if(!zone)return 0;
   if(!(frTar>0&&frDl>frTar))return 0;
@@ -1023,17 +1068,28 @@ function daLaneOnLadder(cards,cc,value){
    also sit on a Sonderfahrt add-on (20261013 row 275), and then the price is read
    off the NEW card only (20260730 row 67 is the OLD-card fence). Gated on the
    national card although it reads only the two international cards, so a bundle
-   without one keeps the cascade. Lane naming by PLZ is not attempted, the table
-   carries country lanes only. */
-function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar,vkgDl){
+   without one keeps the cascade. The pool then narrows to the row's destination
+   zone where the imported prefix table resolves one (daIntlZone), so a zone
+   carrying a single copy of the tariff copy is no longer ambiguous; a narrowed
+   pool that comes out empty falls back to the country pool, so a zone naming no
+   lane of its country changes nothing. The tariff-copy guard beside it stays
+   country-wide on purpose: one price for the country is the reason to read the
+   freight as a single shipment, whatever its zone. The zone is looked up from
+   the destination only, so an import row (destination DE) keeps the origin
+   country's pool. The Sonderfahrt arm below keeps its own `nl`/`nm` pool
+   country-wide on purpose: narrowing it could let nm.length===1 hold where the
+   country pool sees two candidates, which would invent a count, while leaving
+   it wide can only preserve today's silence. */
+function daReferenzCountIntl(empfPlz,abgLand,empfLand,kg,frDl,frTar,vkgDl){
   const cards=daRatecardCards();
   if(!cards)return 0;
   const cc=(empfLand&&empfLand!=='DE')?empfLand:(abgLand||'');
   if(!cc||cc==='DE')return 0;
+  const zone=daIntlZone(empfLand,empfPlz);
   if(!(frTar>0&&frDl>frTar))return 0;
   const match=[];
   for(const card of [cards.nw,cards.od]){
-    const lanes=daRatecardLanes(card,kg,cc);
+    const lanes=daZonePool(daRatecardLanes(card,kg,cc),zone);
     for(const k in lanes){const p=lanes[k];
       if(p>0&&p<99999&&  // 99999 = the card's no-rate sentinel
          Math.abs(p-frTar)<=DA_NAT_PRICE_TOL+1e-9&&match.indexOf(p)<0)match.push(p);}
@@ -1105,7 +1161,7 @@ function daReferenzCountIntl(abgLand,empfLand,kg,frDl,frTar,vkgDl){
   for(let n=2;n<=DA_NAT_MAX_COPIES;n++){
     const target=frDl/n, hits=[];
     for(const card of [cards.nw,cards.od]){
-      const lanes=daRatecardLanes(card,vkgDl,cc);
+      const lanes=daZonePool(daRatecardLanes(card,vkgDl,cc),zone);
       for(const k in lanes){const q=lanes[k];
         if(q>0&&q<99999&&Math.abs(q-target)<=DA_NAT_PRICE_TOL+1e-9&&hits.indexOf(q)<0)hits.push(q);}
     }
