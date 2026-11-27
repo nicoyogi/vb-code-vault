@@ -6,7 +6,7 @@ first, using a first-two-digit PLZ table generated into the local-only ratecard
 asset. The table is imported knowledge, not a new rule: when it resolves nothing,
 the pool is exactly what it was.
 
-Nothing was renamed on the cards and no version was taken in this commit. That
+Nothing was renamed on the cards and no version was taken. That
 is not a claim that the change is invisible: the decision space did move. Two
 same-bracket, cross-zone near-pairs are live. FR 301-350 kg: the NEW card prices
 `FR Frankreich 1` at 151.38 and the OLD card prices `FR Frankreich 2` at 151.35.
@@ -15,11 +15,16 @@ prices `IT Italien 2` at 846.20. Each pair sits 0.03 apart, so a tariff copy
 between the two prices matches two lanes across the country pool (two
 candidates, so silence) while the narrowed zone keeps one, and the uniqueness
 gate no longer silences it. PL carries the same shape in several brackets, but
-its zone is the bare country code, so nothing narrows there. What keeps this
-commit inert today is the bundle, not the corpus: `assets/dachser-ratecards.enc.json` has not been
-re-encrypted since `fa78251`, so `nat.intl_plz` is absent in the browser,
-`daIntlZone` returns null and every pool stays country-wide. The bump decision
-therefore belongs with the enc-bundle rebuild, and no bump is taken here.
+its zone is the bare country code, so nothing narrows there.
+
+No row of the released corpus sits in either window: 2118 released rows over 11
+readable workbooks, 0 phrases moved between the engine with the table and the
+same engine with `daIntlZone` pinned to null. The policy test is whether an
+auditor gets a different result, and on this corpus they do not, so no version
+and no changelog entry were taken. The bundle was rebuilt with the team key and
+round-trip verified against the plaintext on 2026-11-27, so the table is live;
+an auditor would only see a difference on a row that sits inside one of the two
+windows above.
 
 ## Sources
 
@@ -129,15 +134,12 @@ precedence"), the narrowing, and the empty-pool fallback.
 
 ## Open items
 
-The encrypted bundle `assets/dachser-ratecards.enc.json` is not re-encrypted in
-this change: the team passphrase is not in the repository, so the table is live
-only in the local plaintext `assets/dachser-ratecards.js` and the browser still
-sees a bundle without `national.intl_plz`, where `daIntlZone` returns null and
-the cascade is exactly the pre-change one. Rebuilding the bundle is the
-activation step, and the version decision belongs with it: the corpus does not
-move, but a row whose tariff copy sits in one of the two live cross-zone
-near-pairs (FR 301-350 kg, IT 1801-1900 kg) would read differently once the
-table ships.
+`assets/dachser-ratecards.enc.json` was rebuilt from the plaintext with the team
+key on 2026-11-27 and round-trip verified: the ciphertext decrypts to the exact
+plaintext, including `national.intl_plz` and the GR ruling. The local plaintext
+stays gitignored; only the ciphertext ships. A rebuild is owed whenever either
+zone workbook or one of the four price workbooks changes, and nothing detects
+that today.
 
 Open with the owner: `DACHSER ZONE.xlsx` states AT, CH and PL as one whole
 country each, while both cards price `AT1`/`AT2`, `CH1`-`CH3` and `PL1`-`PL3`
