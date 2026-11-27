@@ -299,6 +299,43 @@ test('processDachser: SNK_DL=75 K1AV stays Speditionskosten gem. Text', () => {
   assert.equal(e.processDachser(ws, R, cols), 'Speditionskosten gem. Text');
 });
 
+test('processDachser: SNK_DL=75 with a blank Serv.-Art reads Speditionskosten gem. Text', () => {
+  /* 20261125 rows 222-230 are Amazon-DTM1 rows to Werne: SNK_DL 75, SNK tariff
+     base 0, SERVICE_ART and SACHKONTO both blank, and the sheet reads
+     "Speditionskosten gem. Text" on all nine. The column map below stands in
+     for that layout, which carries the SNK fields at 56-58.
+     A non-blank Serv.-Art keeps the fee literal, so 20260903 row 278 (DA01,
+     tariff base 0) still leads "Ausfallfracht/Schadensersatz". This test maps
+     its SACHKONTO to column 35, the engine's own default, while the 20260903
+     sheet carries it at 37, so 35 is the cell kept out of cols. */
+  const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53, snk_tar: 54, serv_art: 55 };
+  assert.equal(
+    e.processDachser(makeRow(R, { 50: 10, 51: '200', 52: '75', 53: '75', 54: '', 55: '' }), R, cols),
+    'Speditionskosten gem. Text',
+  );
+  assert.equal(
+    e.processDachser(makeRow(R, { 50: 10, 51: '200', 52: '75', 53: '75', 54: '', 55: 'DA01', 35: 'X' }), R, cols),
+    'Ausfallfracht/Schadensersatz',
+  );
+  /* A tariff base keeps the Hebebuehnen arm on top of the blank-Serv line, and
+     it does so whether or not the row carries a diff. Both rows below are the
+     20261006 row 19 shape (SNK_DL 75, tariff base 29.29, SACHKONTO set, DA01 on
+     the sheet) with the Serv.-Art wiped, which is the one cell that differs.
+     The sheet on row 19 leads "Differenz Hebebuehnen-Zuschlag". If the blank-Serv
+     line were moved above the snkTar>0 arm, both asserts would read
+     "Speditionskosten gem. Text" instead. */
+  assert.equal(
+    e.processDachser(makeRow(R, { 50: 10, 51: '794.55', 52: '75', 53: '45.71', 54: '29.29', 55: '', 35: 'X' }), R, cols),
+    'Differenz Hebebuehnen-Zuschlag',
+  );
+  /* No diff over the threshold: the snkTar>0 arm answers with nothing and the
+     row never reaches the blank-Serv fee literal. */
+  assert.equal(
+    e.processDachser(makeRow(R, { 50: 10, 51: '794.55', 52: '75', 53: '0', 54: '29.29', 55: '', 35: 'X' }), R, cols),
+    '',
+  );
+});
+
 test('processDachser: non-integer SNK_DL with an integer residual -> Laderaumkostenentwicklung', () => {
   const cols = { stat: 50, tarif: 51, snk_dl: 52, snk_diff: 53 };
   const ws = makeRow(R, { 50: 10, 51: '600.72', 52: '16.29', 53: '-13' });
@@ -3273,6 +3310,82 @@ test('processDachser: a non-Amazon recipient on a blank TARIF export keeps the c
   assert.equal(e.processDachser(ws, R, AMAZON_COLS), 'kein Tarif für RO');
 });
 
+/* ── Dachser Dornstadt national blank-TARIF arm ──────────────────────────────
+   A domestic Dornstadt row carries an empty TARIF cell while its FR delta is the
+   national price, so a blank TARIF plus a second delta line is not a duplicate
+   booking. The shapes
+   below are the real 20261125 rows 376 and 441 (WMF Dornstadt to GraGus
+   Albstadt, K1AV, SACH 612100), remapped onto these column indexes. The whole
+   block is card-free: no arm under test reads the rate cards. */
+const DORNSTADT_NAT_COLS = { stat: 50, tarif: 51, fr: 52, brutto: 53, vkg_dl: 54,
+  maut: 55, tz: 56, sachkonto: 57, serv_art: 58, referenz: 59,
+  abg_ort: 60, empf_land: 61, abg_land: 62, zabf_diff: 63 };
+const DORNSTADT_NAT_376 = { 50: 10, 52: '56.4', 53: '209', 54: '209', 55: '3.46',
+  56: '11.56', 57: '612100', 58: 'K1AV', 59: '2545543942', 60: 'Dornstadt',
+  61: 'DE', 62: 'DE' };
+const DORNSTADT_NAT_441 = { ...DORNSTADT_NAT_376, 52: '51.3', 53: '165',
+  55: '2.73', 56: '10.52', 59: '2545551669' };
+
+test('processDachser: a Dornstadt origin on a domestic blank-TARIF row with a second delta reads kein Tarif für Dornstadt National', () => {
+  assert.equal(e.processDachser(makeRow(R, DORNSTADT_NAT_376), R, DORNSTADT_NAT_COLS),
+    'kein Tarif für Dornstadt National');
+  assert.equal(e.processDachser(makeRow(R, DORNSTADT_NAT_441), R, DORNSTADT_NAT_COLS),
+    'kein Tarif für Dornstadt National');
+  /* The town alone is not the trigger: 20260923 row 193 is the same shape with
+     no second delta (MT and TZ both 0) and keeps the Fremdnummer literal. */
+  assert.equal(
+    e.processDachser(makeRow(R, { ...DORNSTADT_NAT_376, 55: '0', 56: '0' }), R, DORNSTADT_NAT_COLS),
+    'Fremdnummer 2545543942 bereits berechnet in RE00123xxx, ok?',
+  );
+  /* The row that splits hasOtherDiff from bookingLine: Maut and TZ are zero,
+     and the only second line is a ZABF 10. A customs entry is not part of this
+     split, so the arm must stay off. No corpus witness, this is the guard: with
+     (hasOtherDiff||bookingLine) the row reads "kein Tarif für Dornstadt
+     National" instead of the Fremdnummer literal. */
+  assert.equal(
+    e.processDachser(makeRow(R, { ...DORNSTADT_NAT_376, 55: '0', 56: '0', 63: '10' }), R, DORNSTADT_NAT_COLS),
+    'Fremdnummer 2545543942 bereits berechnet in RE00123xxx, ok?',
+  );
+});
+
+test('processDachser: the 10 t ceiling still wins over the Dornstadt national arm', () => {
+  /* 20261006 row 205: the same Dornstadt shape with Brutto 11573, and the sheet
+     keeps "Kein Tarif für DE >10 to, ok?". Kills moving the new arm above the
+     weight ceiling. */
+  assert.equal(
+    e.processDachser(makeRow(R, { ...DORNSTADT_NAT_376, 53: '11573' }), R, DORNSTADT_NAT_COLS),
+    'Kein Tarif für DE >10 to, ok?',
+  );
+});
+
+test('processDachser: the Amazon arm still wins over the Dornstadt national arm', () => {
+  /* 20261125 row 387: WMF Dornstadt to Amazon XDT6, K1AV, SACH 612100, blank
+     TARIF. Both arms qualify, so only the order keeps the Amazon phrase. The
+     columns are AMAZON_COLS plus an origin cell, the same mapping the other
+     Amazon tests use; only abg_ort is new here. */
+  const cols = { ...AMAZON_COLS, abg_ort: 66 };
+  const ws = makeRow(R, {
+    50: 10, 52: '299.4', 53: '273', 54: '273', 55: '8.61', 56: '16.44',
+    59: 'Amazon - XDT6', 60: '37293', 61: 'DE', 62: '612100', 63: 'K1AV',
+    65: 'DE', 66: 'Dornstadt',
+  });
+  assert.equal(e.processDachser(ws, R, cols), "kein Tarif für AMAZON DE '37293'");
+});
+
+test('processDachser: the Dornstadt national arm needs an Empf.-Land and an Abg.-Ort', () => {
+  /* Kills dropping either guard. A blank Empf.-Land reads back as '', and
+     cols.abg_ort -1 leaves the origin '', so neither row qualifies and both
+     fall through to the Fremdnummer literal. */
+  const noLand = { ...DORNSTADT_NAT_376 };
+  delete noLand[61];
+  assert.equal(e.processDachser(makeRow(R, noLand), R, DORNSTADT_NAT_COLS),
+    'Fremdnummer 2545543942 bereits berechnet in RE00123xxx, ok?');
+  assert.equal(
+    e.processDachser(makeRow(R, DORNSTADT_NAT_376), R, { ...DORNSTADT_NAT_COLS, abg_ort: -1 }),
+    'Fremdnummer 2545543942 bereits berechnet in RE00123xxx, ok?',
+  );
+});
+
 test('processDachser: FR wording comes from the rate cards, not the EXP lane proxy', () => {
   /* Was: DE origin + non-DE destination + EXP over threshold -> Sonderfahrt.
      That proxy matched 1 of the 5 Sonderfahrt rows on 20260923 and 7 of 15 on
@@ -3465,6 +3578,7 @@ test('processDachser: a Geislingen import from CH does not take the export arm',
 
 test('phraseToKey: the Dornstadt phrase resolves to its catalog key', () => {
   assert.equal(e.phraseToKey(DORNSTADT), 'daDornstadtTarif');
+  assert.equal(e.phraseToKey('kein Tarif für Dornstadt National'), 'tpl_keinTarifLand');
 });
 
 test('processDachser: DA_SONDERFAHRT_S carries the 110 add-on', () => {

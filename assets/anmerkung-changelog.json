@@ -1,6 +1,14 @@
 {
-  "version": "1.66.0",
+  "version": "1.67.0",
   "entries": [
+    {
+      "ver": "1.67.0",
+      "date": "2026-11-27",
+      "items": [
+        "Dachser - an SNK Kosten DL of 75 with a blank Serv.-Art and no SNK tariff base now reads \"Speditionskosten gem. Text\", the same as a K1AV row, instead of \"Ausfallfracht/Schadensersatz\". 20261125 rows 222-230 are the witnesses.",
+        "Dachser - a domestic Dornstadt row with a blank Tarif, a freight difference, a second delta line and both SACHKONTO and Serv.-Art set now reads \"kein Tarif für Dornstadt National\" instead of the already-billed Fremdnummer note. 20261125 rows 376 and 441."
+      ]
+    },
     {
       "ver": "1.66.0",
       "date": "2026-11-20",

@@ -1350,6 +1350,16 @@ function daEvalSNK(ws,r,cols,isTarifZero,servArt){
         if(!hasErr(snkDiff,T))return'';
         return'Differenz Hebebuehnen-Zuschlag';
       }
+      /* A blank SERVICE_ART is the same fee line as K1AV: all 306 K1AV 75 rows
+         take the Speditionskosten branch, with or without an SNK tariff base
+         (20261019 carries six), and 20261125 rows 222-230 read it on the sheet
+         with SACH blank too. A blank-Serv row carrying a tariff base never reaches
+         this line: the snkTar>0 arm above answers it first, which is the
+         precedence its own comment documents. DA01 keeps both of its outcomes:
+         20260903 row 278 (fee literal) and 20261006 row 19 (Hebebuehnen).
+         Falsified by a blank-Serv 75 row without a tariff base whose truth cell
+         reads Ausfallfracht/Schadensersatz. */
+      if(!servArt)return P.speditionskostenGemText;
       return'Ausfallfracht/Schadensersatz';
     case 11:
       if(!hasErr(snkDiff,T))return'';
@@ -1549,6 +1559,14 @@ function processDachser(ws,r,cols){
         (cols.sam>=0&&hasErr(cellNum(ws,r,cols.sam),T))||
         (cols.sbfu>=0&&hasErr(cellNum(ws,r,cols.sbfu),T))||
         (cols.c38l_diff>=0&&hasErr(cellNum(ws,r,cols.c38l_diff),T));
+      /* hasOtherDiff does not read the ZABF, T1 and C196 columns, so a row with a
+         customs- or transit-clearance line would otherwise pass as a trip. Those
+         three count as delta lines for the Sonderfahrt test below, and nowhere
+         else. */
+      const bookingLine=
+        (cols.zabf_diff>=0&&hasErr(cellNum(ws,r,cols.zabf_diff),T))||
+        (cols.t1_diff>=0&&hasErr(cellNum(ws,r,cols.t1_diff),T))||
+        (cols.c196_diff>=0&&hasErr(cellNum(ws,r,cols.c196_diff),T));
       /* Amazon's tariff card is not shipped, so this arm is a proxy: an Amazon
          recipient, a blank TARIF and a second delta line. 20261027 rows 146-151
          read "kein Tarif für AMAZON DE '37293'" and "AMAZON PL '05'"; 20260923
@@ -1569,13 +1587,6 @@ function processDachser(ws,r,cols){
            artifact and keeps the wording below, and 90.03 off the add-on is
            outside the bound. */
         const frDl=cols.fr_dl>=0?cellNum(ws,r,cols.fr_dl):0;
-        /* hasOtherDiff does not read the ZABF, T1 and C196 columns, so a row
-           with a customs- or transit-clearance line would otherwise pass as a
-           trip. Those three count as delta lines here, and nowhere else. */
-        const bookingLine=
-          (cols.zabf_diff>=0&&hasErr(cellNum(ws,r,cols.zabf_diff),T))||
-          (cols.t1_diff>=0&&hasErr(cellNum(ws,r,cols.t1_diff),T))||
-          (cols.c196_diff>=0&&hasErr(cellNum(ws,r,cols.c196_diff),T));
         if(!hasOtherDiff&&!bookingLine&&frDl>0&&DA_SONDERFAHRT_S.some(S=>Math.abs(frDl-S)<=DA_NAT_PRICE_TOL+1e-9))
           return P.sonderfahrt;
         return 'kein Tarif für '+empfLand;
@@ -1588,6 +1599,23 @@ function processDachser(ws,r,cols){
          names DE and would mislabel a non-DE row. */
       if(brutto>10000)return 'Kein Tarif für DE >10 to, ok?';
       if(!sachkonto&&!servArt&&!hasOtherDiff)return PHRASES.vorholung;
+      /* A domestic row from Dornstadt has an empty TARIF cell and the FR delta
+         carries the national price of its own lane (20261125 rows 376/441, DE to
+         DE, GraGus Albstadt, FR 56.40 at 209 kg and 51.30 at 165 kg with Maut and
+         TZ deltas; the shipped national card reads 56.42 and 51.26 for 72458), so
+         the empty cell is not evidence of a duplicate booking and the row reads
+         "kein Tarif für Dornstadt National". The second delta line is the split,
+         not the town. This arm deliberately reads hasOtherDiff only: a row whose
+         only second line is a customs or transit entry (ZABF, T1, C196) is not
+         part of this split and keeps the Fremdnummer literal below until a
+         witness exists. 20260923 row 193 is the same shape without any delta
+         line and keeps that literal too. It sits below the >10 t arm because
+         20261006 row 205 is a Dornstadt row as well and keeps its ceiling
+         phrase. Falsified by a no-delta Dornstadt row wanting this phrase. The
+         town is spelled out here, not read from the cell: 222/230 write
+         DORNSTADT. */
+      if(hasOtherDiff&&empfLand==='DE'&&sachkonto&&servArt&&/dornstadt/i.test(abgOrt))
+        return 'kein Tarif für Dornstadt National';
       if(sachkonto&&servArt){
         /* The Fremdnummer is the row's own ReferenzNr. The Beleg it was charged
            in is not: it names a document outside this workbook, so it stays a
